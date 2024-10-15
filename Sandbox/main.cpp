@@ -14,31 +14,36 @@
 
 #include "scene/scene.h"
 
+
+#include <string>
+#include "core/engine/argument_parser.h"
+
 #include "core/Profiling/profiler.h"
 #include "core/rendering/orthographic_camera.h"
 #include "core/rendering/Texture.h"
 #include "GLFW/glfw3.h"
 #include "platform/opengl/opengl_shader.h"
 
+#include "core/engine/engine.h"
+
+
 unsigned int createBasicShader();
 unsigned int createTextureShader();
 
-int main(void)
+int main(int argc, char *argv[])
 {
-	ENABLE_PROFILING;
-	hive::Logger::setLogger(hive::LoggingFactory::createLogger(hive::LogOutputType::Console, hive::LogLevel::Info));
+    //Create engine instance
+    hive::Engine engine(argc, argv);
+    engine.run();
 
-    //Init Logging
-    hive::Logger::setLogger(hive::LoggingFactory::createLogger(hive::LogOutputType::Console, hive::LogLevel::Debug));
 
     //Init Window
     hive::WindowConfiguration configuration;
     configuration.set(hive::WindowConfigurationOptions::CURSOR_DISABLED, true);
-    const auto window = std::unique_ptr<hive::Window>(hive::WindowFactory::Create("Hive Engine", 800, 600, configuration));
+    const auto window = std::unique_ptr<hive::Window>(hive::WindowFactory::Create("Hive Engine main.cpp test", 800, 600, configuration));
 
     //Init Input
     hive::Input::init(window->getNativeWindow());
-
 
     /*unsigned int shaderProgram = createBasicShader();
     unsigned int textureShader = createTextureShader();*/
@@ -104,7 +109,7 @@ int main(void)
 
     textureShader->bind();
     textureShader->uploadUniformInt("u_Texture", 0);
-  
+
     // TEST ECS
 	hive::Scene scene = {};
 	hive::Entity entity = scene.createEntity("Test");

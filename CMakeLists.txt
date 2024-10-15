@@ -10,7 +10,9 @@ set(PCH_HEADER
 set(PCH_SOURCE
     HiveEngine/src/lypch.cpp
     ${PCH_HEADER}
-    )
+        HiveEngine/src/core/engine/argument_parser.cpp
+        HiveEngine/src/core/engine/argument_parser.h
+)
 
 include_directories(HiveEngine/src)
 
