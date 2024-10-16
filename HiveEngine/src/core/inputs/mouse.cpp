@@ -1,11 +1,10 @@
 //
 // Created by GuillaumeIsCoding on 7/28/2024.
 //
-#include "core/inputs/mouse.h"
 
 #ifdef HIVE_PLATFORM_GLFW
+#include "core/inputs/mouse.h"
 #include "platform/glfw/glfw_mouse.h"
-#endif
 
 namespace hive
 {
@@ -19,3 +18,4 @@ namespace hive
         #endif
     }
 }
+#endif

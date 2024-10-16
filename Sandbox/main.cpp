@@ -1,6 +1,7 @@
 #include <memory>
 
 #include "core/inputs/input.h"
+#include "core/inputs/keycode.h"
 #include "core/logging/Logger.h"
 #include "core/logging/LoggerFactory.h"
 #include "core/window/window.h"
@@ -30,7 +31,7 @@ class TestSystem : public hive::System
 public:
     void update(float deltaTime) override
     {
-        if(hive::Input::getKeyDown(hive::KEY_SPACE))
+        if(hive::Input::getKeyDown(hive::KeyCode::KEY_SPACE))
         {
             auto window = hive::WindowManager::getCurrentWindow();
             auto config = window->getConfiguration();

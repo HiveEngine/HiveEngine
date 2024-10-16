@@ -6,8 +6,21 @@ set(PCH_SOURCE src/lypch.cpp ${PCH_HEADER})
 include_directories(src)
 
 #Dependencies
-add_subdirectory(dep/glfw)
-include_directories(dep/glfw/include)
+if(BACKEND STREQUAL "raylib")
+    message(STATUS "Building with Raylib backend")
+    add_compile_definitions(HIVE_PLATFORM_RAYLIB)
+    add_subdirectory(dep/raylib)
+    include_directories(dep/raylib/src)
+    add_library(backend ALIAS raylib)
+    # Add your raylib-specific configurations here
+elseif(BACKEND STREQUAL "glfw")
+    message(STATUS "Building with Other backend")
+    add_compile_definitions(HIVE_PLATFORM_GLFW)
+    add_subdirectory(dep/glfw)
+    include_directories(dep/glfw/include)
+    add_library(backend ALIAS glfw)
+    # Add your other backend configurations here
+endif()
 
 add_subdirectory(dep/glad)
 include_directories(dep/glad/include)
@@ -21,6 +34,8 @@ include_directories(dep/entt/single_include)
 include_directories(dep/stb_image)
 add_library(stb_image STATIC dep/stb_image/stb_image.cpp)
 
+
+
 set(EASY_PROFILER_NO_GUI ON)
 set(EASY_PROFILER_NO_SAMPLES ON)
 add_subdirectory(dep/easy_profiler)
@@ -29,26 +44,22 @@ add_compile_definitions(BUILD_WITH_EASY_PROFILER)
 
 
 
-add_compile_definitions(HIVE_PLATFORM_GLFW)
-
 file(GLOB_RECURSE SCENE_SOURCES src/scene/*.cpp src/scene/*.h)
 file(GLOB_RECURSE CORE_SOURCES src/core/*.cpp src/core/*.h)
+file(GLOB_RECURSE PLATFORM_SOURCES src/platform/*.cpp src/platform/*.h)
 
 if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
-    file(GLOB_RECURSE PLATFORM_SOURCES src/platform/windows/*.cpp src/platform/windows/*.h)
-    file(GLOB_RECURSE RENDERING_SOURCES src/platform/opengl/*.cpp src/platform/opengl/*.h)
-    file(GLOB_RECURSE WINDOW_BACKEND src/platform/glfw/*.cpp src/platform/glfw/*.h)
+    add_compile_definitions(HIVE_PLATFORM_WINDOWS)
+    add_compile_definitions(HIVE_RENDERING_OPENGL)
 elseif (CMAKE_SYSTEM_NAME STREQUAL "Linux")
     add_compile_definitions(HIVE_PLATFORM_LINUX)
-    file(GLOB_RECURSE PLATFORM_SOURCES src/platform/linux/*.cpp src/platform/linux/*.h)
-    file(GLOB_RECURSE RENDERING_SOURCES src/platform/opengl/*.cpp src/platform/opengl/*.h)
-    file(GLOB_RECURSE WINDOW_BACKEND src/platform/glfw/*.cpp src/platform/glfw/*.h)
+    add_compile_definitions(HIVE_RENDERING_OPENGL)
 elseif (CMAKE_SYSTEM_NAME STREQUAL "Darwin")
     message(FATAL_ERROR "Unsupported platform: ${CMAKE_SYSTEM_NAME}")
 else()
     message(FATAL_ERROR "Unsupported platform: ${CMAKE_SYSTEM_NAME}")
 endif ()
 
-add_library(HiveEngine ${CORE_SOURCES} ${PLATFORM_SOURCES} ${RENDERING_SOURCES} ${VENDOR_SOURCES} ${WINDOW_BACKEND} ${SCENE_SOURCES})
-target_link_libraries(HiveEngine glfw glad EnTT glm stb_image easy_profiler)
+add_library(HiveEngine ${CORE_SOURCES} ${PLATFORM_SOURCES} ${SCENE_SOURCES})
+target_link_libraries(HiveEngine backend glad EnTT glm stb_image easy_profiler)
 target_precompile_headers(HiveEngine PRIVATE ${PCH_HEADER})

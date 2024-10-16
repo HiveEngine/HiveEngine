@@ -1,7 +1,7 @@
 //
 // Created by GuillaumeIsCoding on 7/26/2024.
 //
-
+#ifdef HIVE_PLATFORM_GLFW
 #include <glad/glad.h>
 #include "glfw_window.h"
 #include "core/window/window_configuration.h"
@@ -122,3 +122,4 @@ namespace hive
         return m_Configuration;
     }
 }
+#endif

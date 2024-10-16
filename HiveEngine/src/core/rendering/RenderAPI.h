@@ -11,7 +11,9 @@ namespace hive
     class RenderAPI
     {
         public:
-            enum class API
+        virtual ~RenderAPI() = default;
+
+        enum class API
             {
                 None = 0, OpenGL = 1
             };

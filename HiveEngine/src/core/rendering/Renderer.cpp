@@ -7,8 +7,6 @@ namespace hive {
 
     void Renderer::beginScene(OrthographicCamera& camera, glm::vec4 backgroundColor)
     {
-
-
         RenderCommand::setClearColor(backgroundColor);
         RenderCommand::clear();
 

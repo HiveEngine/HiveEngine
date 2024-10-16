@@ -3,11 +3,15 @@
 //
 
 #include "input.h"
+
+#include <cassert>
+
 #include "input_manager.h"
 #include "keycode.h"
 
 #include "core/window/window.h"
 #include "platform/glfw/inputs/glfw_input_manager.h"
+#include "platform/raylib/InputManagerRaylib.h"
 
 struct InputData {
     hive::InputManager *input_manager;
@@ -15,18 +19,33 @@ struct InputData {
 
 InputData *input_data;
 
+void setupInputManager()
+{
+#ifdef HIVE_PLATFORM_RAYLIB
+    input_data->input_manager = new hive::InputManagerRaylib();
+#endif
+
+#ifdef HIVE_PLATFORM_GLFW
+    input_data->input_manager = new GlfwInputManager(static_cast<GLFWwindow*>(window_native_data.window_handle));
+#endif
+
+}
 void hive::Input::init(WindowNativeData window_native_data)
 {
     Logger::log("Initializing Input", LogLevel::Debug);
     input_data = new InputData();
 
-    switch (window_native_data.backend)
-    {
-    case WindowNativeData::GLFW:
-        input_data->input_manager = new GlfwInputManager(static_cast<GLFWwindow*>(window_native_data.window_handle));
-        break;
-    }
+    //TODO Add InputManagerFactory
+    setupInputManager();
+    // switch (window_native_data.backend)
+    // {
+    // case WindowNativeData::GLFW:
+    //     input_data->input_manager = new GlfwInputManager(static_cast<GLFWwindow*>(window_native_data.window_handle));
+    //     break;
+    // }
 }
+
+
 
 void hive::Input::shutdown() {
     Logger::log("Shutting down Input", LogLevel::Debug);
@@ -35,16 +54,19 @@ void hive::Input::shutdown() {
 }
 
 bool hive::Input::getKey(const KeyCode key_code) {
-    return input_data->input_manager->isKeyDown(key_code);
+    assert(input_data->input_manager != nullptr);
+    return input_data->input_manager->isKeyDown(getBackendKey(key_code));
 }
 
 
 bool hive::Input::getKeyDown(const KeyCode key_code) {
-    return input_data->input_manager->isKeyPressed(key_code);
+    assert(input_data->input_manager != nullptr);
+    return input_data->input_manager->isKeyPressed(getBackendKey(key_code));
 }
 
 bool hive::Input::getKeyUp(const KeyCode key_code) {
-    return input_data->input_manager->isKeyReleased(key_code);
+    assert(input_data->input_manager != nullptr);
+    return input_data->input_manager->isKeyReleased(getBackendKey(key_code));
 }
 
 

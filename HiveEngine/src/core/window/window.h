@@ -13,7 +13,7 @@ namespace hive
         void* window_handle;
         enum WindowBackend
         {
-            GLFW,
+            GLFW, RAYLIB
         };
 
         WindowBackend backend;
