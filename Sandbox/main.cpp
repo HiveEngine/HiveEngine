@@ -24,7 +24,7 @@ struct myData : hive::IComponent
     }
 };
 
-class TestSystem : public hive::System::System
+class TestSystem : public hive::System
 {
 
 public:
