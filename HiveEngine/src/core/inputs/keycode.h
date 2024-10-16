@@ -5,7 +5,6 @@
 #define _KEYCODE_H_
 
 
-
 namespace hive {
 
     enum class KeyCode
@@ -221,10 +220,6 @@ namespace hive {
             return 93;
         case KeyCode::KEY_GRAVE_ACCENT:
             return 96;
-        case KeyCode::KEY_WORLD_1:
-            return 161;
-        case KeyCode::KEY_WORLD_2:
-            return 162;
         case KeyCode::KEY_ESCAPE:
             return 256;
         case KeyCode::KEY_ENTER:
@@ -287,32 +282,7 @@ namespace hive {
             return 300;
         case KeyCode::KEY_F12:
             return 301;
-        case KeyCode::KEY_F13:
-            return 302;
-        case KeyCode::KEY_F14:
-            return 303;
-        case KeyCode::KEY_F15:
-            return 304;
-        case KeyCode::KEY_F16:
-            return 305;
-        case KeyCode::KEY_F17:
-            return 306;
-        case KeyCode::KEY_F18:
-            return 307;
-        case KeyCode::KEY_F19:
-            return 308;
-        case KeyCode::KEY_F20:
-            return 309;
-        case KeyCode::KEY_F21:
-            return 310;
-        case KeyCode::KEY_F22:
-            return 311;
-        case KeyCode::KEY_F23:
-            return 312;
-        case KeyCode::KEY_F24:
-            return 313;
-        case KeyCode::KEY_F25:
-            return 314;
+
         case KeyCode::KEY_KP_0:
             return 320;
         case KeyCode::KEY_KP_1:

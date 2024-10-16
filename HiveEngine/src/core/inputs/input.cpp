@@ -19,14 +19,14 @@ struct InputData {
 
 InputData *input_data;
 
-void setupInputManager()
+void setupInputManager(hive::WindowNativeData &data)
 {
 #ifdef HIVE_PLATFORM_RAYLIB
     input_data->input_manager = new hive::InputManagerRaylib();
 #endif
 
 #ifdef HIVE_PLATFORM_GLFW
-    input_data->input_manager = new GlfwInputManager(static_cast<GLFWwindow*>(window_native_data.window_handle));
+    input_data->input_manager = new hive::GlfwInputManager(static_cast<GLFWwindow*>(data.window_handle));
 #endif
 
 }
@@ -36,7 +36,7 @@ void hive::Input::init(WindowNativeData window_native_data)
     input_data = new InputData();
 
     //TODO Add InputManagerFactory
-    setupInputManager();
+    setupInputManager(window_native_data);
     // switch (window_native_data.backend)
     // {
     // case WindowNativeData::GLFW:

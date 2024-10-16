@@ -2,6 +2,7 @@
 // Created by samuel on 10/16/24.
 //
 
+#ifdef HIVE_PLATFORM_RAYLIB
 #include "WindowRaylib.h"
 
 #include <assert.h>
@@ -87,3 +88,4 @@ hive::WindowConfiguration hive::WindowRaylib::getConfiguration()
 	return m_configuration;
 }
 
+#endif
