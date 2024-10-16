@@ -1,8 +1,10 @@
 #include <memory>
 
 #include "core/inputs/input.h"
+#include "core/inputs/keycode.h"
 #include "core/logging/Logger.h"
 #include "core/logging/LoggerFactory.h"
+#include "core/rendering/Renderer2D.h"
 #include "core/window/window.h"
 #include "core/window/WindowManager.h"
 #include "core/window/window_configuration.h"
@@ -30,7 +32,7 @@ class TestSystem : public hive::System
 public:
     void update(float deltaTime) override
     {
-        if(hive::Input::getKeyDown(hive::KEY_SPACE))
+        if(hive::Input::getKeyDown(hive::KeyCode::KEY_SPACE))
         {
             auto window = hive::WindowManager::getCurrentWindow();
             auto config = window->getConfiguration();
@@ -84,10 +86,16 @@ void setupEcs()
 
 void shutdown()
 {
+    hive::Renderer2D::shutdown();
     hive::ECS::shutdown();
     hive::Input::shutdown();
     hive::WindowManager::setCurrentWindow(nullptr);
     hive::Logger::shutdown();
+}
+
+void setupRenderer()
+{
+    hive::Renderer2D::init();
 }
 
 void init()
@@ -101,6 +109,7 @@ void init()
     setupInput();
 
     setupEcs();
+    setupRenderer();
 }
 
 int main()
@@ -108,13 +117,18 @@ int main()
     init();
 
     //Game loop
+    hive::OrthographicCamera cam(0, 0, 800, 600);
     auto window = hive::WindowManager::getCurrentWindow();
     while(!window->shouldClose()) {
-        //Swap the buffer
-        window->onUpdate();
 
+        window->onUpdate();
         //Run all the systems
         hive::ECS::updateSystems(0);
+
+        hive::Renderer2D::beginScene(cam);
+        hive::Renderer2D::drawQuad(glm::vec2(0, 0), glm::vec2(20, 20), glm::vec4(255, 1, 1, 255));
+        hive::Renderer2D::endScene();
+
     }
 
     window.reset();

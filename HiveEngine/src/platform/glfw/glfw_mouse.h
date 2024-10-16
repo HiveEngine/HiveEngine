@@ -1,6 +1,8 @@
 //
 // Created by GuillaumeIsCoding on 7/28/2024.
 //
+#ifdef HIVE_PLATFORM_GLFW
+
 #pragma once
 
 #include "core/inputs/mouse.h"
@@ -38,3 +40,4 @@ namespace hive
 		static std::unique_ptr<DataImpl> p_data_impl_;
 	};
 }
+#endif

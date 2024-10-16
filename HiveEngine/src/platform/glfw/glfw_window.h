@@ -1,6 +1,7 @@
 //
 // Created by GuillaumeIsCoding on 7/26/2024.
 //
+#ifdef HIVE_PLATFORM_GLFW
 #pragma once
 
 #include "core/window/window.h"
@@ -41,3 +42,4 @@ namespace hive
             WindowConfiguration m_Configuration;
         };
 }
+#endif

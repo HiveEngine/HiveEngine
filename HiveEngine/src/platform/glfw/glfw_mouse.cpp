@@ -1,6 +1,7 @@
 //
 // Created by GuillaumeIsCoding on 7/28/2024.
 //
+#ifdef HIVE_PLATFORM_GLFW
 #include "glfw_mouse.h"
 
 namespace hive
@@ -83,3 +84,4 @@ namespace hive
 		return GlfwMouse::p_data_impl_->buttons[static_cast<int>(button_value)];
 	}
 }
+#endif

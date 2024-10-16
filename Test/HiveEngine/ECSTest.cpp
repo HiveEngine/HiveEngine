@@ -4,6 +4,7 @@
 
 #include <gtest/gtest.h>
 
+#include "raylib.h"
 #include "scene/ECS.h"
 #include "scene/query_builder.h"
 #include "scene/Registry.h"
