@@ -1,6 +1,51 @@
 //
 // Created by mathe on 02/10/2024.
 //
+#ifdef HIVE_PLATFORM_RAYLIB
+#include "Renderer2D.h"
+#include <raylib.h>
+
+void hive::Renderer2D::init()
+{
+}
+
+void hive::Renderer2D::shutdown()
+{
+}
+
+void hive::Renderer2D::beginScene(const OrthographicCamera& camera)
+{
+    BeginDrawing();
+    ClearBackground(BLACK);
+}
+
+void hive::Renderer2D::endScene()
+{
+    EndDrawing();
+}
+
+void hive::Renderer2D::drawQuad(const glm::vec2& position, const glm::vec2& size, const glm::vec4& color)
+{
+    DrawRectangle(position.x, position.y, size.x, size.y, Color(color.r, color.g, color.b, color.a));
+}
+
+void hive::Renderer2D::drawQuad(const glm::vec3& positionWithZValue, const glm::vec2& size, const glm::vec4& color)
+{
+
+}
+
+void hive::Renderer2D::drawQuad(const glm::vec2& position, const glm::vec2& size, const SRef<Texture2D>& texture)
+{
+    //Do nothing
+}
+
+void hive::Renderer2D::drawQuad(const glm::vec3& positionWithZValue, const glm::vec2& size,
+    const SRef<Texture2D>& texture)
+{
+    //Do nothing
+}
+
+#else
 
 #include "Renderer2D.h"
 #include "platform/opengl/opengl_shader.h"
@@ -97,3 +142,5 @@ namespace hive {
         RenderCommand::drawVertexArray(render2dData->QuadVertexArray);
     }
 }
+#endif
+

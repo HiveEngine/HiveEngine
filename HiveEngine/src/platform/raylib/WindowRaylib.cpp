@@ -35,7 +35,7 @@ hive::WindowRaylib::WindowRaylib(const std::string& title, int width, int height
 			break;
 		}
 	});
-	SetConfigFlags(FLAG_WINDOW_RESIZABLE);    // Window configuration flags
+	SetTargetFPS(60);
 	InitWindow(width, height, title.c_str());
 
 }
