@@ -67,7 +67,7 @@ namespace hive
 			return getCurrentRegistry()->hasComponent<T>(entity);
 		}
 
-		static entt::entity createEntity();
+		static entt::entity createEntity() { return getCurrentRegistry()->createEntity(); }
 
 		//Other
 		static Registry* getCurrentRegistry();

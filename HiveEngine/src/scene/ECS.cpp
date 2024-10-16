@@ -39,13 +39,12 @@ void hive::ECS::removeSystem(const std::string& name)
 
 void hive::ECS::updateSystems(float deltaTime)
 {
-	m_systemManager->updateSystems(deltaTime);
+	if(m_systemManager != nullptr)
+	{
+		m_systemManager->updateSystems(deltaTime);
+	}
 }
 
-entt::entity hive::ECS::createEntity()
-{
-	return m_registry->createEntity();
-}
 
 hive::Registry* hive::ECS::getCurrentRegistry()
 {

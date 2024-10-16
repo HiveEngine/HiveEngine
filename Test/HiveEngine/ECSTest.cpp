@@ -22,20 +22,18 @@ protected:
 };
 TEST_F(ECSTest, ShouldCreateEntity)
 {
-	auto registry = hive::ECS::getCurrentRegistry();
-	auto entity = registry->createEntity();
+	auto entity = hive::ECS::createEntity();
 	EXPECT_NE(&entity, nullptr);
 }
 
 TEST_F(ECSTest, ShouldAddComponent)
 {
-	auto registry = hive::ECS::getCurrentRegistry();
 	auto entity = hive::ECS::createEntity();
 
 	struct Player{};
 	hive::ECS::addComponent<Player>(entity);
 
-	EXPECT_TRUE(registry->hasComponent<Player>(entity));
+	EXPECT_TRUE(hive::ECS::hasComponent<Player>(entity));
 }
 
 
