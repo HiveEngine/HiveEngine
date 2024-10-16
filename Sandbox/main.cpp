@@ -39,6 +39,15 @@ public:
             window->updateConfiguration(config);
         }
     }
+
+    void init() override
+    {
+        auto query = hive::QueryBuilder<myData>();
+        for(auto [entity, data] : query.each())
+        {
+            hive::Logger::log("We have an entity", hive::LogLevel::Info);
+        }
+    }
 };
 
 
@@ -64,6 +73,8 @@ void setupEcs()
     //ECS
     hive::ECS::init();
 
+    // auto registry = hive::ECS::getCurrentRegistry();
+    // auto entity = registry->createEntity();
     auto entity = hive::ECS::createEntity();
     hive::ECS::addComponent<myData>(entity);
 
