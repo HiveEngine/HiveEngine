@@ -1,16 +1,16 @@
 #include <memory>
-#include <core/rendering/Renderer.hpp>
-#include <core/rendering/VertexArray.hpp>
 
 #include "core/inputs/input.h"
 #include "core/logging/Logger.h"
-#include "core/logging/LoggingFactory.h"
+#include "core/logging/LoggerFactory.h"
 #include "core/window/window.h"
+#include "core/window/WindowManager.h"
 #include "core/window/window_configuration.h"
 #include "core/window/window_factory.h"
-
 #include "scene/components.h"
-#include "scene/entity.h"
+#include "scene/ECS.h"
+#include "scene/query_builder.h"
+#include "scene/system_manager.h"
 
 #include "core/rendering/VertexBuffer.hpp"
 #include "core/rendering/IndexBuffer.hpp"
@@ -30,42 +30,61 @@
 #include "stb_image.h"
 #include "core/rendering/Renderer2D.h"
 
-unsigned int createBasicShader();
-unsigned int createTextureShader();
-
-int main(void)
+struct myData : hive::IComponent
 {
-	ENABLE_PROFILING;
-	hive::Logger::setLogger(hive::LoggingFactory::createLogger(hive::LogOutputType::Console, hive::LogLevel::Info));
+    float x, y;
 
-    //Init Logging
-    hive::Logger::setLogger(hive::LoggingFactory::createLogger(hive::LogOutputType::Console, hive::LogLevel::Debug));
+    std::string toString() override
+    {
+        return std::string(std::to_string(x) + " " + std::to_string(y));
+    }
+};
 
-    //Init Window
-    hive::WindowConfiguration configuration;
-    configuration.set(hive::WindowConfigurationOptions::CURSOR_DISABLED, true);
-    const auto window = std::unique_ptr<hive::Window>(hive::WindowFactory::Create("Hive Engine", 800, 600, configuration));
+class TestSystem : public hive::System
+{
 
-    //Init Input
-    hive::Input::init(window->getNativeWindow());
+public:
+    void update(float deltaTime) override
+    {
+        if(hive::Input::getKeyDown(hive::KEY_SPACE))
+        {
+            auto window = hive::WindowManager::getCurrentWindow();
+            auto config = window->getConfiguration();
 
+            config.toggle(hive::WindowConfigurationOptions::CURSOR_DISABLED);
+            window->updateConfiguration(config);
+        }
+    }
 
     hive::OrthographicCamera m_Camera(-1.0f, 1.0f, -1.0f, 1.0f);
 
-    std::string fragmentPath = "../HiveEngine/assets/shaders/basicColorShader.frag.glsl";
-    std::string vertexPath = "../HiveEngine/assets/shaders/basicColorShader.vert.glsl";
 
-    std::shared_ptr<hive::OpenglShader> colorShader = std::make_shared<hive::OpenglShader>(vertexPath, fragmentPath);
+void setupLogger(const hive::LogOutputType type, const hive::LogLevel level)
+{
+    hive::Logger::init(hive::LoggerFactory::createLogger(type, level));
+}
 
-    fragmentPath = "../HiveEngine/assets/shaders/textureShader.frag.glsl";
-    vertexPath = "../HiveEngine/assets/shaders/textureShader.vert.glsl";
+void setupWindow(const hive::WindowConfiguration configuration)
+{
+    auto window = std::shared_ptr<hive::Window>(hive::WindowFactory::Create("Hive Engine", 800, 600, configuration));
+    hive::WindowManager::setCurrentWindow(window);
+}
 
-    std::shared_ptr<hive::OpenglShader> textureShader = std::make_shared<hive::OpenglShader>(vertexPath, fragmentPath);
+void setupInput()
+{
+    auto window = hive::WindowManager::getCurrentWindow();
+    hive::Input::init(window->getNativeWindowData());
+}
 
-    std::shared_ptr<hive::VertexArray> vertexArray;
-    std::shared_ptr<hive::VertexArray> squareVA;
+void setupEcs()
+{
+    //ECS
+    hive::ECS::init();
 
-    vertexArray.reset(hive::VertexArray::create());
+    // auto registry = hive::ECS::getCurrentRegistry();
+    // auto entity = registry->createEntity();
+    auto entity = hive::ECS::createEntity();
+    hive::ECS::addComponent<myData>(entity);
 
     float vertices[3 * 7] = {
             -0.5f, -0.5f, -0.1f, 0.8f, 0.2f, 0.8f, 1.0f,
@@ -73,21 +92,22 @@ int main(void)
             0.0f,  0.5f, -0.1f, 0.8f, 0.8f, 0.2f, 1.0f
     };
 
-    std::shared_ptr<hive::VertexBuffer> vertexBuffer = std::shared_ptr<hive::VertexBuffer>(hive::VertexBuffer::create(vertices, sizeof(vertices)));
-    hive::BufferLayout layout = {
-            { hive::ShaderDataType::Float3, "a_Position" },
-            { hive::ShaderDataType::Float4, "a_Color" }
-    };
-    vertexBuffer->setLayout(layout);
 
-    vertexArray->addVertexBuffer(vertexBuffer);
+void shutdown()
+{
+    hive::ECS::shutdown();
+    hive::Input::shutdown();
+    hive::WindowManager::setCurrentWindow(nullptr);
+    hive::Logger::shutdown();
+}
 
-    uint32_t indices[3] = { 0, 1, 2 };
-    std::shared_ptr<hive::IndexBuffer> indexBuffer;
-    indexBuffer.reset(hive::IndexBuffer::create(indices, sizeof(indices)));
-    vertexArray->setIndexBuffer(indexBuffer);
+void init()
+{
+    setupLogger(hive::LogOutputType::Console, hive::LogLevel::Debug);
 
-    squareVA.reset(hive::VertexArray::create());
+    hive::WindowConfiguration configuration;
+    // configuration.set(hive::WindowConfigurationOptions::CURSOR_DISABLED, true);
+    setupWindow(configuration);
 
     float squareVertices[5 * 4] = {
             -0.75f, -0.75f, -0.2f,  0.0f, 0.0f,
@@ -96,35 +116,19 @@ int main(void)
             -0.75f,  0.75f, -0.2f, 0.0f, 1.0f
     };
 
-    std::shared_ptr<hive::VertexBuffer> squareVB = std::shared_ptr<hive::VertexBuffer>(hive::VertexBuffer::create(squareVertices, sizeof(squareVertices)));
-    squareVB->setLayout({
-                                {hive::ShaderDataType::Float3, "a_Position"},
-                                { hive::ShaderDataType::Float2, "a_TexCoord" }
-                        });
-    squareVA->addVertexBuffer(squareVB);
+    setupEcs();
+}
 
-    uint32_t squareIndices[6] = { 0, 1, 2, 2, 3, 0 };
-    std::shared_ptr<hive::IndexBuffer> squareIB;
-    squareIB.reset(hive::IndexBuffer::create(squareIndices, sizeof(squareIndices)));
-    squareVA->setIndexBuffer(squareIB);
+int main()
+{
+    init();
 
     std::shared_ptr<hive::Texture2D> m_Texture = hive::Texture2D::Create("../Sandbox/assets/textures/Checkerboard.png");
     std::shared_ptr<hive::Texture2D> grassTexture = hive::Texture2D::Create("../Sandbox/assets/textures/grass.jpg");
 
-    textureShader->bind();
-    textureShader->uploadUniformInt("u_Texture", 0);
-  
-    // TEST ECS
-	hive::Scene scene = {};
-	hive::Entity entity = scene.createEntity("Test");
-	hive::Entity entity_no_name = scene.createEntity();
-	std::cout << entity.toString() << std::endl;
-	std::cout << entity_no_name.toString() << std::endl;
-	auto& tag = entity_no_name.replaceComponent<hive::TagComponent>();
-	tag.Tag = "Replace";
-	std::cout << scene.toString() << std::endl;
-  
-    float angle = 0.0f;
+        //Run all the systems
+        hive::ECS::updateSystems(0);
+    }
 
 
     hive::Renderer::init();
@@ -135,8 +139,7 @@ int main(void)
     	BLOCK_PROFILING("BLOCK TEST", hive::BlockStatus::ON, hive::colors::Green);
         angle += 0.005f;
 
-        m_Camera.setPosition({ 0.5f, 0.0f, 0.0f });
-        m_Camera.setRotation(angle);
+    shutdown();
 
         hive::Renderer::beginScene(m_Camera);
 
