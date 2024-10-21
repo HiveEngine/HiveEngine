@@ -38,13 +38,13 @@ namespace hive {
         quadIB.reset(hive::IndexBuffer::create(quadIndices, sizeof(quadIndices)));
         render2dData->QuadVertexArray->setIndexBuffer(quadIB);
 
-        std::string fragmentPathflatColor = "../HiveEngine/assets/shaders/flatColor.frag.glsl";
-        std::string vertexPathflatColor = "../HiveEngine/assets/shaders/flatColor.vert.glsl";
+        std::string fragmentPathflatColor = "../../HiveEngine/assets/shaders/flatColor.frag.glsl";
+        std::string vertexPathflatColor = "../../HiveEngine/assets/shaders/flatColor.vert.glsl";
 
         render2dData->FlatColorShader = std::make_shared<hive::OpenglShader>(vertexPathflatColor, fragmentPathflatColor);
 
-        std::string fragmentPathTexture = "../HiveEngine/assets/shaders/texture.frag.glsl";
-        std::string vertexPathTexture = "../HiveEngine/assets/shaders/texture.vert.glsl";
+        std::string fragmentPathTexture = "../../HiveEngine/assets/shaders/texture.frag.glsl";
+        std::string vertexPathTexture = "../../HiveEngine/assets/shaders/texture.vert.glsl";
 
         render2dData->TextureShader = std::make_shared<hive::OpenglShader>(vertexPathTexture, fragmentPathTexture);
         render2dData->TextureShader->bind();

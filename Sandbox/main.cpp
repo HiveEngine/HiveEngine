@@ -20,15 +20,12 @@
 #include "core/rendering/shader.h"
 #include "core/rendering/Renderer.hpp"
 #include "core/rendering/orthographic_camera.h"
-#include "scene/scene.h"
 
-#include "core/Profiling/profiler.h"
-#include "core/rendering/orthographic_camera.h"
-#include "core/rendering/Texture.h"
-#include "GLFW/glfw3.h"
-#include "platform/opengl/opengl_shader.h"
-#include "stb_image.h"
 #include "core/rendering/Renderer2D.h"
+
+#include "platform/opengl/opengl_shader.h"
+
+
 
 struct myData : hive::IComponent
 {
@@ -56,7 +53,15 @@ public:
         }
     }
 
-    hive::OrthographicCamera m_Camera(-1.0f, 1.0f, -1.0f, 1.0f);
+    void init() override
+    {
+        auto query = hive::QueryBuilder<myData>();
+        for(auto [entity, data] : query.each())
+        {
+            hive::Logger::log("We have an entity", hive::LogLevel::Info);
+        }
+    }
+};
 
 
 void setupLogger(const hive::LogOutputType type, const hive::LogLevel level)
@@ -86,11 +91,8 @@ void setupEcs()
     auto entity = hive::ECS::createEntity();
     hive::ECS::addComponent<myData>(entity);
 
-    float vertices[3 * 7] = {
-            -0.5f, -0.5f, -0.1f, 0.8f, 0.2f, 0.8f, 1.0f,
-            0.5f, -0.5f, -0.1f, 0.2f, 0.3f, 0.8f, 1.0f,
-            0.0f,  0.5f, -0.1f, 0.8f, 0.8f, 0.2f, 1.0f
-    };
+    hive::ECS::registerSystem(new TestSystem(), "TestSystem");
+}
 
 
 void shutdown()
@@ -109,12 +111,7 @@ void init()
     // configuration.set(hive::WindowConfigurationOptions::CURSOR_DISABLED, true);
     setupWindow(configuration);
 
-    float squareVertices[5 * 4] = {
-            -0.75f, -0.75f, -0.2f,  0.0f, 0.0f,
-            0.75f, -0.75f, -0.2f,  1.0f, 0.0f,
-            0.75f,  0.75f, -0.2f,  1.0f, 1.0f,
-            -0.75f,  0.75f, -0.2f, 0.0f, 1.0f
-    };
+    setupInput();
 
     setupEcs();
 }
@@ -123,23 +120,83 @@ int main()
 {
     init();
 
-    std::shared_ptr<hive::Texture2D> m_Texture = hive::Texture2D::Create("../Sandbox/assets/textures/Checkerboard.png");
-    std::shared_ptr<hive::Texture2D> grassTexture = hive::Texture2D::Create("../Sandbox/assets/textures/grass.jpg");
 
-        //Run all the systems
-        hive::ECS::updateSystems(0);
-    }
+    hive::OrthographicCamera m_Camera(-1.0f, 1.0f, -1.0f, 1.0f);
 
+    std::string fragmentPath = "../../HiveEngine/assets/shaders/basicColorShader.frag.glsl";
+    std::string vertexPath = "../../HiveEngine/assets/shaders/basicColorShader.vert.glsl";
+
+    std::shared_ptr<hive::OpenglShader> colorShader = std::make_shared<hive::OpenglShader>(vertexPath, fragmentPath);
+
+    fragmentPath = "../../HiveEngine/assets/shaders/textureShader.frag.glsl";
+    vertexPath = "../../HiveEngine/assets/shaders/textureShader.vert.glsl";
+
+    std::shared_ptr<hive::OpenglShader> textureShader = std::make_shared<hive::OpenglShader>(vertexPath, fragmentPath);
+
+    std::shared_ptr<hive::VertexArray> vertexArray;
+    std::shared_ptr<hive::VertexArray> squareVA;
+
+    vertexArray.reset(hive::VertexArray::create());
+
+    float vertices[3 * 7] = {
+            -0.5f, -0.5f, -0.1f, 0.8f, 0.2f, 0.8f, 1.0f,
+            0.5f, -0.5f, -0.1f, 0.2f, 0.3f, 0.8f, 1.0f,
+            0.0f,  0.5f, -0.1f, 0.8f, 0.8f, 0.2f, 1.0f
+    };
+
+    std::shared_ptr<hive::VertexBuffer> vertexBuffer = std::shared_ptr<hive::VertexBuffer>(hive::VertexBuffer::create(vertices, sizeof(vertices)));
+    hive::BufferLayout layout = {
+            { hive::ShaderDataType::Float3, "a_Position" },
+            { hive::ShaderDataType::Float4, "a_Color" }
+    };
+    vertexBuffer->setLayout(layout);
+
+    vertexArray->addVertexBuffer(vertexBuffer);
+
+    uint32_t indices[3] = { 0, 1, 2 };
+    std::shared_ptr<hive::IndexBuffer> indexBuffer;
+    indexBuffer.reset(hive::IndexBuffer::create(indices, sizeof(indices)));
+    vertexArray->setIndexBuffer(indexBuffer);
+
+    squareVA.reset(hive::VertexArray::create());
+
+    float squareVertices[5 * 4] = {
+            -0.75f, -0.75f, -0.2f,  0.0f, 0.0f,
+            0.75f, -0.75f, -0.2f,  1.0f, 0.0f,
+            0.75f,  0.75f, -0.2f,  1.0f, 1.0f,
+            -0.75f,  0.75f, -0.2f, 0.0f, 1.0f
+    };
+
+    std::shared_ptr<hive::VertexBuffer> squareVB = std::shared_ptr<hive::VertexBuffer>(hive::VertexBuffer::create(squareVertices, sizeof(squareVertices)));
+    squareVB->setLayout({
+                                {hive::ShaderDataType::Float3, "a_Position"},
+                                { hive::ShaderDataType::Float2, "a_TexCoord" }
+                        });
+    squareVA->addVertexBuffer(squareVB);
+
+    uint32_t squareIndices[6] = { 0, 1, 2, 2, 3, 0 };
+    std::shared_ptr<hive::IndexBuffer> squareIB;
+    squareIB.reset(hive::IndexBuffer::create(squareIndices, sizeof(squareIndices)));
+    squareVA->setIndexBuffer(squareIB);
+
+    std::shared_ptr<hive::Texture2D> m_Texture = hive::Texture2D::Create("../../Sandbox/assets/textures/Checkerboard.png");
+    std::shared_ptr<hive::Texture2D> grassTexture = hive::Texture2D::Create("../../Sandbox/assets/textures/grass.jpg");
+
+    textureShader->bind();
+    textureShader->uploadUniformInt("u_Texture", 0);
+
+    float angle = 0.0f;
 
     hive::Renderer::init();
 
-    /* Loop until the user closes the window */
-    while (!glfwWindowShouldClose(reinterpret_cast<GLFWwindow*>(window->getNativeWindow())))
-    {
-    	BLOCK_PROFILING("BLOCK TEST", hive::BlockStatus::ON, hive::colors::Green);
+    //Game loop
+    auto window = hive::WindowManager::getCurrentWindow();
+    while(!window->shouldClose()) {
+
         angle += 0.005f;
 
-    shutdown();
+        m_Camera.setPosition({ 0.5f, 0.0f, 0.0f });
+        m_Camera.setRotation(angle);
 
         hive::Renderer::beginScene(m_Camera);
 
@@ -152,16 +209,19 @@ int main()
 
         hive::Renderer2D::drawQuad({ 0.0f, 0.0f, -0.3f }, { 10.0f, 10.0f }, grassTexture);
 
-
         hive::Renderer::endScene();
         hive::Renderer2D::endScene();
 
-
-        /* Poll for and process events */
+        //Swap the buffer
         window->onUpdate();
-    	END_BLOCK_PROFILING;
+
+        //Run all the systems
+        hive::ECS::updateSystems(0);
     }
-	DUMP_PROFILING("test.prof");
-    hive::Input::shutdown();
+
+    window.reset();
+
+    shutdown();
+
     return 0;
 }
