@@ -1,6 +1,7 @@
 #pragma once
 
-#include "lypch.h"
+#ifdef HIVE_BACKEND_OPENGL
+#include <hvpch.h>
 
 namespace hive {
 
@@ -102,3 +103,4 @@ namespace hive {
             uint32_t stride_ = 0;
         };
 }
+#endif

@@ -14,7 +14,7 @@ namespace hive
         #ifdef HIVE_PLATFORM_GLFW
         return std::make_unique<hive::GlfwMouse>(window, configuration);
         #else
-            LYPO_CORE_ERROR("Unknown platform");
+            // LYPO_CORE_ERROR("Unknown platform");
             return nullptr;
         #endif
     }

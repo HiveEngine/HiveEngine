@@ -1,6 +1,6 @@
 #pragma once
-
-#include "lypch.h"
+#ifdef HIVE_BACKEND_OPENGL
+#include <hvpch.h>
 
 namespace hive {
 	class IndexBuffer
@@ -16,3 +16,4 @@ namespace hive {
 		static IndexBuffer* create(uint32_t* indices, uint32_t count);
 	};
 }
+#endif

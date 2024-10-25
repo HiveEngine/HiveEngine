@@ -3,6 +3,7 @@
 //
 #pragma once
 
+#ifdef HIVE_BACKEND_OPENGL
 #include "core/inputs/mouse.h"
 
 #include <glad/glad.h>
@@ -38,3 +39,5 @@ namespace hive
 		static std::unique_ptr<DataImpl> p_data_impl_;
 	};
 }
+
+#endif

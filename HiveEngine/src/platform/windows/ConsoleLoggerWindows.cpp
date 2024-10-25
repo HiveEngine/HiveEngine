@@ -2,6 +2,7 @@
 // Created by lapor on 7/26/2024.
 //
 
+#ifdef HIVE_PLATFORM_WINDOWS
 #include <windows.h>
 #include <cassert>
 
@@ -53,3 +54,4 @@ namespace hive {
     }
 
 }
+#endif

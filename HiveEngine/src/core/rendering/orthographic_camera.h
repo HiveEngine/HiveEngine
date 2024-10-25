@@ -2,7 +2,8 @@
 // Created by mathe on 05/09/2024.
 //
 #pragma once
-#include "lypch.h"
+#ifdef HIVE_BACKEND_OPENGL
+#include <hvpch.h>
 #include <glm/glm.hpp>
 
 namespace hive
@@ -32,3 +33,4 @@ namespace hive
         float rotation_ = 0.0f;
     };
 }
+#endif
