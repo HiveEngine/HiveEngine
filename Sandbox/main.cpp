@@ -116,6 +116,8 @@ int main()
 {
     init();
 
+    asdklasdlksjdl 
+
     //Game loop
     hive::OrthographicCamera cam(0, 0, 800, 600);
     auto window = hive::WindowManager::getCurrentWindow();
