@@ -2,8 +2,8 @@
 // Created by wstap on 8/3/2024.
 //
 
-#ifndef INPUTS_H
-#define INPUTS_H
+#pragma once
+#ifdef HIVE_BACKEND_OPENGL
 #include "core/inputs/input_manager.h"
 
 #include <glad/glad.h> // Needed for GLFW/glfw3.h
@@ -37,4 +37,4 @@ namespace hive {
 }
 
 
-#endif //INPUTS_H
+#endif

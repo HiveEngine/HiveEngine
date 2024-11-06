@@ -1,4 +1,5 @@
 //
+#ifdef HIVE_BACKEND_OPENGL
 // Created by GuillaumeIsCoding on 7/28/2024.
 //
 #include "glfw_mouse.h"
@@ -83,3 +84,4 @@ namespace hive
 		return GlfwMouse::p_data_impl_->buttons[static_cast<int>(button_value)];
 	}
 }
+#endif

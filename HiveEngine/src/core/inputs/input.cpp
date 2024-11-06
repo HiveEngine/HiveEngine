@@ -2,6 +2,7 @@
 // Created by samuel on 9/16/24.
 //
 
+#ifdef HIVE_BACKEND_OPENGL
 #include "input.h"
 #include "input_manager.h"
 #include "keycode.h"
@@ -46,8 +47,4 @@ bool hive::Input::getKeyDown(const KeyCode key_code) {
 bool hive::Input::getKeyUp(const KeyCode key_code) {
     return input_data->input_manager->isKeyReleased(key_code);
 }
-
-
-
-
-
+#endif

@@ -3,6 +3,7 @@
 //
 
 #pragma once
+#ifdef HIVE_BACKEND_OPENGL
 #include "VertexArray.hpp"
 #include <glm/glm.hpp>
 
@@ -28,3 +29,4 @@ namespace hive
             static API api_;
     };
 }
+#endif
