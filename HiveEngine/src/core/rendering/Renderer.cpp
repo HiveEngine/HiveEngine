@@ -1,4 +1,3 @@
-#ifdef HIVE_BACKEND_OPENGL
 #include "Renderer.hpp"
 #include <glm/glm.hpp>
 

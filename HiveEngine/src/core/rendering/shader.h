@@ -2,8 +2,9 @@
 // Created by lapor on 7/26/2024.
 //
 
-#pragma once
-#ifdef HIVE_BACKEND_OPENGL
+#ifndef SHADER_H
+#define SHADER_H
+
 #include <glm/glm.hpp>
 
 namespace hive
@@ -34,4 +35,4 @@ namespace hive
     };
 }
 
-#endif
+#endif //SHADER_H

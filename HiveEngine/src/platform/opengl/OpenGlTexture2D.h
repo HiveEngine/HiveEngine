@@ -3,9 +3,8 @@
 //
 #pragma once
 
-#ifdef HIVE_PLATFORM_OPENGL
 #include "core/rendering/Texture.h"
-#include <hvpch.h>
+#include "lypch.h"
 
 namespace hive {
 
@@ -26,5 +25,3 @@ namespace hive {
     };
 }
 
-
-#endif

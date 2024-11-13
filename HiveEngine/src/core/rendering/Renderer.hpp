@@ -1,6 +1,5 @@
 #pragma once
-#ifdef HIVE_BACKEND_OPENGL
-#include <hvpch.h>
+#include "lypch.h"
 #include "VertexArray.hpp"
 #include "shader.h"
 #include "RenderCommand.h"
@@ -36,4 +35,3 @@ namespace hive {
 
 
 }
-#endif

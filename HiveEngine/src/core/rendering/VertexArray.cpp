@@ -1,6 +1,5 @@
 
 
-#ifdef HIVE_BACKEND_OPENGL
 #include "VertexArray.hpp"
 #include "Renderer.hpp"
 #include "platform/opengl/OpenGlVertexArray.hpp"
@@ -19,4 +18,3 @@ namespace hive {
     }
 
 }
-#endif

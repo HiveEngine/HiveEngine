@@ -1,7 +1,7 @@
 //
 // Created by wstap on 8/4/2024.
 //
-#ifdef HIVE_PLATFORM_GLFW
+
 #include "glfw_input_manager.h"
 
 #include "core/events/event_bus.h"
@@ -88,4 +88,3 @@ namespace hive {
         }
     }
 }
-#endif

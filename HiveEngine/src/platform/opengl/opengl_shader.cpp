@@ -2,8 +2,6 @@
 // Created by lapor on 7/26/2024.
 //
 
-
-#ifdef HIVE_BACKEND_OPENGL
 #include "opengl_shader.h"
 
 #include <fstream>
@@ -152,5 +150,3 @@ namespace hive
     }
 
 }
-
-#endif

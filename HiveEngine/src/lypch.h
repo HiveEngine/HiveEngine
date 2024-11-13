@@ -1,4 +1,4 @@
-// Description: Precompiled header file for HiveEngine
+// Description: Precompiled header file for LypoEngine
 
 #include <cstdint>
 #include <iostream>

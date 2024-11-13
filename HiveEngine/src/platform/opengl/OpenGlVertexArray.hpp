@@ -1,6 +1,5 @@
 #pragma once
 
-#ifdef HIVE_PLATFORM_OPENGL
 #include "lypch.h"
 #include "core/rendering/VertexArray.hpp"
 
@@ -29,4 +28,3 @@ namespace hive {
     };
 
 }
-#endif

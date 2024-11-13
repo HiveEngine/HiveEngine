@@ -3,7 +3,6 @@
 //
 
 
-#ifdef HIVE_PLATFORM_OPENGL
 #include "orthographic_camera.h"
 #include <glm/gtc/matrix_transform.hpp>
 
@@ -25,4 +24,3 @@ namespace hive
         viewProjectionMatrix_ = projectionMatrix_ * viewMatrix_;
     }
 }
-#endif

@@ -1,51 +1,6 @@
 //
 // Created by mathe on 02/10/2024.
 //
-#ifdef HIVE_PLATFORM_RAYLIB
-#include "Renderer2D.h"
-#include <raylib.h>
-
-void hive::Renderer2D::init()
-{
-}
-
-void hive::Renderer2D::shutdown()
-{
-}
-
-void hive::Renderer2D::beginScene(const OrthographicCamera& camera)
-{
-    BeginDrawing();
-    ClearBackground(BLACK);
-}
-
-void hive::Renderer2D::endScene()
-{
-    EndDrawing();
-}
-
-void hive::Renderer2D::drawQuad(const glm::vec2& position, const glm::vec2& size, const glm::vec4& color)
-{
-    DrawRectangle(position.x, position.y, size.x, size.y, Color(color.r, color.g, color.b, color.a));
-}
-
-void hive::Renderer2D::drawQuad(const glm::vec3& positionWithZValue, const glm::vec2& size, const glm::vec4& color)
-{
-
-}
-
-void hive::Renderer2D::drawQuad(const glm::vec2& position, const glm::vec2& size, const SRef<Texture2D>& texture)
-{
-    //Do nothing
-}
-
-void hive::Renderer2D::drawQuad(const glm::vec3& positionWithZValue, const glm::vec2& size,
-    const SRef<Texture2D>& texture)
-{
-    //Do nothing
-}
-
-#else
 
 #include "Renderer2D.h"
 #include "platform/opengl/opengl_shader.h"
@@ -83,13 +38,13 @@ namespace hive {
         quadIB.reset(hive::IndexBuffer::create(quadIndices, sizeof(quadIndices)));
         render2dData->QuadVertexArray->setIndexBuffer(quadIB);
 
-        std::string fragmentPathflatColor = "../HiveEngine/assets/shaders/flatColor.frag.glsl";
-        std::string vertexPathflatColor = "../HiveEngine/assets/shaders/flatColor.vert.glsl";
+        std::string fragmentPathflatColor = "../../HiveEngine/assets/shaders/flatColor.frag.glsl";
+        std::string vertexPathflatColor = "../../HiveEngine/assets/shaders/flatColor.vert.glsl";
 
         render2dData->FlatColorShader = std::make_shared<hive::OpenglShader>(vertexPathflatColor, fragmentPathflatColor);
 
-        std::string fragmentPathTexture = "../HiveEngine/assets/shaders/texture.frag.glsl";
-        std::string vertexPathTexture = "../HiveEngine/assets/shaders/texture.vert.glsl";
+        std::string fragmentPathTexture = "../../HiveEngine/assets/shaders/texture.frag.glsl";
+        std::string vertexPathTexture = "../../HiveEngine/assets/shaders/texture.vert.glsl";
 
         render2dData->TextureShader = std::make_shared<hive::OpenglShader>(vertexPathTexture, fragmentPathTexture);
         render2dData->TextureShader->bind();
@@ -142,5 +97,3 @@ namespace hive {
         RenderCommand::drawVertexArray(render2dData->QuadVertexArray);
     }
 }
-#endif
-

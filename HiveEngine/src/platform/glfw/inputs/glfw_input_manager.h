@@ -1,7 +1,7 @@
 //
 // Created by wstap on 8/3/2024.
 //
-#ifdef HIVE_PLATFORM_GLFW
+
 #ifndef INPUTS_H
 #define INPUTS_H
 #include "core/inputs/input_manager.h"
@@ -37,6 +37,4 @@ namespace hive {
 }
 
 
-#endif
-
-#endif
+#endif //INPUTS_H

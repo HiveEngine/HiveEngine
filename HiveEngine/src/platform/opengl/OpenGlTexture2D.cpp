@@ -2,7 +2,6 @@
 // Created by mathe on 05/08/2024.
 //
 
-#ifdef HIVE_BACKEND_OPENGL
 #include "OpenGlTexture2D.h"
 
 #include <glad/glad.h>
@@ -58,4 +57,3 @@ namespace hive{
 
 }
 
-#endif

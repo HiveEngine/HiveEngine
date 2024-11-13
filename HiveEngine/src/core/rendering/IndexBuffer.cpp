@@ -1,5 +1,4 @@
 
-#ifdef HIVE_PLATFORM_OPENGL
 #include "Renderer.hpp"
 #include "IndexBuffer.hpp"
 
@@ -18,4 +17,3 @@ namespace hive {
         return nullptr;
     }
 }
-#endif

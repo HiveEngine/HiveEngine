@@ -1,6 +1,5 @@
 #pragma once
 
-#ifdef HIVE_PLATFORM_OPENGL
 #include "lypch.h"
 #include "BufferUtils.h"
 
@@ -19,4 +18,3 @@ namespace hive {
 		static VertexBuffer* create(float* vertices, uint32_t size);
 	};
 }
-#endif

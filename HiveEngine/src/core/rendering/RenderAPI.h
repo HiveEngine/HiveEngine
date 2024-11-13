@@ -3,7 +3,6 @@
 //
 
 #pragma once
-#ifdef HIVE_BACKEND_OPENGL
 #include "VertexArray.hpp"
 #include <glm/glm.hpp>
 
@@ -12,9 +11,7 @@ namespace hive
     class RenderAPI
     {
         public:
-        virtual ~RenderAPI() = default;
-
-        enum class API
+            enum class API
             {
                 None = 0, OpenGL = 1
             };
@@ -31,4 +28,3 @@ namespace hive
             static API api_;
     };
 }
-#endif

@@ -1,11 +1,8 @@
 //
 // Created by GuillaumeIsCoding on 7/28/2024.
 //
-#ifdef HIVE_PLATFORM_GLFW
-
 #pragma once
 
-#ifdef HIVE_BACKEND_OPENGL
 #include "core/inputs/mouse.h"
 
 #include <glad/glad.h>
@@ -41,4 +38,3 @@ namespace hive
 		static std::unique_ptr<DataImpl> p_data_impl_;
 	};
 }
-#endif
