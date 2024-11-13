@@ -1,5 +1,6 @@
 #pragma once
 
+#ifdef HIVE_ENGINE_OPENGL
 #include "lypch.h"
 
 namespace hive {
@@ -22,4 +23,4 @@ namespace hive {
     };
 
 }
-
+#endif

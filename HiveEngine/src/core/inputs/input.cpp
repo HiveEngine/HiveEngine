@@ -2,6 +2,7 @@
 // Created by samuel on 9/16/24.
 //
 
+#ifdef HIVE_BACKEND_OPENGL
 #include "input.h"
 
 #include <cassert>
@@ -68,8 +69,4 @@ bool hive::Input::getKeyUp(const KeyCode key_code) {
     assert(input_data->input_manager != nullptr);
     return input_data->input_manager->isKeyReleased(getBackendKey(key_code));
 }
-
-
-
-
-
+#endif

@@ -1,3 +1,5 @@
+
+#ifdef HIVE_BACKEND_OPENGL
 #include "OpenGlVertexArray.hpp"
 
 #include <glad/glad.h>
@@ -78,3 +80,4 @@ namespace hive {
         indexBuffer_ = indexBuffer;
     }
 }
+#endif

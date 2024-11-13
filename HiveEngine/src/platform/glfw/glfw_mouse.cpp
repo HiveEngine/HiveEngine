@@ -1,4 +1,5 @@
 //
+#ifdef HIVE_BACKEND_OPENGL
 // Created by GuillaumeIsCoding on 7/28/2024.
 //
 #ifdef HIVE_PLATFORM_GLFW

@@ -1,4 +1,3 @@
-#include <memory>
 
 #include "core/inputs/input.h"
 #include "core/inputs/keycode.h"
@@ -114,7 +113,6 @@ void init()
 
 int main()
 {
-    init();
 
     asdklasdlksjdl 
 

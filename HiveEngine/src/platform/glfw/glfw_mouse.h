@@ -5,6 +5,7 @@
 
 #pragma once
 
+#ifdef HIVE_BACKEND_OPENGL
 #include "core/inputs/mouse.h"
 
 #include <glad/glad.h>

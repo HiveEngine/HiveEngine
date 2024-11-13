@@ -1,4 +1,5 @@
 
+#ifdef HIVE_BACKEND_OPENGL
 #include "OpenGlIndexBuffer.hpp"
 #include "glad/glad.h"
 
@@ -22,3 +23,4 @@ namespace hive {
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
     }
 }
+#endif

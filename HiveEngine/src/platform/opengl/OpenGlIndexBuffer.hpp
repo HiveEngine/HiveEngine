@@ -1,7 +1,6 @@
 #pragma once
-
+#ifdef HIVE_BACKEND_OPENGL
 #include "core/rendering/IndexBuffer.hpp"
-
 namespace hive {
     class OpenGlIndexBuffer : public IndexBuffer {
     public:
@@ -20,3 +19,4 @@ namespace hive {
         uint32_t count_;
     };
 }
+#endif

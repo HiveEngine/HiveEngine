@@ -37,6 +37,6 @@ namespace hive {
 }
 
 
-#endif //INPUTS_H
+#endif
 
 #endif
