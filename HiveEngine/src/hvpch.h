@@ -19,3 +19,5 @@ using URef = std::unique_ptr<T>;
 
 template<typename T>
 using SRef = std::shared_ptr<T>;
+
+#define HIVE_BACKEND_RAYLIB
