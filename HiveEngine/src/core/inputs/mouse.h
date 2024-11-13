@@ -80,8 +80,15 @@ namespace hive
 		virtual bool isButtonPressed(const hive::ButtonValue& button_value) const = 0;
 
 		/**
-		 * 
+		 * @brief Checks if a specefic mouse button is down
+		 *
+		 * @param button_value The value of the button to check
+		 * @return true If the button is down.
+		 * @return false If the button is not pressed
 		 */
+		virtual bool isButtonDown(const hive::ButtonValue& button_value) const = 0;
+
+
 		static std::unique_ptr<Mouse> create(void* window, const MouseStates& configuration = hive::MouseStates::DEFAULT);
 	protected:
 		struct DataImpl; 

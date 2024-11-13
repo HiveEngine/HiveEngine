@@ -22,10 +22,15 @@ namespace hive {
         static void shutdown();
 
         static bool getKey(KeyCode key_code);
-        static bool getKeyDown(KeyCode key_code);
+        static bool getKeyPressed(KeyCode key_code);
         static bool getKeyUp(KeyCode key_code);
 
-        //TODO implement mouse input
+        static bool getMouseButtonDown(int button);
+        static bool getMouseButtonPressed(int button);
+        static bool getMouseButtonUp(int button);
+
+        static double getMouseX();
+        static double getMouseY();
     };
 }
 

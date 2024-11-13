@@ -18,6 +18,7 @@ namespace hive {
         virtual bool isKeyReleased(int key) = 0;
 
         virtual bool isMouseButtonDown(int button) const = 0;
+        virtual bool isMouseButtonPressed(int button) const = 0;
         virtual bool isMouseButtonUp(int button) const = 0;
 
         virtual double getMouseX() const = 0;

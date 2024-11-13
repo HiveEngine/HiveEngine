@@ -14,6 +14,7 @@ namespace hive
         enum WindowBackend
         {
             GLFW,
+            RAYLIB
         };
 
         WindowBackend backend;
