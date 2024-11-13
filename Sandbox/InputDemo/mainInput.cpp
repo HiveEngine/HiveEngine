@@ -15,7 +15,7 @@ int main()
     const int screenWidth = 800;
     const int screenHeight = 450;
 
-    InitWindow(screenWidth, screenHeight, "raylib [core] example - basic window");
+    InitWindow(screenWidth, screenHeight, "Demo Input");
 
     hive::Input::init({GetWindowHandle(),hive::WindowNativeData::RAYLIB});
 
