@@ -3,6 +3,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <string.h>
+#include <cassert>
 
 #include "Logger.h"
 
@@ -22,6 +23,7 @@ hive::Memory::Memory()
 
 hive::Memory::~Memory()
 {
+    assert(s_stats_->total_allocated == 0); //Check for memory leak
     free(s_stats_);
 }
 

@@ -1,16 +1,25 @@
 #include "Application.h"
 
-#include <iostream>
+#include <rendering/Renderer.h>
+#include <rendering/RendererFactory.h>
 
-void RegisterDefaultLoggerSync(hive::Logger::LogLevel level)
+hive::Application::Application(ApplicationConfig &config) : memory_(), window_(config.window_config)
 {
-    hive::Logger::AddSync(level, [](hive::Logger::LogLevel level, const char* msg)
-    {
-       std::cout << msg << std::endl;
-    });
+    config.render_config.window = &window_;
+    renderer_ = RendererFactory::createRenderer(config.render_config);
 }
 
-hive::Application::Application(ApplicationConfig config) : memory_(), logger_()
+hive::Application::~Application()
 {
-    RegisterDefaultLoggerSync(config.log_level);
+    RendererFactory::destroyRenderer(renderer_);
+}
+
+void hive::Application::run()
+{
+    Memory::printMemoryUsage();
+
+    while(!window_.shouldClose())
+    {
+        window_.pollEvents();
+    }
 }

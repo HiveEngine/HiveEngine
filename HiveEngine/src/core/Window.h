@@ -8,7 +8,7 @@ namespace hive
     {
         enum class WindowType
         {
-            Native, GLFW, Raylib
+            Native, GLFW, Raylib, NONE
         };
 
         WindowType type;
@@ -16,11 +16,28 @@ namespace hive
         const char* title;
 
     };
+
+    class IWindow
+    {
+    public:
+        virtual ~IWindow()= default;
+        [[nodiscard]] virtual u64 getSizeof() const = 0;
+        [[nodiscard]] virtual bool shouldClose() const = 0;
+        virtual void pollEvents() = 0;
+
+    };
+
+
     class Window
     {
     public:
-        explicit Window(WindowConfig config);
+        explicit Window(const WindowConfig &config);
+        ~Window();
+
+        [[nodiscard]] bool shouldClose() const;
+        void pollEvents();
+
     private:
-        void* window_handle{};
+        IWindow* window_handle{};
     };
 }

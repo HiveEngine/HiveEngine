@@ -1,6 +1,10 @@
 #pragma once
+#include <optional>
+#include <rendering/Renderer.h>
+
 #include "core/Memory.h"
 #include "core/Logger.h"
+#include "core/Window.h"
 
 namespace hive
 {
@@ -8,17 +12,24 @@ namespace hive
     struct ApplicationConfig
     {
         Logger::LogLevel log_level;
+        WindowConfig window_config;
+        RendererConfig render_config;
     };
 
 
     class Application
     {
     public:
-        explicit Application(ApplicationConfig config);
+        explicit Application(ApplicationConfig &config);
+
+        ~Application();
+
+        void run();
 
 
     private:
         Memory memory_;
-        Logger logger_;
+        Window window_;
+        IRenderer* renderer_;
     };
 }
