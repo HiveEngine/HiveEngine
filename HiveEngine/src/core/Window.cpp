@@ -46,3 +46,18 @@ void hive::Window::pollEvents()
 {
     window_handle->pollEvents();
 }
+
+#ifdef HIVE_BACKEND_VULKAN_SUPPORTED
+#include <vulkan/vulkan.h>
+void hive::Window::appendRequiredVulkanExtension(std::vector<const char *> &vector) const
+{
+    window_handle->appendRequiredVulkanExtension(vector);
+}
+
+void hive::Window::createVulkanSurface(VkInstance& instance, VkSurfaceKHR*surface_khr) const
+{
+    window_handle->createVulkanSurface(instance, surface_khr);
+}
+
+
+#endif

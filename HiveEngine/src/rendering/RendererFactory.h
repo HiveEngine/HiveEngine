@@ -9,7 +9,7 @@ namespace hive
     class RendererFactory
     {
     public:
-        static IRenderer* createRenderer(const RendererConfig &config);
+        static bool createRenderer(const RendererConfig &config, IRenderer** out_renderer);
         static void destroyRenderer(IRenderer* renderer);
     };
 }

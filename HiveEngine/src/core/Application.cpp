@@ -1,12 +1,17 @@
 #include "Application.h"
 
+#include <stdexcept>
 #include <rendering/Renderer.h>
 #include <rendering/RendererFactory.h>
 
-hive::Application::Application(ApplicationConfig &config) : memory_(), window_(config.window_config)
+hive::Application::Application(ApplicationConfig &config) : memory_(), window_(config.window_config), renderer_(nullptr)
 {
     config.render_config.window = &window_;
-    renderer_ = RendererFactory::createRenderer(config.render_config);
+    if (!RendererFactory::createRenderer(config.render_config, &renderer_))
+    {
+        throw std::runtime_error("Failed to create renderer");
+
+    }
 }
 
 hive::Application::~Application()

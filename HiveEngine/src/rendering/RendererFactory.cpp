@@ -8,12 +8,20 @@
 
 #include <rendering/vulkan/Renderer_Vulkan.h>
 
-hive::IRenderer * hive::RendererFactory::createRenderer(const RendererConfig &config)
+bool hive::RendererFactory::createRenderer(const RendererConfig &config, IRenderer** out_renderer)
 {
     switch (config.type)
     {
         case RendererConfig::Type::VULKAN:
-            return Memory::createObject<vk::RendererVulkan, Memory::RENDERER>(*config.window);
+        {
+            auto vulkan_renderer = Memory::createObject<vk::RendererVulkan, Memory::RENDERER>(*config.window);
+            if (vulkan_renderer->isReady())
+            {
+                *out_renderer = vulkan_renderer;
+                return true;
+            }
+            LOG_ERROR("Failed to create Vulkan renderer");
+        }
         case RendererConfig::Type::OPENGL:
             //TODO: error not supported yet
             break;
@@ -25,8 +33,7 @@ hive::IRenderer * hive::RendererFactory::createRenderer(const RendererConfig &co
             break;
     }
 
-    LOG_ERROR("RendererFactory: vulkan is the only supported backend for now");
-    return nullptr;
+    return false;
 }
 
 void hive::RendererFactory::destroyRenderer(IRenderer *renderer)

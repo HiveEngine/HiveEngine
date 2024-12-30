@@ -20,6 +20,8 @@ namespace hive
     public:
         virtual ~IRenderer() = default;
 
+        [[nodiscard]] virtual bool isReady() const = 0;
+
         virtual void beginDrawing() = 0;
         virtual void endDrawing() = 0;
         virtual void frame() = 0;

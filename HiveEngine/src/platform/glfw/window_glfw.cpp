@@ -2,6 +2,7 @@
 
 #include <core/Logger.h>
 #include <core/Window.h>
+#define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
 
@@ -44,3 +45,23 @@ void hive::WindowGLFW::pollEvents()
     glfwPollEvents();
 }
 
+
+#ifdef HIVE_BACKEND_VULKAN_SUPPORTED
+void hive::WindowGLFW::appendRequiredVulkanExtension(std::vector<const char *> &vector) const
+{
+    u32 count;
+    const char** extensions = glfwGetRequiredInstanceExtensions(&count);
+
+    for (int i = 0; i < count; i++)
+    {
+        vector.emplace_back(extensions[i]);
+    }
+}
+
+void hive::WindowGLFW::createVulkanSurface(VkInstance&instance, VkSurfaceKHR* surface_khr) const
+{
+    glfwCreateWindowSurface(instance, window_, nullptr, surface_khr);
+}
+
+
+#endif
