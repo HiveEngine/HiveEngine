@@ -1,9 +1,9 @@
+#define GLFW_INCLUDE_VULKAN
+#include <core/Window.h>
+#include <core/Logger.h>
+#include <GLFW/glfw3.h>
 #include "window_glfw.h"
 
-#include <core/Logger.h>
-#include <core/Window.h>
-#define GLFW_INCLUDE_VULKAN
-#include <GLFW/glfw3.h>
 
 
 hive::WindowGLFW::~WindowGLFW()
@@ -45,6 +45,11 @@ void hive::WindowGLFW::pollEvents()
     glfwPollEvents();
 }
 
+void hive::WindowGLFW::getFramebufferSize(i32 &width, i32 &height) const
+{
+    glfwGetFramebufferSize(window_, &width, &height);
+}
+
 
 #ifdef HIVE_BACKEND_VULKAN_SUPPORTED
 void hive::WindowGLFW::appendRequiredVulkanExtension(std::vector<const char *> &vector) const
@@ -58,10 +63,14 @@ void hive::WindowGLFW::appendRequiredVulkanExtension(std::vector<const char *> &
     }
 }
 
-void hive::WindowGLFW::createVulkanSurface(VkInstance&instance, VkSurfaceKHR* surface_khr) const
+void hive::WindowGLFW::createVulkanSurface(void *instance, void *surface_khr) const
 {
-    glfwCreateWindowSurface(instance, window_, nullptr, surface_khr);
+    auto vk_instance = static_cast<VkInstance>(instance);
+    auto vk_surface = static_cast<VkSurfaceKHR*>(surface_khr);
+    glfwCreateWindowSurface(vk_instance, window_, nullptr, vk_surface);
 }
+
+
 
 
 #endif

@@ -8,16 +8,5 @@ namespace hive
 {
     DEFINE_HANDLE(ShaderProgram);
 
-    struct PhysicalDeviceRequirements
-    {
-        bool graphics;
-        bool presentation;
-        bool compute;
-        bool transfer;
-        bool discrete_gpu;
 
-
-        std::vector<const char*> extensions;
-        //... other
-    };
 }

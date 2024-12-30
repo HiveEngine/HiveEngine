@@ -47,6 +47,11 @@ void hive::Window::pollEvents()
     window_handle->pollEvents();
 }
 
+void hive::Window::getFramebufferSize(i32 &width, i32 &height) const
+{
+   window_handle->getFramebufferSize(width, height);
+}
+
 #ifdef HIVE_BACKEND_VULKAN_SUPPORTED
 #include <vulkan/vulkan.h>
 void hive::Window::appendRequiredVulkanExtension(std::vector<const char *> &vector) const
@@ -54,7 +59,7 @@ void hive::Window::appendRequiredVulkanExtension(std::vector<const char *> &vect
     window_handle->appendRequiredVulkanExtension(vector);
 }
 
-void hive::Window::createVulkanSurface(VkInstance& instance, VkSurfaceKHR*surface_khr) const
+void hive::Window::createVulkanSurface(void* instance, void* surface_khr) const
 {
     window_handle->createVulkanSurface(instance, surface_khr);
 }

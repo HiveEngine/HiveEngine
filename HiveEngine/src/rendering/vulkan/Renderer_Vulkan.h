@@ -1,28 +1,13 @@
 #pragma once
 #include <rendering/Renderer.h>
 #include <vulkan/vulkan.h>
+#include "vulkan_types.h"
 
 namespace hive::vk
 {
-    struct VulkanDevice
-    {
-        VkPhysicalDevice physicalDevice_{};
-        VkDevice device_{};
 
-        i32 graphics_queue_index_{};
-        i32 transfer_queue_index_{};
-        i32 present_queue_index_{};
 
-        VkQueue graphicsQueue_{};
-    };
 
-    struct PhysicalDeviceFamilyQueueInfo
-    {
-        i32 graphics_family_index;
-        i32 present_family_index;
-        i32 compute_family_index;
-        i32 transfer_family_index;
-    };
 
     class RendererVulkan : public IRenderer
     {
@@ -48,16 +33,17 @@ namespace hive::vk
         bool createSurface(const Window& window);
         bool pickPhysicalDevice();
         bool createLogicalDevice();
-        bool createSwapChain();
+        bool createSwapChain(const Window& window);
+        bool createImageView();
 
         //Helper function
-        bool isDeviceSuitable(const VkPhysicalDevice& device, const PhysicalDeviceRequirements& requirements, PhysicalDeviceFamilyQueueInfo& out_familyQueueInfo) const;
 
 
     protected:
         VkInstance instance_{};
         VkSurfaceKHR surface_{};
         VulkanDevice device_{};
+        VulkanSwapchain swapchain_{};
 
         bool is_ready_ = false;
 

@@ -18,10 +18,12 @@ namespace hive
         [[nodiscard]] bool shouldClose() const override;
 
         void pollEvents() override;
+        void getFramebufferSize(i32 &width, i32 &height) const override;
 
 #ifdef HIVE_BACKEND_VULKAN_SUPPORTED
         void appendRequiredVulkanExtension(std::vector<const char*> &vector) const override;
-        void createVulkanSurface(VkInstance& instance, VkSurfaceKHR *surface_khr) const override;
+        void createVulkanSurface(void *instance, void *surface_khr) const override;
+
 #endif
 
 

@@ -3,9 +3,6 @@
 #include <vector>
 
 #include <rendering/RendererPlatform.h>
-#ifdef HIVE_BACKEND_VULKAN_SUPPORTED
-#include <vulkan/vulkan_core.h>
-#endif
 
 namespace hive
 {
@@ -29,10 +26,11 @@ namespace hive
         [[nodiscard]] virtual u64 getSizeof() const = 0;
         [[nodiscard]] virtual bool shouldClose() const = 0;
         virtual void pollEvents() = 0;
+        virtual void getFramebufferSize(i32& width, i32 &height) const = 0;
 
 #ifdef HIVE_BACKEND_VULKAN_SUPPORTED
         virtual void appendRequiredVulkanExtension(std::vector<const char*> &vector) const = 0;
-        virtual void createVulkanSurface(VkInstance& instance, VkSurfaceKHR *surface_khr) const = 0;
+        virtual void createVulkanSurface(void* instance, void *surface_khr) const = 0;
 #endif
     };
 
@@ -46,9 +44,11 @@ namespace hive
         [[nodiscard]] bool shouldClose() const;
         void pollEvents();
 
+        void getFramebufferSize(i32& width, i32 &height) const;
+
 #ifdef HIVE_BACKEND_VULKAN_SUPPORTED
         void appendRequiredVulkanExtension(std::vector<const char*> &vector) const;
-        void createVulkanSurface(VkInstance& instance, VkSurfaceKHR *surface_khr) const;
+        void createVulkanSurface(void* instance, void *surface_khr) const;
 #endif
     private:
         IWindow* window_handle{};
