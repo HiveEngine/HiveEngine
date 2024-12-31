@@ -10,3 +10,6 @@
 [submodule "HiveEngine/dep/easy_profiler"]
 	path = HiveEngine/dep/easy_profiler
 	url = https://github.com/yse/easy_profiler
+[submodule "HiveEngine/dep/HiveECS"]
+	path = HiveEngine/dep/HiveECS
+	url = https://github.com/GuillaumeIsCoding/HiveECS
