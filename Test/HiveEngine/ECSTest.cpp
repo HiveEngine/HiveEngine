@@ -4,40 +4,38 @@
 
 #include <gtest/gtest.h>
 
-#include "scene/ECS.h"
-#include "scene/query_builder.h"
-#include "scene/Registry.h"
+#include "ecs/HiveECS.h"
 
 class ECSTest : public ::testing::Test
 {
 protected:
 	void SetUp() override
 	{
-		hive::ECS::init();
+		hive::ecs::ECS::init();
 	}
 	void TearDown() override
 	{
-		hive::ECS::shutdown();
+		hive::ecs::ECS::shutdown();
 	}
 };
 TEST_F(ECSTest, ShouldCreateEntity)
 {
-	auto entity = hive::ECS::createEntity();
+	auto entity = hive::ecs::ECS::createEntity();
 	EXPECT_NE(&entity, nullptr);
 }
 
 TEST_F(ECSTest, ShouldAddComponent)
 {
-	auto entity = hive::ECS::createEntity();
+	auto entity = hive::ecs::ECS::createEntity();
 
 	struct Player{};
-	hive::ECS::addComponent<Player>(entity);
+	hive::ecs::ECS::addComponent<Player>(entity);
 
-	EXPECT_TRUE(hive::ECS::hasComponent<Player>(entity));
+	EXPECT_TRUE(hive::ecs::ECS::hasComponent<Player>(entity));
 }
 
 
-class TestSystem : public hive::System
+class TestSystem : public hive::ecs::System
 {
 public:
 	void init() override
@@ -57,7 +55,7 @@ public:
 TEST_F(ECSTest, SystemShouldInitWhenRegister)
 {
 	TestSystem *test_system = new TestSystem();
-	hive::ECS::registerSystem(test_system, "TestSystem");
+	hive::ecs::ECS::registerSystem(test_system, "TestSystem");
 
 	EXPECT_TRUE(test_system->is_init);
 }
@@ -66,9 +64,9 @@ TEST_F(ECSTest, SystemShouldUpdate)
 {
 	TestSystem *test_system = new TestSystem();
 
-	hive::ECS::registerSystem(test_system, "TestSystem");
+	hive::ecs::ECS::registerSystem(test_system, "TestSystem");
 
-	hive::ECS::updateSystems(0);
+	hive::ecs::ECS::updateSystems(0);
 
 	EXPECT_TRUE(test_system->is_updated);
 }
@@ -77,10 +75,10 @@ TEST_F(ECSTest, SystemShouldBeRemoved)
 {
 	TestSystem *test_system = new TestSystem();
 
-	hive::ECS::registerSystem(test_system, "TestSystem");
-	hive::ECS::removeSystem("TestSystem");
+	hive::ecs::ECS::registerSystem(test_system, "TestSystem");
+	hive::ecs::ECS::removeSystem("TestSystem");
 
-	hive::ECS::updateSystems(0);
+	hive::ecs::ECS::updateSystems(0);
 
 	EXPECT_TRUE(test_system->is_init);
 	EXPECT_FALSE(test_system->is_updated);
@@ -90,11 +88,11 @@ TEST_F(ECSTest, SystemShouldNotUpdateIfDisabled)
 {
 	TestSystem *test_system = new TestSystem();
 
-	hive::ECS::registerSystem(test_system, "TestSystem");
+	hive::ecs::ECS::registerSystem(test_system, "TestSystem");
 
-	test_system->is_active = false;
+	test_system->m_is_active = false;
 
-	hive::ECS::updateSystems(0);
+	hive::ecs::ECS::updateSystems(0);
 
 	EXPECT_TRUE(test_system->is_init);
 	EXPECT_FALSE(test_system->is_updated);
@@ -104,8 +102,8 @@ TEST_F(ECSTest, SystemShouldNotUpdateIfDisabled)
 TEST_F(ECSTest, QueryBuilderShouldFetchCorrectEntity)
 {
 
-	auto entity = hive::ECS::createEntity();
-	auto entity2 = hive::ECS::createEntity();
+	auto entity = hive::ecs::ECS::createEntity();
+	auto entity2 = hive::ecs::ECS::createEntity();
 
 	struct Player
 	{
@@ -116,12 +114,12 @@ TEST_F(ECSTest, QueryBuilderShouldFetchCorrectEntity)
 	{
 
 	};
-	hive::ECS::addComponent<Player>(entity, 20);
-	hive::ECS::addComponent<Player>(entity2, 33);
+	hive::ecs::ECS::addComponent<Player>(entity, 20);
+	hive::ecs::ECS::addComponent<Player>(entity2, 33);
 
-	auto query = hive::QueryBuilder<Player>();
+	auto query = hive::ecs::QueryBuilder<Player>();
 
-	auto it = query.each().begin();
+	auto it = query.viewEach().begin();
 	auto [e1, p1] = *it;
 	it.operator++();
 
@@ -136,8 +134,8 @@ TEST_F(ECSTest, QueryBuilderShouldFetchCorrectEntity)
 TEST_F(ECSTest, QueryBuilderShouldFetchWithMultipleComponent)
 {
 
-	auto entity = hive::ECS::createEntity();
-	auto entity2 = hive::ECS::createEntity();
+	auto entity = hive::ecs::ECS::createEntity();
+	auto entity2 = hive::ecs::ECS::createEntity();
 
 	struct Player
 	{
@@ -148,16 +146,16 @@ TEST_F(ECSTest, QueryBuilderShouldFetchWithMultipleComponent)
 	{
 
 	};
-	hive::ECS::addComponent<Player>(entity, 20);
-	hive::ECS::addComponent<Player>(entity2, 33);
-	hive::ECS::addComponent<Enemy>(entity2);
+	hive::ecs::ECS::addComponent<Player>(entity, 20);
+	hive::ecs::ECS::addComponent<Player>(entity2, 33);
+	hive::ecs::ECS::addComponent<Enemy>(entity2);
 
-	auto query = hive::QueryBuilder<Player, Enemy>();
+	auto query = hive::ecs::QueryBuilder<Player, Enemy>();
 
-	auto it = query.each().begin();
+	auto it = query.viewEach().begin();
 	auto [e1, p1] = *it;
 	it.operator++();
 
-	EXPECT_EQ(it, query.each().end());
+	EXPECT_EQ(it, query.viewEach().end());
 	EXPECT_TRUE(p1.id == 33);
 }
