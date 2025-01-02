@@ -7,10 +7,7 @@
 #include "core/window/WindowManager.h"
 #include "core/window/window_configuration.h"
 #include "core/window/window_factory.h"
-#include "scene/components.h"
-#include "scene/ECS.h"
-#include "scene/query_builder.h"
-#include "scene/system_manager.h"
+#include "ecs/HiveECS.h"
 
 #include "core/rendering/VertexBuffer.hpp"
 #include "core/rendering/IndexBuffer.hpp"
@@ -27,17 +24,17 @@
 
 
 
-struct myData : hive::IComponent
+struct myData : hive::ecs::IComponent
 {
     float x, y;
 
-    std::string toString() override
+    std::string toString() const override
     {
         return std::string(std::to_string(x) + " " + std::to_string(y));
     }
 };
 
-class TestSystem : public hive::System
+class TestSystem : public hive::ecs::System
 {
 
 public:
@@ -55,8 +52,8 @@ public:
 
     void init() override
     {
-        auto query = hive::QueryBuilder<myData>();
-        for(auto [entity, data] : query.each())
+        auto query = hive::ecs::QueryBuilder<myData>();
+        for(auto [entity, data] : query.viewEach())
         {
             hive::Logger::log("We have an entity", hive::LogLevel::Info);
         }
@@ -84,20 +81,20 @@ void setupInput()
 void setupEcs()
 {
     //ECS
-    hive::ECS::init();
+    hive::ecs::ECS::init();
 
     // auto registry = hive::ECS::getCurrentRegistry();
     // auto entity = registry->createEntity();
-    auto entity = hive::ECS::createEntity();
-    hive::ECS::addComponent<myData>(entity);
+    auto entity = hive::ecs::ECS::createEntity();
+    hive::ecs::ECS::addComponent<myData>(entity);
 
-    hive::ECS::registerSystem(new TestSystem(), "TestSystem");
+    hive::ecs::ECS::registerSystem(new TestSystem(), "TestSystem");
 }
 
 
 void shutdown()
 {
-    hive::ECS::shutdown();
+    hive::ecs::ECS::shutdown();
     hive::Input::shutdown();
     hive::WindowManager::setCurrentWindow(nullptr);
     hive::Logger::shutdown();
@@ -216,7 +213,7 @@ int main()
         window->onUpdate();
 
         //Run all the systems
-        hive::ECS::updateSystems(0);
+        hive::ecs::ECS::updateSystems(0);
     }
 
     window.reset();
