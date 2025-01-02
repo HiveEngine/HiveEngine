@@ -16,6 +16,9 @@ include_directories(dep/glad/include)
 add_subdirectory(dep/glm)
 include_directories(dep/glm/glm)
 
+set(HIVE_ECS_NO_TEST ON CACHE BOOL "Build HiveECS without test" FORCE)
+set(HIVE_ECS_NO_SANDBOX ON CACHE BOOL "Build HiveECS without a Sample" FORCE)
+
 add_subdirectory(dep/HiveECS)
 include_directories(dep/HiveECS/HiveECS)
 
