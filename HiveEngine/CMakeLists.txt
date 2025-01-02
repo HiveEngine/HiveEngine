@@ -5,7 +5,8 @@ set(PCH_SOURCE src/lypch.cpp ${PCH_HEADER})
 
 include_directories(src)
 
-#Dependencies
+# Dependencies
+
 add_subdirectory(dep/glfw)
 include_directories(dep/glfw/include)
 
