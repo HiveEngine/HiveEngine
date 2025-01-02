@@ -3,8 +3,7 @@ set(PCH_HEADER src/hvpch.h)
 
 #Hive
 file(GLOB_RECURSE SOURCES src/*.cpp)
-add_library(hive STATIC ${SOURCES}
-        src/rendering/vulkan/vulkan_device.h)
+add_library(hive STATIC ${SOURCES})
 target_include_directories(hive PUBLIC src)
 target_precompile_headers(hive PUBLIC src/hvpch.h)
 

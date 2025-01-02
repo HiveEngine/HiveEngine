@@ -23,7 +23,7 @@ namespace hive::vk
 
         void frame() override;
 
-        ShaderProgramHandle createProgram() override;
+        ShaderProgramHandle createProgram(const char *vertex_path, const char *fragment_path) override;
         void destroyProgram(ShaderProgramHandle shader) override;
         void useProgram(ShaderProgramHandle shader) override;
 
@@ -35,8 +35,6 @@ namespace hive::vk
         bool createLogicalDevice();
         bool createSwapChain(const Window& window);
         bool createImageView();
-
-        //Helper function
 
 
     protected:

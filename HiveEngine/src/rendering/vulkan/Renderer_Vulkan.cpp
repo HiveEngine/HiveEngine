@@ -1,5 +1,6 @@
 
 #include "vulkan_image.h"
+#include "vulkan_shader.h"
 #include "vulkan_swapchain.h"
 #include "rendering/RendererPlatform.h"
 
@@ -24,6 +25,10 @@ hive::vk::RendererVulkan::RendererVulkan(const Window &window)
     if (!createLogicalDevice()) return;
     if (!createSwapChain(window)) return;
     if (!createImageView()) return;
+
+    //Default shader
+    ShaderProgramHandle shader = createProgram("shaders/vert.spv", "shaders/frag.spv");
+    if (shader.id == -1) return;
 
     is_ready_ = true;
 }
@@ -53,17 +58,19 @@ void hive::vk::RendererVulkan::frame()
 {
 }
 
-hive::ShaderProgramHandle hive::vk::RendererVulkan::createProgram()
+hive::ShaderProgramHandle hive::vk::RendererVulkan::createProgram(const char *vertex_path, const char *fragment_path)
 {
-    return {0};
+    return create_shader_program(vertex_path, fragment_path, device_, swapchain_);
 }
 
 void hive::vk::RendererVulkan::destroyProgram(ShaderProgramHandle shader)
 {
+    destroy_program(shader);
 }
 
 void hive::vk::RendererVulkan::useProgram(ShaderProgramHandle shader)
 {
+    use_program(shader);
 }
 
 bool hive::vk::RendererVulkan::createInstance(const Window& window)
