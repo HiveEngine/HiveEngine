@@ -1,9 +1,6 @@
 [submodule "HiveEngine/dep/glfw"]
 	path = HiveEngine/dep/glfw
 	url = https://github.com/glfw/glfw.git
-[submodule "HiveEngine/dep/entt"]
-	path = HiveEngine/dep/entt
-	url = https://github.com/skypjack/entt.git
 [submodule "HiveEngine/dep/glm"]
 	path = HiveEngine/dep/glm
 	url = https://github.com/g-truc/glm.git
@@ -13,3 +10,6 @@
 [submodule "HiveEngine/dep/easy_profiler"]
 	path = HiveEngine/dep/easy_profiler
 	url = https://github.com/yse/easy_profiler
+[submodule "HiveEngine/dep/HiveECS"]
+	path = HiveEngine/dep/HiveECS
+	url = https://github.com/GuillaumeIsCoding/HiveECS

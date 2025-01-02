@@ -5,7 +5,8 @@ set(PCH_SOURCE src/lypch.cpp ${PCH_HEADER})
 
 include_directories(src)
 
-#Dependencies
+# Dependencies
+
 add_subdirectory(dep/glfw)
 include_directories(dep/glfw/include)
 
@@ -15,19 +16,20 @@ include_directories(dep/glad/include)
 add_subdirectory(dep/glm)
 include_directories(dep/glm/glm)
 
-add_subdirectory(dep/entt)
-include_directories(dep/entt/single_include)
+set(HIVE_ECS_NO_TEST ON CACHE BOOL "Build HiveECS without test" FORCE)
+set(HIVE_ECS_NO_SANDBOX ON CACHE BOOL "Build HiveECS without a Sample" FORCE)
+
+add_subdirectory(dep/HiveECS)
+include_directories(dep/HiveECS/HiveECS)
 
 include_directories(dep/stb_image)
 add_library(stb_image STATIC dep/stb_image/stb_image.cpp)
 
-set(EASY_PROFILER_NO_GUI ON)
-set(EASY_PROFILER_NO_SAMPLES ON)
+set(EASY_PROFILER_NO_GUI ON CACHE BOOL "Disable GUI support in Easy Profiler" FORCE)
+set(EASY_PROFILER_NO_SAMPLES ON CACHE BOOL "Disable TEST support in Easy Profiler" FORCE)
 add_subdirectory(dep/easy_profiler)
 include_directories(dep/easy_profiler/easy_profiler_core)
 add_compile_definitions(BUILD_WITH_EASY_PROFILER)
-
-
 
 add_compile_definitions(HIVE_PLATFORM_GLFW)
 
@@ -50,5 +52,5 @@ else()
 endif ()
 
 add_library(HiveEngine ${CORE_SOURCES} ${PLATFORM_SOURCES} ${RENDERING_SOURCES} ${VENDOR_SOURCES} ${WINDOW_BACKEND} ${SCENE_SOURCES})
-target_link_libraries(HiveEngine glfw glad EnTT glm stb_image easy_profiler)
+target_link_libraries(HiveEngine glfw glad HiveECS glm stb_image easy_profiler)
 target_precompile_headers(HiveEngine PRIVATE ${PCH_HEADER})
