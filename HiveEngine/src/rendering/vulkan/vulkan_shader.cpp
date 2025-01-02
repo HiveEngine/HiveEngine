@@ -1,3 +1,4 @@
+#include <core/RessourceManager.h>
 #include <rendering/RendererPlatform.h>
 
 #ifdef HIVE_BACKEND_VULKAN_SUPPORTED
@@ -12,7 +13,7 @@ std::vector<char> readFile(const std::string &filename);
 VkShaderModule createShaderModule(const std::vector<char>& code, const hive::vk::VulkanDevice& device);
 
 
-hive::ShaderProgramHandle hive::vk::create_shader_program(const char *vertex_path, const char *fragment_path, const VulkanDevice& device, const VulkanSwapchain& swapchain)
+hive::ShaderProgramHandle hive::vk::create_shader_program(const char *vertex_path, const char *fragment_path, const VulkanDevice& device, const VulkanSwapchain& swapchain, const VkRenderPass& render_pass, RessourceManager<VulkanShader> &shaders_manager)
 {
     auto vert_src = readFile(vertex_path);
     auto frag_src = readFile(fragment_path);
@@ -110,15 +111,51 @@ hive::ShaderProgramHandle hive::vk::create_shader_program(const char *vertex_pat
         return {static_cast<u32>(-1)};
     }
 
+    VkGraphicsPipelineCreateInfo pipeline_create_info{};
+    pipeline_create_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+    pipeline_create_info.stageCount = 2;
+    pipeline_create_info.pStages = shaderStages;
+    pipeline_create_info.pVertexInputState = &vertexInputInfo;
+    pipeline_create_info.pInputAssemblyState = &inputAssembly;
+    pipeline_create_info.pViewportState = &viewportState;
+    pipeline_create_info.pRasterizationState = &rasterizer;
+    pipeline_create_info.pMultisampleState = &multisampling;
+    pipeline_create_info.pDepthStencilState = nullptr;
+    pipeline_create_info.pColorBlendState = &colorBlending;
+    pipeline_create_info.pDynamicState = &dynamicState;
+
+    pipeline_create_info.layout = pipelineLayout;
+    pipeline_create_info.renderPass = render_pass;
+    pipeline_create_info.subpass = 0;
+    pipeline_create_info.basePipelineHandle = VK_NULL_HANDLE;
+    pipeline_create_info.basePipelineIndex = -1;
+
+    VkPipeline graphics_pipeline;
+    if (vkCreateGraphicsPipelines(device.device_, VK_NULL_HANDLE, 1, &pipeline_create_info, nullptr,
+                                  &graphics_pipeline) !=
+        VK_SUCCESS)
+    {
+        return {static_cast<u32>(-1)};
+    }
 
     vkDestroyShaderModule(device.device_, vert_shader_module, nullptr);
     vkDestroyShaderModule(device.device_, frag_shader_module, nullptr);
 
 
+    VulkanShader shader{};
+    shader.layout = pipelineLayout;
+    shader.pipeline = graphics_pipeline;
+
+    u32 handle = shaders_manager.pushData(shader);
+    return {handle};
 }
 
-void hive::vk::destroy_program(ShaderProgramHandle shader)
+void hive::vk::destroy_program(ShaderProgramHandle shader,const VulkanDevice &device, RessourceManager<VulkanShader> &shader_manager)
 {
+    auto [pipeline, layout] = shader_manager.getData(shader.id);
+
+    vkDestroyPipelineLayout(device.device_, layout, nullptr);
+    vkDestroyPipeline(device.device_, pipeline, nullptr);
 }
 
 void hive::vk::use_program(ShaderProgramHandle shader)
@@ -147,7 +184,7 @@ std::vector<char> readFile(const std::string &filename)
 
 
 
-VkShaderModule createShaderModule(const std::vector<char>& code, const hive::vk::VulkanDevice& device);
+VkShaderModule createShaderModule(const std::vector<char>& code, const hive::vk::VulkanDevice& device)
 {
     VkShaderModuleCreateInfo createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;

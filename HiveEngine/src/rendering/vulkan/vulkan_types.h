@@ -35,6 +35,7 @@ namespace hive::vk
         i32 present_queue_index_{};
 
         VkQueue graphicsQueue_{};
+        VkQueue present_queue_{};
     };
 
     struct VulkanSwapchain
@@ -49,8 +50,13 @@ namespace hive::vk
 
         VkFormat format;
         VkExtent2D extent;
-
-
     };
+
+    struct VulkanShader
+    {
+        VkPipeline pipeline;
+        VkPipelineLayout layout;
+    };
+
 
 }

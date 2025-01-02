@@ -4,10 +4,8 @@
 namespace hive::vk
 {
     struct VulkanDevice;
-}
+    struct VulkanSwapchain;
 
-namespace hive::vk
-{
-    void create_renderpass(const VulkanDevice& device, VkRenderPass& renderpass);
+    bool create_renderpass(const VulkanDevice &device, const VulkanSwapchain &swapchain, VkRenderPass&renderpass);
     void destroy_renderpass(const VulkanDevice& device, VkRenderPass& renderpass);
 }

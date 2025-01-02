@@ -10,7 +10,7 @@ target_precompile_headers(hive PUBLIC src/hvpch.h)
 #glfw
 add_subdirectory(dep/glfw)
 target_link_libraries(hive PRIVATE glfw)
-target_include_directories(hive PRIVATE dep/glfw/include)
+target_include_directories(hive PUBLIC dep/glfw/include)
 
 
 #Vulkan
@@ -27,6 +27,6 @@ else()
 endif()
 
 option(VULKAN_SDK_PATH "Path to Vulkan SDK" ${DEFAULT_VULKAN_SDK_PATH})
-target_include_directories(hive PRIVATE ${VULKAN_SDK_PATH}/Include)
+target_include_directories(hive PUBLIC ${VULKAN_SDK_PATH}/Include)
 target_link_directories(hive PUBLIC ${VULKAN_SDK_PATH}/Lib)
 target_link_libraries(hive PUBLIC ${VULKAN_LIB_NAME})

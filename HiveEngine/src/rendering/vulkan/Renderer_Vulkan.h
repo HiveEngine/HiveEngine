@@ -2,13 +2,9 @@
 #include <rendering/Renderer.h>
 #include <vulkan/vulkan.h>
 #include "vulkan_types.h"
-
+#include <core/RessourceManager.h>
 namespace hive::vk
 {
-
-
-
-
     class RendererVulkan : public IRenderer
     {
     public:
@@ -35,13 +31,30 @@ namespace hive::vk
         bool createLogicalDevice();
         bool createSwapChain(const Window& window);
         bool createImageView();
+        bool createRenderPass();
+        bool createFramebuffer();
+        bool createCommandPool();
+        bool createCommandBuffer();
+        bool createSyncObject();
 
 
     protected:
         VkInstance instance_{};
         VkSurfaceKHR surface_{};
+        VkRenderPass render_pass_{};
         VulkanDevice device_{};
         VulkanSwapchain swapchain_{};
+        VkCommandPool command_pool_{};
+        VkCommandBuffer command_buffer_{};
+
+        VkSemaphore image_available_semaphore_;
+        VkSemaphore render_finished_semaphore_;
+        VkFence in_flight_fence_;
+
+        RessourceManager<VulkanShader> shaders_;
+
+
+        std::vector<VkFramebuffer> framebuffers_;
 
         bool is_ready_ = false;
 

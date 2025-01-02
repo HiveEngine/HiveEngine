@@ -9,12 +9,7 @@
 
 namespace hive::vk
 {
-    // bool is_device_suitable(const VkPhysicalDevice &device, const VkSurfaceKHR surface_khr,
-    //                       const PhysicalDeviceRequirements &requirements,
-    //                       PhysicalDeviceFamilyQueueInfo &out_familyQueueInfo)
-    // {
-    //
-    // }
+
     bool is_device_suitable(const VkPhysicalDevice &device, const VkSurfaceKHR &surface_khr, const PhysicalDeviceRequirements &requirements,
                           PhysicalDeviceFamilyQueueInfo &out_familyQueueInfo)
     {
@@ -133,6 +128,7 @@ namespace hive::vk
         if (result != VK_SUCCESS) return;
 
         vkGetDeviceQueue(device.device_, device.graphics_queue_index_, 0, &device.graphicsQueue_);
+        vkGetDeviceQueue(device.device_, device.present_queue_index_, 0, &device.present_queue_);
     }
 
     void pick_physical_device(const PhysicalDeviceRequirements& requirements, VulkanDevice& vulkan_device, const VkSurfaceKHR &surface, const VkInstance& instance)
