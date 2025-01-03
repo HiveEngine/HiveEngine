@@ -51,7 +51,6 @@ namespace hive::vk
         bool createDevice();
         bool createSwapChain(const Window& window);
         bool createRenderPass();
-        bool createGraphicsPipeline();
         bool createFramebuffers();
         bool createCommandPool();
         bool createCommandBuffer();
@@ -59,7 +58,6 @@ namespace hive::vk
 
         void recreateSwapChain();
         void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT &createInfo);
-        void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t uint32);
 
     public:
 
@@ -84,8 +82,6 @@ namespace hive::vk
         VkSemaphore image_available_semaphore_[MAX_FRAME_IN_FLIGHT], render_finished_semaphore_[MAX_FRAME_IN_FLIGHT];
         VkFence in_flight_fence_[MAX_FRAME_IN_FLIGHT];
 
-        VkPipelineLayout pipeline_layout_{};
-        VkPipeline graphics_pipeline_{};
 
         RessourceManager<Shader> shaders_manager_;
 

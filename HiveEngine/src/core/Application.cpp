@@ -18,6 +18,9 @@ hive::Application::~Application()
     RendererFactory::destroyRenderer(renderer_);
 }
 
+
+
+
 void hive::Application::run()
 {
     Memory::printMemoryUsage();

@@ -12,6 +12,11 @@ add_subdirectory(dep/glfw)
 target_link_libraries(hive PRIVATE glfw)
 target_include_directories(hive PUBLIC dep/glfw/include)
 
+#glm
+add_subdirectory(dep/glm)
+target_link_libraries(hive PRIVATE glm-header-only)
+target_include_directories(hive PUBLIC dep/glm)
+
 
 #Vulkan
 if(WIN32)

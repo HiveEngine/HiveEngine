@@ -122,7 +122,6 @@ namespace hive::vk
         VKQueueFamilyIndices indices = findQueueFamilies(physical_device, surface);
 
 
-        //TODO: check if we should put the required extension to another location
 
         bool extensionsSupported = checkDeviceExtensionSupport(physical_device, config.required_extensions);
 
