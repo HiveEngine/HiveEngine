@@ -47,6 +47,13 @@ void hive::Window::pollEvents()
     window_handle->pollEvents();
 }
 
+void hive::Window::waitEvents() const
+{
+    window_handle->waitEvents();
+}
+
+
+
 void hive::Window::getFramebufferSize(i32 &width, i32 &height) const
 {
    window_handle->getFramebufferSize(width, height);

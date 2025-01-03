@@ -1,43 +1,37 @@
 #include <rendering/RendererPlatform.h>
-
 #ifdef HIVE_BACKEND_VULKAN_SUPPORTED
-#include <core/Logger.h>
-#include "vulkan_types.h"
 #include "vulkan_framebuffer.h"
+#include "vulkan_swapchain.h"
+#include "vulkan_device.h"
+#include "vulkan_renderpass.h"
+#include <core/Logger.h>
 
-bool hive::vk::create_framebuffer(std::vector<VkFramebuffer> &framebuffers, const VulkanDevice &device, const VulkanSwapchain &swapchain, const VkRenderPass& render_pass)
+void hive::vk::create_framebuffer(const Device& device, const Swapchain& swapchain, const RenderPass& render_pass,  Framebuffer& framebuffer)
 {
-    framebuffers.resize(swapchain.image_view_count);
+    framebuffer.vk_framebuffers.resize(swapchain.image_views.size());
 
-    for(i32 i = 0; i < swapchain.image_view_count; i++)
+    for (size_t i = 0; i < swapchain.image_views.size(); i++)
     {
         VkImageView attachments[] = {
-            swapchain.image_view[i]
+            swapchain.image_views[i]
         };
 
         VkFramebufferCreateInfo framebufferInfo{};
         framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-        framebufferInfo.renderPass = render_pass;
+        framebufferInfo.renderPass = render_pass.vk_render_pass;
         framebufferInfo.attachmentCount = 1;
         framebufferInfo.pAttachments = attachments;
-        framebufferInfo.width = swapchain.extent.width;
-        framebufferInfo.height = swapchain.extent.height;
+        framebufferInfo.width = swapchain.extent_2d.width;
+        framebufferInfo.height = swapchain.extent_2d.height;
+        framebufferInfo.layers = 1;
 
-        if (vkCreateFramebuffer(device.device_, &framebufferInfo, nullptr, &framebuffers[i]) != VK_SUCCESS)
+        if (vkCreateFramebuffer(device.logical_device, &framebufferInfo, nullptr, &framebuffer.vk_framebuffers[i]) !=
+            VK_SUCCESS)
         {
-            LOG_ERROR("Could not create the framebuffer")
-            return false;
+            LOG_ERROR("failed to create framebuffer!");
+            break;
         }
     }
-
-    return true;
-}
-
-void hive::vk::destroy_framebuffer(const VulkanDevice &device, const VkFramebuffer &framebuffer)
-{
-    vkDestroyFramebuffer(device.device_, framebuffer, nullptr);
 }
 
 #endif
-
-

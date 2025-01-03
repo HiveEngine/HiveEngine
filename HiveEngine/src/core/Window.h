@@ -26,6 +26,7 @@ namespace hive
         [[nodiscard]] virtual u64 getSizeof() const = 0;
         [[nodiscard]] virtual bool shouldClose() const = 0;
         virtual void pollEvents() = 0;
+        virtual void waitEvents() const = 0;
         virtual void getFramebufferSize(i32& width, i32 &height) const = 0;
 
 #ifdef HIVE_BACKEND_VULKAN_SUPPORTED
@@ -43,6 +44,7 @@ namespace hive
 
         [[nodiscard]] bool shouldClose() const;
         void pollEvents();
+        void waitEvents() const ;
 
         void getFramebufferSize(i32& width, i32 &height) const;
 

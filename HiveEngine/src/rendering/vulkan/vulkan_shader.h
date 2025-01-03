@@ -1,18 +1,23 @@
 #pragma once
-#include <rendering/RenderType.h>
-#include <vulkan/vulkan_core.h>
 
-#include <core/RessourceManager.h>
+#include <vulkan/vulkan.h>
+#include <string>
 namespace hive::vk
 {
-    struct VulkanSwapchain;
-    struct VulkanShader;
-    struct VulkanDevice;
+    struct Shader
+    {
+        std::string vertex_path;
+        std::string fragment_path;
 
-    ShaderProgramHandle create_shader_program(const char* vertex_path, const char* fragment_path, const VulkanDevice& vulkan_device, const VulkanSwapchain& swapchain, const VkRenderPass& render_pass, RessourceManager<VulkanShader>& shaders_manager);
+        VkPipeline pipeline;
+        VkPipelineLayout layout;
+    };
 
-    void destroy_program(ShaderProgramHandle shader, const VulkanDevice &device,
-                         RessourceManager<VulkanShader> &shader_manager);
+    void create_shader(const VkDevice& device, const VkRenderPass &render_pass, Shader &shader);
 
-    void use_program(ShaderProgramHandle shader);
+    void destroy_shader(const VkDevice &device, const Shader &shader);
+
+
+    // VkShaderModule create_shader_module(VkDevice device, const std::vector<char>& code);
+    // void destroy_shader_module(VkDevice device, VkShaderModule module);
 }

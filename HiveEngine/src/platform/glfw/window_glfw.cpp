@@ -45,6 +45,11 @@ void hive::WindowGLFW::pollEvents()
     glfwPollEvents();
 }
 
+void hive::WindowGLFW::waitEvents() const
+{
+    glfwWaitEvents();
+}
+
 void hive::WindowGLFW::getFramebufferSize(i32 &width, i32 &height) const
 {
     glfwGetFramebufferSize(window_, &width, &height);

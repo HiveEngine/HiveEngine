@@ -1,11 +1,15 @@
 #pragma once
-#include <vulkan/vulkan.h>
 
 namespace hive::vk
 {
-    struct VulkanDevice;
-    struct VulkanSwapchain;
+    struct Device;
+    struct Swapchain;
 
-    bool create_renderpass(const VulkanDevice &device, const VulkanSwapchain &swapchain, VkRenderPass&renderpass);
-    void destroy_renderpass(const VulkanDevice& device, VkRenderPass& renderpass);
+    struct RenderPass
+    {
+        VkRenderPass vk_render_pass;
+
+    };
+
+    void create_render_pass(const Device &device, const Swapchain &swapchain, RenderPass &render_pass);
 }

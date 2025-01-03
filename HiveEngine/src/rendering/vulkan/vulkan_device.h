@@ -1,15 +1,50 @@
 #pragma once
-#include "vulkan_types.h"
-#include <vulkan/vulkan.h>
 
+#include <optional>
 #include <vector>
+#include <vulkan/vulkan.h>
 namespace hive::vk
 {
+    struct DeviceConfig
+    {
+        bool enable_validation_layers;
 
-    void pick_physical_device(const PhysicalDeviceRequirements& requirements, VulkanDevice& vulkan_device, const VkSurfaceKHR &surface, const VkInstance& instance);
+        std::vector<const char*> required_extensions = {
+            VK_KHR_SWAPCHAIN_EXTENSION_NAME
+        };
 
-    bool is_device_suitable(const VkPhysicalDevice &device, const VkSurfaceKHR &surface_khr, const PhysicalDeviceRequirements &requirements,
-                          PhysicalDeviceFamilyQueueInfo &out_familyQueueInfo);
+        std::vector<const char *> validation_layers = {
+            "VK_LAYER_KHRONOS_validation"
+        };
 
-    void create_logical_device(const VkInstance& instance, VulkanDevice& device);
+
+    };
+
+    struct Device
+    {
+
+        VkPhysicalDevice physical_device;
+        VkDevice logical_device;
+
+        VkQueue graphics_queue;
+        VkQueue present_queue;
+
+        VkCommandPool graphics_command_pool;
+
+    };
+
+    struct VKQueueFamilyIndices
+    {
+        std::optional<u32> graphicsFamily;
+        std::optional<u32> presentFamily;
+
+        [[nodiscard]] bool isComplete() const { return graphicsFamily.has_value() && presentFamily.has_value(); }
+    };
+
+
+
+    void create_device(const VkInstance &instance, const VkSurfaceKHR &surface_khr, Device &device);
+    void destroy_device(const Device &device);
+
+    VKQueueFamilyIndices findQueueFamilies(VkPhysicalDevice device, VkSurfaceKHR surface_khr);
 }

@@ -1,7 +1,7 @@
 #pragma once
 #include <optional>
 #include <rendering/Renderer.h>
-#include <rendering/vulkan_redo/VulkanRenderer.h>
+#include <rendering/vulkan/VulkanRenderer.h>
 
 #include "core/Memory.h"
 #include "core/Logger.h"
@@ -31,7 +31,7 @@ namespace hive
     private:
         Memory memory_;
         Window window_;
-        // IRenderer* renderer_;
-        vk::VulkanRenderer renderer_;
+        IRenderer* renderer_;
+        // vk::VulkanRenderer renderer_;
     };
 }

@@ -1,18 +1,17 @@
 #pragma once
-#include <hvpch.h>
 #include <vector>
 #include <vulkan/vulkan_core.h>
 
 namespace hive::vk
 {
-    struct VulkanDevice;
-    struct VulkanSwapchain;
-}
+    struct Swapchain;
+    struct RenderPass;
+    struct Device;
 
-namespace hive::vk
-{
-    bool create_framebuffer(std::vector<VkFramebuffer> &framebuffers, const VulkanDevice &device,
-                            const VulkanSwapchain &swapchain, const VkRenderPass &render_pass);
+    struct Framebuffer
+    {
+        std::vector<VkFramebuffer> vk_framebuffers;
+    };
 
-    void destroy_framebuffer(const VulkanDevice& device, const VkFramebuffer &framebuffer);
+    void create_framebuffer(const Device& device, const Swapchain& swapchain, const RenderPass& render_pass,  Framebuffer& framebuffer);
 }

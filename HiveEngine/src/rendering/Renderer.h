@@ -22,7 +22,8 @@ namespace hive
 
         [[nodiscard]] virtual bool isReady() const = 0;
 
-        virtual void beginDrawing() = 0;
+        virtual void temp_draw() = 0;
+        virtual bool beginDrawing() = 0;
         virtual void endDrawing() = 0;
         virtual void frame() = 0;
 

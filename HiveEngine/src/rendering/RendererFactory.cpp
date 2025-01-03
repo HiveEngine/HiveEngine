@@ -6,7 +6,7 @@
 #include "Renderer.h"
 
 
-#include <rendering/vulkan/Renderer_Vulkan.h>
+#include <rendering/vulkan/VulkanRenderer.h>
 
 bool hive::RendererFactory::createRenderer(const RendererConfig &config, IRenderer** out_renderer)
 {
@@ -14,7 +14,7 @@ bool hive::RendererFactory::createRenderer(const RendererConfig &config, IRender
     {
         case RendererConfig::Type::VULKAN:
         {
-            auto vulkan_renderer = Memory::createObject<vk::RendererVulkan, Memory::RENDERER>(*config.window);
+            auto vulkan_renderer = Memory::createObject<vk::VulkanRenderer, Memory::RENDERER>(*config.window);
             if (vulkan_renderer->isReady())
             {
                 *out_renderer = vulkan_renderer;
@@ -38,5 +38,5 @@ bool hive::RendererFactory::createRenderer(const RendererConfig &config, IRender
 
 void hive::RendererFactory::destroyRenderer(IRenderer *renderer)
 {
-    Memory::destroyObject<vk::RendererVulkan, Memory::RENDERER>(renderer);
+    Memory::destroyObject<vk::VulkanRenderer, Memory::RENDERER>(renderer);
 }
