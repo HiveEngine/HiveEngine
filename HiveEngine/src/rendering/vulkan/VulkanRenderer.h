@@ -10,6 +10,7 @@
 #include "vulkan_swapchain.h"
 #include <core/RessourceManager.h>
 
+#include "vulkan_buffer.h"
 #include "vulkan_shader.h"
 
 
@@ -63,6 +64,8 @@ namespace hive::vk
 
     protected:
         bool is_ready_ = false;
+        Buffer temp_vertex_buffer_;
+        Buffer temp_indices_buffer_;
         u32 imageIndex = 0;
         u32 current_frame = 0;
         VkInstance instance_{};

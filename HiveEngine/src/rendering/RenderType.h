@@ -7,6 +7,6 @@
 namespace hive
 {
     DEFINE_HANDLE(ShaderProgram);
-
+    DEFINE_HANDLE(VertexBuffer);
 
 }

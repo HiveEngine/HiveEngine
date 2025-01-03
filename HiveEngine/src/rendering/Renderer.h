@@ -30,6 +30,11 @@ namespace hive
         virtual ShaderProgramHandle createProgram(const char* vertex_path, const char* fragment_path) = 0;
         virtual void destroyProgram(ShaderProgramHandle shader) = 0;
         virtual void useProgram(ShaderProgramHandle shader) = 0;
+
+
+        // virtual VertexBufferHandle createVertexBuffer();
+        // virtual void destroyVertexBuffer(VertexBufferHandle buffer);
+        // virtual void useVertexBuffer(VertexBufferHandle buffer);
     };
 
 }

@@ -3,6 +3,7 @@
 using u8 = unsigned char;
 using u16 = unsigned short;
 using u32 = unsigned int;
+#define U32_MAX 0xffffffffU;
 using u64 = unsigned long long;
 
 using i8 = signed char;

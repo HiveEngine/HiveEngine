@@ -12,6 +12,7 @@
 #include <cstring>
 #include <rendering/vulkan/vulkan_renderpass.h>
 
+#include "vulkan_buffer.h"
 #include "vulkan_command_buffer.h"
 #include "vulkan_framebuffer.h"
 #include "vulkan_renderpass.h"
@@ -31,7 +32,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(VkDebugUtilsMessageSeverityF
     return VK_FALSE;
 }
 
-VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT *pCreateInfo,
+VkResult VKCreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT *pCreateInfo,
                                       const VkAllocationCallbacks *pAllocator,
                                       VkDebugUtilsMessengerEXT *pDebugMessenger)
 {
@@ -47,7 +48,6 @@ VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMes
 
 hive::vk::VulkanRenderer::VulkanRenderer(const Window &window) : window_(window)
 {
-
     DeviceConfig config;
     config.enable_validation_layers = true;
 
@@ -61,6 +61,52 @@ hive::vk::VulkanRenderer::VulkanRenderer(const Window &window) : window_(window)
     if (!createCommandPool()) return;
     if (!createCommandBuffer()) return;
     if (!createSyncObjects()) return;
+
+    std::vector<Vertex> vertices = {
+        {{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
+        {{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
+        {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
+        {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}}
+    };
+
+    std::vector<u16> indices = {
+        0, 1, 2, 2, 3, 0
+    };
+
+
+    //Vertex Buffer
+    VkDeviceSize vertex_size = sizeof(vertices[0]) * vertices.size();
+    Buffer staging_buffer{};
+    create_buffer(device_,
+                  VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                  VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                  staging_buffer,
+                  vertex_size); //Create a CPU buffer to put the vertex in it
+
+    fill_buffer_data(device_, staging_buffer, vertices.data(), vertex_size);
+
+    create_buffer(device_, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+                  VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, temp_vertex_buffer_, vertex_size); //Create a GPU buffer
+
+    copy_buffer_data(device_, staging_buffer, temp_vertex_buffer_, vertex_size); //Copy the CPU buffer into the GPU buffer
+
+    destroy_buffer(device_, staging_buffer); //Destroy the temp buffer we made
+
+    temp_vertex_buffer_.count = vertices.size();
+
+    //Index Buffer
+    VkDeviceSize indices_size = sizeof(indices[0]) * indices.size();
+    Buffer indices_staging_buffer{};
+    create_buffer(device_, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                  VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, indices_staging_buffer,
+                  indices_size);
+    fill_buffer_data(device_, indices_staging_buffer, indices.data(), indices_size);
+
+    create_buffer(device_, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+                  VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, temp_indices_buffer_, indices_size);
+    copy_buffer_data(device_, indices_staging_buffer, temp_indices_buffer_, indices_size);
+    destroy_buffer(device_, indices_staging_buffer);
+    temp_indices_buffer_.count = indices.size();
 
     is_ready_ = true;
 }
@@ -77,18 +123,7 @@ bool hive::vk::VulkanRenderer::isReady() const
     return is_ready_;
 }
 
-#include <glm/glm.hpp>
-struct Vertex
-{
-    glm::vec2 pos;
-    glm::vec3 color;
-};
 
-const std::vector<Vertex> vertices = {
-    {{0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}},
-    {{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
-    {{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}
-};
 
 void hive::vk::VulkanRenderer::temp_draw()
 {
@@ -106,7 +141,12 @@ void hive::vk::VulkanRenderer::temp_draw()
     scissor.extent = swapchain_.extent_2d;
     vkCmdSetScissor(command_buffers_[current_frame], 0, 1, &scissor);
 
-    vkCmdDraw(command_buffers_[current_frame], 3, 1, 0, 0);
+    VkBuffer vertexBuffers[] = {temp_vertex_buffer_.vk_buffer};
+    VkDeviceSize offsets[] = {0};
+    vkCmdBindVertexBuffers(command_buffers_[current_frame], 0, 1, vertexBuffers, offsets);
+
+    vkCmdBindIndexBuffer(command_buffers_[current_frame], temp_indices_buffer_.vk_buffer, 0, VK_INDEX_TYPE_UINT16);
+    vkCmdDrawIndexed(command_buffers_[current_frame], temp_indices_buffer_.count, 1, 0, 0, 0);
 }
 
 bool hive::vk::VulkanRenderer::beginDrawing()
@@ -292,7 +332,7 @@ bool hive::vk::VulkanRenderer::setupDebugMessenger()
     VkDebugUtilsMessengerCreateInfoEXT createInfo;
     populateDebugMessengerCreateInfo(createInfo);
 
-    if (CreateDebugUtilsMessengerEXT(instance_, &createInfo, nullptr, &debugMessenger) != VK_SUCCESS) {
+    if (VKCreateDebugUtilsMessengerEXT(instance_, &createInfo, nullptr, &debugMessenger) != VK_SUCCESS) {
         LOG_ERROR("Failed to setup debug messenger");
         return false;
     }
