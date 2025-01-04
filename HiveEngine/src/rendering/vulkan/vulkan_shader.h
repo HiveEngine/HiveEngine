@@ -1,10 +1,13 @@
 #pragma once
 #include <vulkan/vulkan.h>
+
 namespace hive::vk
 {
     struct VulkanDevice;
 
     bool create_shader_module(const VulkanDevice& device, const char* path, VkShaderModule &out_module);
+
+    void destroy_shader_module(const VulkanDevice& device, VkShaderModule &module);
 
 
     enum class StageType

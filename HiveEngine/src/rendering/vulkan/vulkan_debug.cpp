@@ -43,6 +43,16 @@ VkResult hive::vk::VKCreateDebugUtilsMessengerEXT(VkInstance instance, const VkD
     }
 }
 
+void hive::vk::destroy_debug_util_mesenger(const VkInstance &instance, VkDebugUtilsMessengerEXT &debug_messenger)
+{
+    auto func = (PFN_vkDestroyDebugUtilsMessengerEXT) vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT");
+    if (func != nullptr) {
+        func(instance, debug_messenger, nullptr);
+    }
+
+    debug_messenger = VK_NULL_HANDLE;
+}
+
 bool hive::vk::setup_debug_messenger(const VkInstance &instance, VkDebugUtilsMessengerEXT&debugMessenger)
 {
     VkDebugUtilsMessengerCreateInfoEXT createInfo;

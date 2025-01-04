@@ -43,6 +43,12 @@ namespace hive::vk
         return true;
     }
 
+    void destroy_shader_module(const VulkanDevice &device, VkShaderModule &module)
+    {
+        vkDestroyShaderModule(device.logical_device, module, nullptr);
+        module = VK_NULL_HANDLE;
+    }
+
     VkPipelineShaderStageCreateInfo create_stage_info(const VkShaderModule &shader_module, const StageType type)
     {
         VkPipelineShaderStageCreateInfo create_info{};

@@ -34,9 +34,10 @@ namespace hive::vk
         return true;
     }
 
-    void destroy_device(const VkDevice &device)
+    void destroy_device(VulkanDevice &device)
     {
-        vkDestroyDevice(device, nullptr);
+        vkDestroyDevice(device.logical_device, nullptr);
+        device.logical_device = VK_NULL_HANDLE;
     }
 
 

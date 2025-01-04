@@ -92,6 +92,24 @@ namespace hive::vk
         return create_image_view(device, out_swapchain);
     }
 
+    void destroy_swapchain(const VulkanDevice &device, VulkanSwapchain &swapchain)
+    {
+
+        for(auto image_view : swapchain.image_views)
+        {
+            vkDestroyImageView(device.logical_device, image_view, nullptr);
+        }
+
+        vkDestroySwapchainKHR(device.logical_device, swapchain.vk_swapchain, nullptr);
+
+    }
+
+    void destroy_surface(const VkInstance &instance, VkSurfaceKHR&surface_khr)
+    {
+        vkDestroySurfaceKHR(instance, surface_khr, nullptr);
+        surface_khr = VK_NULL_HANDLE;
+    }
+
     VkSurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR> &availableFormats)
     {
         for (const auto &availableFormat: availableFormats)

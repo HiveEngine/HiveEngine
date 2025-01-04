@@ -10,5 +10,5 @@ namespace hive::vk
 namespace hive::vk
 {
     bool create_device(const VkInstance& instance, const VkSurfaceKHR& surface_khr, VulkanDevice& device);
-    void destroy_device(const VkDevice& device);
+    void destroy_device(VulkanDevice &device);
 }

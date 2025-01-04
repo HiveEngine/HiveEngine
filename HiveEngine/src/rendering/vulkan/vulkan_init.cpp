@@ -72,6 +72,12 @@ namespace hive::vk
         return true;
     }
 
+    void destroy_instance(VkInstance&instance)
+    {
+        vkDestroyInstance(instance, nullptr);
+        instance = VK_NULL_HANDLE;
+
+    }
 
 
     void get_required_extensions(VkInstanceCreateInfo& create_info, const Window& window)

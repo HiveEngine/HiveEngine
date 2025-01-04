@@ -44,10 +44,37 @@ hive::vk::VkRenderer::VkRenderer(const Window& window)
         VkPipelineShaderStageCreateInfo stages[] = {vert_stage, frag_stage};
 
         if (!create_graphics_pipeline(device_, render_pass_, stages, 2, default_pipeline_)) return;
+
+        destroy_shader_module(device_, vert_module);
+        destroy_shader_module(device_, frag_module);
     }
 
     is_ready_ = true;
 }
+
+hive::vk::VkRenderer::~VkRenderer()
+{
+    vkDeviceWaitIdle(device_.logical_device);
+
+    destroy_swapchain(device_, swapchain_);
+    destroy_graphics_pipeline(device_, default_pipeline_);
+    destroy_renderpass(device_, render_pass_);
+    destroy_framebuffer(device_, framebuffer_);
+    destroy_semaphores(device_, sem_image_available_, MAX_FRAME_IN_FLIGHT);
+    destroy_semaphores(device_, sem_render_finished_, MAX_FRAME_IN_FLIGHT);
+    destroy_fences(device_, fence_in_flight_, MAX_FRAME_IN_FLIGHT);
+    destroy_command_pool(device_);
+
+    //debug messenger if in debug mode
+    if(config::enable_validation)
+    {
+        destroy_debug_util_mesenger(instance_, debugMessenger);
+    }
+
+    destroy_device(device_);
+    destroy_surface(instance_, surface_khr_);
+}
+
 
 bool hive::vk::VkRenderer::isReady() const
 {

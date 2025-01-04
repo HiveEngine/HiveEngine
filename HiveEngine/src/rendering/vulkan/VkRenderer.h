@@ -6,10 +6,11 @@
 
 namespace hive::vk
 {
-    class VkRenderer : IRenderer
+    class VkRenderer : public IRenderer
     {
     public:
-        VkRenderer(const Window& window);
+        explicit VkRenderer(const Window& window);
+        ~VkRenderer();
 
         [[nodiscard]] bool isReady() const override;
 

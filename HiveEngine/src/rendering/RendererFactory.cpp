@@ -7,6 +7,7 @@
 
 
 // #include <rendering/vulkan/VulkanRenderer.h>
+#include <rendering/vulkan/VkRenderer.h>
 
 bool hive::RendererFactory::createRenderer(const RendererConfig &config, IRenderer** out_renderer)
 {
@@ -14,12 +15,12 @@ bool hive::RendererFactory::createRenderer(const RendererConfig &config, IRender
     {
         case RendererConfig::Type::VULKAN:
         {
-            // auto vulkan_renderer = Memory::createObject<vk::VulkanRenderer, Memory::RENDERER>(*config.window);
-            // if (vulkan_renderer->isReady())
-            // {
-            //     *out_renderer = vulkan_renderer;
-            return true;
-            // }
+            auto vulkan_renderer = Memory::createObject<vk::VkRenderer, Memory::RENDERER>(*config.window);
+            if (vulkan_renderer->isReady())
+            {
+                *out_renderer = vulkan_renderer;
+                return true;
+            }
             LOG_ERROR("Failed to create Vulkan renderer");
         }
         case RendererConfig::Type::OPENGL:
@@ -38,5 +39,5 @@ bool hive::RendererFactory::createRenderer(const RendererConfig &config, IRender
 
 void hive::RendererFactory::destroyRenderer(IRenderer *renderer)
 {
-    // Memory::destroyObject<vk::VulkanRenderer, Memory::RENDERER>(renderer);
+    Memory::destroyObject<vk::VkRenderer, Memory::RENDERER>(renderer);
 }

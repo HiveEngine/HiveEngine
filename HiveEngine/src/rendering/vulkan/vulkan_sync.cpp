@@ -46,5 +46,20 @@ namespace hive::vk
         return true;
     }
 
+    void destroy_semaphores(const VulkanDevice &device, const VkSemaphore*semaphore, const u32 count)
+    {
+        for(i32 i = 0; i < count; i++)
+        {
+            vkDestroySemaphore(device.logical_device, semaphore[i], nullptr);
+        }
+    }
+
+    void destroy_fences(const VulkanDevice &device, const VkFence *fence, u32 count)
+    {
+        for (i32 i = 0; i < count; i++)
+        {
+            vkDestroyFence(device.logical_device, fence[i], nullptr);
+        }
+    }
 }
 #endif

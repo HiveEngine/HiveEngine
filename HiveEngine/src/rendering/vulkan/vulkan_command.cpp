@@ -42,5 +42,11 @@ namespace hive::vk
 
         return true;
     }
+
+    void destroy_command_pool(VulkanDevice &device)
+    {
+        vkDestroyCommandPool(device.logical_device, device.graphics_command_pool, nullptr);
+        device.graphics_command_pool = VK_NULL_HANDLE;
+    }
 }
 #endif

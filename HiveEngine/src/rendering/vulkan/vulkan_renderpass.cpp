@@ -86,5 +86,18 @@ namespace hive::vk
 
         return true;
     }
+
+    void destroy_renderpass(const VulkanDevice &device, const VkRenderPass&render_pass)
+    {
+        vkDestroyRenderPass(device.logical_device, render_pass, nullptr);
+    }
+
+    void destroy_framebuffer(const VulkanDevice &device, VulkanFramebuffer framebuffer)
+    {
+        for(i32 i = 0; i < framebuffer.framebuffers.size(); i++)
+        {
+            vkDestroyFramebuffer(device.logical_device, framebuffer.framebuffers[i], nullptr);
+        }
+    }
 }
 #endif

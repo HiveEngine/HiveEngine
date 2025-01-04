@@ -100,5 +100,11 @@ namespace hive::vk
 
         return true;
     }
+
+    void destroy_graphics_pipeline(const VulkanDevice &device, VulkanPipeline &pipeline)
+    {
+        vkDestroyPipelineLayout(device.logical_device, pipeline.pipeline_layout, nullptr);
+        vkDestroyPipeline(device.logical_device, pipeline.vk_pipeline, nullptr);
+    }
 }
 #endif

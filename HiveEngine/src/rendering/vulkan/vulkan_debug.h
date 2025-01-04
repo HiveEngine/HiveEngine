@@ -15,4 +15,6 @@ namespace hive::vk
                                             const VkDebugUtilsMessengerCreateInfoEXT *pCreateInfo,
                                             const VkAllocationCallbacks *pAllocator,
                                             VkDebugUtilsMessengerEXT *pDebugMessenger);
+
+    void destroy_debug_util_mesenger(const VkInstance& instance, VkDebugUtilsMessengerEXT& debug_messenger);
 }

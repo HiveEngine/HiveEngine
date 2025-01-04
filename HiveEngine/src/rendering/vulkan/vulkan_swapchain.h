@@ -15,4 +15,7 @@ namespace hive::vk
 
     bool create_swapchain(const VulkanDevice &device, const VkSurfaceKHR &surface_khr, const Window &window,
                           VulkanSwapchain &out_swapchain);
+
+    void destroy_swapchain(const VulkanDevice &device, VulkanSwapchain& swapchain);
+    void destroy_surface(const VkInstance& instance, VkSurfaceKHR& surface_khr);
 }

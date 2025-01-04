@@ -32,7 +32,6 @@ namespace hive
         Memory memory_;
         Window window_;
         IRenderer* renderer_;
-        vk::VkRenderer vk_renderer_;
         // vk::VulkanRenderer renderer_;
     };
 }
