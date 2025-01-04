@@ -31,6 +31,8 @@ namespace hive
         virtual void destroyProgram(ShaderProgramHandle shader) = 0;
         virtual void useProgram(ShaderProgramHandle shader) = 0;
 
+        virtual void createShaderLayout() = 0;
+
 
         // virtual VertexBufferHandle createVertexBuffer();
         // virtual void destroyVertexBuffer(VertexBufferHandle buffer);

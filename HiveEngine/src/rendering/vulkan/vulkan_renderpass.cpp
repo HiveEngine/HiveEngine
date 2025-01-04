@@ -2,15 +2,14 @@
 
 #ifdef HIVE_BACKEND_VULKAN_SUPPORTED
 #include <core/Logger.h>
-
-#include "vulkan_swapchain.h"
-#include "vulkan_device.h"
 #include "vulkan_renderpass.h"
+#include "vulkan_types.h"
+
 #include <vulkan/vulkan.h>
 
 namespace hive::vk
 {
-    void create_render_pass(const Device& device, const Swapchain& swapchain, RenderPass& render_pass)
+    bool create_renderpass(const VulkanDevice& device, const VulkanSwapchain& swapchain, VkRenderPass &out_renderpass)
     {
         VkAttachmentDescription colorAttachment{};
         colorAttachment.format = swapchain.image_format;
@@ -48,10 +47,44 @@ namespace hive::vk
         renderPassInfo.dependencyCount = 1;
         renderPassInfo.pDependencies = &dependency;
 
-        if (vkCreateRenderPass(device.logical_device, &renderPassInfo, nullptr, &render_pass.vk_render_pass) != VK_SUCCESS)
+        if (vkCreateRenderPass(device.logical_device, &renderPassInfo, nullptr, &out_renderpass) !=
+            VK_SUCCESS)
         {
             LOG_ERROR("failed to create render pass!");
+            return false;
         }
+        return true;
+    }
+
+    bool create_framebuffer(const VulkanDevice& device, const VulkanSwapchain& swapchain, const VkRenderPass& render_pass, VulkanFramebuffer& framebuffer)
+    {
+        framebuffer.framebuffers.resize(swapchain.image_views.size());
+
+        for (size_t i = 0; i < swapchain.image_views.size(); i++)
+        {
+            VkImageView attachments[] = {
+                swapchain.image_views[i]
+            };
+
+            VkFramebufferCreateInfo framebufferInfo{};
+            framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+            framebufferInfo.renderPass = render_pass;
+            framebufferInfo.attachmentCount = 1;
+            framebufferInfo.pAttachments = attachments;
+            framebufferInfo.width = swapchain.extent_2d.width;
+            framebufferInfo.height = swapchain.extent_2d.height;
+            framebufferInfo.layers = 1;
+
+            if (vkCreateFramebuffer(device.logical_device, &framebufferInfo, nullptr,
+                                    &framebuffer.framebuffers[i]) !=
+                VK_SUCCESS)
+            {
+                LOG_ERROR("failed to create framebuffer!");
+                return false;
+            }
+        }
+
+        return true;
     }
 }
 #endif
