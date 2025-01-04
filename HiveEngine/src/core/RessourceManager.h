@@ -6,58 +6,55 @@
 namespace hive
 {
     template<typename T>
+    struct IsValidHandle
+    {
+        static constexpr bool value = std::is_same_v<decltype(T::id), u32>;
+    };
+
+    template<typename Data_T, typename Handle_T>
     class RessourceManager
     {
+        static_assert(IsValidHandle<Handle_T>::value, "Handle_T must be a proper handle with a property id of type u32");
     public:
-        T& getData(u32 id);
-        i32 getAvailableId();
-        u32 pushData(T data);
-        void clearData(i32 id);
+        Data_T& getData(Handle_T id);
+        Handle_T getAvailableId();
+        u32 pushData(Data_T data);
+        void clearData(Handle_T id);
 
 
         i32 size();
 
     private:
-        std::vector<T> data_;
-        std::stack<i32> available_data_slot_;
+        std::vector<Data_T> data_;
+        std::stack<Handle_T> available_data_slot_;
     };
 
-    template<typename T>
-    T& RessourceManager<T>::getData(u32 id)
+    template<typename Data_T, typename Handle_T>
+    Data_T & RessourceManager<Data_T, Handle_T>::getData(Handle_T id)
     {
-        return data_[id];
+        return data_[id.id];
     }
 
-    template<typename T>
-    i32 RessourceManager<T>::getAvailableId()
+    template<typename Data_T, typename Handle_T>
+    Handle_T RessourceManager<Data_T, Handle_T>::getAvailableId()
     {
-        if(available_data_slot_.empty())
-        {
-            return -1;
-        }
-
-        i32 id = available_data_slot_.top();
-        available_data_slot_.pop();
-        return id;
+        return {0};
     }
 
-    template<typename T>
-    u32 RessourceManager<T>::pushData(T data)
+    template<typename Data_T, typename Handle_T>
+    u32 RessourceManager<Data_T, Handle_T>::pushData(Data_T data)
     {
-        data_.emplace_back(data);
-        return data_.size() - 1;
+        return 0;
     }
 
-
-    template<typename T>
-    void RessourceManager<T>::clearData(i32 id)
+    template<typename Data_T, typename Handle_T>
+    void RessourceManager<Data_T, Handle_T>::clearData(Handle_T id)
     {
-        available_data_slot_.push(id);
+
     }
 
-    template<typename T>
-    i32 RessourceManager<T>::size()
+    template<typename Data_T, typename Handle_T>
+    i32 RessourceManager<Data_T, Handle_T>::size()
     {
-        return data_.size();
     }
 }

@@ -3,6 +3,7 @@
 #include <vulkan/vulkan.h>
 
 #include "vulkan_types.h"
+#include <core/RessourceManager.h>
 
 namespace hive::vk
 {
@@ -57,6 +58,7 @@ namespace hive::vk
 
         VulkanPipeline default_pipeline_{};
 
+        RessourceManager<VulkanPipeline, ShaderProgramHandle> shaders;
 
     };
 }
