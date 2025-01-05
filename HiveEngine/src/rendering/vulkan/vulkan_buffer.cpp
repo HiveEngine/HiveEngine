@@ -13,7 +13,11 @@ namespace hive::vk
     bool findMemoryType(const VulkanDevice &device, u32 typeFilter, VkMemoryPropertyFlags properties, u32 &out_index);
 
 
-    bool create_buffer(const VulkanDevice &device, VkBufferUsageFlags usage_flags, u32 size, VulkanBuffer &out_buffer)
+    bool create_buffer(const VulkanDevice &device,
+                       VkBufferUsageFlags usage_flags,
+                       VkMemoryPropertyFlags memory_property_flags,
+                       u32 size,
+                       VulkanBuffer &out_buffer)
     {
         VkBufferCreateInfo create_info{};
         create_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -32,7 +36,7 @@ namespace hive::vk
 
         u32 memory_type_index;
         if (!findMemoryType(device, memRequirements.memoryTypeBits,
-                           VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                           memory_property_flags,
                            memory_type_index))
         {
             LOG_ERROR("Vulkan: failed to find visible memory type");
@@ -67,9 +71,45 @@ namespace hive::vk
     {
         void* local_data;
         vkMapMemory(device.logical_device, buffer.vk_buffer_memory, 0, size, 0, &local_data);
-        memcpy(data, data, size);
+        memcpy(local_data, data, size);
         vkUnmapMemory(device.logical_device, buffer.vk_buffer_memory);
 
+    }
+
+    void buffer_copy(const VulkanDevice& device, VulkanBuffer &src, VulkanBuffer &dst, u32 size)
+    {
+        VkCommandBufferAllocateInfo allocInfo{};
+        allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+        allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+        allocInfo.commandPool = device.graphics_command_pool;
+        allocInfo.commandBufferCount = 1;
+
+        VkCommandBuffer commandBuffer;
+        vkAllocateCommandBuffers(device.logical_device, &allocInfo, &commandBuffer);
+
+        VkCommandBufferBeginInfo beginInfo{};
+        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+        vkBeginCommandBuffer(commandBuffer, &beginInfo);
+
+        VkBufferCopy copyRegion{};
+        copyRegion.srcOffset = 0; // Optional
+        copyRegion.dstOffset = 0; // Optional
+        copyRegion.size = size;
+        vkCmdCopyBuffer(commandBuffer, src.vk_buffer, dst.vk_buffer, 1, &copyRegion);
+
+        vkEndCommandBuffer(commandBuffer);
+
+        VkSubmitInfo submitInfo{};
+        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submitInfo.commandBufferCount = 1;
+        submitInfo.pCommandBuffers = &commandBuffer;
+
+        vkQueueSubmit(device.graphics_queue, 1, &submitInfo, VK_NULL_HANDLE);
+        vkQueueWaitIdle(device.graphics_queue);
+
+        vkFreeCommandBuffers(device.logical_device, device.graphics_command_pool, 1, &commandBuffer);
     }
 
     bool findMemoryType(const VulkanDevice &device, u32 typeFilter, VkMemoryPropertyFlags properties, u32 &out_index)

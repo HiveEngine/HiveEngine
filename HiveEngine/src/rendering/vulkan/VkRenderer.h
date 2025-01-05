@@ -58,6 +58,7 @@ namespace hive::vk
 
         VulkanPipeline default_pipeline_{};
         VulkanBuffer vertex_buffer_{};
+        VulkanBuffer index_buffer_{};
 
         RessourceManager<VulkanPipeline, ShaderProgramHandle> shaders;
 

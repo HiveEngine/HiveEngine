@@ -15,10 +15,17 @@
 #include "vulkan_pipeline.h"
 #include "vulkan_buffer.h"
 std::vector<hive::vk::Vertex> vertices = {
-    {{0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}},
-    {{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
-    {{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}
+    {{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
+    {{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
+    {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
+    {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}}
 };
+
+std::vector<u16> indices = {
+    0, 1, 2, 2, 3, 0
+};
+
+
 hive::vk::VkRenderer::VkRenderer(const Window& window)
 {
     if(!create_instance(instance_, window)) return;
@@ -35,7 +42,7 @@ hive::vk::VkRenderer::VkRenderer(const Window& window)
         || !create_semaphore(device_, sem_render_finished_, MAX_FRAME_IN_FLIGHT)
         || !create_fence(device_, fence_in_flight_, MAX_FRAME_IN_FLIGHT, true)) return;
 
-    //End if init the rest is temporary
+    //the rest is temporary
     {
         VkShaderModule vert_module;
         VkShaderModule frag_module;
@@ -52,10 +59,21 @@ hive::vk::VkRenderer::VkRenderer(const Window& window)
         destroy_shader_module(device_, vert_module);
         destroy_shader_module(device_, frag_module);
 
+        //Vertex buffer
+        VulkanBuffer temp_vertex_buffer;
+        create_buffer(device_,  VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, vertices.size() * sizeof(vertices[0]), temp_vertex_buffer);
+        buffer_fill_data(device_, temp_vertex_buffer, vertices.data(), vertices.size() * sizeof(vertices[0]));
+        create_buffer(device_, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, vertices.size() * sizeof(vertices[0]), vertex_buffer_);
+        buffer_copy(device_, temp_vertex_buffer, vertex_buffer_, vertices.size() * sizeof(vertices[0]));
+        destroy_buffer(device_, temp_vertex_buffer);
 
-        create_buffer(device_, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, vertices.size() * sizeof(vertices[0]), vertex_buffer_);
-        buffer_fill_data(device_, vertex_buffer_, vertices.data(), vertices.size() * sizeof(vertices[0]));
-
+        //Index buffer
+        VulkanBuffer temp_index_buffer;
+        create_buffer(device_,  VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, indices.size() * sizeof(indices[0]), temp_index_buffer);
+        buffer_fill_data(device_, temp_index_buffer, indices.data(), indices.size() * sizeof(indices[0]));
+        create_buffer(device_,  VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,  VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, indices.size() * sizeof(indices[0]), index_buffer_);
+        buffer_copy(device_, temp_index_buffer, index_buffer_, indices.size() * sizeof(indices[0]));
+        destroy_buffer(device_, temp_index_buffer);
     }
 
     is_ready_ = true;
@@ -64,7 +82,12 @@ hive::vk::VkRenderer::VkRenderer(const Window& window)
 hive::vk::VkRenderer::~VkRenderer()
 {
     vkDeviceWaitIdle(device_.logical_device);
-    destroy_buffer(device_, vertex_buffer_);
+    //Temporary
+    {
+        destroy_buffer(device_, vertex_buffer_);
+        destroy_buffer(device_, index_buffer_);
+
+    }
 
     destroy_swapchain(device_, swapchain_);
     destroy_graphics_pipeline(device_, default_pipeline_);
@@ -134,8 +157,10 @@ void hive::vk::VkRenderer::recordCommandBuffer(VkCommandBuffer command_buffer, u
     VkBuffer vertexBuffers[] = {vertex_buffer_.vk_buffer};
     VkDeviceSize offsets[] = {0};
     vkCmdBindVertexBuffers(command_buffer, 0, 1, vertexBuffers, offsets);
+    vkCmdBindIndexBuffer(command_buffer, index_buffer_.vk_buffer, 0, VK_INDEX_TYPE_UINT16);
     // vkCmdDraw(command_buffer, 3, 1, 0, 0);
-    vkCmdDraw(command_buffer, static_cast<uint32_t>(vertices.size()), 1, 0, 0);
+    // vkCmdDraw(command_buffer, static_cast<uint32_t>(vertices.size()), 1, 0, 0);
+    vkCmdDrawIndexed(command_buffer, indices.size(), 1, 0, 0, 0);
 
     vkCmdEndRenderPass(command_buffer);
 
