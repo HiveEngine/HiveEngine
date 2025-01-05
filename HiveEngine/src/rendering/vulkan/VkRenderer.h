@@ -25,11 +25,11 @@ namespace hive::vk
 
         void frame() override;
 
-        ::hive::ShaderProgramHandle createProgram(const char *vertex_path, const char *fragment_path) override;
+        ShaderProgramHandle createProgram(const char *vertex_path, const char *fragment_path) override;
 
-        void destroyProgram(::hive::ShaderProgramHandle shader) override;
+        void destroyProgram(ShaderProgramHandle shader) override;
 
-        void useProgram(::hive::ShaderProgramHandle shader) override;
+        void useProgram(ShaderProgramHandle shader) override;
 
         void createShaderLayout() override;
 
@@ -57,6 +57,7 @@ namespace hive::vk
 
 
         VulkanPipeline default_pipeline_{};
+        VulkanBuffer vertex_buffer_{};
 
         RessourceManager<VulkanPipeline, ShaderProgramHandle> shaders;
 

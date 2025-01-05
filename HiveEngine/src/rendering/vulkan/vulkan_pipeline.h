@@ -1,6 +1,7 @@
 #pragma once
 #include <vulkan/vulkan.h>
-
+#include <vector>
+#include <glm/glm.hpp>
 
 namespace hive::vk
 {
@@ -15,4 +16,12 @@ namespace hive::vk
                                   VulkanPipeline &pipeline);
 
     void destroy_graphics_pipeline(const VulkanDevice &device, VulkanPipeline &pipeline);
+
+    struct Vertex {
+        glm::vec2 pos;
+        glm::vec3 color;
+    };
+
+
+
 }

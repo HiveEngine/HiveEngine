@@ -1,7 +1,6 @@
 #include <rendering/RendererPlatform.h>
 
 
-
 #ifdef HIVE_BACKEND_VULKAN_SUPPORTED
 #include "VkRenderer.h"
 
@@ -14,7 +13,12 @@
 #include "vulkan_sync.h"
 #include "vulkan_shader.h"
 #include "vulkan_pipeline.h"
-
+#include "vulkan_buffer.h"
+std::vector<hive::vk::Vertex> vertices = {
+    {{0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}},
+    {{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
+    {{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}
+};
 hive::vk::VkRenderer::VkRenderer(const Window& window)
 {
     if(!create_instance(instance_, window)) return;
@@ -47,6 +51,11 @@ hive::vk::VkRenderer::VkRenderer(const Window& window)
 
         destroy_shader_module(device_, vert_module);
         destroy_shader_module(device_, frag_module);
+
+
+        create_buffer(device_, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, vertices.size() * sizeof(vertices[0]), vertex_buffer_);
+        buffer_fill_data(device_, vertex_buffer_, vertices.data(), vertices.size() * sizeof(vertices[0]));
+
     }
 
     is_ready_ = true;
@@ -55,6 +64,7 @@ hive::vk::VkRenderer::VkRenderer(const Window& window)
 hive::vk::VkRenderer::~VkRenderer()
 {
     vkDeviceWaitIdle(device_.logical_device);
+    destroy_buffer(device_, vertex_buffer_);
 
     destroy_swapchain(device_, swapchain_);
     destroy_graphics_pipeline(device_, default_pipeline_);
@@ -71,8 +81,9 @@ hive::vk::VkRenderer::~VkRenderer()
         destroy_debug_util_mesenger(instance_, debugMessenger);
     }
 
-    destroy_device(device_);
     destroy_surface(instance_, surface_khr_);
+    destroy_device(device_);
+    destroy_instance(instance_);
 }
 
 
@@ -105,6 +116,7 @@ void hive::vk::VkRenderer::recordCommandBuffer(VkCommandBuffer command_buffer, u
 
     vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, default_pipeline_.vk_pipeline);
 
+
     VkViewport viewport{};
     viewport.x = 0.0f;
     viewport.y = 0.0f;
@@ -119,7 +131,11 @@ void hive::vk::VkRenderer::recordCommandBuffer(VkCommandBuffer command_buffer, u
     scissor.extent = swapchain_.extent_2d;
     vkCmdSetScissor(command_buffer, 0, 1, &scissor);
 
-    vkCmdDraw(command_buffer, 3, 1, 0, 0);
+    VkBuffer vertexBuffers[] = {vertex_buffer_.vk_buffer};
+    VkDeviceSize offsets[] = {0};
+    vkCmdBindVertexBuffers(command_buffer, 0, 1, vertexBuffers, offsets);
+    // vkCmdDraw(command_buffer, 3, 1, 0, 0);
+    vkCmdDraw(command_buffer, static_cast<uint32_t>(vertices.size()), 1, 0, 0);
 
     vkCmdEndRenderPass(command_buffer);
 

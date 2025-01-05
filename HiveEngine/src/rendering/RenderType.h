@@ -1,6 +1,5 @@
 #pragma once
 #include <hvpch.h>
-#include <vector>
 
 #define DEFINE_HANDLE(_name) struct _name##Handle {u32 id; }
 
