@@ -2,7 +2,11 @@
 
 
 #ifdef HIVE_BACKEND_VULKAN_SUPPORTED
+#include <chrono>
+#include <glm/gtc/matrix_transform.hpp>
+
 #include "VkRenderer.h"
+#include <core/Logger.h>
 
 #include "vulkan_init.h"
 #include "vulkan_debug.h"
@@ -14,6 +18,7 @@
 #include "vulkan_shader.h"
 #include "vulkan_pipeline.h"
 #include "vulkan_buffer.h"
+
 std::vector<hive::vk::Vertex> vertices = {
     {{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
     {{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
@@ -44,21 +49,6 @@ hive::vk::VkRenderer::VkRenderer(const Window& window)
 
     //the rest is temporary
     {
-        VkShaderModule vert_module;
-        VkShaderModule frag_module;
-        if(!create_shader_module(device_, "shaders/vert.spv", vert_module)) return;
-        if(!create_shader_module(device_, "shaders/frag.spv", frag_module)) return;
-
-        auto vert_stage = create_stage_info(vert_module, StageType::VERTEX);
-        auto frag_stage = create_stage_info(frag_module, StageType::FRAGMENT);
-
-        VkPipelineShaderStageCreateInfo stages[] = {vert_stage, frag_stage};
-
-        if (!create_graphics_pipeline(device_, render_pass_, stages, 2, default_pipeline_)) return;
-
-        destroy_shader_module(device_, vert_module);
-        destroy_shader_module(device_, frag_module);
-
         //Vertex buffer
         VulkanBuffer temp_vertex_buffer;
         create_buffer(device_,  VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, vertices.size() * sizeof(vertices[0]), temp_vertex_buffer);
@@ -74,6 +64,77 @@ hive::vk::VkRenderer::VkRenderer(const Window& window)
         create_buffer(device_,  VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,  VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, indices.size() * sizeof(indices[0]), index_buffer_);
         buffer_copy(device_, temp_index_buffer, index_buffer_, indices.size() * sizeof(indices[0]));
         destroy_buffer(device_, temp_index_buffer);
+
+        //UBO
+        for(auto & ubo : ubos)
+        {
+            create_buffer(device_, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, sizeof(UniformBufferObject), ubo);
+        }
+
+        //DescriptorPool
+        VkDescriptorPoolSize poolSize{};
+        poolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        poolSize.descriptorCount = static_cast<uint32_t>(MAX_FRAME_IN_FLIGHT);
+
+        VkDescriptorPoolCreateInfo poolInfo{};
+        poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+        poolInfo.poolSizeCount = 1;
+        poolInfo.pPoolSizes = &poolSize;
+        poolInfo.maxSets = static_cast<uint32_t>(MAX_FRAME_IN_FLIGHT);
+
+        if (vkCreateDescriptorPool(device_.logical_device, &poolInfo, nullptr, &descriptor_pool) != VK_SUCCESS) {
+            throw std::runtime_error("failed to create descriptor pool!");
+        }
+
+        //Shader
+        VkShaderModule vert_module;
+        VkShaderModule frag_module;
+        if(!create_shader_module(device_, "shaders/vert.spv", vert_module)) return;
+        if(!create_shader_module(device_, "shaders/frag.spv", frag_module)) return;
+
+        auto vert_stage = create_stage_info(vert_module, StageType::VERTEX);
+        auto frag_stage = create_stage_info(frag_module, StageType::FRAGMENT);
+
+        VkPipelineShaderStageCreateInfo stages[] = {vert_stage, frag_stage};
+
+        if (!create_graphics_pipeline(device_, render_pass_, stages, 2, default_pipeline_)) return;
+
+        destroy_shader_module(device_, vert_module);
+        destroy_shader_module(device_, frag_module);
+
+        //DescriptorSet
+
+        std::vector<VkDescriptorSetLayout> layouts(MAX_FRAME_IN_FLIGHT, default_pipeline_.descriptor_set_layout);
+        VkDescriptorSetAllocateInfo allocInfo{};
+        allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+        allocInfo.descriptorPool = descriptor_pool;
+        allocInfo.descriptorSetCount = static_cast<uint32_t>(MAX_FRAME_IN_FLIGHT);
+        allocInfo.pSetLayouts = layouts.data();
+
+        descriptorSets.resize(MAX_FRAME_IN_FLIGHT);
+        if (vkAllocateDescriptorSets(device_.logical_device, &allocInfo, descriptorSets.data()) != VK_SUCCESS) {
+            throw std::runtime_error("failed to allocate descriptor sets!");
+        }
+
+        for (size_t i = 0; i < MAX_FRAME_IN_FLIGHT; i++) {
+            VkDescriptorBufferInfo bufferInfo{};
+            bufferInfo.buffer = ubos[i].vk_buffer;
+            bufferInfo.offset = 0;
+            bufferInfo.range = sizeof(UniformBufferObject);
+
+            VkWriteDescriptorSet descriptorWrite{};
+            descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            descriptorWrite.dstSet = descriptorSets[i];
+            descriptorWrite.dstBinding = 0;
+            descriptorWrite.dstArrayElement = 0;
+            descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+            descriptorWrite.descriptorCount = 1;
+            descriptorWrite.pBufferInfo = &bufferInfo;
+            descriptorWrite.pImageInfo = nullptr; // Optional
+            descriptorWrite.pTexelBufferView = nullptr; // Optional
+
+            vkUpdateDescriptorSets(device_.logical_device, 1, &descriptorWrite, 0, nullptr);
+        }
     }
 
     is_ready_ = true;
@@ -87,6 +148,12 @@ hive::vk::VkRenderer::~VkRenderer()
         destroy_buffer(device_, vertex_buffer_);
         destroy_buffer(device_, index_buffer_);
 
+        for(auto buffer : ubos)
+        {
+            destroy_buffer(device_, buffer);
+        }
+
+        vkDestroyDescriptorPool(device_.logical_device, descriptor_pool, nullptr);
     }
 
     destroy_swapchain(device_, swapchain_);
@@ -115,30 +182,9 @@ bool hive::vk::VkRenderer::isReady() const
     return is_ready_;
 }
 
-void hive::vk::VkRenderer::recordCommandBuffer(VkCommandBuffer command_buffer, uint32_t image_index)
+void hive::vk::VkRenderer::recordCommandBuffer(VkCommandBuffer command_buffer)
 {
-    VkCommandBufferBeginInfo beginInfo{};
-    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-
-    if (vkBeginCommandBuffer(command_buffer, &beginInfo) != VK_SUCCESS) {
-        throw std::runtime_error("failed to begin recording command buffer!");
-    }
-
-    VkRenderPassBeginInfo renderPassInfo{};
-    renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-    renderPassInfo.renderPass = render_pass_;
-    renderPassInfo.framebuffer = framebuffer_.framebuffers[image_index];
-    renderPassInfo.renderArea.offset = {0, 0};
-    renderPassInfo.renderArea.extent = swapchain_.extent_2d;
-
-    VkClearValue clearColor = {{{0.0f, 0.0f, 0.0f, 1.0f}}};
-    renderPassInfo.clearValueCount = 1;
-    renderPassInfo.pClearValues = &clearColor;
-
-    vkCmdBeginRenderPass(command_buffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-
     vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, default_pipeline_.vk_pipeline);
-
 
     VkViewport viewport{};
     viewport.x = 0.0f;
@@ -158,46 +204,102 @@ void hive::vk::VkRenderer::recordCommandBuffer(VkCommandBuffer command_buffer, u
     VkDeviceSize offsets[] = {0};
     vkCmdBindVertexBuffers(command_buffer, 0, 1, vertexBuffers, offsets);
     vkCmdBindIndexBuffer(command_buffer, index_buffer_.vk_buffer, 0, VK_INDEX_TYPE_UINT16);
-    // vkCmdDraw(command_buffer, 3, 1, 0, 0);
-    // vkCmdDraw(command_buffer, static_cast<uint32_t>(vertices.size()), 1, 0, 0);
-    vkCmdDrawIndexed(command_buffer, indices.size(), 1, 0, 0, 0);
 
-    vkCmdEndRenderPass(command_buffer);
+    vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, default_pipeline_.pipeline_layout, 0, 1, &descriptorSets[current_frame_], 0, nullptr);
+    vkCmdDrawIndexed(command_buffer, static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
 
-    if (vkEndCommandBuffer(command_buffer) != VK_SUCCESS) {
-        throw std::runtime_error("failed to record command buffer!");
-    }
+}
+
+void hive::vk::VkRenderer::updateUniformBuffer()
+{
+    static auto startTime = std::chrono::high_resolution_clock::now();
+
+    auto currentTime = std::chrono::high_resolution_clock::now();
+    float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
+    UniformBufferObject ubo{};
+    ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+    ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+    ubo.proj = glm::perspective(glm::radians(45.0f), swapchain_.extent_2d.width / (float) swapchain_.extent_2d.height, 0.1f, 10.0f);
+    ubo.proj[1][1] *= -1;
+
+    memcpy(ubos[current_frame_].map, &ubo, sizeof(ubo));
+
+
 }
 
 void hive::vk::VkRenderer::temp_draw()
 {
-    vkWaitForFences(device_.logical_device, 1, &fence_in_flight_[current_frame], VK_TRUE, UINT64_MAX);
-    vkResetFences(device_.logical_device, 1, &fence_in_flight_[current_frame]);
+    updateUniformBuffer();
+    recordCommandBuffer(command_buffers_[current_frame_]);
+}
 
-    uint32_t imageIndex;
-    vkAcquireNextImageKHR(device_.logical_device, swapchain_.vk_swapchain, UINT64_MAX, sem_image_available_[current_frame], VK_NULL_HANDLE, &imageIndex);
+bool hive::vk::VkRenderer::beginDrawing()
+{
+    vkWaitForFences(device_.logical_device, 1, &fence_in_flight_[current_frame_], VK_TRUE, UINT64_MAX);
+    vkResetFences(device_.logical_device, 1, &fence_in_flight_[current_frame_]);
 
-    vkResetCommandBuffer(command_buffers_[current_frame], /*VkCommandBufferResetFlagBits*/ 0);
-    recordCommandBuffer(command_buffers_[current_frame], imageIndex);
+    vkAcquireNextImageKHR(device_.logical_device, swapchain_.vk_swapchain, UINT64_MAX, sem_image_available_[current_frame_], VK_NULL_HANDLE, &image_index_);
 
+    vkResetCommandBuffer(command_buffers_[current_frame_], /*VkCommandBufferResetFlagBits*/ 0);
+
+    VkCommandBufferBeginInfo beginInfo{};
+    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+
+    if (vkBeginCommandBuffer(command_buffers_[current_frame_], &beginInfo) != VK_SUCCESS) {
+        LOG_ERROR("Vulkan: failed to begin recording command buffer!");
+        return false;
+    }
+
+    VkRenderPassBeginInfo renderPassInfo{};
+    renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    renderPassInfo.renderPass = render_pass_;
+    renderPassInfo.framebuffer = framebuffer_.framebuffers[image_index_];
+    renderPassInfo.renderArea.offset = {0, 0};
+    renderPassInfo.renderArea.extent = swapchain_.extent_2d;
+
+    VkClearValue clearColor = {{{0.0f, 0.0f, 0.0f, 1.0f}}};
+    renderPassInfo.clearValueCount = 1;
+    renderPassInfo.pClearValues = &clearColor;
+
+
+    vkCmdBeginRenderPass(command_buffers_[current_frame_], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+    return true;
+}
+
+bool hive::vk::VkRenderer::endDrawing()
+{
+    vkCmdEndRenderPass(command_buffers_[current_frame_]);
+
+    if (vkEndCommandBuffer(command_buffers_[current_frame_]) != VK_SUCCESS) {
+        LOG_ERROR("Vulkan: failed to record command buffer!");
+        return false;
+    }
+    return true;
+}
+
+bool hive::vk::VkRenderer::frame()
+{
     VkSubmitInfo submitInfo{};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
-    VkSemaphore waitSemaphores[] = {sem_image_available_[current_frame]};
+    VkSemaphore waitSemaphores[] = {sem_image_available_[current_frame_]};
     VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
     submitInfo.waitSemaphoreCount = 1;
     submitInfo.pWaitSemaphores = waitSemaphores;
     submitInfo.pWaitDstStageMask = waitStages;
 
     submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &command_buffers_[current_frame];
+    submitInfo.pCommandBuffers = &command_buffers_[current_frame_];
 
-    VkSemaphore signalSemaphores[] = {sem_render_finished_[current_frame]};
+    VkSemaphore signalSemaphores[] = {sem_render_finished_[current_frame_]};
     submitInfo.signalSemaphoreCount = 1;
     submitInfo.pSignalSemaphores = signalSemaphores;
 
-    if (vkQueueSubmit(device_.graphics_queue, 1, &submitInfo, fence_in_flight_[current_frame]) != VK_SUCCESS) {
-        throw std::runtime_error("failed to submit draw command buffer!");
+    if (vkQueueSubmit(device_.graphics_queue, 1, &submitInfo, fence_in_flight_[current_frame_]) != VK_SUCCESS)
+    {
+        LOG_ERROR("Vulkan: failed to submit draw command buffer!");
+        return false;
     }
 
     VkPresentInfoKHR presentInfo{};
@@ -210,24 +312,13 @@ void hive::vk::VkRenderer::temp_draw()
     presentInfo.swapchainCount = 1;
     presentInfo.pSwapchains = swapChains;
 
-    presentInfo.pImageIndices = &imageIndex;
+    presentInfo.pImageIndices = &image_index_;
 
     vkQueuePresentKHR(device_.present_queue, &presentInfo);
 
-    current_frame = (current_frame + 1) % MAX_FRAME_IN_FLIGHT;
-}
+    current_frame_ = (current_frame_ + 1) % MAX_FRAME_IN_FLIGHT;
 
-bool hive::vk::VkRenderer::beginDrawing()
-{
     return true;
-}
-
-void hive::vk::VkRenderer::endDrawing()
-{
-}
-
-void hive::vk::VkRenderer::frame()
-{
 }
 
 hive::ShaderProgramHandle hive::vk::VkRenderer::createProgram(const char *vertex_path, const char *fragment_path)

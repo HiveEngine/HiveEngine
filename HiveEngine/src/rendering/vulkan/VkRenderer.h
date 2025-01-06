@@ -11,19 +11,23 @@ namespace hive::vk
     {
     public:
         explicit VkRenderer(const Window& window);
-        ~VkRenderer();
+        ~VkRenderer() override;
 
         [[nodiscard]] bool isReady() const override;
 
-        void recordCommandBuffer(VkCommandBuffer command_buffer, uint32_t uint32);
-
+        //Temporary
+        void recordCommandBuffer(VkCommandBuffer command_buffer);
+        void updateUniformBuffer();
         void temp_draw() override;
 
+
+
+        //API
         bool beginDrawing() override;
 
-        void endDrawing() override;
+        bool endDrawing() override;
 
-        void frame() override;
+        bool frame() override;
 
         ShaderProgramHandle createProgram(const char *vertex_path, const char *fragment_path) override;
 
@@ -35,8 +39,8 @@ namespace hive::vk
 
     protected:
         bool is_ready_ = false;
-
-        u32 current_frame = 0;
+        u32 current_frame_ = 0;
+        u32 image_index_ = 0;
         
 
         VkInstance instance_{};
@@ -56,11 +60,17 @@ namespace hive::vk
         VkFence fence_in_flight_[MAX_FRAME_IN_FLIGHT] {};
 
 
+        RessourceManager<VulkanPipeline, ShaderProgramHandle> shaders;
+
+        //Temporary
         VulkanPipeline default_pipeline_{};
         VulkanBuffer vertex_buffer_{};
         VulkanBuffer index_buffer_{};
+        std::vector<VkDescriptorSet> descriptorSets;
+        VkDescriptorPool descriptor_pool;
+        VulkanBuffer ubos[MAX_FRAME_IN_FLIGHT]{};
 
-        RessourceManager<VulkanPipeline, ShaderProgramHandle> shaders;
+
 
     };
 }

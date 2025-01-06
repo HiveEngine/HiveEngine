@@ -56,5 +56,6 @@ namespace hive
     template<typename Data_T, typename Handle_T>
     i32 RessourceManager<Data_T, Handle_T>::size()
     {
+        return 0;
     }
 }

@@ -41,10 +41,14 @@ namespace hive::vk
         VkDescriptorSetLayout descriptor_set_layout;
     };
 
+
+
     struct VulkanBuffer
     {
         VkBuffer vk_buffer;
         VkDeviceMemory vk_buffer_memory;
+
+        void* map;
     };
 
 }

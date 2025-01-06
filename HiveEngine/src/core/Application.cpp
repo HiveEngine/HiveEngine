@@ -27,11 +27,19 @@ void hive::Application::run()
 
     // auto shader = renderer_->createProgram("shaders/vert.spv", "shaders/frag.spv");
 
+    u32 frame = 0;
     while(!window_.shouldClose())
     {
         window_.pollEvents();
 
-        renderer_->temp_draw();
+        if(!renderer_->beginDrawing()) break;
+        {
+            //Draw command here
+            renderer_->temp_draw();
+        }
+        if(!renderer_->endDrawing()) break;
+        if (!renderer_->frame()) break;
+        // LOG_INFO("Frame: %d", frame++);
 
         // if(renderer_->beginDrawing())
         // {

@@ -57,6 +57,11 @@ namespace hive::vk
 
         vkBindBufferMemory(device.logical_device, out_buffer.vk_buffer, out_buffer.vk_buffer_memory, 0);
 
+        if(memory_property_flags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)
+        {
+            vkMapMemory(device.logical_device, out_buffer.vk_buffer_memory, 0, size, 0, &out_buffer.map);
+        }
+
         return true;
     }
 
@@ -69,9 +74,9 @@ namespace hive::vk
 
     void buffer_fill_data(const VulkanDevice &device, const VulkanBuffer &buffer, void *data, u32 size)
     {
-        void* local_data;
-        vkMapMemory(device.logical_device, buffer.vk_buffer_memory, 0, size, 0, &local_data);
-        memcpy(local_data, data, size);
+        // void* local_data;
+        // vkMapMemory(device.logical_device, buffer.vk_buffer_memory, 0, size, 0, &local_data);
+        memcpy(buffer.map, data, size);
         vkUnmapMemory(device.logical_device, buffer.vk_buffer_memory);
 
     }

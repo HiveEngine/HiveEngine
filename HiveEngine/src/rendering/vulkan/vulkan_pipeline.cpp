@@ -55,7 +55,7 @@ namespace hive::vk
         rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
         rasterizer.lineWidth = 1.0f;
         rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
-        rasterizer.frontFace = VK_FRONT_FACE_CLOCKWISE;
+        rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
         rasterizer.depthBiasEnable = VK_FALSE;
 
         VkPipelineMultisampleStateCreateInfo multisampling{};
@@ -87,9 +87,11 @@ namespace hive::vk
         dynamicState.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
         dynamicState.pDynamicStates = dynamicStates.data();
 
+        create_descriptor_set_layout(device, pipeline);
         VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
         pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-        pipelineLayoutInfo.setLayoutCount = 0;
+        pipelineLayoutInfo.setLayoutCount = 1;
+        pipelineLayoutInfo.pSetLayouts = &pipeline.descriptor_set_layout;
         pipelineLayoutInfo.pushConstantRangeCount = 0;
 
         if (vkCreatePipelineLayout(device.logical_device, &pipelineLayoutInfo, nullptr, &pipeline.pipeline_layout) != VK_SUCCESS) {
@@ -123,8 +125,32 @@ namespace hive::vk
 
     void destroy_graphics_pipeline(const VulkanDevice &device, VulkanPipeline &pipeline)
     {
+        vkDestroyDescriptorSetLayout(device.logical_device, pipeline.descriptor_set_layout, nullptr);
         vkDestroyPipelineLayout(device.logical_device, pipeline.pipeline_layout, nullptr);
         vkDestroyPipeline(device.logical_device, pipeline.vk_pipeline, nullptr);
+    }
+
+    bool create_descriptor_set_layout(const VulkanDevice& device, VulkanPipeline& pipeline)
+    {
+        VkDescriptorSetLayoutBinding uboLayoutBinding{};
+        uboLayoutBinding.binding = 0;
+        uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        uboLayoutBinding.descriptorCount = 1;
+        uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+        uboLayoutBinding.pImmutableSamplers = nullptr; // Optional
+
+        VkDescriptorSetLayoutCreateInfo layoutInfo{};
+        layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+        layoutInfo.bindingCount = 1;
+        layoutInfo.pBindings = &uboLayoutBinding;
+
+        if (vkCreateDescriptorSetLayout(device.logical_device, &layoutInfo, nullptr, &pipeline.descriptor_set_layout) != VK_SUCCESS)
+        {
+            LOG_ERROR("Vulkan: failed to create descriptor set layout!");
+            return false;
+        }
+
+        return true;
     }
 }
 #endif

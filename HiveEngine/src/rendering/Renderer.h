@@ -24,8 +24,8 @@ namespace hive
 
         virtual void temp_draw() = 0;
         virtual bool beginDrawing() = 0;
-        virtual void endDrawing() = 0;
-        virtual void frame() = 0;
+        virtual bool endDrawing() = 0;
+        virtual bool frame() = 0;
 
         virtual ShaderProgramHandle createProgram(const char* vertex_path, const char* fragment_path) = 0;
         virtual void destroyProgram(ShaderProgramHandle shader) = 0;

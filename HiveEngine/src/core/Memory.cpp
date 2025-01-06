@@ -100,6 +100,6 @@ void hive::Memory::printMemoryUsage()
         offset += length;
     }
 
-    LOG_DEBUG(buffer);
+    LOG_INFO(buffer);
 }
 
