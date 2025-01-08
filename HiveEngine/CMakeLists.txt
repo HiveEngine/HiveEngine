@@ -20,6 +20,9 @@ target_include_directories(hive PUBLIC dep/glm)
 #stb
 target_include_directories(hive PRIVATE dep/stb_image)
 
+#tinyobjloader
+target_include_directories(hive PRIVATE dep/tinyobjloader)
+
 #Vulkan
 if(WIN32)
     set(DEFAULT_VULKAN_SDK_PATH "C:/VulkanSDK/1.x.x.x")

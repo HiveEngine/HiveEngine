@@ -10,6 +10,9 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
+#define TINYOBJLOADER_IMPLEMENTATION
+#include <tiny_obj_loader.h>
+
 #include "VkRenderer.h"
 #include <core/Logger.h>
 
@@ -24,22 +27,6 @@
 #include "vulkan_pipeline.h"
 #include "vulkan_buffer.h"
 #include "vulkan_image.h"
-
-std::vector<hive::vk::Vertex> vertices = {
-    {{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
-   {{0.5f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
-   {{0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
-   {{-0.5f, 0.5f, 0.0f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}},
-
-   {{-0.5f, -0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
-   {{0.5f, -0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
-   {{0.5f, 0.5f, -0.5f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
-   {{-0.5f, 0.5f, -0.5f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}}
-};
-
-std::vector<u16> indices = {
-    0, 1, 2, 2, 3, 0,
-       4, 5, 6, 6, 7, 4};
 
 
 hive::vk::VkRenderer::VkRenderer(const Window& window) : shaders_manager_(16)
@@ -62,7 +49,7 @@ hive::vk::VkRenderer::VkRenderer(const Window& window) : shaders_manager_(16)
     {
         //Create texture
         i32 texWidth, texHeight, texChannels;
-        stbi_uc* pixels = stbi_load("textures/texture.jpg", &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+        stbi_uc* pixels = stbi_load("textures/viking_room.png", &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
         u32 image_size = texWidth * texHeight * 4;
 
         if(!pixels)
@@ -89,6 +76,9 @@ hive::vk::VkRenderer::VkRenderer(const Window& window) : shaders_manager_(16)
         create_image_sampler(device_, texture_image_.vk_sampler);
 
         //Vertex buffer
+
+        load_model();
+
         VulkanBuffer temp_vertex_buffer;
         create_buffer(device_,  VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, vertices.size() * sizeof(vertices[0]), temp_vertex_buffer);
         buffer_fill_data(device_, temp_vertex_buffer, vertices.data(), vertices.size() * sizeof(vertices[0]));
@@ -259,7 +249,7 @@ void hive::vk::VkRenderer::recordCommandBuffer(VkCommandBuffer command_buffer)
     VkBuffer vertexBuffers[] = {vertex_buffer_.vk_buffer};
     VkDeviceSize offsets[] = {0};
     vkCmdBindVertexBuffers(command_buffer, 0, 1, vertexBuffers, offsets);
-    vkCmdBindIndexBuffer(command_buffer, index_buffer_.vk_buffer, 0, VK_INDEX_TYPE_UINT16);
+    vkCmdBindIndexBuffer(command_buffer, index_buffer_.vk_buffer, 0, VK_INDEX_TYPE_UINT32);
 
     vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, default_pipeline_.pipeline_layout, 0, 1, &descriptorSets_[current_frame_], 0, nullptr);
     vkCmdDrawIndexed(command_buffer, static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
@@ -287,6 +277,42 @@ void hive::vk::VkRenderer::temp_draw()
 {
     updateUniformBuffer();
     recordCommandBuffer(command_buffers_[current_frame_]);
+}
+
+void hive::vk::VkRenderer::load_model()
+{
+    tinyobj::attrib_t attrib;
+    std::vector<tinyobj::shape_t> shapes;
+    std::vector<tinyobj::material_t> materials;
+    std::string warn, err;
+
+    if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, "assets/viking_room.obj")) {
+        throw std::runtime_error(warn + err);
+    }
+
+    for(const auto& shape : shapes)
+    {
+        for(const auto& index : shape.mesh.indices)
+        {
+            Vertex vertex{};
+            vertex.pos = {
+                attrib.vertices[3 * index.vertex_index + 0],
+                attrib.vertices[3 * index.vertex_index + 1],
+                attrib.vertices[3 * index.vertex_index + 2]
+            };
+
+            vertex.texCoord = {
+                attrib.texcoords[2 * index.texcoord_index + 0],
+                1.0f - attrib.texcoords[2 * index.texcoord_index + 1]
+            };
+
+            vertex.color = {1.0f, 1.0f, 1.0f};
+
+
+            vertices.push_back(vertex);
+            indices.push_back(indices.size());
+        }
+    }
 }
 
 bool hive::vk::VkRenderer::beginDrawing()

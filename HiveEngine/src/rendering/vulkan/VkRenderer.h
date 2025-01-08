@@ -8,9 +8,11 @@
 
 namespace hive::vk
 {
+    struct Vertex;
     class VkRenderer : public IRenderer
     {
     public:
+
         explicit VkRenderer(const Window& window);
         ~VkRenderer() override;
 
@@ -20,6 +22,8 @@ namespace hive::vk
         void recordCommandBuffer(VkCommandBuffer command_buffer);
         void updateUniformBuffer();
         void temp_draw() override;
+        void load_model();
+
 
 
 
@@ -71,6 +75,9 @@ namespace hive::vk
         VulkanBuffer ubos[MAX_FRAME_IN_FLIGHT]{};
         VulkanDescriptorPool *descriptor_pool_;
         VulkanImage texture_image_;
+
+        std::vector<Vertex> vertices;
+        std::vector<u32> indices;
 
 
 
