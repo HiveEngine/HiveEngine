@@ -75,22 +75,18 @@ hive::vk::VkRenderer::VkRenderer(const Window& window) : shaders_manager_(16)
         buffer_fill_data(device_, temp_texture_buffer, pixels, image_size);
         stbi_image_free(pixels);
 
-        VulkanImage image;
         create_image(device_, texWidth, texHeight,
                      VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL,
                      VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
                      VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-                     image);
-        transition_image_layout(device_, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, image);
-            copy_buffer_to_image(device_, temp_texture_buffer, image, texWidth, texHeight);
-        transition_image_layout(device_, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, image);
+                     texture_image_);
+        transition_image_layout(device_, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, texture_image_);
+            copy_buffer_to_image(device_, temp_texture_buffer, texture_image_, texWidth, texHeight);
+        transition_image_layout(device_, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, texture_image_);
         destroy_buffer(device_, temp_texture_buffer);
-        create_image_view(device_, image.vk_image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT,
-                          image.vk_image_view);
-        create_image_sampler(device_, image.vk_sampler);
-
-
-        // destroy_image(device_, image);
+        create_image_view(device_, texture_image_.vk_image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT,
+                          texture_image_.vk_image_view);
+        create_image_sampler(device_, texture_image_.vk_sampler);
 
         //Vertex buffer
         VulkanBuffer temp_vertex_buffer;
@@ -150,8 +146,8 @@ hive::vk::VkRenderer::VkRenderer(const Window& window) : shaders_manager_(16)
 
             VkDescriptorImageInfo image_info{};
             image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-            image_info.imageView = image.vk_image_view;
-            image_info.sampler = image.vk_sampler;
+            image_info.imageView = texture_image_.vk_image_view;
+            image_info.sampler = texture_image_.vk_sampler;
 
             std::array<VkWriteDescriptorSet, 2> descriptorWrites{};
 
@@ -203,6 +199,7 @@ hive::vk::VkRenderer::~VkRenderer()
     vkDeviceWaitIdle(device_.logical_device);
     //Temporary
     {
+        destroy_image(device_, texture_image_);
         destroy_buffer(device_, vertex_buffer_);
         destroy_buffer(device_, index_buffer_);
 

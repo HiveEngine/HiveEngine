@@ -70,6 +70,7 @@ namespace hive::vk
         std::vector<VkDescriptorSet> descriptorSets_;
         VulkanBuffer ubos[MAX_FRAME_IN_FLIGHT]{};
         VulkanDescriptorPool *descriptor_pool_;
+        VulkanImage texture_image_;
 
 
 
