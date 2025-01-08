@@ -6,12 +6,11 @@
 
 #include <core/Logger.h>
 
+#include "vulkan_utils.h"
 #include "vulkan_types.h"
 #include "vulkan_buffer.h"
 namespace hive::vk
 {
-    bool findMemoryType(const VulkanDevice &device, u32 typeFilter, VkMemoryPropertyFlags properties, u32 &out_index);
-
 
     bool create_buffer(const VulkanDevice &device,
                        VkBufferUsageFlags usage_flags,
@@ -83,53 +82,17 @@ namespace hive::vk
 
     void buffer_copy(const VulkanDevice& device, VulkanBuffer &src, VulkanBuffer &dst, u32 size)
     {
-        VkCommandBufferAllocateInfo allocInfo{};
-        allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-        allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-        allocInfo.commandPool = device.graphics_command_pool;
-        allocInfo.commandBufferCount = 1;
-
-        VkCommandBuffer commandBuffer;
-        vkAllocateCommandBuffers(device.logical_device, &allocInfo, &commandBuffer);
-
-        VkCommandBufferBeginInfo beginInfo{};
-        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-        beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-
-        vkBeginCommandBuffer(commandBuffer, &beginInfo);
+        VkCommandBuffer command_buffer = begin_single_command(device);
 
         VkBufferCopy copyRegion{};
         copyRegion.srcOffset = 0; // Optional
         copyRegion.dstOffset = 0; // Optional
         copyRegion.size = size;
-        vkCmdCopyBuffer(commandBuffer, src.vk_buffer, dst.vk_buffer, 1, &copyRegion);
+        vkCmdCopyBuffer(command_buffer, src.vk_buffer, dst.vk_buffer, 1, &copyRegion);
 
-        vkEndCommandBuffer(commandBuffer);
-
-        VkSubmitInfo submitInfo{};
-        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-        submitInfo.commandBufferCount = 1;
-        submitInfo.pCommandBuffers = &commandBuffer;
-
-        vkQueueSubmit(device.graphics_queue, 1, &submitInfo, VK_NULL_HANDLE);
-        vkQueueWaitIdle(device.graphics_queue);
-
-        vkFreeCommandBuffers(device.logical_device, device.graphics_command_pool, 1, &commandBuffer);
+        end_single_command(device, command_buffer);
     }
 
-    bool findMemoryType(const VulkanDevice &device, u32 typeFilter, VkMemoryPropertyFlags properties, u32 &out_index)
-    {
-        VkPhysicalDeviceMemoryProperties memProperties;
-        vkGetPhysicalDeviceMemoryProperties(device.physical_device, &memProperties);
 
-        for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
-            if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties) {
-                out_index = i;
-                return true;
-            }
-        }
-
-        return false;
-    }
 }
 #endif

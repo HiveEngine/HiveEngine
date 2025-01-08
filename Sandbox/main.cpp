@@ -18,11 +18,11 @@ void RegisterDefaultLoggerSync(hive::Logger::LogLevel level)
 int main()
 {
     hive::Logger logger;
-    RegisterDefaultLoggerSync(hive::Logger::LogLevel::INFO);
+    RegisterDefaultLoggerSync(hive::Logger::LogLevel::DEBUG);
 
     hive::ApplicationConfig config{};
 
-    config.log_level = hive::Logger::LogLevel::INFO;
+    config.log_level = hive::Logger::LogLevel::DEBUG;
     config.window_config.width = 1920;
     config.window_config.height = 1080;
     config.window_config.title = "Hive Engine";
@@ -33,6 +33,8 @@ int main()
 
 
 }
+
+
 
 // #define GLFW_INCLUDE_VULKAN
 // #include <GLFW/glfw3.h>
@@ -598,8 +600,8 @@ int main()
 //     }
 //
 //     void createGraphicsPipeline() {
-//         auto vertShaderCode = readFile("shaders/vert.spv");
-//         auto fragShaderCode = readFile("shaders/frag.spv");
+//         auto vertShaderCode = readFile("shaders_manager_/vert.spv");
+//         auto fragShaderCode = readFile("shaders_manager_/frag.spv");
 //
 //         VkShaderModule vertShaderModule = createShaderModule(vertShaderCode);
 //         VkShaderModule fragShaderModule = createShaderModule(fragShaderCode);

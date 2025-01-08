@@ -24,6 +24,7 @@ namespace hive::vk
         VkFormat image_format;
         VkExtent2D extent_2d;
 
+        //TODO: use vector of VulkanImage instead
         std::vector<VkImage> images;
         std::vector<VkImageView> image_views;
     };
@@ -33,12 +34,13 @@ namespace hive::vk
         std::vector<VkFramebuffer> framebuffers;
     };
 
+
+    class VulkanDescriptorSetLayout;
     struct VulkanPipeline
     {
         VkPipeline vk_pipeline;
         VkPipelineLayout pipeline_layout;
-
-        VkDescriptorSetLayout descriptor_set_layout;
+        VulkanDescriptorSetLayout *layout;
     };
 
 
@@ -47,8 +49,15 @@ namespace hive::vk
     {
         VkBuffer vk_buffer;
         VkDeviceMemory vk_buffer_memory;
-
         void* map;
+    };
+
+    struct VulkanImage
+    {
+        VkImage vk_image;
+        VkDeviceMemory vk_image_memory;
+        VkImageView vk_image_view;
+        VkSampler vk_sampler;
     };
 
 }

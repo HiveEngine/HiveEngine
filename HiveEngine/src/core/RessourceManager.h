@@ -16,6 +16,8 @@ namespace hive
     {
         static_assert(IsValidHandle<Handle_T>::value, "Handle_T must be a proper handle with a property id of type u32");
     public:
+        explicit RessourceManager(u32 size);
+
         Data_T& getData(Handle_T id);
         Handle_T getAvailableId();
         u32 pushData(Data_T data);
@@ -30,6 +32,15 @@ namespace hive
     };
 
     template<typename Data_T, typename Handle_T>
+    RessourceManager<Data_T, Handle_T>::RessourceManager(u32 size) : data_(size)
+    {
+        for(u32 i = 0; i < size; i++)
+        {
+            available_data_slot_.push({i});
+        }
+    }
+
+    template<typename Data_T, typename Handle_T>
     Data_T & RessourceManager<Data_T, Handle_T>::getData(Handle_T id)
     {
         return data_[id.id];
@@ -38,7 +49,13 @@ namespace hive
     template<typename Data_T, typename Handle_T>
     Handle_T RessourceManager<Data_T, Handle_T>::getAvailableId()
     {
-        return {0};
+        if(!available_data_slot_.empty())
+        {
+            auto t = available_data_slot_.top();
+            available_data_slot_.pop();
+            return t;
+        }
+        return {U32_MAX};
     }
 
     template<typename Data_T, typename Handle_T>

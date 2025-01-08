@@ -1,9 +1,12 @@
 #include <rendering/RendererPlatform.h>
+
 #ifdef HIVE_BACKEND_VULKAN_SUPPORTED
+#include "vulkan_descriptor.h"
 #include "vulkan_pipeline.h"
 #include "vulkan_types.h"
 
 #include <core/Logger.h>
+#include <core/Memory.h>
 
 namespace hive::vk
 {
@@ -11,6 +14,7 @@ namespace hive::vk
                                   const VkRenderPass &render_pass,
                                   VkPipelineShaderStageCreateInfo *stages,
                                   u32 stages_count,
+                                  VulkanDescriptorSetLayout *layout,
                                   VulkanPipeline &pipeline)
     {
         //Vertex Input
@@ -20,7 +24,7 @@ namespace hive::vk
         bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
         //This describe how the data of the vertex is ordered for the GPU
-        std::array<VkVertexInputAttributeDescription, 2> attributeDescriptions{};
+        std::array<VkVertexInputAttributeDescription, 3> attributeDescriptions{};
         attributeDescriptions[0].binding = 0;
         attributeDescriptions[0].location = 0;
         attributeDescriptions[0].format = VK_FORMAT_R32G32_SFLOAT;
@@ -30,6 +34,11 @@ namespace hive::vk
         attributeDescriptions[1].location = 1;
         attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
         attributeDescriptions[1].offset = offsetof(Vertex, color);
+
+        attributeDescriptions[2].binding = 0;
+        attributeDescriptions[2].location = 2;
+        attributeDescriptions[2].format = VK_FORMAT_R32G32_SFLOAT;
+        attributeDescriptions[2].offset = offsetof(Vertex, texCoord);
 
         VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
         vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
@@ -87,11 +96,16 @@ namespace hive::vk
         dynamicState.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
         dynamicState.pDynamicStates = dynamicStates.data();
 
-        create_descriptor_set_layout(device, pipeline);
+        // create_descriptor_set_layout(device, pipeline);
+
+        // pipeline.descriptor_set_layout = layout.getDescriptorSetLayout();
+        pipeline.layout = layout;
+
         VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
         pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+
         pipelineLayoutInfo.setLayoutCount = 1;
-        pipelineLayoutInfo.pSetLayouts = &pipeline.descriptor_set_layout;
+        pipelineLayoutInfo.pSetLayouts = &layout->getDescriptorSetLayout();
         pipelineLayoutInfo.pushConstantRangeCount = 0;
 
         if (vkCreatePipelineLayout(device.logical_device, &pipelineLayoutInfo, nullptr, &pipeline.pipeline_layout) != VK_SUCCESS) {
@@ -125,32 +139,11 @@ namespace hive::vk
 
     void destroy_graphics_pipeline(const VulkanDevice &device, VulkanPipeline &pipeline)
     {
-        vkDestroyDescriptorSetLayout(device.logical_device, pipeline.descriptor_set_layout, nullptr);
+        Memory::destroyObject<VulkanDescriptorSetLayout, Memory::RENDERER>(pipeline.layout);
         vkDestroyPipelineLayout(device.logical_device, pipeline.pipeline_layout, nullptr);
         vkDestroyPipeline(device.logical_device, pipeline.vk_pipeline, nullptr);
     }
 
-    bool create_descriptor_set_layout(const VulkanDevice& device, VulkanPipeline& pipeline)
-    {
-        VkDescriptorSetLayoutBinding uboLayoutBinding{};
-        uboLayoutBinding.binding = 0;
-        uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        uboLayoutBinding.descriptorCount = 1;
-        uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-        uboLayoutBinding.pImmutableSamplers = nullptr; // Optional
 
-        VkDescriptorSetLayoutCreateInfo layoutInfo{};
-        layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-        layoutInfo.bindingCount = 1;
-        layoutInfo.pBindings = &uboLayoutBinding;
-
-        if (vkCreateDescriptorSetLayout(device.logical_device, &layoutInfo, nullptr, &pipeline.descriptor_set_layout) != VK_SUCCESS)
-        {
-            LOG_ERROR("Vulkan: failed to create descriptor set layout!");
-            return false;
-        }
-
-        return true;
-    }
 }
 #endif

@@ -17,6 +17,8 @@ add_subdirectory(dep/glm)
 target_link_libraries(hive PRIVATE glm-header-only)
 target_include_directories(hive PUBLIC dep/glm)
 
+#stb
+target_include_directories(hive PRIVATE dep/stb_image)
 
 #Vulkan
 if(WIN32)

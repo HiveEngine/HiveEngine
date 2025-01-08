@@ -1,9 +1,14 @@
+#include <core/Memory.h>
 #include <rendering/RendererPlatform.h>
+
+#include "vulkan_descriptor.h"
 
 
 #ifdef HIVE_BACKEND_VULKAN_SUPPORTED
 #include <chrono>
 #include <glm/gtc/matrix_transform.hpp>
+#define STB_IMAGE_IMPLEMENTATION
+#include <stb_image.h>
 
 #include "VkRenderer.h"
 #include <core/Logger.h>
@@ -18,12 +23,13 @@
 #include "vulkan_shader.h"
 #include "vulkan_pipeline.h"
 #include "vulkan_buffer.h"
+#include "vulkan_image.h"
 
 std::vector<hive::vk::Vertex> vertices = {
-    {{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
-    {{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
-    {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
-    {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}}
+    {{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
+    {{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
+    {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
+    {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}}
 };
 
 std::vector<u16> indices = {
@@ -31,7 +37,7 @@ std::vector<u16> indices = {
 };
 
 
-hive::vk::VkRenderer::VkRenderer(const Window& window)
+hive::vk::VkRenderer::VkRenderer(const Window& window) : shaders_manager_(16)
 {
     if(!create_instance(instance_, window)) return;
     if(config::enable_validation && !setup_debug_messenger(instance_, debugMessenger)) return;
@@ -49,6 +55,37 @@ hive::vk::VkRenderer::VkRenderer(const Window& window)
 
     //the rest is temporary
     {
+        //Create texture
+        i32 texWidth, texHeight, texChannels;
+        stbi_uc* pixels = stbi_load("textures/texture.jpg", &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+        u32 image_size = texWidth * texHeight * 4;
+
+        if(!pixels)
+        {
+            return;
+        }
+
+        VulkanBuffer temp_texture_buffer;
+        create_buffer(device_, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, image_size, temp_texture_buffer);
+        buffer_fill_data(device_, temp_texture_buffer, pixels, image_size);
+        stbi_image_free(pixels);
+
+        VulkanImage image;
+        create_image(device_, texWidth, texHeight,
+                     VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL,
+                     VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+                     VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+                     image);
+        transition_image_layout(device_, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, image);
+            copy_buffer_to_image(device_, temp_texture_buffer, image, texWidth, texHeight);
+        transition_image_layout(device_, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, image);
+        destroy_buffer(device_, temp_texture_buffer);
+        create_image_view(device_, image.vk_image, image.vk_image_view);
+        create_image_sampler(device_, image.vk_sampler);
+
+
+        // destroy_image(device_, image);
+
         //Vertex buffer
         VulkanBuffer temp_vertex_buffer;
         create_buffer(device_,  VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, vertices.size() * sizeof(vertices[0]), temp_vertex_buffer);
@@ -65,56 +102,39 @@ hive::vk::VkRenderer::VkRenderer(const Window& window)
         buffer_copy(device_, temp_index_buffer, index_buffer_, indices.size() * sizeof(indices[0]));
         destroy_buffer(device_, temp_index_buffer);
 
+
         //UBO
         for(auto & ubo : ubos)
         {
             create_buffer(device_, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, sizeof(UniformBufferObject), ubo);
         }
 
-        //DescriptorPool
-        VkDescriptorPoolSize poolSize{};
-        poolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        poolSize.descriptorCount = static_cast<uint32_t>(MAX_FRAME_IN_FLIGHT);
 
-        VkDescriptorPoolCreateInfo poolInfo{};
-        poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-        poolInfo.poolSizeCount = 1;
-        poolInfo.pPoolSizes = &poolSize;
-        poolInfo.maxSets = static_cast<uint32_t>(MAX_FRAME_IN_FLIGHT);
+        // DescriptorPool
+        descriptor_pool_ = VulkanDescriptorPool::Builder(device_)
+                 .setMaxtSets(MAX_FRAME_IN_FLIGHT)
+                 .addPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, MAX_FRAME_IN_FLIGHT)
+                 .addPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, MAX_FRAME_IN_FLIGHT)
+                 .build();
 
-        if (vkCreateDescriptorPool(device_.logical_device, &poolInfo, nullptr, &descriptor_pool) != VK_SUCCESS) {
-            throw std::runtime_error("failed to create descriptor pool!");
+        if (!descriptor_pool_->isReady())
+        {
+            return;
         }
 
-        //Shader
-        VkShaderModule vert_module;
-        VkShaderModule frag_module;
-        if(!create_shader_module(device_, "shaders/vert.spv", vert_module)) return;
-        if(!create_shader_module(device_, "shaders/frag.spv", frag_module)) return;
 
-        auto vert_stage = create_stage_info(vert_module, StageType::VERTEX);
-        auto frag_stage = create_stage_info(frag_module, StageType::FRAGMENT);
+        //DescriptorLayout
+        VulkanDescriptorSetLayout *layout = VulkanDescriptorSetLayout::Builder(device_)
+                .addBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT, 1)
+                .addBinding(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 1)
+                .build();
 
-        VkPipelineShaderStageCreateInfo stages[] = {vert_stage, frag_stage};
 
-        if (!create_graphics_pipeline(device_, render_pass_, stages, 2, default_pipeline_)) return;
+        descriptorSets_.resize(MAX_FRAME_IN_FLIGHT);
 
-        destroy_shader_module(device_, vert_module);
-        destroy_shader_module(device_, frag_module);
+        descriptor_pool_->allocateDescriptor(layout->getDescriptorSetLayout(), descriptorSets_[0]);
+        descriptor_pool_->allocateDescriptor(layout->getDescriptorSetLayout(), descriptorSets_[1]);
 
-        //DescriptorSet
-
-        std::vector<VkDescriptorSetLayout> layouts(MAX_FRAME_IN_FLIGHT, default_pipeline_.descriptor_set_layout);
-        VkDescriptorSetAllocateInfo allocInfo{};
-        allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-        allocInfo.descriptorPool = descriptor_pool;
-        allocInfo.descriptorSetCount = static_cast<uint32_t>(MAX_FRAME_IN_FLIGHT);
-        allocInfo.pSetLayouts = layouts.data();
-
-        descriptorSets.resize(MAX_FRAME_IN_FLIGHT);
-        if (vkAllocateDescriptorSets(device_.logical_device, &allocInfo, descriptorSets.data()) != VK_SUCCESS) {
-            throw std::runtime_error("failed to allocate descriptor sets!");
-        }
 
         for (size_t i = 0; i < MAX_FRAME_IN_FLIGHT; i++) {
             VkDescriptorBufferInfo bufferInfo{};
@@ -122,19 +142,51 @@ hive::vk::VkRenderer::VkRenderer(const Window& window)
             bufferInfo.offset = 0;
             bufferInfo.range = sizeof(UniformBufferObject);
 
-            VkWriteDescriptorSet descriptorWrite{};
-            descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            descriptorWrite.dstSet = descriptorSets[i];
-            descriptorWrite.dstBinding = 0;
-            descriptorWrite.dstArrayElement = 0;
-            descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-            descriptorWrite.descriptorCount = 1;
-            descriptorWrite.pBufferInfo = &bufferInfo;
-            descriptorWrite.pImageInfo = nullptr; // Optional
-            descriptorWrite.pTexelBufferView = nullptr; // Optional
+            VkDescriptorImageInfo image_info{};
+            image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+            image_info.imageView = image.vk_image_view;
+            image_info.sampler = image.vk_sampler;
 
-            vkUpdateDescriptorSets(device_.logical_device, 1, &descriptorWrite, 0, nullptr);
+            std::array<VkWriteDescriptorSet, 2> descriptorWrites{};
+
+            descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            descriptorWrites[0].dstSet = descriptorSets_[i];
+            descriptorWrites[0].dstBinding = 0;
+            descriptorWrites[0].dstArrayElement = 0;
+            descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+            descriptorWrites[0].descriptorCount = 1;
+            descriptorWrites[0].pBufferInfo = &bufferInfo;
+            descriptorWrites[0].pImageInfo = nullptr; // Optional
+            descriptorWrites[0].pTexelBufferView = nullptr; // Optional
+
+            descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            descriptorWrites[1].dstSet = descriptorSets_[i];
+            descriptorWrites[1].dstBinding = 1;
+            descriptorWrites[1].dstArrayElement = 0;
+            descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+            descriptorWrites[1].descriptorCount = 1;
+            descriptorWrites[1].pBufferInfo = nullptr;
+            descriptorWrites[1].pImageInfo = &image_info; // Optional
+            descriptorWrites[1].pTexelBufferView = nullptr; // Optional
+
+            vkUpdateDescriptorSets(device_.logical_device, descriptorWrites.size(), descriptorWrites.data(), 0, nullptr);
         }
+
+        //Shader
+        VkShaderModule vert_module;
+        VkShaderModule frag_module;
+        if (!create_shader_module(device_, "shaders/vert.spv", vert_module)) return;
+        if (!create_shader_module(device_, "shaders/frag.spv", frag_module)) return;
+
+        auto vert_stage = create_stage_info(vert_module, StageType::VERTEX);
+        auto frag_stage = create_stage_info(frag_module, StageType::FRAGMENT);
+
+        VkPipelineShaderStageCreateInfo stages[] = {vert_stage, frag_stage};
+
+        if (!create_graphics_pipeline(device_, render_pass_, stages, 2, layout, default_pipeline_ )) return;
+
+        destroy_shader_module(device_, vert_module);
+        destroy_shader_module(device_, frag_module);
     }
 
     is_ready_ = true;
@@ -153,11 +205,12 @@ hive::vk::VkRenderer::~VkRenderer()
             destroy_buffer(device_, buffer);
         }
 
-        vkDestroyDescriptorPool(device_.logical_device, descriptor_pool, nullptr);
+        Memory::destroyObject<VulkanDescriptorPool, Memory::RENDERER>(descriptor_pool_);
+
+        destroy_graphics_pipeline(device_, default_pipeline_);
     }
 
     destroy_swapchain(device_, swapchain_);
-    destroy_graphics_pipeline(device_, default_pipeline_);
     destroy_renderpass(device_, render_pass_);
     destroy_framebuffer(device_, framebuffer_);
     destroy_semaphores(device_, sem_image_available_, MAX_FRAME_IN_FLIGHT);
@@ -205,7 +258,7 @@ void hive::vk::VkRenderer::recordCommandBuffer(VkCommandBuffer command_buffer)
     vkCmdBindVertexBuffers(command_buffer, 0, 1, vertexBuffers, offsets);
     vkCmdBindIndexBuffer(command_buffer, index_buffer_.vk_buffer, 0, VK_INDEX_TYPE_UINT16);
 
-    vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, default_pipeline_.pipeline_layout, 0, 1, &descriptorSets[current_frame_], 0, nullptr);
+    vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, default_pipeline_.pipeline_layout, 0, 1, &descriptorSets_[current_frame_], 0, nullptr);
     vkCmdDrawIndexed(command_buffer, static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
 
 }
@@ -321,21 +374,43 @@ bool hive::vk::VkRenderer::frame()
     return true;
 }
 
-hive::ShaderProgramHandle hive::vk::VkRenderer::createProgram(const char *vertex_path, const char *fragment_path)
+//TODO: use something like spirv-cross to get the layout or provide a structure that is passed to the function in order to tell the glsl layout
+hive::ShaderProgramHandle hive::vk::VkRenderer::createShader(const char *vertex_path, const char *fragment_path)
 {
-    return {0};
+
+    auto shader = shaders_manager_.getAvailableId();
+    auto& shader_data = shaders_manager_.getData(shader);
+
+    VkShaderModule vert_module;
+    VkShaderModule frag_module;
+    if (!create_shader_module(device_, vertex_path, vert_module)) return {};
+    if (!create_shader_module(device_, fragment_path, frag_module)) return {};
+
+    auto vert_stage = create_stage_info(vert_module, StageType::VERTEX);
+    auto frag_stage = create_stage_info(frag_module, StageType::FRAGMENT);
+
+    VkPipelineShaderStageCreateInfo stages[] = {vert_stage, frag_stage};
+
+    // if (!create_graphics_pipeline(device_, render_pass_, stages, 2, shader_data)) return {};
+
+    destroy_shader_module(device_, vert_module);
+    destroy_shader_module(device_, frag_module);
+
+    return shader;
 }
 
-void hive::vk::VkRenderer::destroyProgram(hive::ShaderProgramHandle shader)
+void hive::vk::VkRenderer::destroyShader(hive::ShaderProgramHandle shader)
 {
+    //TODO: find a way to make sure the shader is not in used
+    auto& shader_data = shaders_manager_.getData(shader);
+    destroy_graphics_pipeline(device_, shader_data);
 }
 
-void hive::vk::VkRenderer::useProgram(hive::ShaderProgramHandle shader)
+void hive::vk::VkRenderer::useShader(ShaderProgramHandle shader)
 {
+    auto &shader_data = shaders_manager_.getData(shader);
+    vkCmdBindPipeline(command_buffers_[current_frame_], VK_PIPELINE_BIND_POINT_GRAPHICS, shader_data.vk_pipeline);
 }
 
-void hive::vk::VkRenderer::createShaderLayout()
-{
-}
 
 #endif

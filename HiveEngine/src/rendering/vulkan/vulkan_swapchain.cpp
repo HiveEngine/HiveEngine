@@ -4,6 +4,7 @@
 #include "vulkan_swapchain.h"
 #include "vulkan_utils.h"
 #include "vulkan_types.h"
+#include "vulkan_image.h"
 
 #include <core/Logger.h>
 #include <core/Window.h>
@@ -13,10 +14,10 @@
 
 namespace hive::vk
 {
-    VkSurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR> & vector);
-    VkPresentModeKHR chooseSwapPresentMode(const std::vector<VkPresentModeKHR> & vector);
+    VkSurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR> &availableFormats);
+    VkPresentModeKHR chooseSwapPresentMode(const std::vector<VkPresentModeKHR> &availablePresentModes);
     VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR & capabilities, const Window & window);
-    bool create_image_view(const VulkanDevice& device, VulkanSwapchain& out_swapchain);
+    bool create_swapchain_image_view(const VulkanDevice& device, VulkanSwapchain& out_swapchain);
 
     bool create_surface(const VkInstance &instance, const Window &window, VkSurfaceKHR &surface_khr)
     {
@@ -89,7 +90,7 @@ namespace hive::vk
         out_swapchain.image_format = surfaceFormat.format;
         out_swapchain.extent_2d = extent;
 
-        return create_image_view(device, out_swapchain);
+        return create_swapchain_image_view(device, out_swapchain);
     }
 
     void destroy_swapchain(const VulkanDevice &device, VulkanSwapchain &swapchain)
@@ -114,7 +115,7 @@ namespace hive::vk
     {
         for (const auto &availableFormat: availableFormats)
         {
-            if (availableFormat.format == VK_FORMAT_B8G8R8A8_SRGB && availableFormat.colorSpace ==
+            if (availableFormat.format == VK_FORMAT_R8G8B8A8_SRGB && availableFormat.colorSpace ==
                 VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
             {
                 return availableFormat;
@@ -161,31 +162,14 @@ namespace hive::vk
         }
     }
 
-    bool create_image_view(const VulkanDevice &device, VulkanSwapchain &out_swapchain)
+    bool create_swapchain_image_view(const VulkanDevice &device, VulkanSwapchain &out_swapchain)
     {
         out_swapchain.image_views.resize(out_swapchain.images.size());
 
         for (size_t i = 0; i < out_swapchain.images.size(); i++)
         {
-            VkImageViewCreateInfo createInfo{};
-            createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-            createInfo.image = out_swapchain.images[i];
-            createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-            createInfo.format = out_swapchain.image_format;
-            createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-            createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-            createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
-            createInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-            createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-            createInfo.subresourceRange.baseMipLevel = 0;
-            createInfo.subresourceRange.levelCount = 1;
-            createInfo.subresourceRange.baseArrayLayer = 0;
-            createInfo.subresourceRange.layerCount = 1;
-
-            if (vkCreateImageView(device.logical_device, &createInfo, nullptr, &out_swapchain.image_views[i]) !=
-                VK_SUCCESS)
+            if(!create_image_view(device, out_swapchain.images[i], out_swapchain.image_views[i]))
             {
-                LOG_ERROR("Vulkan: failed to create image views!");
                 return false;
             }
         }

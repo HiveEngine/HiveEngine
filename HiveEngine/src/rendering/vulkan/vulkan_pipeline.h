@@ -13,15 +13,15 @@ namespace hive::vk
                                   const VkRenderPass &render_pass,
                                   VkPipelineShaderStageCreateInfo *stages,
                                   u32 stages_count,
+                                  VulkanDescriptorSetLayout *layout,
                                   VulkanPipeline &pipeline);
-
-    bool create_descriptor_set_layout(const VulkanDevice& device, VulkanPipeline& pipeline);
 
     void destroy_graphics_pipeline(const VulkanDevice &device, VulkanPipeline &pipeline);
 
     struct Vertex {
         glm::vec2 pos;
         glm::vec3 color;
+        glm::vec2 texCoord;
     };
 
     struct UniformBufferObject

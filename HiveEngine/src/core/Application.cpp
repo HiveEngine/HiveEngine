@@ -9,7 +9,7 @@ hive::Application::Application(ApplicationConfig &config) : memory_(), window_(c
     config.render_config.window = &window_;
     if (!RendererFactory::createRenderer(config.render_config, &renderer_))
     {
-    throw std::runtime_error("Failed to create renderer");
+        throw std::runtime_error("Failed to create renderer");
     }
 }
 
@@ -25,16 +25,19 @@ void hive::Application::run()
 {
     Memory::printMemoryUsage();
 
-    // auto shader = renderer_->createProgram("shaders/vert.spv", "shaders/frag.spv");
 
     u32 frame = 0;
+    // auto shader = renderer_->createShader("shaders/vert.spv", "shaders/frag.spv");
+
     while(!window_.shouldClose())
     {
         window_.pollEvents();
 
+
         if(!renderer_->beginDrawing()) break;
         {
-            //Draw command here
+            //Draw command hereren
+            // renderer_->useShader(shader);
             renderer_->temp_draw();
         }
         if(!renderer_->endDrawing()) break;
@@ -50,5 +53,5 @@ void hive::Application::run()
         // }
     }
 
-    // renderer_->destroyProgram(shder);
+    // renderer_->destroyShader(shader);
 }

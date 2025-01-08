@@ -4,6 +4,7 @@
 
 #include "vulkan_types.h"
 #include <core/RessourceManager.h>
+#include "vulkan_descriptor.h"
 
 namespace hive::vk
 {
@@ -29,13 +30,12 @@ namespace hive::vk
 
         bool frame() override;
 
-        ShaderProgramHandle createProgram(const char *vertex_path, const char *fragment_path) override;
+        ShaderProgramHandle createShader(const char *vertex_path, const char *fragment_path) override;
 
-        void destroyProgram(ShaderProgramHandle shader) override;
+        void destroyShader(ShaderProgramHandle shader) override;
 
-        void useProgram(ShaderProgramHandle shader) override;
+        void useShader(ShaderProgramHandle shader) override;
 
-        void createShaderLayout() override;
 
     protected:
         bool is_ready_ = false;
@@ -58,17 +58,18 @@ namespace hive::vk
         VkSemaphore sem_image_available_[MAX_FRAME_IN_FLIGHT] {};
         VkSemaphore sem_render_finished_[MAX_FRAME_IN_FLIGHT] {};
         VkFence fence_in_flight_[MAX_FRAME_IN_FLIGHT] {};
+        // VkDescriptorPool descriptor_pool_;
 
 
-        RessourceManager<VulkanPipeline, ShaderProgramHandle> shaders;
+        RessourceManager<VulkanPipeline, ShaderProgramHandle> shaders_manager_;
 
         //Temporary
         VulkanPipeline default_pipeline_{};
         VulkanBuffer vertex_buffer_{};
         VulkanBuffer index_buffer_{};
-        std::vector<VkDescriptorSet> descriptorSets;
-        VkDescriptorPool descriptor_pool;
+        std::vector<VkDescriptorSet> descriptorSets_;
         VulkanBuffer ubos[MAX_FRAME_IN_FLIGHT]{};
+        VulkanDescriptorPool *descriptor_pool_;
 
 
 
