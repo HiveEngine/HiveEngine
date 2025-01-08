@@ -7,6 +7,7 @@
 #include <cstring>
 #include <string>
 #include <set>
+#include <core/Logger.h>
 
 
 bool hive::vk::check_validation_layer_support(const std::vector<const char *> &validation_layers)
@@ -156,6 +157,31 @@ void hive::vk::end_single_command(const VulkanDevice& device, VkCommandBuffer co
     vkQueueWaitIdle(device.graphics_queue);
 
     vkFreeCommandBuffers(device.logical_device, device.graphics_command_pool, 1, &command_buffer);
+}
+
+VkFormat hive::vk::find_supported_format(const VulkanDevice &device, const std::vector<VkFormat> &candidates,
+    VkImageTiling tiling, VkFormatFeatureFlags features)
+{
+    for(VkFormat format : candidates)
+    {
+        VkFormatProperties properties;
+        vkGetPhysicalDeviceFormatProperties(device.physical_device, format, &properties);
+
+        if(tiling == VK_IMAGE_TILING_LINEAR && (properties.linearTilingFeatures & features) == features) return format;
+        else if (tiling == VK_IMAGE_TILING_OPTIMAL && (properties.optimalTilingFeatures & features) == features) return format;
+    }
+
+    LOG_ERROR("Vulkan: failed to find supported format");
+    return {};
+}
+
+VkFormat hive::vk::find_depth_format(const VulkanDevice &device)
+{
+    return find_supported_format(
+        device,
+        {VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT},
+        VK_IMAGE_TILING_OPTIMAL,
+        VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
 }
 
 bool hive::vk::findMemoryType(const hive::vk::VulkanDevice &device, u32 typeFilter, VkMemoryPropertyFlags properties, u32 &out_index)

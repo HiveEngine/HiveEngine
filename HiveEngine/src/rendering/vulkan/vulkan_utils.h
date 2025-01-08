@@ -36,4 +36,7 @@ namespace hive::vk
     VkCommandBuffer begin_single_command(const VulkanDevice &device);
     void end_single_command(const VulkanDevice& device, VkCommandBuffer command_buffer);
 
+    VkFormat find_supported_format(const VulkanDevice& device, const std::vector<VkFormat> &candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
+    VkFormat find_depth_format(const VulkanDevice& device);
+
 }

@@ -17,7 +17,8 @@ namespace hive::vk
                       VkMemoryPropertyFlags memory_property,
                       VulkanImage &image);
 
-    bool create_image_view(const VulkanDevice &device, const VkImage &image, VkImageView &image_view);
+    bool create_image_view(const VulkanDevice &device, const VkImage &image, const VkFormat &format,
+                           VkImageAspectFlags aspect_flags, VkImageView &image_view);
     bool create_image_sampler(const VulkanDevice& device, VkSampler &sampler);
 
     void transition_image_layout(const VulkanDevice &device,

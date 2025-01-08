@@ -18,6 +18,15 @@ namespace hive::vk
         VkCommandPool graphics_command_pool;
     };
 
+    struct VulkanImage
+    {
+        VkImage vk_image;
+        VkDeviceMemory vk_image_memory;
+        VkImageView vk_image_view;
+        VkSampler vk_sampler;
+    };
+
+
     struct VulkanSwapchain
     {
         VkSwapchainKHR vk_swapchain;
@@ -27,6 +36,8 @@ namespace hive::vk
         //TODO: use vector of VulkanImage instead
         std::vector<VkImage> images;
         std::vector<VkImageView> image_views;
+
+        VulkanImage depth_image;
     };
 
     struct VulkanFramebuffer
@@ -52,12 +63,5 @@ namespace hive::vk
         void* map;
     };
 
-    struct VulkanImage
-    {
-        VkImage vk_image;
-        VkDeviceMemory vk_image_memory;
-        VkImageView vk_image_view;
-        VkSampler vk_sampler;
-    };
 
 }

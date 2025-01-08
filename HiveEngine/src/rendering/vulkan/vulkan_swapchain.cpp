@@ -90,7 +90,15 @@ namespace hive::vk
         out_swapchain.image_format = surfaceFormat.format;
         out_swapchain.extent_2d = extent;
 
-        return create_swapchain_image_view(device, out_swapchain);
+        if(!create_swapchain_image_view(device, out_swapchain)) return false;
+
+        VkFormat depth_format = find_depth_format(device);
+
+        create_image(device, out_swapchain.extent_2d.width, out_swapchain.extent_2d.height, depth_format, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, out_swapchain.depth_image);
+        create_image_view(device, out_swapchain.depth_image.vk_image, depth_format, VK_IMAGE_ASPECT_DEPTH_BIT,
+                          out_swapchain.depth_image.vk_image_view);
+
+        return true;
     }
 
     void destroy_swapchain(const VulkanDevice &device, VulkanSwapchain &swapchain)
@@ -101,6 +109,7 @@ namespace hive::vk
             vkDestroyImageView(device.logical_device, image_view, nullptr);
         }
 
+        destroy_image(device, swapchain.depth_image);
         vkDestroySwapchainKHR(device.logical_device, swapchain.vk_swapchain, nullptr);
 
     }
@@ -168,7 +177,8 @@ namespace hive::vk
 
         for (size_t i = 0; i < out_swapchain.images.size(); i++)
         {
-            if(!create_image_view(device, out_swapchain.images[i], out_swapchain.image_views[i]))
+            if (!create_image_view(device, out_swapchain.images[i], VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT,
+                                   out_swapchain.image_views[i]))
             {
                 return false;
             }
