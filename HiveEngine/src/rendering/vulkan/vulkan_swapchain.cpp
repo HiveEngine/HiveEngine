@@ -177,7 +177,7 @@ namespace hive::vk
 
         for (size_t i = 0; i < out_swapchain.images.size(); i++)
         {
-            if (!create_image_view(device, out_swapchain.images[i], VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT,
+            if (!create_image_view(device, out_swapchain.images[i], out_swapchain.image_format, VK_IMAGE_ASPECT_COLOR_BIT,
                                    out_swapchain.image_views[i]))
             {
                 return false;
