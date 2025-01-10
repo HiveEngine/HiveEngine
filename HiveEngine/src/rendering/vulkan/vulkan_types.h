@@ -1,7 +1,9 @@
 #pragma once
 #include <vulkan/vulkan.h>
 #include <vector>
-#include <glm/glm.hpp>
+
+
+
 namespace hive::vk
 {
     struct VulkanDevice
@@ -45,23 +47,34 @@ namespace hive::vk
         std::vector<VkFramebuffer> framebuffers;
     };
 
-
-    class VulkanDescriptorSetLayout;
-    struct VulkanPipeline
-    {
-        VkPipeline vk_pipeline;
-        VkPipelineLayout pipeline_layout;
-        VulkanDescriptorSetLayout *layout;
-    };
-
-
-
     struct VulkanBuffer
     {
         VkBuffer vk_buffer;
         VkDeviceMemory vk_buffer_memory;
         void* map;
     };
+
+    class VulkanDescriptorPool;
+    class VulkanDescriptorSetLayout;
+    struct VulkanPipeline
+    {
+        VkPipeline vk_pipeline;
+        VkPipelineLayout pipeline_layout;
+
+        //We assume the pipeline has a ubo at binding 0
+        //We assume the pipeline has a sampler2d at binding 1
+        VulkanImage *texture_buffers;
+        VulkanBuffer *ubos;
+
+        VulkanDescriptorPool *pool;
+        VulkanDescriptorSetLayout *layout;
+
+        std::vector<VkDescriptorSet> descriptor_sets;
+
+    };
+
+
+
 
 
 }

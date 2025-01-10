@@ -4,12 +4,15 @@
 
 #include "vulkan_types.h"
 #include <core/RessourceManager.h>
-#include "vulkan_descriptor.h"
 
-namespace hive::vk
+namespace hive
 {
     struct Vertex;
-    class VkRenderer : public IRenderer
+
+}
+namespace hive::vk
+{
+    class VkRenderer final : public IRenderer
     {
     public:
 
@@ -29,17 +32,16 @@ namespace hive::vk
 
         //API
         bool beginDrawing() override;
-
         bool endDrawing() override;
-
         bool frame() override;
 
-        ShaderProgramHandle createShader(const char *vertex_path, const char *fragment_path) override;
-
+        ShaderProgramHandle createShader(const char* vertex_path, const char* fragment_path, UniformBufferObjectHandle ubo) override;
         void destroyShader(ShaderProgramHandle shader) override;
-
         void useShader(ShaderProgramHandle shader) override;
 
+        UniformBufferObjectHandle createUbo() override;
+        void updateUbo(UniformBufferObjectHandle handle, const UniformBufferObject &ubo) override;
+        void destroyUbo(UniformBufferObjectHandle handle) override;
 
     protected:
         bool is_ready_ = false;
@@ -56,24 +58,20 @@ namespace hive::vk
         VkRenderPass render_pass_{};
         VulkanFramebuffer framebuffer_{};
 
-        static constexpr u32 MAX_FRAME_IN_FLIGHT = 2;
+        static constexpr u32 MAX_FRAME_IN_FLIGHT = 3;
         VkCommandBuffer command_buffers_[MAX_FRAME_IN_FLIGHT] {};
 
         VkSemaphore sem_image_available_[MAX_FRAME_IN_FLIGHT] {};
         VkSemaphore sem_render_finished_[MAX_FRAME_IN_FLIGHT] {};
         VkFence fence_in_flight_[MAX_FRAME_IN_FLIGHT] {};
-        // VkDescriptorPool descriptor_pool_;
 
 
         RessourceManager<VulkanPipeline, ShaderProgramHandle> shaders_manager_;
+        RessourceManager<std::array<VulkanBuffer, MAX_FRAME_IN_FLIGHT>, UniformBufferObjectHandle> ubos_manager_;
 
         //Temporary
-        VulkanPipeline default_pipeline_{};
         VulkanBuffer vertex_buffer_{};
         VulkanBuffer index_buffer_{};
-        std::vector<VkDescriptorSet> descriptorSets_;
-        VulkanBuffer ubos[MAX_FRAME_IN_FLIGHT]{};
-        VulkanDescriptorPool *descriptor_pool_;
         VulkanImage texture_image_;
 
         std::vector<Vertex> vertices;

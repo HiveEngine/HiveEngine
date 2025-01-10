@@ -1,21 +1,22 @@
-#include <core/Memory.h>
 #include <rendering/RendererPlatform.h>
 
-#include "vulkan_descriptor.h"
 
 
 #ifdef HIVE_BACKEND_VULKAN_SUPPORTED
+#include <core/Logger.h>
+#include <rendering/RenderType.h>
+
 #include <chrono>
 #include <glm/gtc/matrix_transform.hpp>
+
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
 #define TINYOBJLOADER_IMPLEMENTATION
 #include <tiny_obj_loader.h>
 
-#include "VkRenderer.h"
-#include <core/Logger.h>
 
+#include "VkRenderer.h"
 #include "vulkan_init.h"
 #include "vulkan_debug.h"
 #include "vulkan_swapchain.h"
@@ -29,7 +30,7 @@
 #include "vulkan_image.h"
 
 
-hive::vk::VkRenderer::VkRenderer(const Window& window) : shaders_manager_(16)
+hive::vk::VkRenderer::VkRenderer(const Window& window) : shaders_manager_(16), ubos_manager_(16)
 {
     if(!create_instance(instance_, window)) return;
     if(config::enable_validation && !setup_debug_messenger(instance_, debugMessenger)) return;
@@ -76,7 +77,6 @@ hive::vk::VkRenderer::VkRenderer(const Window& window) : shaders_manager_(16)
         create_image_sampler(device_, texture_image_.vk_sampler);
 
         //Vertex buffer
-
         load_model();
 
         VulkanBuffer temp_vertex_buffer;
@@ -96,89 +96,11 @@ hive::vk::VkRenderer::VkRenderer(const Window& window) : shaders_manager_(16)
 
 
         //UBO
-        for(auto & ubo : ubos)
-        {
-            create_buffer(device_, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, sizeof(UniformBufferObject), ubo);
-        }
+        // for(auto & ubo : ubos)
+        // {
+        //     create_buffer(device_, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, sizeof(UniformBufferObject), ubo);
+        // }
 
-
-        // DescriptorPool
-        descriptor_pool_ = VulkanDescriptorPool::Builder(device_)
-                 .setMaxtSets(MAX_FRAME_IN_FLIGHT)
-                 .addPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, MAX_FRAME_IN_FLIGHT)
-                 .addPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, MAX_FRAME_IN_FLIGHT)
-                 .build();
-
-        if (!descriptor_pool_->isReady())
-        {
-            return;
-        }
-
-
-        //DescriptorLayout
-        VulkanDescriptorSetLayout *layout = VulkanDescriptorSetLayout::Builder(device_)
-                .addBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT, 1)
-                .addBinding(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 1)
-                .build();
-
-
-        descriptorSets_.resize(MAX_FRAME_IN_FLIGHT);
-
-        descriptor_pool_->allocateDescriptor(layout->getDescriptorSetLayout(), descriptorSets_[0]);
-        descriptor_pool_->allocateDescriptor(layout->getDescriptorSetLayout(), descriptorSets_[1]);
-
-
-        for (size_t i = 0; i < MAX_FRAME_IN_FLIGHT; i++) {
-            VkDescriptorBufferInfo bufferInfo{};
-            bufferInfo.buffer = ubos[i].vk_buffer;
-            bufferInfo.offset = 0;
-            bufferInfo.range = sizeof(UniformBufferObject);
-
-            VkDescriptorImageInfo image_info{};
-            image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-            image_info.imageView = texture_image_.vk_image_view;
-            image_info.sampler = texture_image_.vk_sampler;
-
-            std::array<VkWriteDescriptorSet, 2> descriptorWrites{};
-
-            descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            descriptorWrites[0].dstSet = descriptorSets_[i];
-            descriptorWrites[0].dstBinding = 0;
-            descriptorWrites[0].dstArrayElement = 0;
-            descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-            descriptorWrites[0].descriptorCount = 1;
-            descriptorWrites[0].pBufferInfo = &bufferInfo;
-            descriptorWrites[0].pImageInfo = nullptr; // Optional
-            descriptorWrites[0].pTexelBufferView = nullptr; // Optional
-
-            descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            descriptorWrites[1].dstSet = descriptorSets_[i];
-            descriptorWrites[1].dstBinding = 1;
-            descriptorWrites[1].dstArrayElement = 0;
-            descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-            descriptorWrites[1].descriptorCount = 1;
-            descriptorWrites[1].pBufferInfo = nullptr;
-            descriptorWrites[1].pImageInfo = &image_info; // Optional
-            descriptorWrites[1].pTexelBufferView = nullptr; // Optional
-
-            vkUpdateDescriptorSets(device_.logical_device, descriptorWrites.size(), descriptorWrites.data(), 0, nullptr);
-        }
-
-        //Shader
-        VkShaderModule vert_module;
-        VkShaderModule frag_module;
-        if (!create_shader_module(device_, "shaders/vert.spv", vert_module)) return;
-        if (!create_shader_module(device_, "shaders/frag.spv", frag_module)) return;
-
-        auto vert_stage = create_stage_info(vert_module, StageType::VERTEX);
-        auto frag_stage = create_stage_info(frag_module, StageType::FRAGMENT);
-
-        VkPipelineShaderStageCreateInfo stages[] = {vert_stage, frag_stage};
-
-        if (!create_graphics_pipeline(device_, render_pass_, stages, 2, layout, default_pipeline_ )) return;
-
-        destroy_shader_module(device_, vert_module);
-        destroy_shader_module(device_, frag_module);
     }
 
     is_ready_ = true;
@@ -193,14 +115,12 @@ hive::vk::VkRenderer::~VkRenderer()
         destroy_buffer(device_, vertex_buffer_);
         destroy_buffer(device_, index_buffer_);
 
-        for(auto buffer : ubos)
-        {
-            destroy_buffer(device_, buffer);
-        }
+        // for(auto buffer : ubos)
+        // {
+        //     destroy_buffer(device_, buffer);
+        // }
 
-        Memory::destroyObject<VulkanDescriptorPool, Memory::RENDERER>(descriptor_pool_);
-
-        destroy_graphics_pipeline(device_, default_pipeline_);
+        // destroy_graphics_pipeline(device_, default_pipeline_);
     }
 
     destroy_swapchain(device_, swapchain_);
@@ -230,7 +150,6 @@ bool hive::vk::VkRenderer::isReady() const
 
 void hive::vk::VkRenderer::recordCommandBuffer(VkCommandBuffer command_buffer)
 {
-    vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, default_pipeline_.vk_pipeline);
 
     VkViewport viewport{};
     viewport.x = 0.0f;
@@ -251,31 +170,13 @@ void hive::vk::VkRenderer::recordCommandBuffer(VkCommandBuffer command_buffer)
     vkCmdBindVertexBuffers(command_buffer, 0, 1, vertexBuffers, offsets);
     vkCmdBindIndexBuffer(command_buffer, index_buffer_.vk_buffer, 0, VK_INDEX_TYPE_UINT32);
 
-    vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, default_pipeline_.pipeline_layout, 0, 1, &descriptorSets_[current_frame_], 0, nullptr);
     vkCmdDrawIndexed(command_buffer, static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
 
 }
 
-void hive::vk::VkRenderer::updateUniformBuffer()
-{
-    static auto startTime = std::chrono::high_resolution_clock::now();
-
-    auto currentTime = std::chrono::high_resolution_clock::now();
-    float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
-    UniformBufferObject ubo{};
-    ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-    ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-    ubo.proj = glm::perspective(glm::radians(45.0f), swapchain_.extent_2d.width / (float) swapchain_.extent_2d.height, 0.1f, 10.0f);
-    ubo.proj[1][1] *= -1;
-
-    memcpy(ubos[current_frame_].map, &ubo, sizeof(ubo));
-
-
-}
 
 void hive::vk::VkRenderer::temp_draw()
 {
-    updateUniformBuffer();
     recordCommandBuffer(command_buffers_[current_frame_]);
 }
 
@@ -406,8 +307,10 @@ bool hive::vk::VkRenderer::frame()
     return true;
 }
 
-//TODO: use something like spirv-cross to get the layout or provide a structure that is passed to the function in order to tell the glsl layout
-hive::ShaderProgramHandle hive::vk::VkRenderer::createShader(const char *vertex_path, const char *fragment_path)
+// TODO: use something like spirv-cross to get the layout or provide a structure that is passed to the function in order to tell the glsl layout
+//The engine assume that the shader has a uniform buffer of type UniformBufferObject at binding 0 and a texture sampler at binding 1
+hive::ShaderProgramHandle hive::vk::VkRenderer::createShader(const char *vertex_path, const char *fragment_path,
+    UniformBufferObjectHandle ubo)
 {
 
     auto shader = shaders_manager_.getAvailableId();
@@ -423,7 +326,12 @@ hive::ShaderProgramHandle hive::vk::VkRenderer::createShader(const char *vertex_
 
     VkPipelineShaderStageCreateInfo stages[] = {vert_stage, frag_stage};
 
-    // if (!create_graphics_pipeline(device_, render_pass_, stages, 2, shader_data)) return {};
+    if (!create_graphics_pipeline(device_, render_pass_, stages, 2, MAX_FRAME_IN_FLIGHT, shader_data)) return {};
+
+    auto ubo_data = ubos_manager_.getData(ubo);
+    pipeline_update_ubo_buffer(device_, shader_data, MAX_FRAME_IN_FLIGHT, ubo_data.data());
+    pipeline_update_texture_buffer(device_, shader_data, MAX_FRAME_IN_FLIGHT, &texture_image_);
+
 
     destroy_shader_module(device_, vert_module);
     destroy_shader_module(device_, frag_module);
@@ -431,9 +339,12 @@ hive::ShaderProgramHandle hive::vk::VkRenderer::createShader(const char *vertex_
     return shader;
 }
 
-void hive::vk::VkRenderer::destroyShader(hive::ShaderProgramHandle shader)
+
+void hive::vk::VkRenderer::destroyShader(ShaderProgramHandle shader)
 {
     //TODO: find a way to make sure the shader is not in used
+    vkDeviceWaitIdle(device_.logical_device);
+
     auto& shader_data = shaders_manager_.getData(shader);
     destroy_graphics_pipeline(device_, shader_data);
 }
@@ -442,6 +353,39 @@ void hive::vk::VkRenderer::useShader(ShaderProgramHandle shader)
 {
     auto &shader_data = shaders_manager_.getData(shader);
     vkCmdBindPipeline(command_buffers_[current_frame_], VK_PIPELINE_BIND_POINT_GRAPHICS, shader_data.vk_pipeline);
+    vkCmdBindDescriptorSets(command_buffers_[current_frame_], VK_PIPELINE_BIND_POINT_GRAPHICS, shader_data.pipeline_layout, 0, 1, &shader_data.descriptor_sets[current_frame_], 0, nullptr);
+}
+
+hive::UniformBufferObjectHandle hive::vk::VkRenderer::createUbo()
+{
+    auto ubo = ubos_manager_.getAvailableId();
+    auto &ubos = ubos_manager_.getData(ubo);
+
+    for(auto &ubo_data : ubos)
+    {
+        create_buffer(device_, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                      sizeof(UniformBufferObject), ubo_data);
+    }
+
+    return ubo;
+}
+
+void hive::vk::VkRenderer::updateUbo(UniformBufferObjectHandle handle, const UniformBufferObject &ubo)
+{
+    auto &ubo_data = ubos_manager_.getData(handle);
+    memcpy(ubo_data[current_frame_].map, &ubo, sizeof(UniformBufferObject));
+}
+
+void hive::vk::VkRenderer::destroyUbo(UniformBufferObjectHandle handle)
+{
+    vkDeviceWaitIdle(device_.logical_device);
+
+    auto& ubo_data = ubos_manager_.getData(handle);
+    for(i32 i = 0; i < ubo_data.size(); i++)
+    {
+        destroy_buffer(device_, ubo_data[i]);
+    }
 }
 
 

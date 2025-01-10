@@ -2,6 +2,7 @@
 
 
 #ifdef HIVE_BACKEND_VULKAN_SUPPORTED
+#include <array>
 #include <core/Logger.h>
 #include "vulkan_renderpass.h"
 #include "vulkan_types.h"

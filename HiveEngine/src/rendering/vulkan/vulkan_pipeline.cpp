@@ -1,12 +1,14 @@
 #include <rendering/RendererPlatform.h>
 
 #ifdef HIVE_BACKEND_VULKAN_SUPPORTED
+#include <core/Logger.h>
+#include <core/Memory.h>
+#include <rendering/RenderType.h>
+
 #include "vulkan_descriptor.h"
 #include "vulkan_pipeline.h"
 #include "vulkan_types.h"
 
-#include <core/Logger.h>
-#include <core/Memory.h>
 
 namespace hive::vk
 {
@@ -14,9 +16,34 @@ namespace hive::vk
                                   const VkRenderPass &render_pass,
                                   VkPipelineShaderStageCreateInfo *stages,
                                   u32 stages_count,
-                                  VulkanDescriptorSetLayout *layout,
+                                  u32 frame_in_flight,
                                   VulkanPipeline &pipeline)
     {
+        //Descriptor
+        pipeline.pool = VulkanDescriptorPool::Builder(device)
+                .setMaxtSets(frame_in_flight)
+                .addPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, frame_in_flight)
+                .addPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, frame_in_flight)
+                .build();
+
+        if(!pipeline.pool->isReady())
+        {
+            return false;
+        }
+
+        pipeline.layout = VulkanDescriptorSetLayout::Builder(device)
+                .addBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT, 1)
+                .addBinding(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 1)
+                .build();
+
+        pipeline.descriptor_sets.resize(frame_in_flight);
+        for(i32 i = 0; i < frame_in_flight; i++)
+        {
+            pipeline.pool->allocateDescriptor(pipeline.layout->getDescriptorSetLayout(), pipeline.descriptor_sets[i]);
+        }
+
+
+
         //Vertex Input
         VkVertexInputBindingDescription bindingDescription{};
         bindingDescription.binding = 0;
@@ -96,16 +123,13 @@ namespace hive::vk
         dynamicState.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
         dynamicState.pDynamicStates = dynamicStates.data();
 
-        // create_descriptor_set_layout(device, pipeline);
 
-        // pipeline.descriptor_set_layout = layout.getDescriptorSetLayout();
-        pipeline.layout = layout;
 
         VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
         pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 
         pipelineLayoutInfo.setLayoutCount = 1;
-        pipelineLayoutInfo.pSetLayouts = &layout->getDescriptorSetLayout();
+        pipelineLayoutInfo.pSetLayouts = &pipeline.layout->getDescriptorSetLayout();
         pipelineLayoutInfo.pushConstantRangeCount = 0;
 
         if (vkCreatePipelineLayout(device.logical_device, &pipelineLayoutInfo, nullptr, &pipeline.pipeline_layout) != VK_SUCCESS) {
@@ -153,11 +177,69 @@ namespace hive::vk
 
     void destroy_graphics_pipeline(const VulkanDevice &device, VulkanPipeline &pipeline)
     {
+        Memory::destroyObject<VulkanDescriptorPool, Memory::RENDERER>(pipeline.pool);
         Memory::destroyObject<VulkanDescriptorSetLayout, Memory::RENDERER>(pipeline.layout);
         vkDestroyPipelineLayout(device.logical_device, pipeline.pipeline_layout, nullptr);
         vkDestroyPipeline(device.logical_device, pipeline.vk_pipeline, nullptr);
+
+        pipeline.vk_pipeline = VK_NULL_HANDLE;
+        pipeline.layout = nullptr;
+        pipeline.pool = nullptr;
+    }
+
+    void pipeline_update_texture_buffer(const VulkanDevice &device, VulkanPipeline &pipeline, u32 frame_in_flight,
+        VulkanImage *images)
+    {
+        for (i32 i = 0; i < frame_in_flight; i++)
+        {
+            pipeline.texture_buffers = images;
+            VkDescriptorImageInfo image_info{};
+            image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+            image_info.imageView = pipeline.texture_buffers[0].vk_image_view;
+            image_info.sampler = pipeline.texture_buffers[0].vk_sampler;
+
+            VkWriteDescriptorSet descriptorWrite{};
+            descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            descriptorWrite.dstSet = pipeline.descriptor_sets[i];
+            descriptorWrite.dstBinding = 1;
+            descriptorWrite.dstArrayElement = 0;
+            descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+            descriptorWrite.descriptorCount = 1;
+            descriptorWrite.pBufferInfo = nullptr;
+            descriptorWrite.pImageInfo = &image_info; // Optional
+            descriptorWrite.pTexelBufferView = nullptr; // Optional
+
+            vkUpdateDescriptorSets(device.logical_device, 1, &descriptorWrite, 0,
+                                   nullptr);
+        }
     }
 
 
+    void pipeline_update_ubo_buffer(const VulkanDevice &device, VulkanPipeline &pipeline, u32 frame_in_flight,
+                                    VulkanBuffer *buffers)
+    {
+        pipeline.ubos = buffers;
+        for(i32 i = 0; i < frame_in_flight; i++)
+        {
+            VkDescriptorBufferInfo bufferInfo{};
+            bufferInfo.buffer = pipeline.ubos[i].vk_buffer;
+            bufferInfo.offset = 0;
+            bufferInfo.range = sizeof(UniformBufferObject);
+
+            VkWriteDescriptorSet descriptorWrite{};
+            descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            descriptorWrite.dstSet = pipeline.descriptor_sets[i];
+            descriptorWrite.dstBinding = 0;
+            descriptorWrite.dstArrayElement = 0;
+            descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+            descriptorWrite.descriptorCount = 1;
+            descriptorWrite.pBufferInfo = &bufferInfo;
+            descriptorWrite.pImageInfo = nullptr; // Optional
+            descriptorWrite.pTexelBufferView = nullptr; // Optional
+
+            vkUpdateDescriptorSets(device.logical_device, 1, &descriptorWrite, 0,
+                                   nullptr);
+        }
+    }
 }
 #endif

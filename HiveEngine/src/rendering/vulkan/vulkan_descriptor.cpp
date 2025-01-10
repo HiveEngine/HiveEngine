@@ -1,6 +1,7 @@
 #include <rendering/RendererPlatform.h>
 #ifdef HIVE_BACKEND_VULKAN_SUPPORTED
 #include "vulkan_descriptor.h"
+#include "vulkan_types.h"
 
 #include <core/Memory.h>
 #include <core/Logger.h>

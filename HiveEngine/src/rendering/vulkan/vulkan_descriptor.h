@@ -1,12 +1,13 @@
 #pragma once
 #include <hvpch.h>
 #include <unordered_map>
-#include "vulkan_types.h"
+#include <vector>
+// #include "vulkan_types.h"
 
 #include <vulkan/vulkan.h>
 namespace hive::vk
 {
-    // struct VulkanDevice;
+    struct VulkanDevice;
 
     class VulkanDescriptorSetLayout
     {
