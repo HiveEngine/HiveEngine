@@ -55,7 +55,6 @@ void hive::WindowGLFW::getFramebufferSize(i32 &width, i32 &height) const
     glfwGetFramebufferSize(window_, &width, &height);
 }
 
-
 #ifdef HIVE_BACKEND_VULKAN_SUPPORTED
 void hive::WindowGLFW::appendRequiredVulkanExtension(std::vector<const char *> &vector) const
 {

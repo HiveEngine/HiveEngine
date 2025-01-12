@@ -16,6 +16,7 @@ namespace hive::vk
                                   VkPipelineShaderStageCreateInfo *stages,
                                   u32 stages_count,
                                   u32 frame_in_flight,
+                                  VkPolygonMode mode,
                                   VulkanPipeline &pipeline);
 
     void destroy_graphics_pipeline(const VulkanDevice &device, VulkanPipeline &pipeline);

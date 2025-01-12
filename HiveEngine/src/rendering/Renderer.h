@@ -29,7 +29,7 @@ namespace hive
         virtual bool endDrawing() = 0;
         virtual bool frame() = 0;
 
-        virtual ShaderProgramHandle createShader(const char* vertex_path, const char* fragment_path, UniformBufferObjectHandle ubo) = 0;
+        virtual ShaderProgramHandle createShader(const char* vertex_path, const char* fragment_path, UniformBufferObjectHandle ubo, u32 mode) = 0;
         virtual void destroyShader(ShaderProgramHandle shader) = 0;
         virtual void useShader(ShaderProgramHandle shader) = 0;
 

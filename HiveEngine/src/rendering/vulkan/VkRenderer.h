@@ -35,7 +35,7 @@ namespace hive::vk
         bool endDrawing() override;
         bool frame() override;
 
-        ShaderProgramHandle createShader(const char* vertex_path, const char* fragment_path, UniformBufferObjectHandle ubo) override;
+        ShaderProgramHandle createShader(const char* vertex_path, const char* fragment_path, UniformBufferObjectHandle ubo, u32 mode) override;
         void destroyShader(ShaderProgramHandle shader) override;
         void useShader(ShaderProgramHandle shader) override;
 

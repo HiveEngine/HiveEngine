@@ -23,8 +23,8 @@ int main()
     hive::ApplicationConfig config{};
 
     config.log_level = hive::Logger::LogLevel::DEBUG;
-    config.window_config.width = 1920;
-    config.window_config.height = 1080;
+    config.window_config.width = 1080;
+    config.window_config.height = 920;
     config.window_config.title = "Hive Engine";
     config.window_config.type = hive::WindowConfig::WindowType::GLFW;
 

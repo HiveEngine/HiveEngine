@@ -29,6 +29,7 @@ namespace hive
         virtual void waitEvents() const = 0;
         virtual void getFramebufferSize(i32& width, i32 &height) const = 0;
 
+
 #ifdef HIVE_BACKEND_VULKAN_SUPPORTED
         virtual void appendRequiredVulkanExtension(std::vector<const char*> &vector) const = 0;
         virtual void createVulkanSurface(void* instance, void *surface_khr) const = 0;

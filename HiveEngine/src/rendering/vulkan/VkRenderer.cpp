@@ -310,7 +310,7 @@ bool hive::vk::VkRenderer::frame()
 // TODO: use something like spirv-cross to get the layout or provide a structure that is passed to the function in order to tell the glsl layout
 //The engine assume that the shader has a uniform buffer of type UniformBufferObject at binding 0 and a texture sampler at binding 1
 hive::ShaderProgramHandle hive::vk::VkRenderer::createShader(const char *vertex_path, const char *fragment_path,
-    UniformBufferObjectHandle ubo)
+    UniformBufferObjectHandle ubo, u32 mode)
 {
 
     auto shader = shaders_manager_.getAvailableId();
@@ -326,7 +326,20 @@ hive::ShaderProgramHandle hive::vk::VkRenderer::createShader(const char *vertex_
 
     VkPipelineShaderStageCreateInfo stages[] = {vert_stage, frag_stage};
 
-    if (!create_graphics_pipeline(device_, render_pass_, stages, 2, MAX_FRAME_IN_FLIGHT, shader_data)) return {};
+    VkPolygonMode polygon_mode = VK_POLYGON_MODE_FILL;
+    switch (mode)
+    {
+        case 0:
+            polygon_mode = VK_POLYGON_MODE_FILL;
+        break;
+        case 1:
+            polygon_mode = VK_POLYGON_MODE_LINE;
+        break;
+        case 2:
+            polygon_mode = VK_POLYGON_MODE_POINT;
+        break;
+    }
+    if (!create_graphics_pipeline(device_, render_pass_, stages, 2, MAX_FRAME_IN_FLIGHT, polygon_mode, shader_data)) return {};
 
     auto ubo_data = ubos_manager_.getData(ubo);
     pipeline_update_ubo_buffer(device_, shader_data, MAX_FRAME_IN_FLIGHT, ubo_data.data());
