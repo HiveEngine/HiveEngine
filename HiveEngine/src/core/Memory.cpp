@@ -2,7 +2,7 @@
 
 #include <cstdio>
 #include <cstdlib>
-#include <string.h>
+#include <cstring>
 #include <cassert>
 
 #include "Logger.h"
@@ -46,7 +46,7 @@ void hive::Memory::release(void *block, u64 size, Tag tag)
 
 void hive::Memory::copy(const void *src, void *dest, const u64 size)
 {
-    mempcpy(dest, src, size);
+    std::memcpy(dest, src, size);
 }
 
 

@@ -1,6 +1,7 @@
 #include <rendering/RendererPlatform.h>
 
 #ifdef HIVE_BACKEND_VULKAN_SUPPORTED
+#include <array>
 #include <core/Logger.h>
 #include <core/Memory.h>
 #include <rendering/RenderType.h>

@@ -3,6 +3,7 @@
 
 
 #ifdef HIVE_BACKEND_VULKAN_SUPPORTED
+#include <array>
 #include <core/Logger.h>
 #include <rendering/RenderType.h>
 
