@@ -1,0 +1,9 @@
+[submodule "Hive/extern/glfw"]
+	path = Terra/extern/glfw
+	url = https://github.com/glfw/glfw.git
+[submodule "Swarm/extern/vkboot"]
+	path = Swarm/extern/vkboot
+	url = https://github.com/charles-lunarg/vk-bootstrap.git
+[submodule "Swarm/extern/glm"]
+	path = Swarm/extern/glm
+	url = https://github.com/g-truc/glm.git
