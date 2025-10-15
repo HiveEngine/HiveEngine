@@ -42,7 +42,7 @@ namespace hive
 
             if (it == remainingModules.end())
             {
-                throw std::runtime_error("Unresolvable module dependency detected.");
+                return;
             }
 
             initializedModules.insert((*it)->GetName());

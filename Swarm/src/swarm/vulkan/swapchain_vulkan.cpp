@@ -4,6 +4,8 @@
 #include <swarm/surface.h>
 #include <swarm/device.h>
 
+#include <iostream>
+
 namespace swarm
 {
 
@@ -33,7 +35,12 @@ namespace swarm
         const auto swapchainRes = builder.build();
 
         if (!swapchainRes.has_value())
+        {
+            const vkb::Error error = swapchainRes.full_error();
+            std::cout << error.detailed_failure_reasons[0] << std::endl;
+
             return;
+        }
 
         m_Swapchain = swapchainRes.value();
 

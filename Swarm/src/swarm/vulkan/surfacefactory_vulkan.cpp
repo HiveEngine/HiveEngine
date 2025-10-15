@@ -32,10 +32,26 @@ namespace swarm::vk
 
         return surface;
     }
+}
+#endif
 
-    VkSurfaceKHR SurfaceFactory::CreateWin32Surface(VkInstance instance)
+#if defined(_WIN64)
+#include <Windows.h>
+#include <vulkan/vulkan_win32.h>
+namespace swarm::vk
+{
+    VkSurfaceKHR SurfaceFactory::CreateWin32Surface(VkInstance instance, HINSTANCE__ *hinstance, HWND__ *hwnd)
     {
-        return VK_NULL_HANDLE;
+        VkWin32SurfaceCreateInfoKHR createInfo = {};
+        createInfo.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
+        createInfo.hinstance = hinstance;
+        createInfo.hwnd = hwnd;
+
+        VkSurfaceKHR surfaceHandle{VK_NULL_HANDLE};
+        vkCreateWin32SurfaceKHR(instance, &createInfo, nullptr, &surfaceHandle);
+
+        return surfaceHandle;
     }
 }
+
 #endif

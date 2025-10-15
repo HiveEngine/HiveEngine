@@ -19,7 +19,7 @@ namespace swarm
         }
 
         //TODO read file from path
-        std::ifstream file(path);
+        std::ifstream file(path, std::ios::binary);
 
         if (!file.is_open())
         {
@@ -27,14 +27,19 @@ namespace swarm
         }
 
         const unsigned int fileSize = std::filesystem::file_size(path);
-        std::vector<char> buffer(fileSize);
-        file.read(buffer.data(), fileSize);
+        // std::vector<char> buffer(fileSize);
+        char* buffer = new char[fileSize];
+        // std::vector<int> buffer2(10);
+
+        // file.read(buffer.data(), fileSize);
+        file.read(buffer, fileSize);
         file.close();
 
         VkShaderModuleCreateInfo createInfo{};
         createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
         createInfo.codeSize = fileSize;
-        createInfo.pCode = reinterpret_cast<unsigned int*>(buffer.data());
+        // createInfo.pCode = reinterpret_cast<unsigned int*>(buffer.data());
+        createInfo.pCode = reinterpret_cast<unsigned int*>(buffer);
 
         vkCreateShaderModule(m_Device, &createInfo, nullptr, &m_ShaderModule);
     }

@@ -23,7 +23,7 @@ namespace terra
         {
             //X11: windowId for Window XID, displayHandle for _XDisplay
             //Wayland: windowHandle for wl_surface, displayHandle for wl_surface
-            //Win32:
+            //Win32: displayHandle for HINSTANCE, windowHandle for HWND
 
             void* windowHandle{nullptr};
             void* displayHandle{nullptr};

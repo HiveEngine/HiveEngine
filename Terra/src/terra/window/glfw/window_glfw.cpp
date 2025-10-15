@@ -7,6 +7,7 @@ namespace terra
 
     Window::Window(WindowDescription description) : m_Window(nullptr)
     {
+        glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
         m_Window = glfwCreateWindow(static_cast<int>(description.width), static_cast<int>(description.height), description.title, nullptr, nullptr);
     }
 
