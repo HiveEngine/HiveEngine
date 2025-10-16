@@ -21,6 +21,8 @@ namespace swarm
         Swapchain(Swapchain&&) = default;
         Swapchain& operator=(Swapchain&&) = default;
 
+        void GetDimensions(unsigned int& width, unsigned int& height) const;
+
     protected:
         Device& m_Device;
     private:

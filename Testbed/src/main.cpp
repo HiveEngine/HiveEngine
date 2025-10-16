@@ -15,6 +15,7 @@
 #include <swarm/swapchain.h>
 #include <swarm/renderpass.h>
 #include <swarm/commandpool.h>
+#include <swarm/texture.h>
 
 
 extern void RegisterSystemModule();
@@ -74,6 +75,10 @@ int main()
         swarm::Shader fragShader(device, "shaders/frag.spv", {swarm::ShaderStage::FRAGMENT});
 
         swarm::Program program(device, vertexShader, fragShader, renderpass);
+
+        unsigned int swapchainWidth, swapchainHeight;
+        swapchain.GetDimensions(swapchainWidth, swapchainHeight);
+        swarm::Texture depthTexture{device, {swapchainWidth, swapchainHeight, swarm::TextureType::DEPTH}};
 
         while (!window.ShouldClose())
         {

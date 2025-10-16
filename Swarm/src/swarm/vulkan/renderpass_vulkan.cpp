@@ -4,32 +4,12 @@
 #include <swarm/device.h>
 #include <swarm/swapchain.h>
 
+#include <swarm/vulkan/utils_vulkan.h>
+
 
 namespace swarm
 {
-    VkFormat FindSupportedFormat(VkPhysicalDevice physDevice, const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features)
-    {
-        for (VkFormat format : candidates) {
-            VkFormatProperties props;
-            vkGetPhysicalDeviceFormatProperties(physDevice, format, &props);
 
-            if (tiling == VK_IMAGE_TILING_LINEAR && (props.linearTilingFeatures & features) == features) {
-                return format;
-            } else if (tiling == VK_IMAGE_TILING_OPTIMAL && (props.optimalTilingFeatures & features) == features) {
-                return format;
-            }
-        }
-
-        return VK_FORMAT_UNDEFINED;
-    }
-    VkFormat FindDepthFormat(VkPhysicalDevice physDevice)
-    {
-        return FindSupportedFormat(physDevice,
-             {VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT},
-             VK_IMAGE_TILING_OPTIMAL,
-             VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT
-         );
-    }
 
     RenderPass::RenderPass(Device &device, RenderPassDescription description) : m_Device{device},
         m_Renderpass{VK_NULL_HANDLE}
@@ -47,7 +27,7 @@ namespace swarm
         colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
         VkAttachmentDescription depthAttachment{};
-        depthAttachment.format = FindDepthFormat(m_Device.GetPhysicalDevice());
+        depthAttachment.format = vk::FindDepthFormat(m_Device.GetPhysicalDevice());
         depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
         depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
         depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;

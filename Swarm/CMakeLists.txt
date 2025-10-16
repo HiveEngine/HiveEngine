@@ -22,7 +22,8 @@ if(swarm_use_vulkan STREQUAL "ON")
             src/swarm/vulkan/swapchain_vulkan.cpp
             src/swarm/vulkan/shader_vulkan.cpp
             src/swarm/vulkan/program_vulkan.cpp
-            src/swarm/vulkan/commandpool_vulkan.cpp)
+            src/swarm/vulkan/commandpool_vulkan.cpp
+            src/swarm/vulkan/texture_vulkan.cpp)
 
     target_link_libraries(swarm PUBLIC vk-bootstrap Vulkan::Vulkan)
 endif ()

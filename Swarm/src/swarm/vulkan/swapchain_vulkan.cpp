@@ -59,4 +59,10 @@ namespace swarm
         }
         vkb::destroy_swapchain(m_Swapchain);
     }
+
+    void Swapchain::GetDimensions(unsigned int &width, unsigned int &height) const
+    {
+        width = m_Swapchain.extent.width;
+        height = m_Swapchain.extent.height;
+    }
 }
