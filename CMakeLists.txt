@@ -8,6 +8,6 @@ set(swarm_use_vulkan ON)
 set(terra_use_glfw ON)
 
 add_subdirectory(Hive)
-add_subdirectory(Swarm)
+#add_subdirectory(Swarm)
 add_subdirectory(Terra)
 add_subdirectory(Testbed)

@@ -7,3 +7,6 @@
 [submodule "Swarm/extern/glm"]
 	path = Swarm/extern/glm
 	url = https://github.com/g-truc/glm.git
+[submodule "Testbed/extern/swarm"]
+	path = Testbed/extern/swarm
+	url = https://github.com/solfrak/Swarm

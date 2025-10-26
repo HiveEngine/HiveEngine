@@ -1,44 +1,48 @@
+#include <glm/detail/func_packing_simd.inl>
+#include <glm/glm.hpp>
 #include <testbed/precomp.h>
 #include <testbed/logtestbed.h>
 
 #include <hive/core/log.h>
 #include <hive/core/moduleregistry.h>
-#include <swarm/commandpool.h>
+// #include <swarm/commandpool.h>
 
 #include <terra/window/window.h>
 
-#include <swarm/device.h>
-#include <swarm/instance.h>
-#include <swarm/program.h>
-#include <swarm/shader.h>
-#include <swarm/surface.h>
-#include <swarm/swapchain.h>
-#include <swarm/renderpass.h>
-#include <swarm/commandpool.h>
-#include <swarm/texture.h>
+// #include <swarm/device.h>
+// #include <swarm/instance.h>
+// #include <swarm/program.h>
+// #include <swarm/shader.h>
+// #include <swarm/surface.h>
+// #include <swarm/swapchain.h>
+// #include <swarm/renderpass.h>
+// #include <swarm/commandpool.h>
+// #include <swarm/framebuffer.h>
+// #include <swarm/texture.h>
+// #include <swarm/buffer.h>
+#include <swarm/swarm.h>
 
 
 extern void RegisterSystemModule();
 
-swarm::SurfaceDescription ConvertNativeHandle(const terra::Window::NativeHandle &handle)
+swarm::SurfaceCreateInfo ConvertNativeHandle(const terra::Window::NativeHandle &handle)
 {
-    swarm::SurfaceDescription result{};
-    result.displayHandle = handle.displayHandle;
-    result.windowHandle = handle.windowHandle;
-    result.windowId = handle.windowId;
+    swarm::SurfaceCreateInfo result{};
+    result.displayReference.waylandDisplay = handle.displayHandle;
+    result.surfaceReference.waylandSurface = handle.windowHandle;
 
     switch (handle.sessionType)
     {
         case terra::Window::NativeHandle::SessionType::NONE:
             break;
         case terra::Window::NativeHandle::SessionType::WAYLAND:
-            result.type = swarm::SurfaceDescription::SessionType::WAYLAND;
+            result.type = swarm::SessionType::WAYLAND;
             break;
         case terra::Window::NativeHandle::SessionType::X11:
-            result.type = swarm::SurfaceDescription::SessionType::X11;
+            result.type = swarm::SessionType::X11;
             break;
         case terra::Window::NativeHandle::SessionType::WINDOWS:
-            result.type = swarm::SurfaceDescription::SessionType::WIN32;
+            result.type = swarm::SessionType::WIN;
             break;
     }
 
@@ -64,26 +68,74 @@ int main()
 
         const terra::Window::NativeHandle handle = window.GetNativeHandle();
 
-        swarm::Instance instance{{"Testbed", 0, true}};
-        swarm::Surface surface{instance, ConvertNativeHandle(handle)};
-        swarm::Device device{instance, surface, {}};
-        swarm::Swapchain swapchain{device, {surface}};
-        swarm::RenderPass renderpass(device, {swapchain});
-        swarm::CommandPool commandpool(device, surface);
+        swarm::InitSwarm();
 
-        swarm::Shader vertexShader(device, "shaders/vert.spv", {swarm::ShaderStage::VERTEX});
-        swarm::Shader fragShader(device, "shaders/frag.spv", {swarm::ShaderStage::FRAGMENT});
+        swarm::InstanceCreateInfo instanceInfo{"Testbed", 1, true};
+        swarm::InstanceHandle instance = swarm::CreateInstance(instanceInfo);
 
-        swarm::Program program(device, vertexShader, fragShader, renderpass);
+        swarm::SurfaceCreateInfo surfaceInfo = ConvertNativeHandle(handle);
+        swarm::SurfaceHandle surface = swarm::CreateSurface(instance, surfaceInfo);
 
-        unsigned int swapchainWidth, swapchainHeight;
-        swapchain.GetDimensions(swapchainWidth, swapchainHeight);
-        swarm::Texture depthTexture{device, {swapchainWidth, swapchainHeight, swarm::TextureType::DEPTH}};
+        swarm::DeviceCreateInfo deviceInfo{};
+        swarm::DeviceHandle device = swarm::CreateDevice(instance, surface, deviceInfo);
 
-        while (!window.ShouldClose())
-        {
-            terra::Window::PollEvents();
-        }
+        swarm::SwapchainCreateInfo swapchainCreateInfo{};
+        swarm::SwapchainHandle swapchain = swarm::CreateSwapchain(device, swapchainCreateInfo);
+
+        swarm::RenderpassCreateInfo renderpassCreateInfo{};
+        swarm::RenderpassHandle renderpass = swarm::CreateRenderpass(device, swapchain, renderpassCreateInfo);
+
+        swarm::ShaderCreateInfo shaderCreateInfo{};
+        shaderCreateInfo.path = "shaders/vert.spv";
+        shaderCreateInfo.stage = swarm::ShaderStage::VERTEX;
+        swarm::ShaderHandle vertexShader = swarm::CreateShader(device, shaderCreateInfo);
+
+        shaderCreateInfo.path = "shaders/frag.spv";
+        shaderCreateInfo.stage = swarm::ShaderStage::FRAGMENT;
+        swarm::ShaderHandle fragmentShader = swarm::CreateShader(device, shaderCreateInfo);
+
+        std::vector<swarm::DescriptorSetLayoutBinding> bindings;
+        bindings.push_back({0, 1, swarm::BindingType::UBO, swarm::ShaderStage::VERTEX});
+        bindings.push_back({1, 1, swarm::BindingType::IMAGE_SAMPLER, swarm::ShaderStage::FRAGMENT});
+
+        swarm::DescriptorSetlayoutHandle descriptorSetLayout = swarm::CreateDescriptorSetlayout(device, bindings.data(), bindings.size());
+
+
+        swarm::DestroyDescriptorSetlayout(device, descriptorSetLayout);
+        swarm::DestroyShader(device, fragmentShader);
+        swarm::DestroyShader(device, vertexShader);
+        swarm::DestroyRenderpass(device, renderpass);
+        swarm::DestroySwapchain(device, swapchain);
+        swarm::DestroyDevice(device);
+        swarm::DestroySurface(instance, surface);
+        swarm::DestroyInstance(instance);
+
+        // // swarm::CommandPool commandpool(device, surface);
+        // //
+        // const swarm::Program program(device, vertexShader, fragShader, renderpass);
+        // //
+        // unsigned int swapchainWidth, swapchainHeight;
+        // swapchain.GetDimensions(swapchainWidth, swapchainHeight);
+        // swarm::Texture depthTexture{device, {swapchainWidth, swapchainHeight, swarm::TextureType::DEPTH}};
+        // swarm::Framebuffer framebuffer{device, {swapchain, depthTexture, renderpass}};
+        //
+        // struct Vertex
+        // {
+        //     glm::vec3 position;
+        //     glm::vec3 color;
+        //     glm::vec3 texCoord;
+        // };
+        //
+        // std::vector<Vertex> vertices;
+        // vertices.push_back({});
+        // vertices.push_back({});
+        // vertices.push_back({});
+        // swarm::Buffer vertexBuffer{device, commandpool, {vertices.data(), sizeof(Vertex) * vertices.size(), swarm::BufferType::VERTEX}};
+        //
+        // while (!window.ShouldClose())
+        // {
+        //     terra::Window::PollEvents();
+        // }
     }
 
     terra::Window::BackendShutdown();
