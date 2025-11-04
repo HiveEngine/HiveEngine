@@ -1,1 +1,0 @@
-VkCommandPool m_CommandPool;

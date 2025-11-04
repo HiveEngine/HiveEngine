@@ -36,6 +36,9 @@ namespace terra
                 handle.sessionType = sessionType;
                 break;
             }
+            case NativeHandle::SessionType::NONE:
+            default:
+                break;
         }
 
         return handle;
