@@ -66,6 +66,8 @@ swarm::SurfaceCreateInfo ConvertNativeHandle(const terra::Window::NativeHandle &
             result.type = swarm::SessionType::X11;
             break;
         case terra::Window::NativeHandle::SessionType::WINDOWS:
+            result.displayReference.win32Hinstance = handle.displayHandle;
+            result.surfaceReference.win32Hwnd = handle.windowHandle;
             result.type = swarm::SessionType::WIN;
             break;
     }

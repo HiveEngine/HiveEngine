@@ -13,6 +13,7 @@ namespace terra
 
         nativeHandle.windowHandle = glfwGetWin32Window(m_Window);
         nativeHandle.displayHandle = GetModuleHandle(nullptr);
+        nativeHandle.sessionType = NativeHandle::SessionType::WINDOWS;
 
         return nativeHandle;
     }
