@@ -154,12 +154,45 @@ int main()
         InitScene(renderContext);
         LoadModel(renderContext, model);
 
+        //Must have a clear buffer for each attachment in the renderpass. Currently we hardcoded a Color and a Depth buffer
+        std::vector<swarm::ClearValue> clearValues(2);
+        clearValues[0].type = swarm::ClearValueType::COLOR;
+        clearValues[1].type = swarm::ClearValueType::DEPTH;
+
+        clearValues[0].color = {0.f, 0.f, 1.f, 1.f};
+        clearValues[1].depthStencil = {1.f, 0};
+        swarm::RenderpassSetClearValue(renderContext.renderpass, clearValues);
+
         int frame = 0;
         while (!window.ShouldClose())
         {
             terra::Window::PollEvents();
-            swarm::draw(renderContext.device, renderContext.inFlightFences[frame], renderContext.imageAvailableSemaphores[frame], renderContext.renderFinishedSemaphores,
-                        renderContext.swapchain, renderContext.commandBuffers[frame], renderContext.renderpass, nullptr, renderContext.framebuffer);
+
+            swarm::CmdBeginFrameInfo beginFrameInfo{};
+            beginFrameInfo.device = renderContext.device;
+            beginFrameInfo.inFlightFence = renderContext.inFlightFences[frame];
+            beginFrameInfo.imageAvailableSemaphore = renderContext.imageAvailableSemaphores[frame];
+            beginFrameInfo.swapchain = renderContext.swapchain;
+            beginFrameInfo.commandBuffer = renderContext.commandBuffers[frame];
+            beginFrameInfo.renderpass = renderContext.renderpass;
+            beginFrameInfo.framebuffer = renderContext.framebuffer;
+            unsigned int imageIndex = swarm::CmdBeginFrame(beginFrameInfo);
+
+            swarm::CmdEndFrameInfo endFrameInfo{};
+            endFrameInfo.commandBuffer = renderContext.commandBuffers[frame];
+            swarm::CmdEndFrame(endFrameInfo);
+
+            swarm::CmdSubmitInfo submitInfo{};
+            submitInfo.device = renderContext.device;
+            submitInfo.imageAvailableSemaphore = renderContext.imageAvailableSemaphores[frame];
+            submitInfo.inFlightFence = renderContext.inFlightFences[frame];
+            submitInfo.renderFinishedSemaphore = renderContext.renderFinishedSemaphores.data();
+            submitInfo.renderFinishedCount = renderContext.renderFinishedSemaphores.size();
+            submitInfo.commandBuffer = renderContext.commandBuffers[frame];
+            submitInfo.swapchain = renderContext.swapchain;
+            submitInfo.imageIndex = imageIndex;
+            swarm::CmdSubmitFrame(submitInfo);
+
             frame = (frame + 1) % 2;
         }
 
