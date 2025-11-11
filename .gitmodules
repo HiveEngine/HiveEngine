@@ -3,4 +3,4 @@
 	url = https://github.com/glfw/glfw.git
 [submodule "Testbed/extern/swarm"]
 	path = Testbed/extern/swarm
-	url = https://github.com/solfrak/Swarm
+	url = https://github.com/HiveEngine/Swarm
