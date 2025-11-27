@@ -36,8 +36,8 @@ else()
     message(STATUS "Comb: Memory debugging disabled (zero overhead)")
 endif()
 
-# Base allocator sources (always present)
-target_sources(comb PRIVATE
-    src/comb/combmodule.cpp
-    src/comb/platform.cpp
+# Glob all source files
+file(GLOB_RECURSE COMB_SOURCES
+    src/comb/*.cpp
 )
+target_sources(comb PRIVATE ${COMB_SOURCES})
