@@ -2,9 +2,84 @@
   "version": 8,
   "configurePresets": [
     {
+      "name": "llvm-windows-base",
+      "hidden": true,
+      "displayName": "LLVM Windows Base",
+      "description": "Base configuration for LLVM/Clang on Windows",
+      "generator": "Ninja",
+      "toolchainFile": "${sourceDir}/cmake/toolchains/llvm-windows.cmake",
+      "cacheVariables": {
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "SWARM_USE_VULKAN": "ON",
+        "terra_use_glfw": "ON"
+      }
+    },
+    {
+      "name": "llvm-windows-debug",
+      "inherits": "llvm-windows-base",
+      "displayName": "LLVM Windows Debug",
+      "description": "Debug build with full symbols and no optimization",
+      "binaryDir": "${sourceDir}/out/build/llvm-debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "HIVE_ENABLE_LTO": "OFF",
+        "HIVE_WARNINGS_AS_ERRORS": "OFF"
+      }
+    },
+    {
+      "name": "llvm-windows-release",
+      "inherits": "llvm-windows-base",
+      "displayName": "LLVM Windows Release",
+      "description": "Optimized release build with LTO",
+      "binaryDir": "${sourceDir}/out/build/llvm-release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "HIVE_ENABLE_LTO": "ON",
+        "HIVE_ENABLE_SIMD": "ON"
+      }
+    },
+    {
+      "name": "llvm-windows-relwithdebinfo",
+      "inherits": "llvm-windows-base",
+      "displayName": "LLVM Windows RelWithDebInfo",
+      "description": "Optimized build with debug symbols",
+      "binaryDir": "${sourceDir}/out/build/llvm-relwithdebinfo",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "HIVE_ENABLE_LTO": "ON"
+      }
+    },
+    {
+      "name": "llvm-windows-memdebug",
+      "inherits": "llvm-windows-base",
+      "displayName": "LLVM Windows MemDebug",
+      "description": "Debug build with AddressSanitizer for memory debugging",
+      "binaryDir": "${sourceDir}/out/build/llvm-memdebug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "MemDebug",
+        "HIVE_ENABLE_LTO": "OFF",
+        "HIVE_ENABLE_SANITIZERS": "ON",
+        "HIVE_SANITIZER_TYPE": "Address"
+      }
+    },
+    {
+      "name": "llvm-windows-ubsan",
+      "inherits": "llvm-windows-base",
+      "displayName": "LLVM Windows UBSan",
+      "description": "Debug build with UndefinedBehaviorSanitizer",
+      "binaryDir": "${sourceDir}/out/build/llvm-ubsan",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "MemDebug",
+        "HIVE_ENABLE_LTO": "OFF",
+        "HIVE_ENABLE_SANITIZERS": "ON",
+        "HIVE_SANITIZER_TYPE": "UndefinedBehavior"
+      }
+    },
+    {
       "name": "LINUX_GLFW_VULKAN",
-      "displayName": "Clang 20.1.8 x86_64-pc-linux-gnu",
+      "displayName": "Linux Clang Debug",
       "description": "Using compilers: C = /usr/bin/clang, CXX = /usr/bin/clang++",
+      "generator": "Ninja",
       "binaryDir": "${sourceDir}/out/build/${presetName}",
       "cacheVariables": {
         "CMAKE_C_COMPILER": "/usr/bin/clang",
@@ -12,8 +87,29 @@
         "CMAKE_BUILD_TYPE": "Debug",
         "SWARM_USE_VULKAN": "ON",
         "terra_use_glfw": "ON"
-
       }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "llvm-windows-debug",
+      "configurePreset": "llvm-windows-debug"
+    },
+    {
+      "name": "llvm-windows-release",
+      "configurePreset": "llvm-windows-release"
+    },
+    {
+      "name": "llvm-windows-relwithdebinfo",
+      "configurePreset": "llvm-windows-relwithdebinfo"
+    },
+    {
+      "name": "llvm-windows-memdebug",
+      "configurePreset": "llvm-windows-memdebug"
+    },
+    {
+      "name": "llvm-windows-ubsan",
+      "configurePreset": "llvm-windows-ubsan"
     }
   ]
 }

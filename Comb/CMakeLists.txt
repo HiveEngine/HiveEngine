@@ -11,7 +11,14 @@ target_link_libraries(comb PUBLIC hive)
 # Memory Debugging Option
 # ============================================================================
 
-set(COMB_ENABLE_MEM_DEBUG ON CACHE BOOL "Enable comprehensive memory debugging (SLOW! 10-100x overhead)" FORCE)
+# Auto-enable memory debugging for Debug/MemDebug builds, disable for Release
+if(CMAKE_BUILD_TYPE STREQUAL "Debug" OR CMAKE_BUILD_TYPE STREQUAL "MemDebug")
+    set(COMB_ENABLE_MEM_DEBUG_DEFAULT ON)
+else()
+    set(COMB_ENABLE_MEM_DEBUG_DEFAULT OFF)
+endif()
+
+option(COMB_ENABLE_MEM_DEBUG "Enable comprehensive memory debugging (SLOW! 10-100x overhead)" ${COMB_ENABLE_MEM_DEBUG_DEFAULT})
 
 if(COMB_ENABLE_MEM_DEBUG)
     target_compile_definitions(comb PUBLIC COMB_MEM_DEBUG=1)
