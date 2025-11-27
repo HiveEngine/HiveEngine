@@ -10,3 +10,4 @@
 #include <memory>
 #include <string>
 #include <utility>
+#include <optional>

@@ -25,6 +25,19 @@ namespace hive
         std::vector<ModuleFactoryFn> m_ModuleFactories;
         std::vector<std::unique_ptr<Module>> m_Modules;
     };
+
+    template<typename ModuleClass>
+    class ModuleRegistrar
+    {
+    public:
+        ModuleRegistrar()
+        {
+            ModuleRegistry::GetInstance().RegisterModule([]() -> std::unique_ptr<Module>
+            {
+                return std::make_unique<ModuleClass>();
+            });
+        }
+    };
 }
 
 #define REGISTER_MODULE(ModuleClass)                                                                \

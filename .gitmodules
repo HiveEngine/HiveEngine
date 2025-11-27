@@ -1,6 +1,12 @@
 [submodule "Hive/extern/glfw"]
 	path = Terra/extern/glfw
 	url = https://github.com/glfw/glfw.git
-[submodule "Testbed/extern/swarm"]
-	path = Testbed/extern/swarm
-	url = https://github.com/HiveEngine/Swarm
+[submodule "Cells/Swarm/extern/nvrhi"]
+	path = Cells/swarm/extern/nvrhi
+	url = https://github.com/NVIDIA-RTX/NVRHI.git
+[submodule "Cells/swarm/extern/vk-bootstrap"]
+	path = Cells/swarm/extern/vk-bootstrap
+	url = https://github.com/charles-lunarg/vk-bootstrap.git
+[submodule "Hive/extern/fmt"]
+	path = Hive/extern/fmt
+	url = https://github.com/fmtlib/fmt.git

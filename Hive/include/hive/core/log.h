@@ -2,17 +2,24 @@
 
 #include <hive/utils/functor.h>
 #include <hive/utils/singleton.h>
+#include <hive/core/assert.h>
 
 #include <array>
 #include <string>
 #include <utility>
+#include <fmt/format.h>
+
+// Undefine Windows macros that conflict with our enum names
+#ifdef ERROR
+#undef ERROR
+#endif
 
 namespace hive
 {
     class LogCategory
     {
     public:
-        constexpr explicit LogCategory(const char *name, LogCategory *parentCategory = nullptr) : m_Name(name),
+        constexpr explicit LogCategory(const char *name, const LogCategory *parentCategory = nullptr) : m_Name(name),
             m_ParentCategory(parentCategory)
         {
             if (m_ParentCategory)
@@ -32,7 +39,7 @@ namespace hive
     private:
         const char *m_Name;
         std::string m_FullPath;
-        LogCategory *m_ParentCategory;
+        const LogCategory *m_ParentCategory;
     };
 
     extern const LogCategory LogHiveRoot;
@@ -55,7 +62,7 @@ namespace hive
         template<typename T>
         [[nodiscard]] LoggerId RegisterLogger(T *obj, void (T::*method)(const LogCategory &, LogSeverity, const char *))
         {
-            // HIVE_ASSERT(m_Count + 1 < m_Loggers.size())
+            Assert(m_Count + 1 < m_Loggers.size(), "Too many loggers registered");
             m_Loggers[m_Count++] = {m_Count, LogCallback{obj, method}};
             return ++m_IdCount;
         }
@@ -82,10 +89,41 @@ namespace hive
 
     inline void LogGeneral(const LogCategory &cat, LogSeverity sev, const char *msg)
     {
-        // HIVE_ASSERT(LogManager::IsInitialized())
+        Assert(LogManager::IsInitialized(), "LogManager not initialized");
         LogManager::GetInstance().Log(cat, sev, msg);
     }
 
+    // Primary API: Formatted logging (modern {fmt})
+    // Use these by default - type-safe and efficient
+    template<typename... Args>
+    void LogTrace(const LogCategory &category, fmt::format_string<Args...> format, Args&&... args)
+    {
+        auto msg = fmt::format(format, std::forward<Args>(args)...);
+        LogGeneral(category, LogSeverity::TRACE, msg.c_str());
+    }
+
+    template<typename... Args>
+    void LogInfo(const LogCategory &category, fmt::format_string<Args...> format, Args&&... args)
+    {
+        auto msg = fmt::format(format, std::forward<Args>(args)...);
+        LogGeneral(category, LogSeverity::INFO, msg.c_str());
+    }
+
+    template<typename... Args>
+    void LogWarning(const LogCategory &category, fmt::format_string<Args...> format, Args&&... args)
+    {
+        auto msg = fmt::format(format, std::forward<Args>(args)...);
+        LogGeneral(category, LogSeverity::WARN, msg.c_str());
+    }
+
+    template<typename... Args>
+    void LogError(const LogCategory &category, fmt::format_string<Args...> format, Args&&... args)
+    {
+        auto msg = fmt::format(format, std::forward<Args>(args)...);
+        LogGeneral(category, LogSeverity::ERROR, msg.c_str());
+    }
+
+    // Overloads for simple strings (no formatting needed)
     inline void LogTrace(const LogCategory &category, const char *message)
     {
         LogGeneral(category, LogSeverity::TRACE, message);
