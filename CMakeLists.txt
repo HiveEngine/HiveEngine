@@ -35,7 +35,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Build types
-set(CMAKE_CONFIGURATION_TYPES "Debug;Release;RelWithDebInfo" CACHE STRING "" FORCE)
+set(CMAKE_CONFIGURATION_TYPES "Debug;Release;RelWithDebInfo;MemDebug" CACHE STRING "" FORCE)
 
 # ============================================================================
 # Engine Options
@@ -48,6 +48,17 @@ option(HIVE_ENABLE_LTO "Enable Link-Time Optimization (slower compile, better ru
 option(HIVE_ENABLE_FAST_MATH "Enable fast math optimizations (less precise)" OFF)
 option(HIVE_WARNINGS_AS_ERRORS "Treat warnings as errors" OFF)
 option(HIVE_ENABLE_SIMD "Enable SIMD optimizations (SSE2)" ON)
+
+# Sanitizer options (for MemDebug builds with Clang)
+option(HIVE_ENABLE_SANITIZERS "Enable sanitizers (requires Clang)" OFF)
+set(HIVE_SANITIZER_TYPE "Address" CACHE STRING "Sanitizer type: Address, UndefinedBehavior, Thread, Memory")
+set_property(CACHE HIVE_SANITIZER_TYPE PROPERTY STRINGS "Address" "UndefinedBehavior" "Thread" "Memory")
+
+# Clang sanitizer runtimes on Windows are built with static CRT (/MT)
+# We must match this to avoid RuntimeLibrary mismatch linker errors
+if(WIN32 AND CMAKE_BUILD_TYPE STREQUAL "MemDebug" AND HIVE_ENABLE_SANITIZERS)
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded" CACHE STRING "" FORCE)
+endif()
 
 # ============================================================================
 # Compiler Flags - ALL PLATFORMS
@@ -180,6 +191,46 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
         add_compile_options(-O2 -g)
     endif()
 
+    # MemDebug flags (Debug with sanitizers)
+    if(CMAKE_BUILD_TYPE STREQUAL "MemDebug")
+        add_compile_options(-O1 -g3 -fno-omit-frame-pointer -fno-optimize-sibling-calls)
+        add_compile_definitions(_GLIBCXX_DEBUG)
+
+        if(HIVE_ENABLE_SANITIZERS)
+            if(HIVE_SANITIZER_TYPE STREQUAL "Address")
+                # AddressSanitizer: memory errors (buffer overflow, use-after-free, etc.)
+                add_compile_options(-fsanitize=address)
+                add_link_options(-fsanitize=address)
+                message(STATUS "AddressSanitizer enabled")
+            elseif(HIVE_SANITIZER_TYPE STREQUAL "UndefinedBehavior")
+                # UBSan: undefined behavior (signed overflow, null deref, etc.)
+                # On Windows, exclude alignment and function checks (cause DEP violations with Clang)
+                if(WIN32)
+                    add_compile_options(-fsanitize=undefined -fno-sanitize=alignment,function,vptr)
+                    add_link_options(-fsanitize=undefined -fno-sanitize=alignment,function,vptr)
+                else()
+                    add_compile_options(-fsanitize=undefined)
+                    add_link_options(-fsanitize=undefined)
+                endif()
+                message(STATUS "UndefinedBehaviorSanitizer enabled")
+            elseif(HIVE_SANITIZER_TYPE STREQUAL "Thread")
+                # ThreadSanitizer: data races
+                add_compile_options(-fsanitize=thread)
+                add_link_options(-fsanitize=thread)
+                message(STATUS "ThreadSanitizer enabled")
+            elseif(HIVE_SANITIZER_TYPE STREQUAL "Memory")
+                # MemorySanitizer: uninitialized reads (Clang only, not on Windows)
+                if(CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND NOT WIN32)
+                    add_compile_options(-fsanitize=memory -fsanitize-memory-track-origins)
+                    add_link_options(-fsanitize=memory)
+                    message(STATUS "MemorySanitizer enabled")
+                else()
+                    message(WARNING "MemorySanitizer only available with Clang on Linux/macOS")
+                endif()
+            endif()
+        endif()
+    endif()
+
     if(HIVE_ENABLE_SIMD)
         add_compile_options(-msse2)
     endif()
@@ -236,6 +287,13 @@ elseif(CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
             HIVE_ENABLE_ASSERTS=0
             HIVE_LOG_LEVEL=2
     )
+elseif(CMAKE_BUILD_TYPE STREQUAL "MemDebug")
+    add_compile_definitions(
+            HIVE_DEBUG=1
+            HIVE_MEMDEBUG=1
+            HIVE_ENABLE_ASSERTS=1
+            HIVE_LOG_LEVEL=0
+    )
 endif()
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
@@ -266,12 +324,15 @@ message(STATUS "C++ Standard:       ${CMAKE_CXX_STANDARD}")
 message(STATUS "Compiler:           ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}")
 message(STATUS "")
 message(STATUS "Optimizations:")
-message(STATUS "  RTTI:             ❌ Disabled")
-message(STATUS "  Exceptions:       ❌ Disabled")
+message(STATUS "  RTTI:             OFF")
+message(STATUS "  Exceptions:       OFF")
 message(STATUS "  LTO:              ${HIVE_ENABLE_LTO}")
 message(STATUS "  Fast Math:        ${HIVE_ENABLE_FAST_MATH}")
 message(STATUS "  SIMD:             ${HIVE_ENABLE_SIMD}")
 message(STATUS "  Warnings->Errors: ${HIVE_WARNINGS_AS_ERRORS}")
+if(HIVE_ENABLE_SANITIZERS)
+    message(STATUS "  Sanitizers:       ${HIVE_SANITIZER_TYPE}")
+endif()
 message(STATUS "")
 message(STATUS "Engine Options:")
 message(STATUS "  Vulkan:           ${swarm_use_vulkan}")
