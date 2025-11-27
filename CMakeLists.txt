@@ -251,6 +251,7 @@ endforeach()
 
 add_subdirectory(Hive)
 add_subdirectory(Terra)
+add_subdirectory(Larvae)
 #add_subdirectory(Testbed)
 #add_subdirectory(Cells)
 
