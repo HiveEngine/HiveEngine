@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.30.5)
 # Base test sources (always present)
 set(LARVAE_TEST_SOURCES
     main.cpp
+    ../Comb/tests/test_platform.cpp
 )
 
 # Create the test executable
@@ -12,6 +13,11 @@ add_executable(larvae_runner ${LARVAE_TEST_SOURCES})
 target_link_libraries(larvae_runner PRIVATE
     larvae
     hive
+    comb
+)
+
+target_include_directories(larvae_runner PRIVATE
+    ${CMAKE_SOURCE_DIR}/Comb/include
 )
 
 # Set output directory
@@ -31,6 +37,11 @@ add_executable(larvae_benchmark
 target_link_libraries(larvae_benchmark PRIVATE
     larvae
     hive
+    comb
+)
+
+target_include_directories(larvae_benchmark PRIVATE
+    ${CMAKE_SOURCE_DIR}/Comb/include
 )
 
 set_target_properties(larvae_benchmark PROPERTIES
