@@ -29,6 +29,6 @@ namespace hive
             }
         }
 
-        return depCount == m_Context.GetDependencies().size();
+        return depCount == static_cast<int>(m_Context.GetDependencies().size());
     }
 }

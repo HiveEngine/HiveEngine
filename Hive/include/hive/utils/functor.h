@@ -2,13 +2,13 @@
 
 namespace hive
 {
-    template <class>
+   template <class>
    struct max_sizeof;
 
    template <class... Ts>
    struct max_sizeof<std::tuple<Ts...>>
    {
-      static constexpr auto value = std::max({sizeof(Ts)...});
+      static constexpr auto value = (std::max)({sizeof(Ts)...});
    };
 
    template <class T>
@@ -20,7 +20,7 @@ namespace hive
    template <class... Ts>
    struct max_alignof<std::tuple<Ts...>>
    {
-      static constexpr auto value = std::max({alignof(Ts)...});
+      static constexpr auto value = (std::max)({alignof(Ts)...});
    };
 
    template <class T>
