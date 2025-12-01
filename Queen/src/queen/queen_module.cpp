@@ -4,3 +4,6 @@
 #include <queen/core/entity_location.h>
 #include <queen/core/component_info.h>
 #include <queen/storage/sparse_set.h>
+#include <queen/storage/column.h>
+#include <queen/storage/table.h>
+#include <queen/storage/archetype.h>

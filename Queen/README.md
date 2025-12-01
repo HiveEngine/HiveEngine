@@ -86,10 +86,10 @@ int main() {
 - [x] EntityLocationMap
 
 **Phase 2 - Storage:**
-- [ ] ComponentInfo
-- [ ] Column
-- [ ] Table
-- [ ] Archetype
+- [x] ComponentInfo
+- [x] Column
+- [x] Table
+- [x] Archetype
 - [ ] ArchetypeGraph
 
 **Phase 3 - World:**
