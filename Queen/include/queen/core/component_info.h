@@ -3,22 +3,114 @@
 #include <queen/core/type_id.h>
 #include <cstddef>
 #include <new>
-#include <cstring>
+#include <type_traits>
+#include <utility>
 
 namespace queen
 {
     /**
-     * Type-erased component metadata
+     * Storage type hint for components
      *
-     * Stores size, alignment, and function pointers for type-erased operations
-     * on components (construct, destruct, move, copy). Used by Column and Table
-     * to manage heterogeneous component storage without templates.
+     * Components can declare their preferred storage type:
+     * - Dense: Archetype/Table storage (default, cache-friendly iteration)
+     * - Sparse: SparseSet storage (volatile components, fast add/remove)
+     */
+    enum class StorageType : uint8_t
+    {
+        Dense,
+        Sparse
+    };
+
+    namespace detail
+    {
+        template<typename T, typename = void>
+        struct HasStorageType : std::false_type {};
+
+        template<typename T>
+        struct HasStorageType<T, std::void_t<decltype(T::storage)>> : std::true_type {};
+
+        template<typename T>
+        constexpr StorageType DeduceStorage() noexcept
+        {
+            if constexpr (HasStorageType<T>::value)
+            {
+                return T::storage;
+            }
+            else
+            {
+                return StorageType::Dense;
+            }
+        }
+    }
+
+    /**
+     * Compile-time component type information
+     *
+     * Provides static metadata about a component type including:
+     * - Type ID for runtime identification
+     * - Size and alignment for memory allocation
+     * - Trivial properties for optimization
+     * - Storage hint for archetype vs sparse storage
+     * - Lifecycle functions (construct, destruct, move, copy)
+     *
+     * Use cases:
+     * - Column/Table type-erased storage
+     * - Archetype creation and matching
+     * - Component serialization
+     *
+     * Example:
+     * @code
+     *   using Info = ComponentInfo<Position>;
+     *
+     *   void* storage = allocator.Allocate(Info::size, Info::alignment);
+     *   Info::Construct(storage);
+     *   // ...
+     *   Info::Destruct(storage);
+     * @endcode
+     */
+    template<typename T>
+    struct ComponentInfo
+    {
+        static constexpr TypeId id = TypeIdOf<T>();
+        static constexpr size_t size = sizeof(T);
+        static constexpr size_t alignment = alignof(T);
+        static constexpr bool is_trivially_copyable = std::is_trivially_copyable_v<T>;
+        static constexpr bool is_trivially_destructible = std::is_trivially_destructible_v<T>;
+        static constexpr StorageType storage = detail::DeduceStorage<T>();
+
+        static void Construct(void* ptr)
+        {
+            new (ptr) T{};
+        }
+
+        static void Destruct(void* ptr)
+        {
+            static_cast<T*>(ptr)->~T();
+        }
+
+        static void Move(void* dst, void* src)
+        {
+            new (dst) T{std::move(*static_cast<T*>(src))};
+        }
+
+        static void Copy(void* dst, const void* src)
+        {
+            new (dst) T{*static_cast<const T*>(src)};
+        }
+    };
+
+    /**
+     * Runtime component metadata (type-erased)
+     *
+     * Stores component metadata in a non-template form for use in
+     * Column, Table, and other type-erased containers.
      *
      * Memory layout:
      * ┌────────────────────────────────────────────────────────────┐
      * │ type_id: TypeId (8 bytes)                                  │
      * │ size: size_t (8 bytes)                                     │
      * │ alignment: size_t (8 bytes)                                │
+     * │ storage: StorageType (1 byte) + padding (7 bytes)          │
      * │ construct: void(*)(void*) (8 bytes)                        │
      * │ destruct: void(*)(void*) (8 bytes)                         │
      * │ move: void(*)(void*, void*) (8 bytes)                      │
@@ -27,22 +119,15 @@ namespace queen
      *
      * Performance characteristics:
      * - All operations: O(1) - function pointer call
-     * - Memory: 56 bytes per ComponentInfo
-     *
-     * Limitations:
-     * - Requires trivially copyable or properly implemented move/copy
-     * - No RTTI - relies on compile-time type information
      *
      * Example:
      * @code
-     *   ComponentInfo info = ComponentInfo::Of<Position>();
-     *
-     *   void* storage = allocator.Allocate(info.size, info.alignment);
-     *   info.construct(storage);  // Default construct
-     *   info.destruct(storage);   // Destruct
+     *   ComponentMeta meta = ComponentMeta::Of<Position>();
+     *   void* storage = allocator.Allocate(meta.size, meta.alignment);
+     *   meta.construct(storage);
      * @endcode
      */
-    struct ComponentInfo
+    struct ComponentMeta
     {
         using ConstructFn = void(*)(void*);
         using DestructFn = void(*)(void*);
@@ -52,6 +137,7 @@ namespace queen
         TypeId type_id = 0;
         size_t size = 0;
         size_t alignment = 0;
+        StorageType storage = StorageType::Dense;
         ConstructFn construct = nullptr;
         DestructFn destruct = nullptr;
         MoveFn move = nullptr;
@@ -68,60 +154,47 @@ namespace queen
         }
 
         template<typename T>
-        [[nodiscard]] static constexpr ComponentInfo Of() noexcept
+        [[nodiscard]] static constexpr ComponentMeta Of() noexcept
         {
-            ComponentInfo info;
-            info.type_id = TypeIdOf<T>();
-            info.size = sizeof(T);
-            info.alignment = alignof(T);
+            using Info = ComponentInfo<T>;
+
+            ComponentMeta meta{};
+            meta.type_id = Info::id;
+            meta.size = Info::size;
+            meta.alignment = Info::alignment;
+            meta.storage = Info::storage;
 
             if constexpr (std::is_default_constructible_v<T>)
             {
-                info.construct = [](void* ptr) {
-                    new (ptr) T{};
-                };
+                meta.construct = &Info::Construct;
             }
 
             if constexpr (!std::is_trivially_destructible_v<T>)
             {
-                info.destruct = [](void* ptr) {
-                    static_cast<T*>(ptr)->~T();
-                };
+                meta.destruct = &Info::Destruct;
             }
 
-            if constexpr (std::is_move_constructible_v<T>)
+            if constexpr (std::is_move_constructible_v<T> || std::is_copy_constructible_v<T>)
             {
-                info.move = [](void* dst, void* src) {
-                    new (dst) T{std::move(*static_cast<T*>(src))};
-                };
-            }
-            else if constexpr (std::is_copy_constructible_v<T>)
-            {
-                info.move = [](void* dst, void* src) {
-                    new (dst) T{*static_cast<T*>(src)};
-                };
+                meta.move = &Info::Move;
             }
 
             if constexpr (std::is_copy_constructible_v<T>)
             {
-                info.copy = [](void* dst, const void* src) {
-                    new (dst) T{*static_cast<const T*>(src)};
-                };
+                meta.copy = &Info::Copy;
             }
 
-            return info;
+            return meta;
         }
 
         template<typename T>
-        [[nodiscard]] static constexpr ComponentInfo OfTag() noexcept
+        [[nodiscard]] static constexpr ComponentMeta OfTag() noexcept
         {
-            ComponentInfo info;
-            info.type_id = TypeIdOf<T>();
-            info.size = 0;
-            info.alignment = 1;
-            return info;
+            ComponentMeta meta{};
+            meta.type_id = TypeIdOf<T>();
+            meta.size = 0;
+            meta.alignment = 1;
+            return meta;
         }
     };
-
-    static_assert(sizeof(ComponentInfo) == 56, "ComponentInfo should be 56 bytes");
 }
