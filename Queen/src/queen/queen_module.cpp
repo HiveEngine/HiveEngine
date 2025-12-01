@@ -7,3 +7,6 @@
 #include <queen/storage/column.h>
 #include <queen/storage/table.h>
 #include <queen/storage/archetype.h>
+#include <queen/storage/archetype_graph.h>
+#include <queen/storage/component_index.h>
+#include <queen/world/world.h>

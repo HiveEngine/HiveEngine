@@ -1,7 +1,6 @@
 #pragma once
 
 #include <queen/core/entity.h>
-#include <queen/core/type_id.h>
 #include <comb/allocator_concepts.h>
 #include <wax/containers/vector.h>
 #include <hive/core/assert.h>
@@ -12,87 +11,67 @@ namespace queen
      * Record of where an entity's data is stored
      *
      * Used by the World to locate an entity's components in O(1).
-     * Stores archetype ID and position within the archetype's table.
+     * Stores pointer to archetype and position within the archetype's table.
+     * Template parameter ArchetypeType allows forward declaration.
      */
-    struct EntityRecord
+    template<typename ArchetypeType>
+    struct EntityRecordT
     {
-        static constexpr TypeId kInvalidArchetype = 0;
         static constexpr uint32_t kInvalidRow = UINT32_MAX;
 
-        TypeId archetype_id = kInvalidArchetype;
+        ArchetypeType* archetype = nullptr;
         uint32_t row = kInvalidRow;
 
         [[nodiscard]] constexpr bool IsValid() const noexcept
         {
-            return archetype_id != kInvalidArchetype && row != kInvalidRow;
+            return archetype != nullptr && row != kInvalidRow;
         }
 
         void Invalidate() noexcept
         {
-            archetype_id = kInvalidArchetype;
+            archetype = nullptr;
             row = kInvalidRow;
         }
     };
 
     /**
-     * Maps entities to their storage location
+     * Maps entities to their storage location (with archetype pointer)
      *
-     * Provides O(1) lookup from Entity to (Archetype, Row) for fast
+     * Provides O(1) lookup from Entity to (Archetype*, Row) for fast
      * component access. Indexed by entity index, so grows with max entity.
-     *
-     * Memory layout:
-     * ┌─────────────────────────────────────────────────────────────┐
-     * │ records_: [EntityRecord0, EntityRecord1, EntityRecord2, ...] │
-     * │                                                             │
-     * │ EntityRecord:                                               │
-     * │   archetype_id: TypeId (8 bytes)                            │
-     * │   row: uint32_t (4 bytes)                                   │
-     * └─────────────────────────────────────────────────────────────┘
      *
      * Performance characteristics:
      * - Get: O(1) - direct array access
      * - Set: O(1) - direct array access
-     * - Memory: O(max_entity_index) * sizeof(EntityRecord)
+     * - Memory: O(max_entity_index) * sizeof(EntityRecordT)
      *
      * Limitations:
      * - Memory grows with highest entity index ever used
      * - Not thread-safe
-     *
-     * Example:
-     * @code
-     *   EntityLocationMap<comb::LinearAllocator> locations{alloc, 10000};
-     *
-     *   locations.Set(entity, archetype_id, row_in_table);
-     *
-     *   EntityRecord* record = locations.Get(entity);
-     *   if (record && record->IsValid()) {
-     *       Archetype* arch = world.GetArchetype(record->archetype_id);
-     *       T* component = arch->GetColumn<T>()[record->row];
-     *   }
-     * @endcode
      */
-    template<comb::Allocator Allocator>
+    template<comb::Allocator Allocator, typename ArchetypeType>
     class EntityLocationMap
     {
     public:
+        using Record = EntityRecordT<ArchetypeType>;
+
         explicit EntityLocationMap(Allocator& allocator, size_t initial_capacity = 1000)
             : records_{allocator}
         {
             records_.Reserve(initial_capacity);
         }
 
-        void Set(Entity entity, TypeId archetype_id, uint32_t row)
+        void Set(Entity entity, const Record& record)
         {
             hive::Assert(!entity.IsNull(), "Cannot set location for null entity");
 
             uint32_t index = entity.Index();
             EnsureCapacity(index + 1);
 
-            records_[index].archetype_id = archetype_id;
-            records_[index].row = row;
+            records_[index] = record;
         }
 
-        void Invalidate(Entity entity)
+        void Remove(Entity entity)
         {
             if (entity.IsNull())
             {
@@ -106,7 +85,7 @@ namespace queen
             }
         }
 
-        [[nodiscard]] EntityRecord* Get(Entity entity) noexcept
+        [[nodiscard]] Record* Get(Entity entity) noexcept
         {
             if (entity.IsNull())
             {
@@ -122,7 +101,7 @@ namespace queen
             return &records_[index];
         }
 
-        [[nodiscard]] const EntityRecord* Get(Entity entity) const noexcept
+        [[nodiscard]] const Record* Get(Entity entity) const noexcept
         {
             if (entity.IsNull())
             {
@@ -140,7 +119,7 @@ namespace queen
 
         [[nodiscard]] bool HasValidLocation(Entity entity) const noexcept
         {
-            const EntityRecord* record = Get(entity);
+            const Record* record = Get(entity);
             return record && record->IsValid();
         }
 
@@ -164,10 +143,10 @@ namespace queen
         {
             while (records_.Size() < required)
             {
-                records_.PushBack(EntityRecord{});
+                records_.PushBack(Record{});
             }
         }
 
-        wax::Vector<EntityRecord, Allocator> records_;
+        wax::Vector<Record, Allocator> records_;
     };
 }
