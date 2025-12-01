@@ -115,4 +115,5 @@ int main() {
 **Phase 4 - Queries:**
 - [x] Query terms (TermOperator, TermAccess, Read, Write, With, Without, Maybe)
 - [x] Query matching (QueryDescriptor, MatchesArchetype, FindMatchingArchetypes)
-- [ ] Query iteration
+- [x] Query iteration (Query, Each, EachWithEntity)
+- [ ] Query builder (World::Query<>)
