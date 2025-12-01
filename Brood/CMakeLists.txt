@@ -9,6 +9,7 @@
 set(LARVAE_TEST_DIRS
     ${CMAKE_CURRENT_SOURCE_DIR}/../Comb/tests
     ${CMAKE_CURRENT_SOURCE_DIR}/../Wax/tests
+    ${CMAKE_CURRENT_SOURCE_DIR}/../Queen/tests
 )
 
 # Glob all test_*.cpp files from specified directories (recursive)
@@ -30,12 +31,14 @@ target_link_libraries(larvae_runner
         Hive
         Comb
         Wax
+        Queen
 )
 
 target_include_directories(larvae_runner
     PRIVATE
         ${CMAKE_SOURCE_DIR}/Comb/include
         ${CMAKE_SOURCE_DIR}/Wax/include
+        ${CMAKE_SOURCE_DIR}/Queen/include
 )
 
 set_target_properties(larvae_runner
@@ -73,12 +76,14 @@ target_link_libraries(larvae_benchmark
         Hive
         Comb
         Wax
+        Queen
 )
 
 target_include_directories(larvae_benchmark
     PRIVATE
         ${CMAKE_SOURCE_DIR}/Comb/include
         ${CMAKE_SOURCE_DIR}/Wax/include
+        ${CMAKE_SOURCE_DIR}/Queen/include
 )
 
 set_target_properties(larvae_benchmark
