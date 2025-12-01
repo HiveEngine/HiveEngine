@@ -10,6 +10,7 @@
 #include <queen/storage/component_index.h>
 #include <comb/allocator_concepts.h>
 #include <wax/containers/vector.h>
+#include <wax/containers/hash_map.h>
 #include <hive/core/assert.h>
 
 namespace queen
@@ -18,11 +19,11 @@ namespace queen
     class EntityBuilder;
 
     /**
-     * Central ECS world containing all entities and components
+     * Central ECS world containing all entities, components, and resources
      *
      * The World is the main entry point for the ECS. It manages entity lifecycle,
-     * component storage, and provides access to queries. All memory is allocated
-     * through the provided allocator.
+     * component storage, resources (global singletons), and provides access to
+     * queries. All memory is allocated through the provided allocator.
      *
      * Memory layout:
      * ┌────────────────────────────────────────────────────────────┐
@@ -30,6 +31,8 @@ namespace queen
      * │ entity_locations_: Entity -> (Archetype, Row) mapping      │
      * │ archetype_graph_: All archetypes with transitions          │
      * │ component_index_: TypeId -> Archetypes reverse lookup      │
+     * │ resources_: TypeId -> void* global singleton storage       │
+     * │ resource_metas_: Lifecycle info for resource cleanup       │
      * └────────────────────────────────────────────────────────────┘
      *
      * Performance characteristics:
@@ -39,6 +42,8 @@ namespace queen
      * - Add<T>: O(n) (archetype transition, data move)
      * - Remove<T>: O(n) (archetype transition, data move)
      * - IsAlive: O(1)
+     * - Resource<T>: O(1) (hash map lookup)
+     * - InsertResource<T>: O(1) amortized (hash map insert)
      *
      * Limitations:
      * - Not thread-safe
@@ -49,6 +54,7 @@ namespace queen
      *   comb::LinearAllocator alloc{10_MB};
      *   queen::World world{alloc};
      *
+     *   // Entities and components
      *   auto entity = world.Spawn()
      *       .With(Position{1.0f, 2.0f, 3.0f})
      *       .With(Velocity{0.1f, 0.0f, 0.0f})
@@ -56,6 +62,11 @@ namespace queen
      *
      *   Position* pos = world.Get<Position>(entity);
      *   world.Despawn(entity);
+     *
+     *   // Resources (global singletons)
+     *   world.InsertResource(Time{0.0f, 0.016f});
+     *   Time* time = world.Resource<Time>();
+     *   time->delta = 0.033f;
      * @endcode
      */
     template<comb::Allocator Allocator>
@@ -70,11 +81,34 @@ namespace queen
             , entity_locations_{allocator}
             , archetype_graph_{allocator}
             , component_index_{allocator}
+            , resources_{allocator}
+            , resource_metas_{allocator}
         {
             component_index_.RegisterArchetype(archetype_graph_.GetEmptyArchetype());
         }
 
-        ~World() = default;
+        ~World()
+        {
+            for (auto it = resources_.begin(); it != resources_.end(); ++it)
+            {
+                TypeId type_id = it.Key();
+                void* data = it.Value();
+
+                for (size_t i = 0; i < resource_metas_.Size(); ++i)
+                {
+                    if (resource_metas_[i].type_id == type_id)
+                    {
+                        if (resource_metas_[i].destruct != nullptr)
+                        {
+                            resource_metas_[i].destruct(data);
+                        }
+                        break;
+                    }
+                }
+
+                allocator_->Deallocate(data);
+            }
+        }
 
         World(const World&) = delete;
         World& operator=(const World&) = delete;
@@ -254,6 +288,108 @@ namespace queen
             return archetype_graph_.ArchetypeCount();
         }
 
+        // ─────────────────────────────────────────────────────────────
+        // Resources (global singletons)
+        // ─────────────────────────────────────────────────────────────
+
+        template<typename T>
+        void InsertResource(T&& resource)
+        {
+            using DecayedT = std::decay_t<T>;
+            TypeId type_id = TypeIdOf<DecayedT>();
+
+            void** existing = resources_.Find(type_id);
+            if (existing != nullptr)
+            {
+                auto* typed = static_cast<DecayedT*>(*existing);
+                *typed = std::forward<T>(resource);
+                return;
+            }
+
+            void* data = allocator_->Allocate(sizeof(DecayedT), alignof(DecayedT));
+            hive::Assert(data != nullptr, "Failed to allocate resource");
+
+            new (data) DecayedT{std::forward<T>(resource)};
+
+            resources_.Insert(type_id, data);
+            resource_metas_.PushBack(ComponentMeta::Of<DecayedT>());
+        }
+
+        template<typename T>
+        [[nodiscard]] T* Resource() noexcept
+        {
+            TypeId type_id = TypeIdOf<T>();
+
+            void** found = resources_.Find(type_id);
+            if (found == nullptr)
+            {
+                return nullptr;
+            }
+
+            return static_cast<T*>(*found);
+        }
+
+        template<typename T>
+        [[nodiscard]] const T* Resource() const noexcept
+        {
+            TypeId type_id = TypeIdOf<T>();
+
+            void* const* found = resources_.Find(type_id);
+            if (found == nullptr)
+            {
+                return nullptr;
+            }
+
+            return static_cast<const T*>(*found);
+        }
+
+        template<typename T>
+        [[nodiscard]] bool HasResource() const noexcept
+        {
+            TypeId type_id = TypeIdOf<T>();
+            return resources_.Contains(type_id);
+        }
+
+        template<typename T>
+        void RemoveResource()
+        {
+            TypeId type_id = TypeIdOf<T>();
+
+            void** found = resources_.Find(type_id);
+            if (found == nullptr)
+            {
+                return;
+            }
+
+            void* data = *found;
+
+            for (size_t i = 0; i < resource_metas_.Size(); ++i)
+            {
+                if (resource_metas_[i].type_id == type_id)
+                {
+                    if (resource_metas_[i].destruct != nullptr)
+                    {
+                        resource_metas_[i].destruct(data);
+                    }
+
+                    if (i < resource_metas_.Size() - 1)
+                    {
+                        resource_metas_[i] = resource_metas_[resource_metas_.Size() - 1];
+                    }
+                    resource_metas_.PopBack();
+                    break;
+                }
+            }
+
+            allocator_->Deallocate(data);
+            resources_.Remove(type_id);
+        }
+
+        [[nodiscard]] size_t ResourceCount() const noexcept
+        {
+            return resources_.Count();
+        }
+
         [[nodiscard]] Allocator& GetAllocator() noexcept
         {
             return *allocator_;
@@ -349,6 +485,9 @@ namespace queen
         EntityLocationMap<Allocator, Archetype<Allocator>> entity_locations_;
         ArchetypeGraph<Allocator> archetype_graph_;
         ComponentIndex<Allocator> component_index_;
+
+        wax::HashMap<TypeId, void*, Allocator> resources_;
+        wax::Vector<ComponentMeta, Allocator> resource_metas_;
     };
 
     /**

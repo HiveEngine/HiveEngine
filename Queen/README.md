@@ -42,34 +42,47 @@ Queen/
 ## Quick Start
 
 ```cpp
-#include <queen/queen.h>
+#include <queen/world/world.h>
 #include <comb/linear_allocator.h>
 
 // Define components
 struct Position { float x, y, z; };
 struct Velocity { float dx, dy, dz; };
-struct Player {};  // Tag component
+
+// Define resources (global singletons)
+struct Time { float elapsed, delta; };
 
 int main() {
-    comb::LinearAllocator alloc{100_MB};
-    queen::World world{alloc};
+    comb::LinearAllocator alloc{10_MB};
+    queen::World<comb::LinearAllocator> world{alloc};
 
-    // Spawn entities
+    // Insert resources
+    world.InsertResource(Time{0.0f, 0.016f});
+
+    // Spawn entities with builder pattern
     auto player = world.Spawn()
         .With(Position{0, 0, 0})
         .With(Velocity{1, 0, 0})
-        .With<Player>()
         .Build();
 
-    // Query and iterate
-    world.Query<Position, Velocity>().Each([](Position& pos, Velocity& vel) {
-        pos.x += vel.dx;
-        pos.y += vel.dy;
-        pos.z += vel.dz;
-    });
+    // Or spawn with variadic template
+    auto enemy = world.Spawn(Position{10, 0, 0}, Velocity{-1, 0, 0});
+
+    // Access components
+    Position* pos = world.Get<Position>(player);
+    Velocity* vel = world.Get<Velocity>(player);
+
+    // Access resources
+    Time* time = world.Resource<Time>();
+    pos->x += vel->dx * time->delta;
+
+    // Add/remove components dynamically
+    world.Add<Velocity>(player, Velocity{2, 0, 0});
+    world.Remove<Velocity>(player);
 
     // Despawn
     world.Despawn(player);
+    world.Despawn(enemy);
 }
 ```
 
@@ -90,13 +103,14 @@ int main() {
 - [x] Column
 - [x] Table
 - [x] Archetype
-- [ ] ArchetypeGraph
+- [x] ArchetypeGraph
+- [x] ComponentIndex
 
 **Phase 3 - World:**
-- [ ] World
-- [ ] Entity operations
-- [ ] Component operations
-- [ ] Resources
+- [x] World
+- [x] Entity operations (Spawn, Despawn, IsAlive)
+- [x] Component operations (Get, Has, Add, Remove, Set)
+- [x] Resources (InsertResource, Resource, HasResource, RemoveResource)
 
 **Phase 4 - Queries:**
 - [ ] Query terms
