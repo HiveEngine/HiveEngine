@@ -113,6 +113,6 @@ int main() {
 - [x] Resources (InsertResource, Resource, HasResource, RemoveResource)
 
 **Phase 4 - Queries:**
-- [ ] Query terms
+- [x] Query terms (TermOperator, TermAccess, Read, Write, With, Without, Maybe)
 - [ ] Query matching
 - [ ] Query iteration
