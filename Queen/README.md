@@ -114,5 +114,5 @@ int main() {
 
 **Phase 4 - Queries:**
 - [x] Query terms (TermOperator, TermAccess, Read, Write, With, Without, Maybe)
-- [ ] Query matching
+- [x] Query matching (QueryDescriptor, MatchesArchetype, FindMatchingArchetypes)
 - [ ] Query iteration
