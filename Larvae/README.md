@@ -1,6 +1,6 @@
-# Larvae
+# Larvae - Testing Framework
 
-Unit testing framework for HiveEngine. Lightweight, no external dependencies (no Google Test, Catch2, etc.).
+Unit testing framework for HiveEngine. Lightweight, no external dependencies.
 
 ## Features
 
@@ -8,11 +8,11 @@ Unit testing framework for HiveEngine. Lightweight, no external dependencies (no
 - Fixtures support (setup/teardown)
 - Pattern/wildcard filtering
 - Built-in benchmarks
-- Works on Windows, Linux, macOS
+- Cross-platform (Windows, Linux, macOS)
 
-## Quick usage
+## Quick Start
 
-### Simple test
+### Simple Test
 
 ```cpp
 #include <larvae/larvae.h>
@@ -23,7 +23,7 @@ static auto test1 = larvae::RegisterTest("MathSuite", "AdditionWorks", []() {
 });
 ```
 
-### Test with fixture
+### Test with Fixture
 
 ```cpp
 class AllocatorFixture : public larvae::TestFixture
@@ -50,7 +50,31 @@ static auto test2 = larvae::RegisterTestWithFixture<AllocatorFixture>(
     });
 ```
 
-### Available assertions
+### Running Tests
+
+```bash
+cmake -B build
+cmake --build build
+
+# Run all tests
+./build/bin/larvae_runner
+
+# Filter by suite
+./build/bin/larvae_runner --suite=Comb
+
+# Filter by pattern
+./build/bin/larvae_runner --filter=*Allocator*
+
+# Other options
+./build/bin/larvae_runner --verbose
+./build/bin/larvae_runner --repeat=10
+./build/bin/larvae_runner --shuffle
+./build/bin/larvae_runner --stop-on-failure
+```
+
+## API
+
+### Assertions
 
 ```cpp
 // Equality
@@ -71,54 +95,33 @@ larvae::AssertFalse(condition)
 larvae::AssertNull(ptr)
 larvae::AssertNotNull(ptr)
 
-// Floats with epsilon
+// Floats
 larvae::AssertNear(a, b, epsilon)
 larvae::AssertFloatEqual(a, b)      // epsilon = 1e-5f
 larvae::AssertDoubleEqual(a, b)     // epsilon = 1e-9
 
-// Strings (string_view, const char*, std::string)
+// Strings
 larvae::AssertStringEqual(str1, str2)
 larvae::AssertStringNotEqual(str1, str2)
 ```
 
-## Build and run
+### Exit Codes
 
-```bash
-cmake -B build
-cmake --build build
-
-# Run all tests
-./build/bin/larvae_runner
-
-# Filter by suite
-./build/bin/larvae_runner --suite=Comb
-
-# Filter by pattern
-./build/bin/larvae_runner --filter=*Allocator*
-
-# Verbose mode
-./build/bin/larvae_runner --verbose
-
-# Repeat N times
-./build/bin/larvae_runner --repeat=10
-
-# Random order
-./build/bin/larvae_runner --shuffle
-
-# Stop on first failure
-./build/bin/larvae_runner --stop-on-failure
-```
+| Code | Meaning |
+|------|---------|
+| `0` | All tests pass |
+| `1` | At least one test fails |
 
 ## Structure
 
 ```
 Larvae/
 ├── include/larvae/
-│   ├── larvae.h           # Main header
-│   ├── test_registry.h    # Test registration
-│   ├── test_runner.h      # Execution
-│   ├── assertions.h       # Assertions
-│   ├── fixture.h          # Fixtures
+│   ├── larvae.h
+│   ├── test_registry.h
+│   ├── test_runner.h
+│   ├── assertions.h
+│   ├── fixture.h
 │   ├── test_info.h
 │   └── test_result.h
 └── src/larvae/
@@ -127,22 +130,19 @@ Larvae/
     ├── assertions.cpp
     └── larvae.cpp
 
-Brood/                     # The tests themselves
+Brood/
 ├── main.cpp
-├── memory/
-│   └── test_allocator.cpp
 └── CMakeLists.txt
 ```
 
-## Adding tests
+## Adding Tests
 
-1. Create a file in `Brood/module_name/`
+1. Create a file `test_*.cpp` in module's `tests/` directory
 2. Include `<larvae/larvae.h>`
 3. Use `RegisterTest()` or `RegisterTestWithFixture<>()`
-4. Add the file to `Brood/CMakeLists.txt`
 
 ```cpp
-// Brood/mymodule/test_myclass.cpp
+// Comb/tests/test_myclass.cpp
 #include <larvae/larvae.h>
 #include <mymodule/myclass.h>
 
@@ -151,9 +151,3 @@ static auto test_basic = larvae::RegisterTest("MyModule", "BasicTest", []() {
     larvae::AssertTrue(obj.IsValid());
 });
 ```
-
-## Exit codes
-
-- `0`: all tests pass
-- `1`: at least one test fails
-
