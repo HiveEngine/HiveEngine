@@ -1,60 +1,87 @@
-cmake_minimum_required(VERSION 3.30.5)
+# ============================================================================
+# Brood - Test Runner
+# ============================================================================
 
-# Test directories to glob
+# ============================================================================
+# Test Discovery
+# ============================================================================
+
 set(LARVAE_TEST_DIRS
     ${CMAKE_CURRENT_SOURCE_DIR}/../Comb/tests
+    ${CMAKE_CURRENT_SOURCE_DIR}/../Wax/tests
 )
 
-# Glob all test_*.cpp files from specified directories
+# Glob all test_*.cpp files from specified directories (recursive)
 set(LARVAE_TEST_SOURCES main.cpp)
 foreach(TEST_DIR ${LARVAE_TEST_DIRS})
-    file(GLOB DIR_TESTS ${TEST_DIR}/test_*.cpp)
+    file(GLOB_RECURSE DIR_TESTS ${TEST_DIR}/test_*.cpp)
     list(APPEND LARVAE_TEST_SOURCES ${DIR_TESTS})
 endforeach()
 
-# Create the test executable
+# ============================================================================
+# Test Executable
+# ============================================================================
+
 add_executable(larvae_runner ${LARVAE_TEST_SOURCES})
 
-# Link against Larvae testing framework and modules to test
-target_link_libraries(larvae_runner PRIVATE
-    larvae
-    hive
-    comb
+target_link_libraries(larvae_runner
+    PRIVATE
+        Larvae
+        Hive
+        Comb
+        Wax
 )
 
-target_include_directories(larvae_runner PRIVATE
-    ${CMAKE_SOURCE_DIR}/Comb/include
+target_include_directories(larvae_runner
+    PRIVATE
+        ${CMAKE_SOURCE_DIR}/Comb/include
+        ${CMAKE_SOURCE_DIR}/Wax/include
 )
 
-# Set output directory
-set_target_properties(larvae_runner PROPERTIES
-    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
+set_target_properties(larvae_runner
+    PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
 )
 
-# Add test to CTest
+# ============================================================================
+# CTest Integration
+# ============================================================================
+
 enable_testing()
 add_test(NAME AllTests COMMAND larvae_runner)
 
-# Glob all benchmark_*.cpp files from specified directories
+# ============================================================================
+# Benchmark Discovery
+# ============================================================================
+
+# Glob all benchmark_*.cpp files from specified directories (recursive)
 set(LARVAE_BENCHMARK_SOURCES main_benchmark.cpp)
 foreach(TEST_DIR ${LARVAE_TEST_DIRS})
-    file(GLOB DIR_BENCHMARKS ${TEST_DIR}/benchmark_*.cpp)
+    file(GLOB_RECURSE DIR_BENCHMARKS ${TEST_DIR}/benchmark_*.cpp)
     list(APPEND LARVAE_BENCHMARK_SOURCES ${DIR_BENCHMARKS})
 endforeach()
 
-# Create the benchmark executable
+# ============================================================================
+# Benchmark Executable
+# ============================================================================
+
 add_executable(larvae_benchmark ${LARVAE_BENCHMARK_SOURCES})
 
-target_link_libraries(larvae_benchmark PRIVATE
-    larvae
-    hive
-    comb
+target_link_libraries(larvae_benchmark
+    PRIVATE
+        Larvae
+        Hive
+        Comb
+        Wax
 )
 
-target_include_directories(larvae_benchmark PRIVATE
-    ${CMAKE_SOURCE_DIR}/Comb/include
+target_include_directories(larvae_benchmark
+    PRIVATE
+        ${CMAKE_SOURCE_DIR}/Comb/include
+        ${CMAKE_SOURCE_DIR}/Wax/include
 )
 
-set_target_properties(larvae_benchmark PROPERTIES
-    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
+set_target_properties(larvae_benchmark
+    PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
 )
