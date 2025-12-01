@@ -116,4 +116,4 @@ int main() {
 - [x] Query terms (TermOperator, TermAccess, Read, Write, With, Without, Maybe)
 - [x] Query matching (QueryDescriptor, MatchesArchetype, FindMatchingArchetypes)
 - [x] Query iteration (Query, Each, EachWithEntity)
-- [ ] Query builder (World::Query<>)
+- [x] Query builder (World::Query<>)

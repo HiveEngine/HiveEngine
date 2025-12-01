@@ -304,4 +304,93 @@ namespace
         world.Despawn(e1);
         world.Despawn(e2);
     });
+
+    // ─────────────────────────────────────────────────────────────
+    // World::Query builder tests
+    // ─────────────────────────────────────────────────────────────
+
+    auto test13 = larvae::RegisterTest("QueenQuery", "WorldQueryBuilder", []() {
+        comb::LinearAllocator alloc{524288};
+
+        queen::World<comb::LinearAllocator> world{alloc};
+
+        auto e1 = world.Spawn(Position{1, 0, 0}, Velocity{0.1f, 0, 0});
+        auto e2 = world.Spawn(Position{2, 0, 0}, Velocity{0.2f, 0, 0});
+
+        float sum = 0.0f;
+        world.Query<queen::Read<Position>>().Each([&sum](const Position& pos) {
+            sum += pos.x;
+        });
+
+        larvae::AssertEqual(sum, 3.0f);
+
+        world.Despawn(e1);
+        world.Despawn(e2);
+    });
+
+    auto test14 = larvae::RegisterTest("QueenQuery", "WorldQueryBuilderWithFilters", []() {
+        comb::LinearAllocator alloc{524288};
+
+        queen::World<comb::LinearAllocator> world{alloc};
+
+        (void)world.Spawn(Position{1, 0, 0}, Player{});
+        (void)world.Spawn(Position{2, 0, 0});
+        (void)world.Spawn(Position{3, 0, 0}, Player{}, Dead{});
+
+        float sum = 0.0f;
+        world.Query<queen::Read<Position>, queen::With<Player>, queen::Without<Dead>>()
+            .Each([&sum](const Position& pos) {
+                sum += pos.x;
+            });
+
+        larvae::AssertEqual(sum, 1.0f);
+    });
+
+    auto test15 = larvae::RegisterTest("QueenQuery", "WorldQueryBuilderMutation", []() {
+        comb::LinearAllocator alloc{524288};
+
+        queen::World<comb::LinearAllocator> world{alloc};
+
+        auto e1 = world.Spawn(Position{0, 0, 0}, Velocity{1, 0, 0});
+        auto e2 = world.Spawn(Position{0, 0, 0}, Velocity{2, 0, 0});
+
+        world.Query<queen::Read<Velocity>, queen::Write<Position>>()
+            .Each([](const Velocity& vel, Position& pos) {
+                pos.x += vel.dx;
+            });
+
+        larvae::AssertEqual(world.Get<Position>(e1)->x, 1.0f);
+        larvae::AssertEqual(world.Get<Position>(e2)->x, 2.0f);
+
+        world.Despawn(e1);
+        world.Despawn(e2);
+    });
+
+    auto test16 = larvae::RegisterTest("QueenQuery", "WorldQueryBuilderWithEntity", []() {
+        comb::LinearAllocator alloc{524288};
+
+        queen::World<comb::LinearAllocator> world{alloc};
+
+        auto e1 = world.Spawn(Position{1, 0, 0});
+        auto e2 = world.Spawn(Position{2, 0, 0});
+
+        int count = 0;
+        world.Query<queen::Read<Position>>()
+            .EachWithEntity([&count, e1, e2](queen::Entity entity, const Position& pos) {
+                if (entity == e1)
+                {
+                    larvae::AssertEqual(pos.x, 1.0f);
+                }
+                else if (entity == e2)
+                {
+                    larvae::AssertEqual(pos.x, 2.0f);
+                }
+                ++count;
+            });
+
+        larvae::AssertEqual(count, 2);
+
+        world.Despawn(e1);
+        world.Despawn(e2);
+    });
 }

@@ -8,6 +8,7 @@
 #include <queen/storage/archetype.h>
 #include <queen/storage/archetype_graph.h>
 #include <queen/storage/component_index.h>
+#include <queen/query/query.h>
 #include <comb/allocator_concepts.h>
 #include <wax/containers/vector.h>
 #include <wax/containers/hash_map.h>
@@ -403,6 +404,27 @@ namespace queen
         [[nodiscard]] ComponentIndex<Allocator>& GetComponentIndex() noexcept
         {
             return component_index_;
+        }
+
+        // ─────────────────────────────────────────────────────────────
+        // Queries
+        // ─────────────────────────────────────────────────────────────
+
+        /**
+         * Create a query to iterate over entities matching the given terms
+         *
+         * Example:
+         * @code
+         *   world.Query<Read<Position>, Write<Velocity>>()
+         *       .Each([](const Position& pos, Velocity& vel) {
+         *           vel.dx += pos.x * 0.1f;
+         *       });
+         * @endcode
+         */
+        template<typename... Terms>
+        [[nodiscard]] queen::Query<Allocator, Terms...> Query()
+        {
+            return queen::Query<Allocator, Terms...>{*allocator_, component_index_};
         }
 
     private:
