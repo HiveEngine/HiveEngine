@@ -21,7 +21,7 @@ Queen/
 │   ├── core/
 │   │   ├── type_id.h        # Compile-time type hashing
 │   │   ├── entity.h         # Entity ID (index + generation + flags)
-│   │   └── component_mask.h # Dynamic bitset for component presence
+│   │   └── component_info.h # Component metadata (type-erased lifecycle)
 │   ├── storage/
 │   │   ├── sparse_set.h     # Sparse set container
 │   │   ├── column.h         # Type-erased component array
@@ -31,6 +31,8 @@ Queen/
 │   │   └── world.h          # Main ECS world
 │   ├── query/
 │   │   └── query.h          # Query system
+│   ├── command/
+│   │   └── command_buffer.h # Deferred mutations (CommandBuffer)
 │   └── scheduler/
 │       └── scheduler.h      # Task scheduler
 ├── src/queen/
@@ -86,6 +88,34 @@ int main() {
 }
 ```
 
+### Deferred Mutations with CommandBuffer
+
+```cpp
+#include <queen/command/command_buffer.h>
+
+// During iteration - cannot modify World directly
+queen::CommandBuffer<comb::LinearAllocator> cmd{alloc};
+
+world.Query<queen::Read<Health>>().EachWithEntity([&](Entity e, const Health& hp) {
+    if (hp.value <= 0) {
+        cmd.Despawn(e);  // Deferred until Flush()
+    }
+});
+
+// Apply all deferred commands atomically
+cmd.Flush(world);
+
+// Spawn with components via CommandBuffer
+auto builder = cmd.Spawn()
+    .With(Position{0, 0, 0})
+    .With(Velocity{1, 0, 0});
+
+cmd.Flush(world);
+
+// Get the real entity after flush
+Entity spawned = cmd.GetSpawnedEntity(builder.GetSpawnIndex());
+```
+
 ## Status
 
 **Phase 0 - Infrastructure:**
@@ -117,3 +147,10 @@ int main() {
 - [x] Query matching (QueryDescriptor, MatchesArchetype, FindMatchingArchetypes)
 - [x] Query iteration (Query, Each, EachWithEntity)
 - [x] Query builder (World::Query<>)
+
+**Phase 5 - Command Buffers:**
+- [x] CommandBuffer (deferred structural mutations)
+- [x] SpawnCommandBuilder (builder for pending entities)
+- [x] Block-based memory allocation for command data
+- [x] Spawn/Despawn/Add/Remove/Set commands
+- [x] Flush (apply commands to World)

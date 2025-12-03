@@ -13,11 +13,15 @@
 #include <wax/containers/vector.h>
 #include <wax/containers/hash_map.h>
 #include <hive/core/assert.h>
+#include <cstring>
 
 namespace queen
 {
     template<comb::Allocator Allocator>
     class EntityBuilder;
+
+    template<comb::Allocator Allocator>
+    class CommandBuffer;
 
     /**
      * Central ECS world containing all entities, components, and resources
@@ -429,6 +433,10 @@ namespace queen
 
     private:
         friend class EntityBuilder<Allocator>;
+        friend class CommandBuffer<Allocator>;
+
+        template<comb::Allocator OtherAlloc>
+        friend class CommandBuffer;
 
         Entity AllocateEntity()
         {
@@ -553,6 +561,42 @@ namespace queen
 
             void* data = world_->allocator_->Allocate(sizeof(T), alignof(T));
             new (data) T{std::forward<T>(component)};
+            pending_data_.PushBack(data);
+
+            return *this;
+        }
+
+        EntityBuilder& WithRaw(const ComponentMeta& meta, void* source_data)
+        {
+            TypeId type_id = meta.type_id;
+
+            for (size_t i = 0; i < pending_metas_.Size(); ++i)
+            {
+                if (pending_metas_[i].type_id == type_id)
+                {
+                    if (meta.move != nullptr)
+                    {
+                        meta.move(pending_data_[i], source_data);
+                    }
+                    else
+                    {
+                        std::memcpy(pending_data_[i], source_data, meta.size);
+                    }
+                    return *this;
+                }
+            }
+
+            pending_metas_.PushBack(meta);
+
+            void* data = world_->allocator_->Allocate(meta.size, meta.alignment);
+            if (meta.move != nullptr)
+            {
+                meta.move(data, source_data);
+            }
+            else
+            {
+                std::memcpy(data, source_data, meta.size);
+            }
             pending_data_.PushBack(data);
 
             return *this;
