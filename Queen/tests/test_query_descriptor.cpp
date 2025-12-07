@@ -1,7 +1,8 @@
 #include <larvae/larvae.h>
 #include <queen/query/query_descriptor.h>
 #include <queen/world/world.h>
-#include <comb/linear_allocator.h>
+#include <queen/world/world.h>
+#include <comb/buddy_allocator.h>
 
 namespace
 {
@@ -17,9 +18,9 @@ namespace
     // ─────────────────────────────────────────────────────────────
 
     auto test1 = larvae::RegisterTest("QueenQueryDescriptor", "EmptyDescriptor", []() {
-        comb::LinearAllocator alloc{65536};
+        queen::PersistentAllocator alloc{65536};
 
-        queen::QueryDescriptor<comb::LinearAllocator> desc{alloc};
+        queen::QueryDescriptor<queen::PersistentAllocator> desc{alloc};
 
         larvae::AssertTrue(desc.IsEmpty());
         larvae::AssertEqual(desc.TermCount(), size_t{0});
@@ -29,9 +30,9 @@ namespace
     });
 
     auto test2 = larvae::RegisterTest("QueenQueryDescriptor", "AddTermManually", []() {
-        comb::LinearAllocator alloc{65536};
+        queen::PersistentAllocator alloc{65536};
 
-        queen::QueryDescriptor<comb::LinearAllocator> desc{alloc};
+        queen::QueryDescriptor<queen::PersistentAllocator> desc{alloc};
         desc.AddTerm(queen::Read<Position>::ToTerm());
         desc.AddTerm(queen::Write<Velocity>::ToTerm());
         desc.Finalize();
@@ -43,9 +44,9 @@ namespace
     });
 
     auto test3 = larvae::RegisterTest("QueenQueryDescriptor", "AddTermTemplate", []() {
-        comb::LinearAllocator alloc{65536};
+        queen::PersistentAllocator alloc{65536};
 
-        queen::QueryDescriptor<comb::LinearAllocator> desc{alloc};
+        queen::QueryDescriptor<queen::PersistentAllocator> desc{alloc};
         desc.AddTerm<queen::Read<Position>>();
         desc.AddTerm<queen::With<Player>>();
         desc.AddTerm<queen::Without<Dead>>();
@@ -58,9 +59,9 @@ namespace
     });
 
     auto test4 = larvae::RegisterTest("QueenQueryDescriptor", "FromTermsFactory", []() {
-        comb::LinearAllocator alloc{65536};
+        queen::PersistentAllocator alloc{65536};
 
-        auto desc = queen::QueryDescriptor<comb::LinearAllocator>::FromTerms<
+        auto desc = queen::QueryDescriptor<queen::PersistentAllocator>::FromTerms<
             queen::Read<Position>,
             queen::Write<Velocity>,
             queen::Without<Dead>
@@ -79,9 +80,9 @@ namespace
     // ─────────────────────────────────────────────────────────────
 
     auto test5 = larvae::RegisterTest("QueenQueryDescriptor", "OptionalTerms", []() {
-        comb::LinearAllocator alloc{65536};
+        queen::PersistentAllocator alloc{65536};
 
-        auto desc = queen::QueryDescriptor<comb::LinearAllocator>::FromTerms<
+        auto desc = queen::QueryDescriptor<queen::PersistentAllocator>::FromTerms<
             queen::Read<Position>,
             queen::Maybe<Health>,
             queen::MaybeWrite<Velocity>
@@ -99,9 +100,9 @@ namespace
     // ─────────────────────────────────────────────────────────────
 
     auto test6 = larvae::RegisterTest("QueenQueryDescriptor", "MatchesArchetypeWithRequired", []() {
-        comb::LinearAllocator alloc{262144};
+        queen::PersistentAllocator alloc{262144};
 
-        queen::World<comb::LinearAllocator> world{alloc};
+        queen::World world{};
 
         auto e1 = world.Spawn(Position{0, 0, 0}, Velocity{1, 0, 0});
 
@@ -109,7 +110,7 @@ namespace
         record = world.GetArchetypeGraph().GetOrCreateAddTarget(*record, queen::ComponentMeta::Of<Position>());
         record = world.GetArchetypeGraph().GetOrCreateAddTarget(*record, queen::ComponentMeta::Of<Velocity>());
 
-        auto desc = queen::QueryDescriptor<comb::LinearAllocator>::FromTerms<
+        auto desc = queen::QueryDescriptor<queen::PersistentAllocator>::FromTerms<
             queen::Read<Position>,
             queen::Read<Velocity>
         >(alloc);
@@ -120,16 +121,16 @@ namespace
     });
 
     auto test7 = larvae::RegisterTest("QueenQueryDescriptor", "MatchesArchetypeWithMissingRequired", []() {
-        comb::LinearAllocator alloc{262144};
+        queen::PersistentAllocator alloc{262144};
 
-        queen::World<comb::LinearAllocator> world{alloc};
+        queen::World world{};
 
         auto e1 = world.Spawn(Position{0, 0, 0});
 
         auto* record = world.GetArchetypeGraph().GetEmptyArchetype();
         record = world.GetArchetypeGraph().GetOrCreateAddTarget(*record, queen::ComponentMeta::Of<Position>());
 
-        auto desc = queen::QueryDescriptor<comb::LinearAllocator>::FromTerms<
+        auto desc = queen::QueryDescriptor<queen::PersistentAllocator>::FromTerms<
             queen::Read<Position>,
             queen::Read<Velocity>
         >(alloc);
@@ -140,9 +141,9 @@ namespace
     });
 
     auto test8 = larvae::RegisterTest("QueenQueryDescriptor", "MatchesArchetypeWithExcluded", []() {
-        comb::LinearAllocator alloc{262144};
+        queen::PersistentAllocator alloc{262144};
 
-        queen::World<comb::LinearAllocator> world{alloc};
+        queen::World world{};
 
         auto e1 = world.Spawn(Position{0, 0, 0}, Dead{});
 
@@ -150,7 +151,7 @@ namespace
         record = world.GetArchetypeGraph().GetOrCreateAddTarget(*record, queen::ComponentMeta::Of<Position>());
         record = world.GetArchetypeGraph().GetOrCreateAddTarget(*record, queen::ComponentMeta::Of<Dead>());
 
-        auto desc = queen::QueryDescriptor<comb::LinearAllocator>::FromTerms<
+        auto desc = queen::QueryDescriptor<queen::PersistentAllocator>::FromTerms<
             queen::Read<Position>,
             queen::Without<Dead>
         >(alloc);
@@ -161,16 +162,16 @@ namespace
     });
 
     auto test9 = larvae::RegisterTest("QueenQueryDescriptor", "MatchesArchetypeWithoutExcluded", []() {
-        comb::LinearAllocator alloc{262144};
+        queen::PersistentAllocator alloc{262144};
 
-        queen::World<comb::LinearAllocator> world{alloc};
+        queen::World world{};
 
         auto e1 = world.Spawn(Position{0, 0, 0});
 
         auto* record = world.GetArchetypeGraph().GetEmptyArchetype();
         record = world.GetArchetypeGraph().GetOrCreateAddTarget(*record, queen::ComponentMeta::Of<Position>());
 
-        auto desc = queen::QueryDescriptor<comb::LinearAllocator>::FromTerms<
+        auto desc = queen::QueryDescriptor<queen::PersistentAllocator>::FromTerms<
             queen::Read<Position>,
             queen::Without<Dead>
         >(alloc);
@@ -181,9 +182,9 @@ namespace
     });
 
     auto test10 = larvae::RegisterTest("QueenQueryDescriptor", "MatchesArchetypeWithOptional", []() {
-        comb::LinearAllocator alloc{262144};
+        queen::PersistentAllocator alloc{262144};
 
-        queen::World<comb::LinearAllocator> world{alloc};
+        queen::World world{};
 
         auto* arch_with_health = world.GetArchetypeGraph().GetEmptyArchetype();
         arch_with_health = world.GetArchetypeGraph().GetOrCreateAddTarget(*arch_with_health, queen::ComponentMeta::Of<Position>());
@@ -192,7 +193,7 @@ namespace
         auto* arch_without_health = world.GetArchetypeGraph().GetEmptyArchetype();
         arch_without_health = world.GetArchetypeGraph().GetOrCreateAddTarget(*arch_without_health, queen::ComponentMeta::Of<Position>());
 
-        auto desc = queen::QueryDescriptor<comb::LinearAllocator>::FromTerms<
+        auto desc = queen::QueryDescriptor<queen::PersistentAllocator>::FromTerms<
             queen::Read<Position>,
             queen::Maybe<Health>
         >(alloc);
@@ -206,15 +207,15 @@ namespace
     // ─────────────────────────────────────────────────────────────
 
     auto test11 = larvae::RegisterTest("QueenQueryDescriptor", "FindMatchingArchetypes", []() {
-        comb::LinearAllocator alloc{524288};
+        queen::PersistentAllocator alloc{524288};
 
-        queen::World<comb::LinearAllocator> world{alloc};
+        queen::World world{};
 
         auto e1 = world.Spawn(Position{0, 0, 0}, Velocity{1, 0, 0});
         auto e2 = world.Spawn(Position{5, 0, 0});
         auto e3 = world.Spawn(Position{10, 0, 0}, Velocity{-1, 0, 0}, Health{100, 100});
 
-        auto desc = queen::QueryDescriptor<comb::LinearAllocator>::FromTerms<
+        auto desc = queen::QueryDescriptor<queen::PersistentAllocator>::FromTerms<
             queen::Read<Position>,
             queen::Read<Velocity>
         >(alloc);
@@ -229,15 +230,15 @@ namespace
     });
 
     auto test12 = larvae::RegisterTest("QueenQueryDescriptor", "FindMatchingArchetypesWithExclusion", []() {
-        comb::LinearAllocator alloc{524288};
+        queen::PersistentAllocator alloc{524288};
 
-        queen::World<comb::LinearAllocator> world{alloc};
+        queen::World world{};
 
         auto e1 = world.Spawn(Position{0, 0, 0}, Velocity{1, 0, 0});
         auto e2 = world.Spawn(Position{5, 0, 0}, Velocity{2, 0, 0}, Dead{});
         auto e3 = world.Spawn(Position{10, 0, 0}, Velocity{-1, 0, 0});
 
-        auto desc = queen::QueryDescriptor<comb::LinearAllocator>::FromTerms<
+        auto desc = queen::QueryDescriptor<queen::PersistentAllocator>::FromTerms<
             queen::Read<Position>,
             queen::Read<Velocity>,
             queen::Without<Dead>
@@ -258,13 +259,13 @@ namespace
     });
 
     auto test13 = larvae::RegisterTest("QueenQueryDescriptor", "FindMatchingArchetypesNoMatches", []() {
-        comb::LinearAllocator alloc{262144};
+        queen::PersistentAllocator alloc{262144};
 
-        queen::World<comb::LinearAllocator> world{alloc};
+        queen::World world{};
 
         auto e1 = world.Spawn(Position{0, 0, 0});
 
-        auto desc = queen::QueryDescriptor<comb::LinearAllocator>::FromTerms<
+        auto desc = queen::QueryDescriptor<queen::PersistentAllocator>::FromTerms<
             queen::Read<Position>,
             queen::Read<Velocity>
         >(alloc);
@@ -281,9 +282,9 @@ namespace
     // ─────────────────────────────────────────────────────────────
 
     auto test14 = larvae::RegisterTest("QueenQueryDescriptor", "DataAccessExtraction", []() {
-        comb::LinearAllocator alloc{65536};
+        queen::PersistentAllocator alloc{65536};
 
-        auto desc = queen::QueryDescriptor<comb::LinearAllocator>::FromTerms<
+        auto desc = queen::QueryDescriptor<queen::PersistentAllocator>::FromTerms<
             queen::Read<Position>,
             queen::Write<Velocity>,
             queen::With<Player>,
@@ -307,9 +308,9 @@ namespace
     // ─────────────────────────────────────────────────────────────
 
     auto test15 = larvae::RegisterTest("QueenQueryDescriptor", "GetterMethods", []() {
-        comb::LinearAllocator alloc{65536};
+        queen::PersistentAllocator alloc{65536};
 
-        auto desc = queen::QueryDescriptor<comb::LinearAllocator>::FromTerms<
+        auto desc = queen::QueryDescriptor<queen::PersistentAllocator>::FromTerms<
             queen::Read<Position>,
             queen::Write<Velocity>,
             queen::Without<Dead>,
@@ -335,9 +336,9 @@ namespace
     // ─────────────────────────────────────────────────────────────
 
     auto test16 = larvae::RegisterTest("QueenQueryDescriptor", "FinalizeMultipleTimes", []() {
-        comb::LinearAllocator alloc{65536};
+        queen::PersistentAllocator alloc{65536};
 
-        queen::QueryDescriptor<comb::LinearAllocator> desc{alloc};
+        queen::QueryDescriptor<queen::PersistentAllocator> desc{alloc};
         desc.AddTerm<queen::Read<Position>>();
         desc.Finalize();
 

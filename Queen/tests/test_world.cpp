@@ -24,7 +24,7 @@ namespace
     auto test1 = larvae::RegisterTest("QueenWorld", "Creation", []() {
         comb::LinearAllocator alloc{65536};
 
-        queen::World<comb::LinearAllocator> world{alloc};
+        queen::World world{};
 
         larvae::AssertEqual(world.EntityCount(), size_t{0});
         larvae::AssertEqual(world.ArchetypeCount(), size_t{1});
@@ -33,7 +33,7 @@ namespace
     auto test2 = larvae::RegisterTest("QueenWorld", "SpawnEmpty", []() {
         comb::LinearAllocator alloc{65536};
 
-        queen::World<comb::LinearAllocator> world{alloc};
+        queen::World world{};
 
         queen::Entity e = world.Spawn().Build();
 
@@ -45,7 +45,7 @@ namespace
     auto test3 = larvae::RegisterTest("QueenWorld", "SpawnWithComponent", []() {
         comb::LinearAllocator alloc{131072};
 
-        queen::World<comb::LinearAllocator> world{alloc};
+        queen::World world{};
 
         queen::Entity e = world.Spawn()
             .With(Position{1.0f, 2.0f, 3.0f})
@@ -63,7 +63,7 @@ namespace
     auto test4 = larvae::RegisterTest("QueenWorld", "SpawnWithMultipleComponents", []() {
         comb::LinearAllocator alloc{131072};
 
-        queen::World<comb::LinearAllocator> world{alloc};
+        queen::World world{};
 
         queen::Entity e = world.Spawn()
             .With(Position{1.0f, 2.0f, 3.0f})
@@ -85,7 +85,7 @@ namespace
     auto test5 = larvae::RegisterTest("QueenWorld", "SpawnVariadic", []() {
         comb::LinearAllocator alloc{131072};
 
-        queen::World<comb::LinearAllocator> world{alloc};
+        queen::World world{};
 
         queen::Entity e = world.Spawn(Position{5.0f, 6.0f, 7.0f}, Velocity{1.0f, 0.0f, 0.0f});
 
@@ -98,7 +98,7 @@ namespace
     auto test6 = larvae::RegisterTest("QueenWorld", "Despawn", []() {
         comb::LinearAllocator alloc{131072};
 
-        queen::World<comb::LinearAllocator> world{alloc};
+        queen::World world{};
 
         queen::Entity e = world.Spawn(Position{1.0f, 2.0f, 3.0f});
 
@@ -114,7 +114,7 @@ namespace
     auto test7 = larvae::RegisterTest("QueenWorld", "GetNonExistentComponent", []() {
         comb::LinearAllocator alloc{131072};
 
-        queen::World<comb::LinearAllocator> world{alloc};
+        queen::World world{};
 
         queen::Entity e = world.Spawn(Position{1.0f, 2.0f, 3.0f});
 
@@ -125,7 +125,7 @@ namespace
     auto test8 = larvae::RegisterTest("QueenWorld", "AddComponent", []() {
         comb::LinearAllocator alloc{262144};
 
-        queen::World<comb::LinearAllocator> world{alloc};
+        queen::World world{};
 
         queen::Entity e = world.Spawn(Position{1.0f, 2.0f, 3.0f});
 
@@ -143,7 +143,7 @@ namespace
     auto test9 = larvae::RegisterTest("QueenWorld", "RemoveComponent", []() {
         comb::LinearAllocator alloc{262144};
 
-        queen::World<comb::LinearAllocator> world{alloc};
+        queen::World world{};
 
         queen::Entity e = world.Spawn(Position{1.0f, 2.0f, 3.0f}, Velocity{0.1f, 0.2f, 0.3f});
 
@@ -160,7 +160,7 @@ namespace
     auto test10 = larvae::RegisterTest("QueenWorld", "SetComponent", []() {
         comb::LinearAllocator alloc{262144};
 
-        queen::World<comb::LinearAllocator> world{alloc};
+        queen::World world{};
 
         queen::Entity e = world.Spawn(Position{1.0f, 2.0f, 3.0f});
 
@@ -173,7 +173,7 @@ namespace
     auto test11 = larvae::RegisterTest("QueenWorld", "MultipleEntities", []() {
         comb::LinearAllocator alloc{262144};
 
-        queen::World<comb::LinearAllocator> world{alloc};
+        queen::World world{};
 
         queen::Entity e1 = world.Spawn(Position{1.0f, 0.0f, 0.0f});
         queen::Entity e2 = world.Spawn(Position{2.0f, 0.0f, 0.0f});
@@ -189,7 +189,7 @@ namespace
     auto test12 = larvae::RegisterTest("QueenWorld", "DespawnMiddleEntity", []() {
         comb::LinearAllocator alloc{262144};
 
-        queen::World<comb::LinearAllocator> world{alloc};
+        queen::World world{};
 
         queen::Entity e1 = world.Spawn(Position{1.0f, 0.0f, 0.0f});
         queen::Entity e2 = world.Spawn(Position{2.0f, 0.0f, 0.0f});
@@ -209,7 +209,7 @@ namespace
     auto test13 = larvae::RegisterTest("QueenWorld", "DeadEntityOperations", []() {
         comb::LinearAllocator alloc{131072};
 
-        queen::World<comb::LinearAllocator> world{alloc};
+        queen::World world{};
 
         queen::Entity e = world.Spawn(Position{1.0f, 2.0f, 3.0f});
         world.Despawn(e);
@@ -221,7 +221,7 @@ namespace
     auto test14 = larvae::RegisterTest("QueenWorld", "ArchetypeTransitions", []() {
         comb::LinearAllocator alloc{524288};
 
-        queen::World<comb::LinearAllocator> world{alloc};
+        queen::World world{};
 
         queen::Entity e = world.Spawn().Build();
 
@@ -250,7 +250,7 @@ namespace
     auto test15 = larvae::RegisterTest("QueenWorld", "EntityRecycling", []() {
         comb::LinearAllocator alloc{131072};
 
-        queen::World<comb::LinearAllocator> world{alloc};
+        queen::World world{};
 
         queen::Entity e1 = world.Spawn(Position{1.0f, 0.0f, 0.0f});
         uint32_t index1 = e1.Index();

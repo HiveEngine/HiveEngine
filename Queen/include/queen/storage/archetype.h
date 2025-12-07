@@ -121,9 +121,9 @@ namespace queen
             return GetColumnIndex(TypeIdOf<T>());
         }
 
-        uint32_t AllocateRow(Entity entity)
+        uint32_t AllocateRow(Entity entity, Tick current_tick = Tick{0})
         {
-            return table_.AllocateRow(entity);
+            return table_.AllocateRow(entity, current_tick);
         }
 
         Entity FreeRow(uint32_t row)

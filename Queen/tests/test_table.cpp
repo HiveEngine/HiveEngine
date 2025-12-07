@@ -249,4 +249,141 @@ namespace
         auto* invalid = table.GetColumnByTypeId(queen::TypeIdOf<Velocity>());
         larvae::AssertNull(invalid);
     });
+
+    // ─────────────────────────────────────────────────────────────
+    // MoveRowTo Tests
+    // ─────────────────────────────────────────────────────────────
+
+    auto test13 = larvae::RegisterTest("QueenTable", "MoveRowToSameComponents", []() {
+        comb::LinearAllocator alloc{65536};
+
+        wax::Vector<queen::ComponentMeta, comb::LinearAllocator> metas{alloc};
+        metas.PushBack(queen::ComponentMeta::Of<Position>());
+        metas.PushBack(queen::ComponentMeta::Of<Velocity>());
+
+        queen::Table<comb::LinearAllocator> src{alloc, metas, 100};
+        queen::Table<comb::LinearAllocator> dst{alloc, metas, 100};
+
+        queen::Entity e{42, 1};
+        uint32_t src_row = src.AllocateRow(e);
+
+        src.SetComponent<Position>(src_row, Position{1.0f, 2.0f, 3.0f});
+        src.SetComponent<Velocity>(src_row, Velocity{4.0f, 5.0f, 6.0f});
+
+        queen::Entity e2{99, 0};
+        uint32_t dst_row = dst.AllocateRow(e2);
+
+        size_t moved = src.MoveRowTo(src_row, dst, dst_row);
+
+        larvae::AssertEqual(moved, size_t{2});
+
+        auto* pos = dst.GetColumn<Position>()->template Get<Position>(dst_row);
+        auto* vel = dst.GetColumn<Velocity>()->template Get<Velocity>(dst_row);
+
+        larvae::AssertNotNull(pos);
+        larvae::AssertNotNull(vel);
+
+        larvae::AssertTrue(pos->x == 1.0f);
+        larvae::AssertTrue(pos->y == 2.0f);
+        larvae::AssertTrue(pos->z == 3.0f);
+
+        larvae::AssertTrue(vel->dx == 4.0f);
+        larvae::AssertTrue(vel->dy == 5.0f);
+        larvae::AssertTrue(vel->dz == 6.0f);
+    });
+
+    auto test14 = larvae::RegisterTest("QueenTable", "MoveRowToPartialComponents", []() {
+        comb::LinearAllocator alloc{65536};
+
+        wax::Vector<queen::ComponentMeta, comb::LinearAllocator> src_metas{alloc};
+        src_metas.PushBack(queen::ComponentMeta::Of<Position>());
+        src_metas.PushBack(queen::ComponentMeta::Of<Velocity>());
+        src_metas.PushBack(queen::ComponentMeta::Of<Health>());
+
+        wax::Vector<queen::ComponentMeta, comb::LinearAllocator> dst_metas{alloc};
+        dst_metas.PushBack(queen::ComponentMeta::Of<Position>());
+        dst_metas.PushBack(queen::ComponentMeta::Of<Health>());
+
+        queen::Table<comb::LinearAllocator> src{alloc, src_metas, 100};
+        queen::Table<comb::LinearAllocator> dst{alloc, dst_metas, 100};
+
+        queen::Entity e1{1, 0};
+        uint32_t src_row = src.AllocateRow(e1);
+        src.SetComponent<Position>(src_row, Position{10.0f, 20.0f, 30.0f});
+        src.SetComponent<Velocity>(src_row, Velocity{1.0f, 2.0f, 3.0f});
+        src.SetComponent<Health>(src_row, Health{100, 200});
+
+        queen::Entity e2{2, 0};
+        uint32_t dst_row = dst.AllocateRow(e2);
+
+        size_t moved = src.MoveRowTo(src_row, dst, dst_row);
+
+        larvae::AssertEqual(moved, size_t{2});
+
+        auto* pos = dst.GetColumn<Position>()->template Get<Position>(dst_row);
+        auto* health = dst.GetColumn<Health>()->template Get<Health>(dst_row);
+
+        larvae::AssertNotNull(pos);
+        larvae::AssertNotNull(health);
+
+        larvae::AssertTrue(pos->x == 10.0f);
+        larvae::AssertEqual(health->current, 100);
+        larvae::AssertEqual(health->max, 200);
+
+        larvae::AssertNull(dst.GetColumn<Velocity>());
+    });
+
+    auto test15 = larvae::RegisterTest("QueenTable", "MoveRowToNoCommonComponents", []() {
+        comb::LinearAllocator alloc{65536};
+
+        wax::Vector<queen::ComponentMeta, comb::LinearAllocator> src_metas{alloc};
+        src_metas.PushBack(queen::ComponentMeta::Of<Position>());
+
+        wax::Vector<queen::ComponentMeta, comb::LinearAllocator> dst_metas{alloc};
+        dst_metas.PushBack(queen::ComponentMeta::Of<Health>());
+
+        queen::Table<comb::LinearAllocator> src{alloc, src_metas, 100};
+        queen::Table<comb::LinearAllocator> dst{alloc, dst_metas, 100};
+
+        queen::Entity e1{1, 0};
+        uint32_t src_row = src.AllocateRow(e1);
+        src.SetComponent<Position>(src_row, Position{1.0f, 2.0f, 3.0f});
+
+        queen::Entity e2{2, 0};
+        uint32_t dst_row = dst.AllocateRow(e2);
+
+        size_t moved = src.MoveRowTo(src_row, dst, dst_row);
+
+        larvae::AssertEqual(moved, size_t{0});
+    });
+
+    auto test16 = larvae::RegisterTest("QueenTable", "GetTypeIds", []() {
+        comb::LinearAllocator alloc{65536};
+
+        wax::Vector<queen::ComponentMeta, comb::LinearAllocator> metas{alloc};
+        metas.PushBack(queen::ComponentMeta::Of<Position>());
+        metas.PushBack(queen::ComponentMeta::Of<Velocity>());
+        metas.PushBack(queen::ComponentMeta::Of<Health>());
+
+        queen::Table<comb::LinearAllocator> table{alloc, metas, 100};
+
+        auto type_ids = table.GetTypeIds();
+
+        larvae::AssertEqual(type_ids.Size(), size_t{3});
+
+        bool has_position = false;
+        bool has_velocity = false;
+        bool has_health = false;
+
+        for (size_t i = 0; i < type_ids.Size(); ++i)
+        {
+            if (type_ids[i] == queen::TypeIdOf<Position>()) has_position = true;
+            if (type_ids[i] == queen::TypeIdOf<Velocity>()) has_velocity = true;
+            if (type_ids[i] == queen::TypeIdOf<Health>()) has_health = true;
+        }
+
+        larvae::AssertTrue(has_position);
+        larvae::AssertTrue(has_velocity);
+        larvae::AssertTrue(has_health);
+    });
 }

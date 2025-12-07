@@ -2,6 +2,7 @@
 
 #include <queen/core/type_id.h>
 #include <queen/core/entity.h>
+#include <queen/core/tick.h>
 #include <queen/core/component_info.h>
 #include <queen/storage/column.h>
 #include <comb/allocator_concepts.h>
@@ -81,7 +82,7 @@ namespace queen
         Table(Table&&) = default;
         Table& operator=(Table&&) = default;
 
-        uint32_t AllocateRow(Entity entity)
+        uint32_t AllocateRow(Entity entity, Tick current_tick = Tick{0})
         {
             hive::Assert(!entity.IsNull(), "Cannot allocate row for null entity");
 
@@ -90,7 +91,7 @@ namespace queen
 
             for (size_t i = 0; i < columns_.Size(); ++i)
             {
-                columns_[i].PushDefault();
+                columns_[i].PushDefault(current_tick);
             }
 
             return row;
@@ -237,6 +238,71 @@ namespace queen
         [[nodiscard]] size_t RowCount() const noexcept { return entities_.Size(); }
         [[nodiscard]] size_t ColumnCount() const noexcept { return columns_.Size(); }
         [[nodiscard]] bool IsEmpty() const noexcept { return entities_.IsEmpty(); }
+
+        /**
+         * Move a row to another table
+         *
+         * Moves all common components from source_row in this table to dest_row in target.
+         * Components that exist only in this table are destroyed.
+         * Components that exist only in target must be initialized separately.
+         *
+         * @param source_row Row index in this table
+         * @param target Target table to move to
+         * @param dest_row Row index in target table
+         * @return Number of components moved
+         */
+        size_t MoveRowTo(uint32_t source_row, Table& target, uint32_t dest_row)
+        {
+            hive::Assert(source_row < entities_.Size(), "Source row out of bounds");
+            hive::Assert(dest_row < target.entities_.Size(), "Destination row out of bounds");
+
+            size_t moved_count = 0;
+
+            for (size_t i = 0; i < columns_.Size(); ++i)
+            {
+                Column<Allocator>& src_col = columns_[i];
+                TypeId type_id = src_col.GetMeta().type_id;
+
+                Column<Allocator>* dst_col = target.GetColumnByTypeId(type_id);
+                if (dst_col != nullptr)
+                {
+                    void* src = src_col.GetRaw(source_row);
+                    void* dst = dst_col->GetRaw(dest_row);
+                    const ComponentMeta& meta = src_col.GetMeta();
+
+                    if (meta.destruct != nullptr)
+                    {
+                        meta.destruct(dst);
+                    }
+
+                    if (meta.move != nullptr)
+                    {
+                        meta.move(dst, src);
+                    }
+                    else
+                    {
+                        std::memcpy(dst, src, meta.size);
+                    }
+                    ++moved_count;
+                }
+            }
+
+            return moved_count;
+        }
+
+        /**
+         * Get all TypeIds present in this table
+         */
+        [[nodiscard]] wax::Vector<TypeId, Allocator> GetTypeIds() const
+        {
+            wax::Vector<TypeId, Allocator> result{*allocator_};
+            result.Reserve(columns_.Size());
+            for (size_t i = 0; i < columns_.Size(); ++i)
+            {
+                result.PushBack(columns_[i].GetMeta().type_id);
+            }
+            return result;
+        }
 
     private:
         Allocator* allocator_;

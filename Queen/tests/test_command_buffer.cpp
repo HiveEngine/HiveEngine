@@ -125,7 +125,7 @@ namespace
     auto test9 = larvae::RegisterTest("QueenCommandBuffer", "FlushSpawnEmpty", []() {
         comb::LinearAllocator alloc{131072};
 
-        queen::World<comb::LinearAllocator> world{alloc};
+        queen::World world{};
         queen::CommandBuffer<comb::LinearAllocator> cmd{alloc};
 
         larvae::AssertEqual(world.EntityCount(), size_t{0});
@@ -142,7 +142,7 @@ namespace
     auto test10 = larvae::RegisterTest("QueenCommandBuffer", "FlushSpawnWithComponent", []() {
         comb::LinearAllocator alloc{131072};
 
-        queen::World<comb::LinearAllocator> world{alloc};
+        queen::World world{};
         queen::CommandBuffer<comb::LinearAllocator> cmd{alloc};
 
         auto builder = cmd.Spawn()
@@ -164,7 +164,7 @@ namespace
     auto test11 = larvae::RegisterTest("QueenCommandBuffer", "FlushSpawnWithMultipleComponents", []() {
         comb::LinearAllocator alloc{131072};
 
-        queen::World<comb::LinearAllocator> world{alloc};
+        queen::World world{};
         queen::CommandBuffer<comb::LinearAllocator> cmd{alloc};
 
         auto builder = cmd.Spawn()
@@ -188,7 +188,7 @@ namespace
     auto test12 = larvae::RegisterTest("QueenCommandBuffer", "FlushMultipleSpawns", []() {
         comb::LinearAllocator alloc{131072};
 
-        queen::World<comb::LinearAllocator> world{alloc};
+        queen::World world{};
         queen::CommandBuffer<comb::LinearAllocator> cmd{alloc};
 
         auto b1 = cmd.Spawn().With(Position{1.0f, 0.0f, 0.0f});
@@ -215,7 +215,7 @@ namespace
     auto test13 = larvae::RegisterTest("QueenCommandBuffer", "FlushDespawn", []() {
         comb::LinearAllocator alloc{131072};
 
-        queen::World<comb::LinearAllocator> world{alloc};
+        queen::World world{};
 
         queen::Entity e = world.Spawn(Position{1.0f, 2.0f, 3.0f});
         larvae::AssertTrue(world.IsAlive(e));
@@ -232,7 +232,7 @@ namespace
     auto test14 = larvae::RegisterTest("QueenCommandBuffer", "FlushDespawnMultiple", []() {
         comb::LinearAllocator alloc{131072};
 
-        queen::World<comb::LinearAllocator> world{alloc};
+        queen::World world{};
 
         queen::Entity e1 = world.Spawn(Position{1.0f, 0.0f, 0.0f});
         queen::Entity e2 = world.Spawn(Position{2.0f, 0.0f, 0.0f});
@@ -258,7 +258,7 @@ namespace
     auto test15 = larvae::RegisterTest("QueenCommandBuffer", "FlushAddComponent", []() {
         comb::LinearAllocator alloc{131072};
 
-        queen::World<comb::LinearAllocator> world{alloc};
+        queen::World world{};
 
         queen::Entity e = world.Spawn(Position{1.0f, 2.0f, 3.0f});
         larvae::AssertTrue(world.Has<Position>(e));
@@ -278,7 +278,7 @@ namespace
     auto test16 = larvae::RegisterTest("QueenCommandBuffer", "FlushAddExistingComponent", []() {
         comb::LinearAllocator alloc{131072};
 
-        queen::World<comb::LinearAllocator> world{alloc};
+        queen::World world{};
 
         queen::Entity e = world.Spawn(Position{1.0f, 2.0f, 3.0f});
         larvae::AssertEqual(world.Get<Position>(e)->x, 1.0f);
@@ -298,7 +298,7 @@ namespace
     auto test17 = larvae::RegisterTest("QueenCommandBuffer", "FlushRemoveComponent", []() {
         comb::LinearAllocator alloc{131072};
 
-        queen::World<comb::LinearAllocator> world{alloc};
+        queen::World world{};
 
         queen::Entity e = world.Spawn(Position{1.0f, 2.0f, 3.0f}, Velocity{0.1f, 0.2f, 0.3f});
         larvae::AssertTrue(world.Has<Position>(e));
@@ -316,7 +316,7 @@ namespace
     auto test18 = larvae::RegisterTest("QueenCommandBuffer", "FlushRemoveNonExistent", []() {
         comb::LinearAllocator alloc{131072};
 
-        queen::World<comb::LinearAllocator> world{alloc};
+        queen::World world{};
 
         queen::Entity e = world.Spawn(Position{1.0f, 2.0f, 3.0f});
         larvae::AssertTrue(world.Has<Position>(e));
@@ -338,7 +338,7 @@ namespace
     auto test19 = larvae::RegisterTest("QueenCommandBuffer", "FlushSetExisting", []() {
         comb::LinearAllocator alloc{131072};
 
-        queen::World<comb::LinearAllocator> world{alloc};
+        queen::World world{};
 
         queen::Entity e = world.Spawn(Position{1.0f, 2.0f, 3.0f});
 
@@ -354,7 +354,7 @@ namespace
     auto test20 = larvae::RegisterTest("QueenCommandBuffer", "FlushSetNew", []() {
         comb::LinearAllocator alloc{131072};
 
-        queen::World<comb::LinearAllocator> world{alloc};
+        queen::World world{};
 
         queen::Entity e = world.Spawn(Position{1.0f, 2.0f, 3.0f});
         larvae::AssertFalse(world.Has<Velocity>(e));
@@ -374,7 +374,7 @@ namespace
     auto test21 = larvae::RegisterTest("QueenCommandBuffer", "DespawnDuringQuery", []() {
         comb::LinearAllocator alloc{262144};
 
-        queen::World<comb::LinearAllocator> world{alloc};
+        queen::World world{};
 
         world.Spawn(Position{1.0f, 0.0f, 0.0f}, Health{0, 100});
         world.Spawn(Position{2.0f, 0.0f, 0.0f}, Health{50, 100});
@@ -399,7 +399,7 @@ namespace
     auto test22 = larvae::RegisterTest("QueenCommandBuffer", "SpawnDuringQuery", []() {
         comb::LinearAllocator alloc{262144};
 
-        queen::World<comb::LinearAllocator> world{alloc};
+        queen::World world{};
 
         world.Spawn(Position{1.0f, 0.0f, 0.0f});
         world.Spawn(Position{2.0f, 0.0f, 0.0f});
@@ -420,7 +420,7 @@ namespace
     auto test23 = larvae::RegisterTest("QueenCommandBuffer", "AddComponentDuringQuery", []() {
         comb::LinearAllocator alloc{262144};
 
-        queen::World<comb::LinearAllocator> world{alloc};
+        queen::World world{};
 
         queen::Entity e1 = world.Spawn(Position{1.0f, 0.0f, 0.0f});
         queen::Entity e2 = world.Spawn(Position{2.0f, 0.0f, 0.0f});
@@ -446,7 +446,7 @@ namespace
     auto test24 = larvae::RegisterTest("QueenCommandBuffer", "FlushEmpty", []() {
         comb::LinearAllocator alloc{131072};
 
-        queen::World<comb::LinearAllocator> world{alloc};
+        queen::World world{};
         queen::CommandBuffer<comb::LinearAllocator> cmd{alloc};
 
         cmd.Flush(world);
@@ -458,7 +458,7 @@ namespace
     auto test25 = larvae::RegisterTest("QueenCommandBuffer", "DespawnDeadEntity", []() {
         comb::LinearAllocator alloc{131072};
 
-        queen::World<comb::LinearAllocator> world{alloc};
+        queen::World world{};
 
         queen::Entity e = world.Spawn(Position{1.0f, 2.0f, 3.0f});
         world.Despawn(e);
@@ -472,7 +472,7 @@ namespace
     auto test26 = larvae::RegisterTest("QueenCommandBuffer", "AddToDeadEntity", []() {
         comb::LinearAllocator alloc{131072};
 
-        queen::World<comb::LinearAllocator> world{alloc};
+        queen::World world{};
 
         queen::Entity e = world.Spawn(Position{1.0f, 2.0f, 3.0f});
         world.Despawn(e);
@@ -485,7 +485,7 @@ namespace
     auto test27 = larvae::RegisterTest("QueenCommandBuffer", "ReuseAfterFlush", []() {
         comb::LinearAllocator alloc{131072};
 
-        queen::World<comb::LinearAllocator> world{alloc};
+        queen::World world{};
         queen::CommandBuffer<comb::LinearAllocator> cmd{alloc};
 
         cmd.Spawn().With(Position{1.0f, 0.0f, 0.0f});
@@ -503,7 +503,7 @@ namespace
     auto test28 = larvae::RegisterTest("QueenCommandBuffer", "ManyCommands", []() {
         comb::LinearAllocator alloc{1048576};
 
-        queen::World<comb::LinearAllocator> world{alloc};
+        queen::World world{};
         queen::CommandBuffer<comb::LinearAllocator> cmd{alloc};
 
         for (int i = 0; i < 100; ++i)

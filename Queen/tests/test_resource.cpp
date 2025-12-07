@@ -59,7 +59,7 @@ namespace
     auto test1 = larvae::RegisterTest("QueenResource", "InsertAndGet", []() {
         comb::LinearAllocator alloc{65536};
 
-        queen::World<comb::LinearAllocator> world{alloc};
+        queen::World world{};
 
         world.InsertResource(Time{0.0f, 0.016f});
 
@@ -72,7 +72,7 @@ namespace
     auto test2 = larvae::RegisterTest("QueenResource", "HasResource", []() {
         comb::LinearAllocator alloc{65536};
 
-        queen::World<comb::LinearAllocator> world{alloc};
+        queen::World world{};
 
         larvae::AssertFalse(world.HasResource<Time>());
 
@@ -85,7 +85,7 @@ namespace
     auto test3 = larvae::RegisterTest("QueenResource", "RemoveResource", []() {
         comb::LinearAllocator alloc{65536};
 
-        queen::World<comb::LinearAllocator> world{alloc};
+        queen::World world{};
 
         world.InsertResource(Time{0.0f, 0.016f});
         larvae::AssertTrue(world.HasResource<Time>());
@@ -101,7 +101,7 @@ namespace
     auto test4 = larvae::RegisterTest("QueenResource", "MultipleResources", []() {
         comb::LinearAllocator alloc{131072};
 
-        queen::World<comb::LinearAllocator> world{alloc};
+        queen::World world{};
 
         world.InsertResource(Time{1.0f, 0.016f});
         world.InsertResource(Input{true, false, true, false});
@@ -127,7 +127,7 @@ namespace
     auto test5 = larvae::RegisterTest("QueenResource", "UpdateExistingResource", []() {
         comb::LinearAllocator alloc{65536};
 
-        queen::World<comb::LinearAllocator> world{alloc};
+        queen::World world{};
 
         world.InsertResource(Time{0.0f, 0.016f});
 
@@ -146,7 +146,7 @@ namespace
     auto test6 = larvae::RegisterTest("QueenResource", "ModifyResource", []() {
         comb::LinearAllocator alloc{65536};
 
-        queen::World<comb::LinearAllocator> world{alloc};
+        queen::World world{};
 
         world.InsertResource(Time{0.0f, 0.016f});
 
@@ -162,7 +162,7 @@ namespace
     auto test7 = larvae::RegisterTest("QueenResource", "ConstAccess", []() {
         comb::LinearAllocator alloc{65536};
 
-        queen::World<comb::LinearAllocator> world{alloc};
+        queen::World world{};
         world.InsertResource(Time{5.0f, 0.016f});
 
         const auto& const_world = world;
@@ -177,7 +177,7 @@ namespace
     auto test8 = larvae::RegisterTest("QueenResource", "GetNonExistent", []() {
         comb::LinearAllocator alloc{65536};
 
-        queen::World<comb::LinearAllocator> world{alloc};
+        queen::World world{};
 
         Time* time = world.Resource<Time>();
         larvae::AssertNull(time);
@@ -186,7 +186,7 @@ namespace
     auto test9 = larvae::RegisterTest("QueenResource", "RemoveNonExistent", []() {
         comb::LinearAllocator alloc{65536};
 
-        queen::World<comb::LinearAllocator> world{alloc};
+        queen::World world{};
 
         world.RemoveResource<Time>();
 
@@ -199,7 +199,7 @@ namespace
 
         {
             comb::LinearAllocator alloc{65536};
-            queen::World<comb::LinearAllocator> world{alloc};
+            queen::World world{};
 
             world.InsertResource(ResourceWithDestructor{&destruct_count});
         }
@@ -211,7 +211,7 @@ namespace
         int destruct_count = 0;
 
         comb::LinearAllocator alloc{65536};
-        queen::World<comb::LinearAllocator> world{alloc};
+        queen::World world{};
 
         world.InsertResource(ResourceWithDestructor{&destruct_count});
 
@@ -224,7 +224,7 @@ namespace
     auto test12 = larvae::RegisterTest("QueenResource", "ResourcesWithEntities", []() {
         comb::LinearAllocator alloc{262144};
 
-        queen::World<comb::LinearAllocator> world{alloc};
+        queen::World world{};
 
         world.InsertResource(Time{0.0f, 0.016f});
 

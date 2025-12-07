@@ -9,7 +9,6 @@
 
 namespace queen
 {
-    template<comb::Allocator Allocator>
     class World;
 
     /**
@@ -101,7 +100,7 @@ namespace queen
 
         struct CommandDataBlock
         {
-            alignas(16) uint8_t data[kCommandBlockSize];
+            alignas(alignof(std::max_align_t)) uint8_t data[kCommandBlockSize];
             size_t used = 0;
             CommandDataBlock* next = nullptr;
         };
@@ -286,8 +285,7 @@ namespace queen
          *
          * @param world Target World to apply commands to
          */
-        template<comb::Allocator WorldAllocator>
-        void Flush(World<WorldAllocator>& world);
+        void Flush(World& world);
 
         /**
          * Clear all queued commands without applying them
@@ -307,7 +305,11 @@ namespace queen
             spawned_entities_.Clear();
             spawn_count_ = 0;
 
-            ResetBlocks();
+            // Use ClearBlocks() instead of ResetBlocks() to properly release memory.
+            // This follows the Frame Arena pattern: allocate fresh each frame.
+            // With BuddyAllocator, memory is returned to the pool.
+            // With LinearAllocator, Deallocate() is a no-op but pointers are nullified.
+            ClearBlocks();
         }
 
         /**
@@ -468,181 +470,4 @@ namespace queen
     }
 }
 
-#include <queen/world/world.h>
-
-namespace queen
-{
-    template<comb::Allocator Allocator>
-    template<comb::Allocator WorldAllocator>
-    void CommandBuffer<Allocator>::Flush(World<WorldAllocator>& world)
-    {
-        spawned_entities_.Clear();
-        spawned_entities_.Reserve(spawn_count_);
-
-        for (uint32_t i = 0; i < spawn_count_; ++i)
-        {
-            spawned_entities_.PushBack(Entity::Invalid());
-        }
-
-        for (size_t i = 0; i < commands_.Size(); ++i)
-        {
-            const detail::Command& cmd = commands_[i];
-
-            if (cmd.type == CommandType::Spawn)
-            {
-                uint32_t spawn_index = cmd.entity.Index();
-
-                auto builder = world.Spawn();
-
-                for (size_t j = i + 1; j < commands_.Size(); ++j)
-                {
-                    const detail::Command& other = commands_[j];
-                    if (other.type == CommandType::AddComponent &&
-                        IsPendingEntity(other.entity) &&
-                        other.entity.Index() == spawn_index)
-                    {
-                        builder.WithRaw(other.meta, other.data);
-                    }
-                }
-
-                Entity real_entity = builder.Build();
-                spawned_entities_[spawn_index] = real_entity;
-            }
-        }
-
-        for (size_t i = 0; i < commands_.Size(); ++i)
-        {
-            const detail::Command& cmd = commands_[i];
-
-            switch (cmd.type)
-            {
-                case CommandType::Spawn:
-                    break;
-
-                case CommandType::Despawn:
-                    world.Despawn(cmd.entity);
-                    break;
-
-                case CommandType::AddComponent:
-                {
-                    if (IsPendingEntity(cmd.entity))
-                    {
-                        break;
-                    }
-
-                    Entity entity = cmd.entity;
-                    if (!world.IsAlive(entity))
-                    {
-                        break;
-                    }
-
-                    auto* record = world.entity_locations_.Get(entity);
-                    if (record == nullptr || record->archetype == nullptr)
-                    {
-                        break;
-                    }
-
-                    auto* old_arch = record->archetype;
-
-                    if (old_arch->HasComponent(cmd.component_type))
-                    {
-                        old_arch->SetComponent(record->row, cmd.component_type, cmd.data);
-                    }
-                    else
-                    {
-                        auto* new_arch = world.archetype_graph_.GetOrCreateAddTarget(*old_arch, cmd.meta);
-
-                        if (new_arch != old_arch)
-                        {
-                            world.RegisterNewArchetype(new_arch);
-                            world.MoveEntity(entity, *record, old_arch, new_arch);
-                        }
-
-                        new_arch->SetComponent(record->row, cmd.component_type, cmd.data);
-                    }
-                    break;
-                }
-
-                case CommandType::RemoveComponent:
-                {
-                    Entity entity = ResolveEntity(cmd.entity);
-                    if (!world.IsAlive(entity))
-                    {
-                        break;
-                    }
-
-                    auto* record = world.entity_locations_.Get(entity);
-                    if (record == nullptr || record->archetype == nullptr)
-                    {
-                        break;
-                    }
-
-                    auto* old_arch = record->archetype;
-
-                    if (!old_arch->HasComponent(cmd.component_type))
-                    {
-                        break;
-                    }
-
-                    auto* new_arch = world.archetype_graph_.GetOrCreateRemoveTarget(*old_arch, cmd.component_type);
-
-                    if (new_arch != old_arch)
-                    {
-                        world.RegisterNewArchetype(new_arch);
-                        world.MoveEntity(entity, *record, old_arch, new_arch);
-                    }
-                    break;
-                }
-
-                case CommandType::SetComponent:
-                {
-                    Entity entity = ResolveEntity(cmd.entity);
-                    if (!world.IsAlive(entity))
-                    {
-                        break;
-                    }
-
-                    auto* record = world.entity_locations_.Get(entity);
-                    if (record == nullptr || record->archetype == nullptr)
-                    {
-                        break;
-                    }
-
-                    auto* old_arch = record->archetype;
-
-                    if (old_arch->HasComponent(cmd.component_type))
-                    {
-                        old_arch->SetComponent(record->row, cmd.component_type, cmd.data);
-                    }
-                    else
-                    {
-                        auto* new_arch = world.archetype_graph_.GetOrCreateAddTarget(*old_arch, cmd.meta);
-
-                        if (new_arch != old_arch)
-                        {
-                            world.RegisterNewArchetype(new_arch);
-                            world.MoveEntity(entity, *record, old_arch, new_arch);
-                        }
-
-                        new_arch->SetComponent(record->row, cmd.component_type, cmd.data);
-                    }
-                    break;
-                }
-            }
-        }
-
-        // Clear commands but preserve spawned_entities_ for GetSpawnedEntity() calls
-        for (size_t i = 0; i < commands_.Size(); ++i)
-        {
-            const detail::Command& cmd = commands_[i];
-            if (cmd.data != nullptr && cmd.meta.destruct != nullptr)
-            {
-                cmd.meta.destruct(cmd.data);
-            }
-        }
-
-        commands_.Clear();
-        spawn_count_ = 0;
-        ResetBlocks();
-    }
-}
+// Note: CommandBuffer::Flush implementation is in world.h to avoid circular dependency

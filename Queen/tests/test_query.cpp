@@ -1,7 +1,6 @@
 #include <larvae/larvae.h>
 #include <queen/query/query.h>
 #include <queen/world/world.h>
-#include <comb/linear_allocator.h>
 
 namespace
 {
@@ -17,11 +16,9 @@ namespace
     // ─────────────────────────────────────────────────────────────
 
     auto test1 = larvae::RegisterTest("QueenQuery", "EmptyQuery", []() {
-        comb::LinearAllocator alloc{262144};
+        queen::World world{};
 
-        queen::World<comb::LinearAllocator> world{alloc};
-
-        queen::Query<comb::LinearAllocator, queen::Read<Position>> query{alloc, world.GetComponentIndex()};
+        auto query = world.Query<queen::Read<Position>>();
 
         larvae::AssertEqual(query.ArchetypeCount(), size_t{0});
         larvae::AssertEqual(query.EntityCount(), size_t{0});
@@ -29,14 +26,12 @@ namespace
     });
 
     auto test2 = larvae::RegisterTest("QueenQuery", "SingleComponentQuery", []() {
-        comb::LinearAllocator alloc{524288};
-
-        queen::World<comb::LinearAllocator> world{alloc};
+        queen::World world{};
 
         auto e1 = world.Spawn(Position{1.0f, 2.0f, 3.0f});
         auto e2 = world.Spawn(Position{4.0f, 5.0f, 6.0f});
 
-        queen::Query<comb::LinearAllocator, queen::Read<Position>> query{alloc, world.GetComponentIndex()};
+        auto query = world.Query<queen::Read<Position>>();
 
         larvae::AssertEqual(query.ArchetypeCount(), size_t{1});
         larvae::AssertEqual(query.EntityCount(), size_t{2});
@@ -47,15 +42,13 @@ namespace
     });
 
     auto test3 = larvae::RegisterTest("QueenQuery", "MultiComponentQuery", []() {
-        comb::LinearAllocator alloc{524288};
-
-        queen::World<comb::LinearAllocator> world{alloc};
+        queen::World world{};
 
         auto e1 = world.Spawn(Position{0, 0, 0}, Velocity{1, 0, 0});
         auto e2 = world.Spawn(Position{0, 0, 0});
         auto e3 = world.Spawn(Position{0, 0, 0}, Velocity{2, 0, 0});
 
-        queen::Query<comb::LinearAllocator, queen::Read<Position>, queen::Read<Velocity>> query{alloc, world.GetComponentIndex()};
+        auto query = world.Query<queen::Read<Position>, queen::Read<Velocity>>();
 
         larvae::AssertEqual(query.EntityCount(), size_t{2});
 
@@ -69,15 +62,13 @@ namespace
     // ─────────────────────────────────────────────────────────────
 
     auto test4 = larvae::RegisterTest("QueenQuery", "EachReadOnly", []() {
-        comb::LinearAllocator alloc{524288};
-
-        queen::World<comb::LinearAllocator> world{alloc};
+        queen::World world{};
 
         (void)world.Spawn(Position{1.0f, 0, 0});
         (void)world.Spawn(Position{2.0f, 0, 0});
         (void)world.Spawn(Position{3.0f, 0, 0});
 
-        queen::Query<comb::LinearAllocator, queen::Read<Position>> query{alloc, world.GetComponentIndex()};
+        auto query = world.Query<queen::Read<Position>>();
 
         float sum = 0.0f;
         query.Each([&sum](const Position& pos) {
@@ -88,14 +79,12 @@ namespace
     });
 
     auto test5 = larvae::RegisterTest("QueenQuery", "EachWrite", []() {
-        comb::LinearAllocator alloc{524288};
-
-        queen::World<comb::LinearAllocator> world{alloc};
+        queen::World world{};
 
         auto e1 = world.Spawn(Position{0, 0, 0}, Velocity{1, 0, 0});
         auto e2 = world.Spawn(Position{0, 0, 0}, Velocity{2, 0, 0});
 
-        queen::Query<comb::LinearAllocator, queen::Read<Velocity>, queen::Write<Position>> query{alloc, world.GetComponentIndex()};
+        auto query = world.Query<queen::Read<Velocity>, queen::Write<Position>>();
 
         query.Each([](const Velocity& vel, Position& pos) {
             pos.x += vel.dx;
@@ -109,14 +98,12 @@ namespace
     });
 
     auto test6 = larvae::RegisterTest("QueenQuery", "EachWithEntity", []() {
-        comb::LinearAllocator alloc{524288};
-
-        queen::World<comb::LinearAllocator> world{alloc};
+        queen::World world{};
 
         auto e1 = world.Spawn(Position{1, 0, 0});
         auto e2 = world.Spawn(Position{2, 0, 0});
 
-        queen::Query<comb::LinearAllocator, queen::Read<Position>> query{alloc, world.GetComponentIndex()};
+        auto query = world.Query<queen::Read<Position>>();
 
         int count = 0;
         query.EachWithEntity([&count, e1, e2](queen::Entity entity, const Position& pos) {
@@ -142,15 +129,13 @@ namespace
     // ─────────────────────────────────────────────────────────────
 
     auto test7 = larvae::RegisterTest("QueenQuery", "WithFilter", []() {
-        comb::LinearAllocator alloc{524288};
-
-        queen::World<comb::LinearAllocator> world{alloc};
+        queen::World world{};
 
         auto e1 = world.Spawn(Position{1, 0, 0}, Player{});
         auto e2 = world.Spawn(Position{2, 0, 0});
         auto e3 = world.Spawn(Position{3, 0, 0}, Player{});
 
-        queen::Query<comb::LinearAllocator, queen::Read<Position>, queen::With<Player>> query{alloc, world.GetComponentIndex()};
+        auto query = world.Query<queen::Read<Position>, queen::With<Player>>();
 
         float sum = 0.0f;
         query.Each([&sum](const Position& pos) {
@@ -165,15 +150,13 @@ namespace
     });
 
     auto test8 = larvae::RegisterTest("QueenQuery", "WithoutFilter", []() {
-        comb::LinearAllocator alloc{524288};
-
-        queen::World<comb::LinearAllocator> world{alloc};
+        queen::World world{};
 
         auto e1 = world.Spawn(Position{1, 0, 0});
         auto e2 = world.Spawn(Position{2, 0, 0}, Dead{});
         auto e3 = world.Spawn(Position{3, 0, 0});
 
-        queen::Query<comb::LinearAllocator, queen::Read<Position>, queen::Without<Dead>> query{alloc, world.GetComponentIndex()};
+        auto query = world.Query<queen::Read<Position>, queen::Without<Dead>>();
 
         float sum = 0.0f;
         query.Each([&sum](const Position& pos) {
@@ -192,14 +175,12 @@ namespace
     // ─────────────────────────────────────────────────────────────
 
     auto test9 = larvae::RegisterTest("QueenQuery", "MaybeOptional", []() {
-        comb::LinearAllocator alloc{524288};
-
-        queen::World<comb::LinearAllocator> world{alloc};
+        queen::World world{};
 
         auto e1 = world.Spawn(Position{1, 0, 0}, Health{100, 100});
         auto e2 = world.Spawn(Position{2, 0, 0});
 
-        queen::Query<comb::LinearAllocator, queen::Read<Position>, queen::Maybe<Health>> query{alloc, world.GetComponentIndex()};
+        auto query = world.Query<queen::Read<Position>, queen::Maybe<Health>>();
 
         int with_health = 0;
         int without_health = 0;
@@ -228,15 +209,13 @@ namespace
     // ─────────────────────────────────────────────────────────────
 
     auto test10 = larvae::RegisterTest("QueenQuery", "MultipleArchetypes", []() {
-        comb::LinearAllocator alloc{524288};
-
-        queen::World<comb::LinearAllocator> world{alloc};
+        queen::World world{};
 
         (void)world.Spawn(Position{1, 0, 0}, Velocity{0, 0, 0});
         (void)world.Spawn(Position{2, 0, 0}, Velocity{0, 0, 0}, Health{100, 100});
         (void)world.Spawn(Position{3, 0, 0}, Velocity{0, 0, 0}, Player{});
 
-        queen::Query<comb::LinearAllocator, queen::Read<Position>, queen::Read<Velocity>> query{alloc, world.GetComponentIndex()};
+        auto query = world.Query<queen::Read<Position>, queen::Read<Velocity>>();
 
         larvae::AssertEqual(query.ArchetypeCount(), size_t{3});
         larvae::AssertEqual(query.EntityCount(), size_t{3});
@@ -254,21 +233,19 @@ namespace
     // ─────────────────────────────────────────────────────────────
 
     auto test11 = larvae::RegisterTest("QueenQuery", "ComplexQuery", []() {
-        comb::LinearAllocator alloc{524288};
-
-        queen::World<comb::LinearAllocator> world{alloc};
+        queen::World world{};
 
         (void)world.Spawn(Position{1, 0, 0}, Velocity{0.1f, 0, 0}, Player{});
         (void)world.Spawn(Position{2, 0, 0}, Velocity{0.2f, 0, 0}, Enemy{});
         (void)world.Spawn(Position{3, 0, 0}, Velocity{0.3f, 0, 0}, Player{}, Dead{});
         (void)world.Spawn(Position{4, 0, 0}, Velocity{0.4f, 0, 0});
 
-        queen::Query<comb::LinearAllocator,
+        auto query = world.Query<
             queen::Read<Position>,
             queen::Write<Velocity>,
             queen::With<Player>,
             queen::Without<Dead>
-        > query{alloc, world.GetComponentIndex()};
+        >();
 
         larvae::AssertEqual(query.EntityCount(), size_t{1});
 
@@ -280,9 +257,7 @@ namespace
     });
 
     auto test12 = larvae::RegisterTest("QueenQuery", "SystemSimulation", []() {
-        comb::LinearAllocator alloc{524288};
-
-        queen::World<comb::LinearAllocator> world{alloc};
+        queen::World world{};
 
         world.InsertResource(queen::Entity{});
 
@@ -291,7 +266,7 @@ namespace
 
         for (int frame = 0; frame < 10; ++frame)
         {
-            queen::Query<comb::LinearAllocator, queen::Read<Velocity>, queen::Write<Position>> query{alloc, world.GetComponentIndex()};
+            auto query = world.Query<queen::Read<Velocity>, queen::Write<Position>>();
 
             query.Each([](const Velocity& vel, Position& pos) {
                 pos.x += vel.dx * 0.016f;
@@ -310,9 +285,7 @@ namespace
     // ─────────────────────────────────────────────────────────────
 
     auto test13 = larvae::RegisterTest("QueenQuery", "WorldQueryBuilder", []() {
-        comb::LinearAllocator alloc{524288};
-
-        queen::World<comb::LinearAllocator> world{alloc};
+        queen::World world{};
 
         auto e1 = world.Spawn(Position{1, 0, 0}, Velocity{0.1f, 0, 0});
         auto e2 = world.Spawn(Position{2, 0, 0}, Velocity{0.2f, 0, 0});
@@ -329,9 +302,7 @@ namespace
     });
 
     auto test14 = larvae::RegisterTest("QueenQuery", "WorldQueryBuilderWithFilters", []() {
-        comb::LinearAllocator alloc{524288};
-
-        queen::World<comb::LinearAllocator> world{alloc};
+        queen::World world{};
 
         (void)world.Spawn(Position{1, 0, 0}, Player{});
         (void)world.Spawn(Position{2, 0, 0});
@@ -347,9 +318,7 @@ namespace
     });
 
     auto test15 = larvae::RegisterTest("QueenQuery", "WorldQueryBuilderMutation", []() {
-        comb::LinearAllocator alloc{524288};
-
-        queen::World<comb::LinearAllocator> world{alloc};
+        queen::World world{};
 
         auto e1 = world.Spawn(Position{0, 0, 0}, Velocity{1, 0, 0});
         auto e2 = world.Spawn(Position{0, 0, 0}, Velocity{2, 0, 0});
@@ -367,9 +336,7 @@ namespace
     });
 
     auto test16 = larvae::RegisterTest("QueenQuery", "WorldQueryBuilderWithEntity", []() {
-        comb::LinearAllocator alloc{524288};
-
-        queen::World<comb::LinearAllocator> world{alloc};
+        queen::World world{};
 
         auto e1 = world.Spawn(Position{1, 0, 0});
         auto e2 = world.Spawn(Position{2, 0, 0});
