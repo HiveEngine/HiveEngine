@@ -16,6 +16,7 @@
 #include <queen/command/commands.h>
 #include <queen/event/events.h>
 #include <queen/observer/observers.h>
+#include <queen/hierarchy/hierarchy.h>
 #include <queen/world/world_allocators.h>
 #include <comb/allocator_concepts.h>
 #include <wax/containers/vector.h>
@@ -865,6 +866,311 @@ namespace queen
         [[nodiscard]] size_t ObserverCount() const noexcept
         {
             return observers_.ObserverCount();
+        }
+
+        // ─────────────────────────────────────────────────────────────
+        // Hierarchy
+        // ─────────────────────────────────────────────────────────────
+
+        /**
+         * Set the parent of an entity
+         *
+         * If the entity already has a parent, it is removed from the
+         * old parent's children list first.
+         *
+         * @param child Entity to set parent for
+         * @param parent Parent entity (must be alive)
+         */
+        void SetParent(Entity child, Entity parent)
+        {
+            hive::Assert(IsAlive(child), "Child entity must be alive");
+            hive::Assert(IsAlive(parent), "Parent entity must be alive");
+            hive::Assert(!(child == parent), "Entity cannot be its own parent");
+
+            // 1. If child already has a parent, remove from old parent's children
+            if (Parent* old_parent_comp = Get<Parent>(child))
+            {
+                Entity old_parent = old_parent_comp->entity;
+                if (IsAlive(old_parent))
+                {
+                    if (Children* old_children = Get<Children>(old_parent))
+                    {
+                        old_children->Remove(child);
+
+                        // Remove empty Children component
+                        if (old_children->IsEmpty())
+                        {
+                            Remove<Children>(old_parent);
+                        }
+                    }
+                }
+
+                // Update existing Parent component (triggers OnSet)
+                Set<Parent>(child, Parent{parent});
+            }
+            else
+            {
+                // Add new Parent component (triggers OnAdd)
+                Add<Parent>(child, Parent{parent});
+            }
+
+            // 2. Add child to new parent's children list
+            if (Children* children = Get<Children>(parent))
+            {
+                children->Add(child);
+            }
+            else
+            {
+                // Create Children component with this child
+                Children new_children{allocators_.Persistent()};
+                new_children.Add(child);
+                Add<Children>(parent, std::move(new_children));
+            }
+        }
+
+        /**
+         * Remove the parent from an entity (make it a root)
+         *
+         * @param child Entity to remove parent from
+         */
+        void RemoveParent(Entity child)
+        {
+            if (!IsAlive(child))
+            {
+                return;
+            }
+
+            Parent* parent_comp = Get<Parent>(child);
+            if (parent_comp == nullptr)
+            {
+                return;
+            }
+
+            Entity parent = parent_comp->entity;
+
+            // Remove from parent's children list
+            if (IsAlive(parent))
+            {
+                if (Children* children = Get<Children>(parent))
+                {
+                    children->Remove(child);
+
+                    if (children->IsEmpty())
+                    {
+                        Remove<Children>(parent);
+                    }
+                }
+            }
+
+            // Remove Parent component (triggers OnRemove)
+            Remove<Parent>(child);
+        }
+
+        /**
+         * Get the parent of an entity
+         *
+         * @param child Entity to get parent of
+         * @return Parent entity, or Entity::Invalid() if no parent
+         */
+        [[nodiscard]] Entity GetParent(Entity child) const
+        {
+            const Parent* parent_comp = Get<Parent>(child);
+            if (parent_comp == nullptr)
+            {
+                return Entity::Invalid();
+            }
+            return parent_comp->entity;
+        }
+
+        /**
+         * Check if an entity has a parent
+         */
+        [[nodiscard]] bool HasParent(Entity child) const
+        {
+            return Has<Parent>(child);
+        }
+
+        /**
+         * Get children component of an entity
+         *
+         * @param parent Entity to get children of
+         * @return Pointer to Children component, or nullptr if no children
+         */
+        [[nodiscard]] Children* GetChildren(Entity parent)
+        {
+            return Get<Children>(parent);
+        }
+
+        [[nodiscard]] const Children* GetChildren(Entity parent) const
+        {
+            return Get<Children>(parent);
+        }
+
+        /**
+         * Get the number of children
+         */
+        [[nodiscard]] size_t ChildCount(Entity parent) const
+        {
+            const Children* children = Get<Children>(parent);
+            if (children == nullptr)
+            {
+                return 0;
+            }
+            return children->Count();
+        }
+
+        /**
+         * Iterate over all children of an entity
+         *
+         * @param parent Parent entity
+         * @param callback Called for each child
+         */
+        template<typename F>
+        void ForEachChild(Entity parent, F&& callback)
+        {
+            const Children* children = Get<Children>(parent);
+            if (children == nullptr)
+            {
+                return;
+            }
+
+            for (size_t i = 0; i < children->Count(); ++i)
+            {
+                callback(children->At(i));
+            }
+        }
+
+        /**
+         * Iterate over all descendants (recursive, depth-first)
+         *
+         * @param root Root entity
+         * @param callback Called for each descendant (not including root)
+         */
+        template<typename F>
+        void ForEachDescendant(Entity root, F&& callback)
+        {
+            // Depth-first traversal using frame allocator stack
+            wax::Vector<Entity, FrameAllocator> stack{GetFrameAllocator()};
+
+            // Push root's children first
+            const Children* root_children = Get<Children>(root);
+            if (root_children != nullptr)
+            {
+                for (size_t i = 0; i < root_children->Count(); ++i)
+                {
+                    stack.PushBack(root_children->At(i));
+                }
+            }
+
+            while (!stack.IsEmpty())
+            {
+                Entity current = stack.Back();
+                stack.PopBack();
+
+                callback(current);
+
+                const Children* children = Get<Children>(current);
+                if (children != nullptr)
+                {
+                    for (size_t i = 0; i < children->Count(); ++i)
+                    {
+                        stack.PushBack(children->At(i));
+                    }
+                }
+            }
+        }
+
+        /**
+         * Check if an entity is a descendant of another
+         */
+        [[nodiscard]] bool IsDescendantOf(Entity entity, Entity ancestor) const
+        {
+            Entity current = entity;
+            while (true)
+            {
+                const Parent* parent_comp = Get<Parent>(current);
+                if (parent_comp == nullptr || !parent_comp->IsValid())
+                {
+                    return false;
+                }
+
+                if (parent_comp->entity == ancestor)
+                {
+                    return true;
+                }
+
+                current = parent_comp->entity;
+            }
+        }
+
+        /**
+         * Get the root of the hierarchy containing this entity
+         */
+        [[nodiscard]] Entity GetRoot(Entity entity) const
+        {
+            Entity current = entity;
+            while (true)
+            {
+                const Parent* parent_comp = Get<Parent>(current);
+                if (parent_comp == nullptr || !parent_comp->IsValid())
+                {
+                    return current;
+                }
+                current = parent_comp->entity;
+            }
+        }
+
+        /**
+         * Get the depth of an entity in its hierarchy (0 = root)
+         */
+        [[nodiscard]] uint32_t GetDepth(Entity entity) const
+        {
+            uint32_t depth = 0;
+            Entity current = entity;
+            while (true)
+            {
+                const Parent* parent_comp = Get<Parent>(current);
+                if (parent_comp == nullptr || !parent_comp->IsValid())
+                {
+                    return depth;
+                }
+                ++depth;
+                current = parent_comp->entity;
+            }
+        }
+
+        /**
+         * Despawn an entity and all its descendants
+         *
+         * Children are despawned first (depth-first), then the entity itself.
+         */
+        void DespawnRecursive(Entity entity)
+        {
+            if (!IsAlive(entity))
+            {
+                return;
+            }
+
+            // Collect all descendants first to avoid modification during iteration
+            wax::Vector<Entity, FrameAllocator> to_despawn{GetFrameAllocator()};
+            ForEachDescendant(entity, [&to_despawn](Entity descendant) {
+                to_despawn.PushBack(descendant);
+            });
+
+            // Despawn in reverse order (deepest first)
+            for (size_t i = to_despawn.Size(); i > 0; --i)
+            {
+                Entity descendant = to_despawn[i - 1];
+                // Remove from parent's children (parent is still alive at this point)
+                RemoveParent(descendant);
+                Despawn(descendant);
+            }
+
+            // Remove this entity from its parent
+            RemoveParent(entity);
+
+            // Finally despawn this entity
+            Despawn(entity);
         }
 
         // ─────────────────────────────────────────────────────────────

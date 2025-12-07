@@ -268,15 +268,24 @@ world.UpdateParallel(4);  // Use 4 worker threads
 - [x] World::UpdateParallel() (parallel system execution integrated into World)
 
 **Phase 10 - Events & Observers:**
-- [ ] Event concept (trivially copyable event types)
-- [ ] EventQueue (double-buffered event storage)
-- [ ] EventWriter<T> (send events from systems)
-- [ ] EventReader<T> (consume events in systems)
-- [ ] Events registry (type-erased event queue storage)
-- [ ] OnAdd<T>, OnRemove<T>, OnSet<T> (observer trigger types)
-- [ ] Observer (reactive callback on structural changes)
-- [ ] ObserverBuilder (fluent API for observer registration)
-- [ ] ObserverStorage (observer registry)
-- [ ] World::Events<T>() / World::SendEvent<T>()
-- [ ] World::Observer<T>() builder
-- [ ] System integration (EventWriter/EventReader as parameters)
+- [x] Event concept (trivially copyable event types)
+- [x] EventQueue (double-buffered event storage)
+- [x] EventWriter<T> (send events from systems)
+- [x] EventReader<T> (consume events in systems)
+- [x] Events registry (type-erased event queue storage)
+- [x] OnAdd<T>, OnRemove<T>, OnSet<T> (observer trigger types)
+- [x] Observer (reactive callback on structural changes)
+- [x] ObserverBuilder (fluent API for observer registration)
+- [x] ObserverStorage (observer registry)
+- [x] World::SendEvent<T>() / World::EventWriter<T>() / World::EventReader<T>()
+- [x] World::Observer<T>() builder
+- [x] Observer triggers integrated into World::Add/Remove/Set
+
+**Phase 11 - Hierarchy & Relationships:**
+- [x] Parent component (entity reference to parent)
+- [x] Children component (cached child list)
+- [x] SetParent / RemoveParent / GetParent / HasParent
+- [x] GetChildren / ChildCount / ForEachChild
+- [x] ForEachDescendant (recursive iteration)
+- [x] IsDescendantOf / GetRoot / GetDepth
+- [x] DespawnRecursive (cascading destruction)

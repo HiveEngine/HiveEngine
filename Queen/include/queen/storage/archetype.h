@@ -9,6 +9,7 @@
 #include <wax/containers/hash_map.h>
 #include <hive/core/assert.h>
 #include <algorithm>
+#include <type_traits>
 
 namespace queen
 {
@@ -135,6 +136,13 @@ namespace queen
         void SetComponent(uint32_t row, const T& value)
         {
             table_.template SetComponent<T>(row, value);
+        }
+
+        template<typename T>
+        void SetComponent(uint32_t row, T&& value)
+            requires(!std::is_lvalue_reference_v<T&&>)
+        {
+            table_.template SetComponent<T>(row, std::forward<T>(value));
         }
 
         void SetComponent(uint32_t row, TypeId type_id, const void* data)
