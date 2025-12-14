@@ -116,6 +116,47 @@ namespace wax
             size_t capacity_;
         };
 
+        class ConstIterator
+        {
+        public:
+            ConstIterator(const Bucket* buckets, size_t index, size_t capacity)
+                : buckets_{buckets}, index_{index}, capacity_{capacity}
+            {
+                SkipEmpty();
+            }
+
+            std::pair<const K&, const V&> operator*() const
+            {
+                return {*buckets_[index_].Key(), *buckets_[index_].Value()};
+            }
+
+            ConstIterator& operator++()
+            {
+                ++index_;
+                SkipEmpty();
+                return *this;
+            }
+
+            bool operator==(const ConstIterator& other) const { return index_ == other.index_; }
+            bool operator!=(const ConstIterator& other) const { return index_ != other.index_; }
+
+            const K& Key() const { return *buckets_[index_].Key(); }
+            const V& Value() const { return *buckets_[index_].Value(); }
+
+        private:
+            void SkipEmpty()
+            {
+                while (index_ < capacity_ && buckets_[index_].state != kOccupied)
+                {
+                    ++index_;
+                }
+            }
+
+            const Bucket* buckets_;
+            size_t index_;
+            size_t capacity_;
+        };
+
         HashMap(Allocator& allocator, size_t initial_capacity = 16)
             : allocator_{&allocator}
             , capacity_{NextPowerOfTwo(initial_capacity)}
@@ -374,6 +415,8 @@ namespace wax
 
         Iterator begin() { return Iterator{buckets_, 0, capacity_}; }
         Iterator end() { return Iterator{buckets_, capacity_, capacity_}; }
+        ConstIterator begin() const { return ConstIterator{buckets_, 0, capacity_}; }
+        ConstIterator end() const { return ConstIterator{buckets_, capacity_, capacity_}; }
 
     private:
         [[nodiscard]] bool ShouldRehash() const noexcept
