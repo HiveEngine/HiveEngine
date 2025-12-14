@@ -23,6 +23,7 @@
 #include <wax/containers/hash_map.h>
 #include <hive/core/assert.h>
 #include <cstring>
+#include <mutex>
 
 namespace queen
 {
@@ -134,27 +135,13 @@ namespace queen
          * Create World with custom allocator configuration
          */
         explicit World(const WorldAllocatorConfig& config)
-            : allocators_{WorldAllocators::Create(config)}
-            , entity_allocator_{allocators_.Components()}
-            , entity_locations_{allocators_.Components()}
-            , archetype_graph_{allocators_.Components()}
-            , component_index_{allocators_.Persistent()}
-            , resources_{allocators_.Persistent()}
-            , resource_metas_{allocators_.Persistent()}
-            , systems_{allocators_.Persistent()}
-            , scheduler_{allocators_.Persistent()}
-            , commands_{allocators_.Persistent()}
-            , events_{allocators_.Persistent()}
-            , observers_{allocators_.Persistent()}
-        {
-            component_index_.RegisterArchetype(archetype_graph_.GetEmptyArchetype());
-        }
-
-        /**
-         * Create World with pre-configured WorldAllocators
-         */
-        explicit World(WorldAllocators&& allocators)
-            : allocators_{std::move(allocators)}
+            : allocators_{
+                config.persistent_size,
+                config.component_size,
+                config.frame_size,
+                config.thread_frame_size,
+                config.thread_count
+            }
             , entity_allocator_{allocators_.Components()}
             , entity_locations_{allocators_.Components()}
             , archetype_graph_{allocators_.Components()}
@@ -204,7 +191,7 @@ namespace queen
 
         World(const World&) = delete;
         World& operator=(const World&) = delete;
-        World(World&&) = default;
+        World(World&&) = delete;  // WorldAllocators contains mutex (not movable)
         World& operator=(World&&) = delete;
 
         [[nodiscard]] EntityBuilder Spawn();
@@ -559,6 +546,9 @@ namespace queen
         /**
          * Create a query to iterate over entities matching the given terms
          *
+         * Thread-safe: Protected by mutex during query construction.
+         * Query iteration (Each/EachWithEntity) is lock-free after construction.
+         *
          * Example:
          * @code
          *   world.Query<Read<Position>, Write<Velocity>>()
@@ -570,7 +560,53 @@ namespace queen
         template<typename... Terms>
         [[nodiscard]] queen::Query<PersistentAllocator, Terms...> Query()
         {
+            std::lock_guard<std::mutex> lock{allocators_.PersistentMutex()};
             return queen::Query<PersistentAllocator, Terms...>{allocators_.Persistent(), component_index_};
+        }
+
+        /**
+         * Execute a callback with a query, holding the lock for the entire lifetime
+         *
+         * Thread-safe: The mutex is held during query construction, iteration, AND destruction.
+         * Use this for parallel system execution to avoid race conditions.
+         *
+         * @param callback Function to call with the query (e.g., query.Each(...))
+         */
+        template<typename... Terms, typename Callback>
+        void QueryEach(Callback&& callback)
+        {
+            std::lock_guard<std::mutex> lock{allocators_.PersistentMutex()};
+            queen::Query<PersistentAllocator, Terms...> query{allocators_.Persistent(), component_index_};
+            callback(query);
+            // Query destructor runs here while still holding the lock
+        }
+
+        /**
+         * Execute Each() on a query with full lock protection
+         *
+         * Thread-safe version for parallel execution.
+         */
+        template<typename... Terms, typename F>
+        void QueryEachLocked(F&& func)
+        {
+            std::lock_guard<std::mutex> lock{allocators_.PersistentMutex()};
+            queen::Query<PersistentAllocator, Terms...> query{allocators_.Persistent(), component_index_};
+            query.Each(std::forward<F>(func));
+            // Query destructor runs here while still holding the lock
+        }
+
+        /**
+         * Execute EachWithEntity() on a query with full lock protection
+         *
+         * Thread-safe version for parallel execution.
+         */
+        template<typename... Terms, typename F>
+        void QueryEachWithEntityLocked(F&& func)
+        {
+            std::lock_guard<std::mutex> lock{allocators_.PersistentMutex()};
+            queen::Query<PersistentAllocator, Terms...> query{allocators_.Persistent(), component_index_};
+            query.EachWithEntity(std::forward<F>(func));
+            // Query destructor runs here while still holding the lock
         }
 
         // ─────────────────────────────────────────────────────────────

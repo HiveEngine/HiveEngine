@@ -1,6 +1,7 @@
 #include <larvae/larvae.h>
 #include <queen/world/world.h>
 #include <comb/linear_allocator.h>
+#include <comb/debug/mem_debug_config.h>
 #include <atomic>
 #include <thread>
 
@@ -21,8 +22,11 @@ namespace
         int current, max;
     };
 
-    // Larger allocator size for parallel tests to avoid race conditions in debug memory
+    // Larger allocator size for parallel tests
     constexpr size_t ParallelAllocSize = 8 * 1024 * 1024;
+
+    // Default worker count for parallel tests (0 = auto-detect based on hardware)
+    constexpr size_t DefaultParallelWorkers = 0;
 
     // ─────────────────────────────────────────────────────────────
     // Basic UpdateParallel Tests
@@ -36,7 +40,7 @@ namespace
         larvae::AssertFalse(world.HasParallelScheduler());
         larvae::AssertNull(world.GetParallelScheduler());
 
-        world.UpdateParallel();
+        world.UpdateParallel(DefaultParallelWorkers);
 
         larvae::AssertTrue(world.HasParallelScheduler());
         larvae::AssertNotNull(world.GetParallelScheduler());
@@ -48,7 +52,7 @@ namespace
         queen::World world{};
 
         queen::Tick tick_before = world.CurrentTick();
-        world.UpdateParallel();
+        world.UpdateParallel(DefaultParallelWorkers);
         queen::Tick tick_after = world.CurrentTick();
 
         larvae::AssertTrue(tick_after.IsNewerThan(tick_before));
@@ -71,7 +75,7 @@ namespace
         (void)world.Spawn(Position{2.0f, 0.0f, 0.0f});
         (void)world.Spawn(Position{3.0f, 0.0f, 0.0f});
 
-        world.UpdateParallel();
+        world.UpdateParallel(DefaultParallelWorkers);
 
         larvae::AssertEqual(count.load(), 3);
     });
@@ -99,7 +103,7 @@ namespace
         (void)world.Spawn(Position{1.0f, 0.0f, 0.0f});
         (void)world.Spawn(Velocity{1.0f, 0.0f, 0.0f});
 
-        world.UpdateParallel();
+        world.UpdateParallel(DefaultParallelWorkers);
 
         larvae::AssertEqual(system_a_count.load(), 1);
         larvae::AssertEqual(system_b_count.load(), 1);
@@ -122,7 +126,7 @@ namespace
         (void)world.Spawn(Position{2.0f, 0.0f, 0.0f}, Velocity{0.0f, 0.0f, 0.0f});
         (void)world.Spawn(Position{3.0f, 0.0f, 0.0f}, Health{100, 100});
 
-        world.UpdateParallel();
+        world.UpdateParallel(DefaultParallelWorkers);
 
         larvae::AssertEqual(count.load(), 3);
     });
@@ -136,10 +140,10 @@ namespace
         comb::LinearAllocator alloc{ParallelAllocSize};
         queen::World world{};
 
-        world.UpdateParallel();
+        world.UpdateParallel(DefaultParallelWorkers);
         auto* scheduler1 = world.GetParallelScheduler();
 
-        world.UpdateParallel();
+        world.UpdateParallel(DefaultParallelWorkers);
         auto* scheduler2 = world.GetParallelScheduler();
 
         larvae::AssertTrue(scheduler1 == scheduler2);
@@ -160,9 +164,9 @@ namespace
 
         (void)world.Spawn(Position{1.0f, 0.0f, 0.0f});
 
-        world.UpdateParallel();
-        world.UpdateParallel();
-        world.UpdateParallel();
+        world.UpdateParallel(DefaultParallelWorkers);
+        world.UpdateParallel(DefaultParallelWorkers);
+        world.UpdateParallel(DefaultParallelWorkers);
 
         larvae::AssertEqual(count.load(), 3);
     });
@@ -179,7 +183,7 @@ namespace
         world.System<queen::Read<Position>>("Sys1")
             .Each([](const Position&) {});
 
-        world.UpdateParallel();
+        world.UpdateParallel(DefaultParallelWorkers);
 
         auto* scheduler = world.GetParallelScheduler();
         larvae::AssertNotNull(scheduler);
@@ -236,7 +240,7 @@ namespace
                 (void)world.Spawn(Position{static_cast<float>(i), 0.0f, 0.0f});
             }
 
-            world.UpdateParallel();
+            world.UpdateParallel(DefaultParallelWorkers);
         }
 
         larvae::AssertEqual(sequential_count.load(), parallel_count.load());
@@ -260,7 +264,7 @@ namespace
 
         auto e = world.Spawn(Position{0.0f, 0.0f, 0.0f});
 
-        world.UpdateParallel();
+        world.UpdateParallel(DefaultParallelWorkers);
 
         auto* pos = world.Get<Position>(e);
         larvae::AssertNotNull(pos);
@@ -272,7 +276,6 @@ namespace
         comb::LinearAllocator alloc{16 * 1024 * 1024};
         queen::World world{};
 
-        // Use single-worker to avoid parallel allocation race conditions in debug builds
         world.System<queen::Write<Position>>("MoveX")
             .Each([](Position& pos)
             {
@@ -288,8 +291,7 @@ namespace
         auto e1 = world.Spawn(Position{0.0f, 0.0f, 0.0f});
         auto e2 = world.Spawn(Velocity{0.0f, 0.0f, 0.0f});
 
-        // Use single worker to avoid race conditions in debug memory tracking
-        world.UpdateParallel(1);
+        world.UpdateParallel(DefaultParallelWorkers);
 
         auto* pos = world.Get<Position>(e1);
         auto* vel = world.Get<Velocity>(e2);
@@ -339,7 +341,8 @@ namespace
         (void)world.Spawn(Velocity{1.0f, 0.0f, 0.0f});
         (void)world.Spawn(Health{100, 100});
 
-        world.UpdateParallel(4);
+        // With multiple workers, systems on independent components can run in parallel
+        world.UpdateParallel(DefaultParallelWorkers);
 
         larvae::AssertTrue(max_concurrent.load() >= 1);
     });
@@ -354,9 +357,9 @@ namespace
         queen::World world{};
 
         queen::Tick t1 = world.CurrentTick();
-        world.UpdateParallel();
+        world.UpdateParallel(DefaultParallelWorkers);
         queen::Tick t2 = world.CurrentTick();
-        world.UpdateParallel();
+        world.UpdateParallel(DefaultParallelWorkers);
         queen::Tick t3 = world.CurrentTick();
 
         larvae::AssertTrue(t2.IsNewerThan(t1));
@@ -379,9 +382,9 @@ namespace
         (void)world.Spawn(Position{1.0f, 0.0f, 0.0f});
 
         world.Update();
-        world.UpdateParallel();
+        world.UpdateParallel(DefaultParallelWorkers);
         world.Update();
-        world.UpdateParallel();
+        world.UpdateParallel(DefaultParallelWorkers);
 
         larvae::AssertEqual(count.load(), 4);
     });
@@ -403,7 +406,7 @@ namespace
                 count.fetch_add(1, std::memory_order_relaxed);
             });
 
-        world.UpdateParallel();
+        world.UpdateParallel(DefaultParallelWorkers);
 
         larvae::AssertEqual(count.load(), 0);
     });

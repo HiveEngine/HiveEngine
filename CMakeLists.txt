@@ -26,6 +26,26 @@ endif()
 project(HiveEngine_Redo LANGUAGES CXX)
 
 # ============================================================================
+# Thread Configuration (must be before any subdirectory that uses Threads)
+# ============================================================================
+# On Windows, use native Win32 threads instead of pthreads
+# This fixes linking issues with Clang on Windows trying to link pthreads.lib
+if(WIN32)
+    set(THREADS_PREFER_PTHREAD_FLAG OFF CACHE BOOL "" FORCE)
+    set(CMAKE_USE_WIN32_THREADS_INIT ON CACHE BOOL "" FORCE)
+    set(CMAKE_USE_PTHREADS_INIT OFF CACHE BOOL "" FORCE)
+    set(CMAKE_THREAD_LIBS_INIT "" CACHE STRING "" FORCE)
+
+    # Pre-create Threads::Threads target for Windows to prevent GLFW from
+    # adding pthreads dependency. Windows has native thread support.
+    if(NOT TARGET Threads::Threads)
+        add_library(Threads::Threads INTERFACE IMPORTED)
+        set(Threads_FOUND TRUE CACHE BOOL "" FORCE)
+        set(CMAKE_THREAD_LIBS_INIT "" CACHE STRING "" FORCE)
+    endif()
+endif()
+
+# ============================================================================
 # Build Configuration
 # ============================================================================
 

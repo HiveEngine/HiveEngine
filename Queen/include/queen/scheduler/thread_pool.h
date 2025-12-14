@@ -1,7 +1,9 @@
 #pragma once
 
 #include <queen/scheduler/work_stealing_deque.h>
+#include <queen/scheduler/worker_context.h>
 #include <comb/allocator_concepts.h>
+#include <comb/thread_safe_allocator.h>
 #include <atomic>
 #include <thread>
 #include <functional>
@@ -77,11 +79,14 @@ namespace queen
     template<comb::Allocator Allocator>
     struct WorkerContextT
     {
+        // Use ThreadSafeAllocator for thread-safe deque operations
+        using SafeAllocator = comb::ThreadSafeAllocator<Allocator>;
+
         size_t id{0};
         std::atomic<WorkerState> state{WorkerState::Idle};
         std::atomic<bool> should_stop{false};
         std::thread thread;
-        WorkStealingDeque<Task, Allocator>* deque{nullptr};
+        WorkStealingDeque<Task, SafeAllocator>* deque{nullptr};
         uint32_t rng_state{0};
 
         WorkerContextT() = default;
@@ -135,12 +140,14 @@ namespace queen
     {
     public:
         using WorkerContext = WorkerContextT<Allocator>;
+        using SafeAllocator = comb::ThreadSafeAllocator<Allocator>;
 
         explicit ThreadPool(Allocator& allocator,
                            size_t worker_count = 0,
                            IdleStrategy idle_strategy = IdleStrategy::Yield,
                            size_t deque_capacity = 1024)
             : allocator_{&allocator}
+            , safe_allocator_{allocator}  // Thread-safe wrapper
             , workers_{nullptr}
             , global_queue_{nullptr}
             , worker_count_{worker_count == 0 ? GetDefaultWorkerCount() : worker_count}
@@ -150,13 +157,14 @@ namespace queen
             , next_worker_{0}
         {
             // Allocate global submission queue
+            // The deque uses safe_allocator_ internally for Grow() which can happen from any thread
             void* global_mem = allocator_->Allocate(
-                sizeof(WorkStealingDeque<Task, Allocator>),
-                alignof(WorkStealingDeque<Task, Allocator>)
+                sizeof(WorkStealingDeque<Task, SafeAllocator>),
+                alignof(WorkStealingDeque<Task, SafeAllocator>)
             );
-            global_queue_ = new (global_mem) WorkStealingDeque<Task, Allocator>(allocator, deque_capacity * 4);
+            global_queue_ = new (global_mem) WorkStealingDeque<Task, SafeAllocator>(safe_allocator_, deque_capacity * 4);
 
-            // Allocate worker contexts
+            // Allocate worker contexts (single-threaded setup)
             void* mem = allocator_->Allocate(sizeof(WorkerContext) * worker_count_, alignof(WorkerContext));
             workers_ = static_cast<WorkerContext*>(mem);
 
@@ -167,12 +175,13 @@ namespace queen
                 workers_[i].id = i;
                 workers_[i].rng_state = static_cast<uint32_t>(i + 1);
 
-                // Allocate and construct per-worker deque (for subtasks)
+                // Allocate per-worker deque (single-threaded setup)
+                // The deque uses safe_allocator_ internally for Grow() which can happen from workers
                 void* deque_mem = allocator_->Allocate(
-                    sizeof(WorkStealingDeque<Task, Allocator>),
-                    alignof(WorkStealingDeque<Task, Allocator>)
+                    sizeof(WorkStealingDeque<Task, SafeAllocator>),
+                    alignof(WorkStealingDeque<Task, SafeAllocator>)
                 );
-                workers_[i].deque = new (deque_mem) WorkStealingDeque<Task, Allocator>(allocator, deque_capacity);
+                workers_[i].deque = new (deque_mem) WorkStealingDeque<Task, SafeAllocator>(safe_allocator_, deque_capacity);
             }
         }
 
@@ -185,7 +194,7 @@ namespace queen
             {
                 if (workers_[i].deque != nullptr)
                 {
-                    workers_[i].deque->~WorkStealingDeque<Task, Allocator>();
+                    workers_[i].deque->~WorkStealingDeque<Task, SafeAllocator>();
                     allocator_->Deallocate(workers_[i].deque);
                 }
                 workers_[i].~WorkerContext();
@@ -196,7 +205,7 @@ namespace queen
             // Destroy global queue
             if (global_queue_ != nullptr)
             {
-                global_queue_->~WorkStealingDeque<Task, Allocator>();
+                global_queue_->~WorkStealingDeque<Task, SafeAllocator>();
                 allocator_->Deallocate(global_queue_);
             }
         }
@@ -365,6 +374,9 @@ namespace queen
             constexpr int kSpinAttempts = 64; // Spin before yielding
             int idle_spins = 0;
 
+            // Set worker index for this thread (used by World::Query for per-thread allocators)
+            queen::WorkerContext::SetCurrentWorkerIndex(ctx->id);
+
             while (!ctx->should_stop.load(std::memory_order_acquire))
             {
                 Task task{};
@@ -429,6 +441,8 @@ namespace queen
                 pending_tasks_.fetch_sub(1, std::memory_order_release);
             }
 
+            // Clear worker index when thread stops
+            queen::WorkerContext::ClearCurrentWorkerIndex();
             ctx->state.store(WorkerState::Stopped, std::memory_order_release);
         }
 
@@ -476,8 +490,9 @@ namespace queen
         }
 
         Allocator* allocator_;
+        SafeAllocator safe_allocator_;  // Thread-safe wrapper for deque allocations (Grow)
         WorkerContext* workers_;
-        WorkStealingDeque<Task, Allocator>* global_queue_;  // Main submission queue
+        WorkStealingDeque<Task, SafeAllocator>* global_queue_;  // Main submission queue
         mutable std::mutex submit_mutex_;  // Protects global_queue_ Push (multi-producer)
         size_t worker_count_;
         IdleStrategy idle_strategy_;

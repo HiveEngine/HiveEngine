@@ -3,11 +3,61 @@
 #include <comb/allocator_concepts.h>
 #include <comb/linear_allocator.h>
 #include <comb/buddy_allocator.h>
+#include <comb/thread_safe_allocator.h>
 #include <wax/containers/vector.h>
 #include <hive/core/assert.h>
+#include <mutex>
 
 namespace queen
 {
+    /**
+     * Thread-safe allocator wrapper that satisfies the comb::Allocator concept
+     *
+     * This wrapper holds a reference to a BuddyAllocator and a mutex,
+     * providing thread-safe allocation for use during parallel execution.
+     */
+    class ThreadSafeBuddyAllocator
+    {
+    public:
+        ThreadSafeBuddyAllocator(comb::BuddyAllocator& allocator, std::mutex& mutex)
+            : allocator_{&allocator}
+            , mutex_{&mutex}
+        {}
+
+        [[nodiscard]] void* Allocate(size_t size, size_t alignment, const char* tag = nullptr)
+        {
+            std::lock_guard<std::mutex> lock{*mutex_};
+            return allocator_->Allocate(size, alignment, tag);
+        }
+
+        void Deallocate(void* ptr)
+        {
+            std::lock_guard<std::mutex> lock{*mutex_};
+            allocator_->Deallocate(ptr);
+        }
+
+        [[nodiscard]] size_t GetUsedMemory() const
+        {
+            std::lock_guard<std::mutex> lock{*mutex_};
+            return allocator_->GetUsedMemory();
+        }
+
+        [[nodiscard]] size_t GetTotalMemory() const
+        {
+            std::lock_guard<std::mutex> lock{*mutex_};
+            return allocator_->GetTotalMemory();
+        }
+
+        [[nodiscard]] const char* GetName() const
+        {
+            return "ThreadSafeBuddyAllocator";
+        }
+
+    private:
+        comb::BuddyAllocator* allocator_;
+        std::mutex* mutex_;
+    };
+
     /**
      * Memory allocation strategy for ECS World
      *
@@ -115,10 +165,11 @@ namespace queen
 
         ~WorldAllocators() = default;
 
+        // Not copyable or movable (contains mutex)
         WorldAllocators(const WorldAllocators&) = delete;
         WorldAllocators& operator=(const WorldAllocators&) = delete;
-        WorldAllocators(WorldAllocators&&) = default;
-        WorldAllocators& operator=(WorldAllocators&&) = default;
+        WorldAllocators(WorldAllocators&&) = delete;
+        WorldAllocators& operator=(WorldAllocators&&) = delete;
 
         /**
          * Create WorldAllocators with default configuration
@@ -149,6 +200,8 @@ namespace queen
         /**
          * Persistent allocator for long-lived data
          *
+         * WARNING: Not thread-safe! Use PersistentThreadSafe() for parallel execution.
+         *
          * Use for: Archetypes, Systems, ArchetypeGraph, ComponentIndex,
          *          Resources, DependencyGraph
          */
@@ -160,6 +213,28 @@ namespace queen
         [[nodiscard]] const comb::BuddyAllocator& Persistent() const noexcept
         {
             return persistent_;
+        }
+
+        /**
+         * Thread-safe wrapper around the persistent allocator
+         *
+         * Use this for allocations during parallel system execution.
+         * Returns a lightweight wrapper that locks the internal mutex.
+         */
+        [[nodiscard]] ThreadSafeBuddyAllocator PersistentThreadSafe() noexcept
+        {
+            return ThreadSafeBuddyAllocator{persistent_, persistent_mutex_};
+        }
+
+        /**
+         * Access the persistent allocator's mutex for external locking
+         *
+         * Use this when you need to protect a sequence of operations
+         * on the persistent allocator (e.g., Query construction).
+         */
+        [[nodiscard]] std::mutex& PersistentMutex() noexcept
+        {
+            return persistent_mutex_;
         }
 
         /**
@@ -302,10 +377,35 @@ namespace queen
             return total;
         }
 
+        // ─────────────────────────────────────────────────────────────
+        // Thread-Safe Allocation (for parallel system execution)
+        // ─────────────────────────────────────────────────────────────
+
+        /**
+         * Thread-safe allocation from the persistent allocator
+         *
+         * Use this when allocating from worker threads during parallel execution.
+         */
+        [[nodiscard]] void* PersistentAllocateThreadSafe(size_t size, size_t alignment, const char* tag = nullptr)
+        {
+            std::lock_guard<std::mutex> lock{persistent_mutex_};
+            return persistent_.Allocate(size, alignment, tag);
+        }
+
+        /**
+         * Thread-safe deallocation from the persistent allocator
+         */
+        void PersistentDeallocateThreadSafe(void* ptr)
+        {
+            std::lock_guard<std::mutex> lock{persistent_mutex_};
+            persistent_.Deallocate(ptr);
+        }
+
     private:
         comb::BuddyAllocator persistent_;
         comb::BuddyAllocator components_;
         comb::LinearAllocator frame_;
         wax::Vector<comb::LinearAllocator, comb::BuddyAllocator> thread_frames_;
+        mutable std::mutex persistent_mutex_;  // Protects persistent_ during parallel execution
     };
 }

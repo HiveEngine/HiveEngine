@@ -47,6 +47,12 @@ Queen/
 │   ├── query/
 │   │   ├── change_filter.h  # Added<T>/Changed<T> filters
 │   │   └── mut.h            # Mut<T> wrapper with change tracking
+│   ├── reflect/
+│   │   ├── field_info.h         # Runtime field metadata
+│   │   ├── component_reflector.h # Field registration builder
+│   │   ├── reflectable.h        # Reflectable concept
+│   │   ├── component_serializer.h # Binary serialization
+│   │   └── component_registry.h  # Type lookup registry
 │   └── scheduler/
 │       ├── system_node.h       # Dependency graph node
 │       ├── dependency_graph.h  # Dependency graph with topological sort
@@ -185,6 +191,49 @@ world.UpdateParallel();
 world.UpdateParallel(4);  // Use 4 worker threads
 ```
 
+### Component Reflection & Serialization
+
+```cpp
+#include <queen/reflect/reflectable.h>
+#include <queen/reflect/component_serializer.h>
+#include <queen/reflect/component_registry.h>
+
+// Components must define a static Reflect() function
+struct Position {
+    float x, y, z;
+
+    static void Reflect(queen::ComponentReflector<>& r) {
+        r.Field("x", &Position::x);
+        r.Field("y", &Position::y);
+        r.Field("z", &Position::z);
+    }
+};
+
+// Now Position satisfies the Reflectable concept
+static_assert(queen::Reflectable<Position>);
+
+// Register components at startup
+queen::ComponentRegistry<128> registry;
+registry.Register<Position>();
+registry.Register<Velocity>();
+
+// Serialize a component
+Position pos{1.0f, 2.0f, 3.0f};
+comb::LinearAllocator alloc{4096};
+wax::BinaryWriter<comb::LinearAllocator> writer{alloc};
+queen::Serialize(pos, writer);
+
+// Deserialize
+Position loaded{};
+wax::BinaryReader reader{writer.View()};
+queen::Deserialize(loaded, reader);
+// loaded.x == 1.0f, loaded.y == 2.0f, loaded.z == 3.0f
+
+// Type-erased serialization via registry
+const auto* info = registry.Find(queen::TypeIdOf<Position>());
+queen::SerializeComponent(&pos, info->reflection, writer);
+```
+
 ## Status
 
 **Phase 0 - Infrastructure:**
@@ -289,3 +338,11 @@ world.UpdateParallel(4);  // Use 4 worker threads
 - [x] ForEachDescendant (recursive iteration)
 - [x] IsDescendantOf / GetRoot / GetDepth
 - [x] DespawnRecursive (cascading destruction)
+
+**Phase 12 - Reflection & Serialization:**
+- [x] FieldInfo (runtime field metadata)
+- [x] ComponentReflector (field registration builder)
+- [x] Reflectable concept (enforces Reflect() function)
+- [x] ComponentReflection (type-erased reflection data)
+- [x] ComponentRegistry (type lookup by TypeId)
+- [x] Serialize/Deserialize 

@@ -24,8 +24,8 @@ namespace queen
 
         auto executor = [](World& world, void* data) {
             FuncType* fn = static_cast<FuncType*>(data);
-            auto query = world.Query<Terms...>();
-            query.Each(*fn);
+            // Use locked version to protect Query lifetime (construction + destruction)
+            world.template QueryEachLocked<Terms...>(*fn);
         };
 
         auto destructor = [](void* data) {
@@ -48,8 +48,8 @@ namespace queen
 
         auto executor = [](World& world, void* data) {
             FuncType* fn = static_cast<FuncType*>(data);
-            auto query = world.Query<Terms...>();
-            query.EachWithEntity(*fn);
+            // Use locked version to protect Query lifetime (construction + destruction)
+            world.template QueryEachWithEntityLocked<Terms...>(*fn);
         };
 
         auto destructor = [](void* data) {
@@ -72,11 +72,13 @@ namespace queen
 
         auto executor = [](World& world, void* data) {
             FuncType* fn = static_cast<FuncType*>(data);
-            auto query = world.Query<Terms...>();
             auto& commands = world.GetCommands();
 
-            query.EachWithEntity([fn, &commands](Entity e, auto&&... components) {
-                (*fn)(e, std::forward<decltype(components)>(components)..., commands);
+            // Use locked version to protect Query lifetime (construction + destruction)
+            world.template QueryEach<Terms...>([fn, &commands](auto& query) {
+                query.EachWithEntity([fn, &commands](Entity e, auto&&... components) {
+                    (*fn)(e, std::forward<decltype(components)>(components)..., commands);
+                });
             });
         };
 
@@ -102,13 +104,15 @@ namespace queen
 
         auto executor = [](World& world, void* data) {
             FuncType* fn = static_cast<FuncType*>(data);
-            auto query = world.Query<Terms...>();
             R* res_ptr = world.Resource<R>();
             hive::Assert(res_ptr != nullptr, "Resource not found for Res<T>");
             Res<R> res{res_ptr};
 
-            query.EachWithEntity([fn, res](Entity e, auto&&... components) {
-                (*fn)(e, std::forward<decltype(components)>(components)..., res);
+            // Use locked version to protect Query lifetime (construction + destruction)
+            world.template QueryEach<Terms...>([fn, res](auto& query) {
+                query.EachWithEntity([fn, res](Entity e, auto&&... components) {
+                    (*fn)(e, std::forward<decltype(components)>(components)..., res);
+                });
             });
         };
 
@@ -134,13 +138,15 @@ namespace queen
 
         auto executor = [](World& world, void* data) {
             FuncType* fn = static_cast<FuncType*>(data);
-            auto query = world.Query<Terms...>();
             R* res_ptr = world.Resource<R>();
             hive::Assert(res_ptr != nullptr, "Resource not found for ResMut<T>");
             ResMut<R> res{res_ptr};
 
-            query.EachWithEntity([fn, res](Entity e, auto&&... components) {
-                (*fn)(e, std::forward<decltype(components)>(components)..., res);
+            // Use locked version to protect Query lifetime (construction + destruction)
+            world.template QueryEach<Terms...>([fn, res](auto& query) {
+                query.EachWithEntity([fn, res](Entity e, auto&&... components) {
+                    (*fn)(e, std::forward<decltype(components)>(components)..., res);
+                });
             });
         };
 
