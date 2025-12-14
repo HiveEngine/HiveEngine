@@ -90,3 +90,96 @@ set_target_properties(larvae_benchmark
     PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
 )
+
+# ============================================================================
+# GUI Test Runner (ImGui)
+# ============================================================================
+
+# Find OpenGL
+find_package(OpenGL REQUIRED)
+
+# FetchContent for GLFW and ImGui
+include(FetchContent)
+
+# GLFW - only fetch if not already provided by Terra
+if(NOT TARGET glfw)
+    FetchContent_Declare(
+        glfw
+        GIT_REPOSITORY https://github.com/glfw/glfw.git
+        GIT_TAG 3.4
+    )
+    set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
+    set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+    set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+    FetchContent_MakeAvailable(glfw)
+endif()
+
+# ImGui
+FetchContent_Declare(
+    imgui
+    GIT_REPOSITORY https://github.com/ocornut/imgui.git
+    GIT_TAG v1.91.6
+)
+FetchContent_MakeAvailable(imgui)
+
+# ImGui library
+add_library(imgui STATIC
+    ${imgui_SOURCE_DIR}/imgui.cpp
+    ${imgui_SOURCE_DIR}/imgui_demo.cpp
+    ${imgui_SOURCE_DIR}/imgui_draw.cpp
+    ${imgui_SOURCE_DIR}/imgui_tables.cpp
+    ${imgui_SOURCE_DIR}/imgui_widgets.cpp
+    ${imgui_SOURCE_DIR}/backends/imgui_impl_glfw.cpp
+    ${imgui_SOURCE_DIR}/backends/imgui_impl_opengl3.cpp
+)
+
+target_include_directories(imgui PUBLIC
+    ${imgui_SOURCE_DIR}
+    ${imgui_SOURCE_DIR}/backends
+)
+
+target_link_libraries(imgui PUBLIC
+    glfw
+    OpenGL::GL
+)
+
+# GUI Test sources (include all test files like console runner)
+set(LARVAE_GUI_SOURCES main_gui.cpp)
+foreach(TEST_DIR ${LARVAE_TEST_DIRS})
+    file(GLOB_RECURSE DIR_TESTS ${TEST_DIR}/test_*.cpp)
+    list(APPEND LARVAE_GUI_SOURCES ${DIR_TESTS})
+endforeach()
+
+# GUI Executable
+add_executable(larvae_runner_gui ${LARVAE_GUI_SOURCES})
+
+target_link_libraries(larvae_runner_gui
+    PRIVATE
+        Larvae
+        Hive
+        Comb
+        Wax
+        Queen
+        imgui
+)
+
+target_include_directories(larvae_runner_gui
+    PRIVATE
+        ${CMAKE_SOURCE_DIR}/Comb/include
+        ${CMAKE_SOURCE_DIR}/Wax/include
+        ${CMAKE_SOURCE_DIR}/Queen/include
+        ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
+set_target_properties(larvae_runner_gui
+    PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
+)
+
+# On Windows, set WIN32 subsystem to avoid console window
+if(WIN32)
+    set_target_properties(larvae_runner_gui
+        PROPERTIES
+            WIN32_EXECUTABLE TRUE
+    )
+endif()
