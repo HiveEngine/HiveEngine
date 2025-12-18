@@ -4,15 +4,17 @@
 set(CMAKE_SYSTEM_NAME Windows)
 
 # Find LLVM installation
-# Priority: Environment variable > Common install locations
+# Priority: Environment variable > VS installation > Common install locations
 if(DEFINED ENV{LLVM_PATH})
     set(LLVM_ROOT "$ENV{LLVM_PATH}")
+elseif(EXISTS "C:/Program Files/Microsoft Visual Studio/18/Community/VC/Tools/Llvm/x64")
+    set(LLVM_ROOT "C:/Program Files/Microsoft Visual Studio/18/Community/VC/Tools/Llvm/x64")
+elseif(EXISTS "C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/Llvm/x64")
+    set(LLVM_ROOT "C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/Llvm/x64")
 elseif(EXISTS "C:/Program Files/LLVM")
     set(LLVM_ROOT "C:/Program Files/LLVM")
-elseif(EXISTS "C:/LLVM")
-    set(LLVM_ROOT "C:/LLVM")
 else()
-    message(FATAL_ERROR "LLVM not found. Set LLVM_PATH environment variable or install LLVM to C:/Program Files/LLVM")
+    message(FATAL_ERROR "LLVM not found. Set LLVM_PATH environment variable or install LLVM")
 endif()
 
 # Set compilers

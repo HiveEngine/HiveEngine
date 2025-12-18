@@ -1,0 +1,52 @@
+#pragma once
+
+/**
+ * Scheduler method implementations
+ *
+ * This file contains implementations of Scheduler methods that access World members.
+ * It must be included AFTER the World class is fully defined.
+ */
+
+namespace queen
+{
+    template<comb::Allocator Allocator>
+    void Scheduler<Allocator>::RunAll(World& world, SystemStorage<Allocator>& storage)
+    {
+        // Rebuild graph if needed
+        if (graph_.IsDirty())
+        {
+            graph_.Build(storage);
+        }
+
+        // Reset node states for new frame
+        graph_.Reset();
+
+        // Get current tick for change detection
+        Tick current_tick = world.CurrentTick();
+
+        // Execute systems in topological order
+        const auto& order = graph_.ExecutionOrder();
+        for (size_t i = 0; i < order.Size(); ++i)
+        {
+            uint32_t node_index = order[i];
+            SystemNode* node = graph_.GetNode(node_index);
+
+            if (node != nullptr)
+            {
+                node->SetState(SystemState::Running);
+
+                // Execute the system with tick tracking
+                SystemDescriptor<Allocator>* system = storage.GetSystemByIndex(node_index);
+                if (system != nullptr)
+                {
+                    system->Execute(world, current_tick);
+                }
+
+                node->SetState(SystemState::Complete);
+            }
+        }
+
+        // Flush all command buffers at sync point
+        world.GetCommands().FlushAll(world);
+    }
+}

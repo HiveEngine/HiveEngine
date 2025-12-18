@@ -58,6 +58,7 @@
 #include <source_location>
 #include <type_traits>
 #include <cstdint>
+#include <cstdlib>
 
 namespace hive
 {
