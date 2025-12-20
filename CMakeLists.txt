@@ -55,30 +55,52 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Build types
-set(CMAKE_CONFIGURATION_TYPES "Debug;Release;RelWithDebInfo;MemDebug" CACHE STRING "" FORCE)
+set(CMAKE_CONFIGURATION_TYPES "Debug;Release;Profile;Retail" CACHE STRING "" FORCE)
+
+# ============================================================================
+# Engine Mode
+# ============================================================================
+# HIVE_ENGINE_MODE: Editor, Game, or Headless
+set(HIVE_ENGINE_MODE "Game" CACHE STRING "Engine mode: Editor, Game, or Headless")
+set_property(CACHE HIVE_ENGINE_MODE PROPERTY STRINGS "Editor" "Game" "Headless")
+
+# ============================================================================
+# Feature Toggles
+# ============================================================================
+# These can be overridden individually. Default values depend on mode/config.
+
+option(HIVE_FEATURE_IMGUI "Enable ImGui integration" OFF)
+option(HIVE_FEATURE_VULKAN "Enable Vulkan renderer" ON)
+option(HIVE_FEATURE_GLFW "Enable GLFW windowing" ON)
+option(HIVE_FEATURE_MEM_DEBUG "Enable memory debugging" OFF)
+option(HIVE_FEATURE_PROFILER "Enable profiler" ON)
+option(HIVE_FEATURE_LOGGING "Enable logging" ON)
+option(HIVE_FEATURE_ASSERTS "Enable asserts" ON)
+option(HIVE_FEATURE_HOT_RELOAD "Enable hot reload" OFF)
+option(HIVE_FEATURE_CONSOLE "Enable in-game console" ON)
 
 # ============================================================================
 # Engine Options
 # ============================================================================
-
-set(swarm_use_vulkan ON CACHE BOOL "Enable Vulkan GPU allocator")
-set(terra_use_glfw ON CACHE BOOL "Enable GLFW windowing")
 
 option(HIVE_ENABLE_LTO "Enable Link-Time Optimization (slower compile, better runtime)" ON)
 option(HIVE_ENABLE_FAST_MATH "Enable fast math optimizations (less precise)" OFF)
 option(HIVE_WARNINGS_AS_ERRORS "Treat warnings as errors" OFF)
 option(HIVE_ENABLE_SIMD "Enable SIMD optimizations (SSE2)" ON)
 
-# Sanitizer options (for MemDebug builds with Clang)
+# Sanitizer options (for Debug builds with Clang)
 option(HIVE_ENABLE_SANITIZERS "Enable sanitizers (requires Clang)" OFF)
 set(HIVE_SANITIZER_TYPE "Address" CACHE STRING "Sanitizer type: Address, UndefinedBehavior, Thread, Memory")
 set_property(CACHE HIVE_SANITIZER_TYPE PROPERTY STRINGS "Address" "UndefinedBehavior" "Thread" "Memory")
 
 # Clang sanitizer runtimes on Windows are built with static CRT (/MT)
-# We must match this to avoid RuntimeLibrary mismatch linker errors
-if(WIN32 AND CMAKE_BUILD_TYPE STREQUAL "MemDebug" AND HIVE_ENABLE_SANITIZERS)
+if(WIN32 AND CMAKE_BUILD_TYPE STREQUAL "Debug" AND HIVE_ENABLE_SANITIZERS)
     set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded" CACHE STRING "" FORCE)
 endif()
+
+# Legacy compatibility
+set(swarm_use_vulkan ${HIVE_FEATURE_VULKAN} CACHE BOOL "Enable Vulkan GPU allocator" FORCE)
+set(terra_use_glfw ${HIVE_FEATURE_GLFW} CACHE BOOL "Enable GLFW windowing" FORCE)
 
 # ============================================================================
 # Compiler Flags - ALL PLATFORMS
@@ -211,42 +233,50 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
         add_compile_options(-O2 -g)
     endif()
 
-    # MemDebug flags (Debug with sanitizers)
-    if(CMAKE_BUILD_TYPE STREQUAL "MemDebug")
-        add_compile_options(-O1 -g3 -fno-omit-frame-pointer -fno-optimize-sibling-calls)
-        add_compile_definitions(_GLIBCXX_DEBUG)
+    # Profile flags (Release with profiling)
+    if(CMAKE_BUILD_TYPE STREQUAL "Profile")
+        add_compile_options(-O2 -g -fno-omit-frame-pointer)
+    endif()
 
-        if(HIVE_ENABLE_SANITIZERS)
-            if(HIVE_SANITIZER_TYPE STREQUAL "Address")
-                # AddressSanitizer: memory errors (buffer overflow, use-after-free, etc.)
-                add_compile_options(-fsanitize=address)
-                add_link_options(-fsanitize=address)
-                message(STATUS "AddressSanitizer enabled")
-            elseif(HIVE_SANITIZER_TYPE STREQUAL "UndefinedBehavior")
-                # UBSan: undefined behavior (signed overflow, null deref, etc.)
-                # On Windows, exclude alignment and function checks (cause DEP violations with Clang)
-                if(WIN32)
-                    add_compile_options(-fsanitize=undefined -fno-sanitize=alignment,function,vptr)
-                    add_link_options(-fsanitize=undefined -fno-sanitize=alignment,function,vptr)
-                else()
-                    add_compile_options(-fsanitize=undefined)
-                    add_link_options(-fsanitize=undefined)
-                endif()
-                message(STATUS "UndefinedBehaviorSanitizer enabled")
-            elseif(HIVE_SANITIZER_TYPE STREQUAL "Thread")
-                # ThreadSanitizer: data races
-                add_compile_options(-fsanitize=thread)
-                add_link_options(-fsanitize=thread)
-                message(STATUS "ThreadSanitizer enabled")
-            elseif(HIVE_SANITIZER_TYPE STREQUAL "Memory")
-                # MemorySanitizer: uninitialized reads (Clang only, not on Windows)
-                if(CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND NOT WIN32)
-                    add_compile_options(-fsanitize=memory -fsanitize-memory-track-origins)
-                    add_link_options(-fsanitize=memory)
-                    message(STATUS "MemorySanitizer enabled")
-                else()
-                    message(WARNING "MemorySanitizer only available with Clang on Linux/macOS")
-                endif()
+    # Retail flags (Maximum optimization, no debug)
+    if(CMAKE_BUILD_TYPE STREQUAL "Retail")
+        add_compile_options(-O3 -ffunction-sections -fdata-sections)
+        if(NOT WIN32)
+            add_link_options(-Wl,--gc-sections)
+        endif()
+        if(HIVE_ENABLE_FAST_MATH)
+            add_compile_options(-ffast-math)
+        endif()
+    endif()
+
+    # Sanitizers (available in Debug)
+    if(CMAKE_BUILD_TYPE STREQUAL "Debug" AND HIVE_ENABLE_SANITIZERS)
+        add_compile_options(-fno-omit-frame-pointer -fno-optimize-sibling-calls)
+
+        if(HIVE_SANITIZER_TYPE STREQUAL "Address")
+            add_compile_options(-fsanitize=address)
+            add_link_options(-fsanitize=address)
+            message(STATUS "AddressSanitizer enabled")
+        elseif(HIVE_SANITIZER_TYPE STREQUAL "UndefinedBehavior")
+            if(WIN32)
+                add_compile_options(-fsanitize=undefined -fno-sanitize=alignment,function,vptr)
+                add_link_options(-fsanitize=undefined -fno-sanitize=alignment,function,vptr)
+            else()
+                add_compile_options(-fsanitize=undefined)
+                add_link_options(-fsanitize=undefined)
+            endif()
+            message(STATUS "UndefinedBehaviorSanitizer enabled")
+        elseif(HIVE_SANITIZER_TYPE STREQUAL "Thread")
+            add_compile_options(-fsanitize=thread)
+            add_link_options(-fsanitize=thread)
+            message(STATUS "ThreadSanitizer enabled")
+        elseif(HIVE_SANITIZER_TYPE STREQUAL "Memory")
+            if(CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND NOT WIN32)
+                add_compile_options(-fsanitize=memory -fsanitize-memory-track-origins)
+                add_link_options(-fsanitize=memory)
+                message(STATUS "MemorySanitizer enabled")
+            else()
+                message(WARNING "MemorySanitizer only available with Clang on Linux/macOS")
             endif()
         endif()
     endif()
@@ -288,32 +318,60 @@ elseif(APPLE)
     add_compile_definitions(HIVE_PLATFORM_MACOS=1)
 endif()
 
-# Build configuration-specific definitions
+# ============================================================================
+# HiveConfig.h Definitions (passed to compiler)
+# ============================================================================
+
+# Build configuration
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-    add_compile_definitions(
-            HIVE_DEBUG=1
-            HIVE_ENABLE_ASSERTS=1
-            HIVE_LOG_LEVEL=0
-    )
+    add_compile_definitions(HIVE_CONFIG_DEBUG=1)
 elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
-    add_compile_definitions(
-            HIVE_RELEASE=1
-            HIVE_ENABLE_ASSERTS=0
-            HIVE_LOG_LEVEL=3
-    )
-elseif(CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
-    add_compile_definitions(
-            HIVE_RELWITHDEBINFO=1
-            HIVE_ENABLE_ASSERTS=0
-            HIVE_LOG_LEVEL=2
-    )
-elseif(CMAKE_BUILD_TYPE STREQUAL "MemDebug")
-    add_compile_definitions(
-            HIVE_DEBUG=1
-            HIVE_MEMDEBUG=1
-            HIVE_ENABLE_ASSERTS=1
-            HIVE_LOG_LEVEL=0
-    )
+    add_compile_definitions(HIVE_CONFIG_RELEASE=1)
+elseif(CMAKE_BUILD_TYPE STREQUAL "Profile")
+    add_compile_definitions(HIVE_CONFIG_PROFILE=1)
+elseif(CMAKE_BUILD_TYPE STREQUAL "Retail")
+    add_compile_definitions(HIVE_CONFIG_RETAIL=1)
+else()
+    # Default/RelWithDebInfo -> Release
+    add_compile_definitions(HIVE_CONFIG_RELEASE=1)
+endif()
+
+# Engine mode
+if(HIVE_ENGINE_MODE STREQUAL "Editor")
+    add_compile_definitions(HIVE_MODE_EDITOR=1)
+elseif(HIVE_ENGINE_MODE STREQUAL "Game")
+    add_compile_definitions(HIVE_MODE_GAME=1)
+elseif(HIVE_ENGINE_MODE STREQUAL "Headless")
+    add_compile_definitions(HIVE_MODE_HEADLESS=1)
+endif()
+
+# Feature toggles (only define if explicitly set, otherwise use HiveConfig.h defaults)
+if(HIVE_FEATURE_IMGUI)
+    add_compile_definitions(HIVE_FEATURE_IMGUI=1)
+endif()
+if(HIVE_FEATURE_VULKAN)
+    add_compile_definitions(HIVE_FEATURE_VULKAN=1)
+endif()
+if(HIVE_FEATURE_GLFW)
+    add_compile_definitions(HIVE_FEATURE_GLFW=1)
+endif()
+if(HIVE_FEATURE_MEM_DEBUG)
+    add_compile_definitions(HIVE_FEATURE_MEM_DEBUG=1)
+endif()
+if(HIVE_FEATURE_PROFILER)
+    add_compile_definitions(HIVE_FEATURE_PROFILER=1)
+endif()
+if(HIVE_FEATURE_LOGGING)
+    add_compile_definitions(HIVE_FEATURE_LOGGING=1)
+endif()
+if(HIVE_FEATURE_ASSERTS)
+    add_compile_definitions(HIVE_FEATURE_ASSERTS=1)
+endif()
+if(HIVE_FEATURE_HOT_RELOAD)
+    add_compile_definitions(HIVE_FEATURE_HOT_RELOAD=1)
+endif()
+if(HIVE_FEATURE_CONSOLE)
+    add_compile_definitions(HIVE_FEATURE_CONSOLE=1)
 endif()
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
@@ -328,7 +386,7 @@ foreach(CONFIG ${CMAKE_CONFIGURATION_TYPES})
 endforeach()
 
 add_subdirectory(Hive)
-add_subdirectory(Terra)
+#add_subdirectory(Terra)
 add_subdirectory(Larvae)
 add_subdirectory(Comb)
 add_subdirectory(Wax)
@@ -343,8 +401,20 @@ message(STATUS "====================================")
 message(STATUS "  HiveEngine Build Configuration")
 message(STATUS "====================================")
 message(STATUS "Build type:         ${CMAKE_BUILD_TYPE}")
+message(STATUS "Engine mode:        ${HIVE_ENGINE_MODE}")
 message(STATUS "C++ Standard:       ${CMAKE_CXX_STANDARD}")
 message(STATUS "Compiler:           ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}")
+message(STATUS "")
+message(STATUS "Features:")
+message(STATUS "  ImGui:            ${HIVE_FEATURE_IMGUI}")
+message(STATUS "  Vulkan:           ${HIVE_FEATURE_VULKAN}")
+message(STATUS "  GLFW:             ${HIVE_FEATURE_GLFW}")
+message(STATUS "  MemDebug:         ${HIVE_FEATURE_MEM_DEBUG}")
+message(STATUS "  Profiler:         ${HIVE_FEATURE_PROFILER}")
+message(STATUS "  Logging:          ${HIVE_FEATURE_LOGGING}")
+message(STATUS "  Asserts:          ${HIVE_FEATURE_ASSERTS}")
+message(STATUS "  HotReload:        ${HIVE_FEATURE_HOT_RELOAD}")
+message(STATUS "  Console:          ${HIVE_FEATURE_CONSOLE}")
 message(STATUS "")
 message(STATUS "Optimizations:")
 message(STATUS "  RTTI:             OFF")
@@ -356,10 +426,6 @@ message(STATUS "  Warnings->Errors: ${HIVE_WARNINGS_AS_ERRORS}")
 if(HIVE_ENABLE_SANITIZERS)
     message(STATUS "  Sanitizers:       ${HIVE_SANITIZER_TYPE}")
 endif()
-message(STATUS "")
-message(STATUS "Engine Options:")
-message(STATUS "  Vulkan:           ${swarm_use_vulkan}")
-message(STATUS "  GLFW:             ${terra_use_glfw}")
 message(STATUS "")
 message(STATUS "Output:")
 message(STATUS "  Binaries:         ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")

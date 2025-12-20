@@ -62,7 +62,7 @@ namespace hive
 
         std::fprintf(stderr, "%s\n", s_AssertMessageBuffer);
 
-        HIVE_DEBUG_BREAK();
+        HIVE_INTERNAL_DEBUG_BREAK();
 
         return false;
     }
