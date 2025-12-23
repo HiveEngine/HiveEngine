@@ -1,5 +1,7 @@
 #pragma once
 
+#include <hive/HiveConfig.h>
+
 #include <string>
 #include <vector>
 #include <array>

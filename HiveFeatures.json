@@ -1,0 +1,194 @@
+{
+  "$schema": "./HiveFeatures.schema.json",
+  "version": 1,
+  "engineModes": ["Editor", "Game", "Headless"],
+  "buildConfigs": ["Debug", "Release", "Profile", "Retail"],
+  "categories": [
+    {
+      "id": "graphics",
+      "name": "Graphics",
+      "description": "Rendering and display features",
+      "features": [
+        {
+          "id": "vulkan",
+          "name": "Vulkan Renderer",
+          "description": "Enable Vulkan graphics backend",
+          "cmakeVar": "HIVE_FEATURE_VULKAN",
+          "macro": "HIVE_FEATURE_VULKAN",
+          "type": "bool",
+          "defaults": {
+            "Editor": true,
+            "Game": true,
+            "Headless": false
+          }
+        },
+        {
+          "id": "glfw",
+          "name": "GLFW Windowing",
+          "description": "Enable GLFW window management",
+          "cmakeVar": "HIVE_FEATURE_GLFW",
+          "macro": "HIVE_FEATURE_GLFW",
+          "type": "bool",
+          "defaults": {
+            "Editor": true,
+            "Game": true,
+            "Headless": false
+          }
+        },
+        {
+          "id": "imgui",
+          "name": "ImGui",
+          "description": "Enable ImGui debug UI",
+          "cmakeVar": "HIVE_FEATURE_IMGUI",
+          "macro": "HIVE_FEATURE_IMGUI",
+          "type": "bool",
+          "requires": ["glfw"],
+          "defaults": {
+            "Editor": true,
+            "Game": false,
+            "Headless": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "development",
+      "name": "Development",
+      "description": "Development and debugging tools",
+      "features": [
+        {
+          "id": "logging",
+          "name": "Logging",
+          "description": "Enable logging system",
+          "cmakeVar": "HIVE_FEATURE_LOGGING",
+          "macro": "HIVE_FEATURE_LOGGING",
+          "type": "bool",
+          "defaults": {
+            "Editor": true,
+            "Game": true,
+            "Headless": true
+          }
+        },
+        {
+          "id": "asserts",
+          "name": "Asserts",
+          "description": "Enable runtime assertions",
+          "cmakeVar": "HIVE_FEATURE_ASSERTS",
+          "macro": "HIVE_FEATURE_ASSERTS",
+          "type": "bool",
+          "defaults": {
+            "Editor": true,
+            "Game": true,
+            "Headless": true
+          }
+        },
+        {
+          "id": "profiler",
+          "name": "Profiler",
+          "description": "Enable performance profiler",
+          "cmakeVar": "HIVE_FEATURE_PROFILER",
+          "macro": "HIVE_FEATURE_PROFILER",
+          "type": "bool",
+          "defaults": {
+            "Editor": true,
+            "Game": true,
+            "Headless": true
+          }
+        },
+        {
+          "id": "memDebug",
+          "name": "Memory Debug",
+          "description": "Enable memory debugging and tracking",
+          "cmakeVar": "HIVE_FEATURE_MEM_DEBUG",
+          "macro": "HIVE_FEATURE_MEM_DEBUG",
+          "type": "bool",
+          "defaults": {
+            "Editor": false,
+            "Game": false,
+            "Headless": false
+          }
+        },
+        {
+          "id": "console",
+          "name": "Console",
+          "description": "Enable in-game console",
+          "cmakeVar": "HIVE_FEATURE_CONSOLE",
+          "macro": "HIVE_FEATURE_CONSOLE",
+          "type": "bool",
+          "defaults": {
+            "Editor": true,
+            "Game": true,
+            "Headless": true
+          }
+        },
+        {
+          "id": "hotReload",
+          "name": "Hot Reload",
+          "description": "Enable hot code/asset reloading",
+          "cmakeVar": "HIVE_FEATURE_HOT_RELOAD",
+          "macro": "HIVE_FEATURE_HOT_RELOAD",
+          "type": "bool",
+          "defaults": {
+            "Editor": true,
+            "Game": false,
+            "Headless": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "sanitizers",
+      "name": "Sanitizers",
+      "description": "Runtime sanitizer options (Clang only)",
+      "features": [
+        {
+          "id": "enableSanitizers",
+          "name": "Enable Sanitizers",
+          "description": "Enable runtime sanitizers",
+          "cmakeVar": "HIVE_ENABLE_SANITIZERS",
+          "macro": null,
+          "type": "bool",
+          "defaults": {
+            "Editor": false,
+            "Game": false,
+            "Headless": false
+          }
+        },
+        {
+          "id": "sanitizerType",
+          "name": "Sanitizer Type",
+          "description": "Type of sanitizer to use",
+          "cmakeVar": "HIVE_SANITIZER_TYPE",
+          "macro": null,
+          "type": "enum",
+          "requires": ["enableSanitizers"],
+          "options": [
+            {"value": "Address", "name": "Address (ASAN)", "description": "Detects memory errors"},
+            {"value": "UndefinedBehavior", "name": "UB (UBSAN)", "description": "Detects undefined behavior"},
+            {"value": "Thread", "name": "Thread (TSAN)", "description": "Detects data races"},
+            {"value": "Memory", "name": "Memory (MSAN)", "description": "Detects uninitialized reads"}
+          ],
+          "defaults": {
+            "Editor": "Address",
+            "Game": "Address",
+            "Headless": "Address"
+          }
+        }
+      ]
+    }
+  ],
+  "presetDefaults": {
+    "Editor": {
+      "buildType": "Debug",
+      "description": "Full editor with all development tools"
+    },
+    "Game": {
+      "buildType": "Release",
+      "description": "Runtime engine with graphics"
+    },
+    "Headless": {
+      "buildType": "Release",
+      "description": "Server/CLI mode without graphics"
+    }
+  }
+}
