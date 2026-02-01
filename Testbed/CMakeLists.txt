@@ -8,8 +8,8 @@
 
 add_executable(Testbed
     src/main.cpp
-    src/systemmodule.cpp
-    src/logtestbed.cpp
+#    src/systemmodule.cpp
+#    src/logtestbed.cpp
 )
 
 target_include_directories(Testbed
@@ -26,11 +26,11 @@ target_precompile_headers(Testbed
 # Dependencies
 # ============================================================================
 
-add_subdirectory(extern/swarm)
 
 target_link_libraries(Testbed
     PRIVATE
         Hive
-        Terra
+        Comb
         Swarm
+        Terra
 )
