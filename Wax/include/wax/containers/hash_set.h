@@ -2,6 +2,7 @@
 
 #include <hive/core/assert.h>
 #include <comb/allocator_concepts.h>
+#include <comb/default_allocator.h>
 #include <cstdint>
 #include <cstddef>
 #include <functional>
@@ -25,7 +26,7 @@ namespace wax
      * - Remove: O(1) average
      * - Load factor: 0.75 max
      */
-    template<typename K, comb::Allocator Allocator, typename Hash = std::hash<K>>
+    template<typename K, comb::Allocator Allocator = comb::DefaultAllocator, typename Hash = std::hash<K>>
     class HashSet
     {
     private:
@@ -115,6 +116,26 @@ namespace wax
             size_t capacity_;
         };
 
+        // Default constructor - uses global default allocator
+        HashSet(size_t initial_capacity = 16)
+            requires std::is_same_v<Allocator, comb::DefaultAllocator>
+            : allocator_{&comb::GetDefaultAllocator()}
+            , capacity_{NextPowerOfTwo(initial_capacity)}
+            , count_{0}
+        {
+            hive::Assert(initial_capacity > 0, "HashSet capacity must be > 0");
+
+            buckets_ = static_cast<Bucket*>(allocator_->Allocate(sizeof(Bucket) * capacity_, alignof(Bucket)));
+            hive::Assert(buckets_ != nullptr, "Failed to allocate HashSet buckets");
+
+            for (size_t i = 0; i < capacity_; ++i)
+            {
+                buckets_[i].state = kEmpty;
+                buckets_[i].psl = 0;
+            }
+        }
+
+        // Constructor with allocator
         HashSet(Allocator& allocator, size_t initial_capacity = 16)
             : allocator_{&allocator}
             , capacity_{NextPowerOfTwo(initial_capacity)}

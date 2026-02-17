@@ -6,6 +6,7 @@
 #include <comb/stack_allocator.h>
 #include <comb/slab_allocator.h>
 #include <comb/buddy_allocator.h>
+#include <comb/default_allocator.h>
 
 /**
  * Type aliases for common Vector + Allocator combinations

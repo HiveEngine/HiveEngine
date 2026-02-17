@@ -4,6 +4,7 @@
 #include <type_traits>
 #include <hive/core/assert.h>
 #include <comb/new.h>
+#include <comb/default_allocator.h>
 
 namespace wax
 {
@@ -57,7 +58,7 @@ namespace wax
      *   // Object destroyed when last Rc goes out of scope
      * @endcode
      */
-    template<typename T, typename Allocator>
+    template<typename T, typename Allocator = comb::DefaultAllocator>
     class Rc
     {
     private:
@@ -74,9 +75,12 @@ namespace wax
             {}
         };
 
-        // Friend declaration for MakeRc
+        // Friend declarations for MakeRc
         template<typename U, typename A, typename... Args>
         friend Rc<U, A> MakeRc(A& allocator, Args&&... args);
+
+        template<typename U, typename... Args>
+        friend Rc<U, comb::DefaultAllocator> MakeRc(Args&&... args);
 
     public:
         using ValueType = T;
@@ -271,5 +275,20 @@ namespace wax
         ControlBlock* control = new (mem) ControlBlock(std::forward<Args>(args)...);
 
         return Rc<T, Allocator>{allocator, control};
+    }
+
+    // Default allocator overload
+    template<typename T, typename... Args>
+    [[nodiscard]] Rc<T, comb::DefaultAllocator> MakeRc(Args&&... args)
+    {
+        auto& allocator = comb::GetDefaultAllocator();
+        using ControlBlock = typename Rc<T, comb::DefaultAllocator>::ControlBlock;
+
+        void* mem = allocator.Allocate(sizeof(ControlBlock), alignof(ControlBlock));
+        hive::Check(mem != nullptr, "Rc allocation failed");
+
+        ControlBlock* control = new (mem) ControlBlock(std::forward<Args>(args)...);
+
+        return Rc<T, comb::DefaultAllocator>{allocator, control};
     }
 }

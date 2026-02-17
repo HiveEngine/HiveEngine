@@ -5,6 +5,7 @@
 #include <utility>
 #include <type_traits>
 #include <hive/core/assert.h>
+#include <comb/default_allocator.h>
 
 namespace wax
 {
@@ -51,7 +52,7 @@ namespace wax
      *   }
      * @endcode
      */
-    template<typename T, typename Allocator>
+    template<typename T, typename Allocator = comb::DefaultAllocator>
     class Vector
     {
     public:
@@ -59,6 +60,26 @@ namespace wax
         using SizeType = size_t;
         using Iterator = T*;
         using ConstIterator = const T*;
+
+        // Default constructor - uses global default allocator
+        Vector() noexcept
+            requires std::is_same_v<Allocator, comb::DefaultAllocator>
+            : data_{nullptr}
+            , size_{0}
+            , capacity_{0}
+            , allocator_{&comb::GetDefaultAllocator()}
+        {}
+
+        // Default constructor with initial capacity - uses global default allocator
+        explicit Vector(size_t initial_capacity)
+            requires std::is_same_v<Allocator, comb::DefaultAllocator>
+            : data_{nullptr}
+            , size_{0}
+            , capacity_{0}
+            , allocator_{&comb::GetDefaultAllocator()}
+        {
+            Reserve(initial_capacity);
+        }
 
         // Constructor with allocator
         explicit Vector(Allocator& allocator) noexcept

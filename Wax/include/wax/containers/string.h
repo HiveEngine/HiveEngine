@@ -6,6 +6,7 @@
 #include <utility>
 #include <type_traits>
 #include <hive/core/assert.h>
+#include <comb/default_allocator.h>
 #include <wax/containers/string_view.h>
 
 namespace wax
@@ -72,7 +73,7 @@ namespace wax
      *   const char* c_str = path.CStr();
      * @endcode
      */
-    template<typename Allocator>
+    template<typename Allocator = comb::DefaultAllocator>
     class String
     {
     public:
@@ -83,7 +84,55 @@ namespace wax
         static constexpr size_t npos = static_cast<size_t>(-1);
         static constexpr size_t SsoCapacity = 22;  // 23 bytes buffer - 1 for null terminator
 
-        // Default constructor (empty string, SSO mode)
+        // Default constructor (empty string, SSO mode) - uses global default allocator
+        String() noexcept
+            requires std::is_same_v<Allocator, comb::DefaultAllocator>
+            : allocator_{&comb::GetDefaultAllocator()}
+        {
+            InitSso();
+        }
+
+        // Constructor from C string - uses global default allocator
+        String(const char* str)
+            requires std::is_same_v<Allocator, comb::DefaultAllocator>
+            : allocator_{&comb::GetDefaultAllocator()}
+        {
+            size_t len = str ? std::strlen(str) : 0;
+
+            if (len <= SsoCapacity)
+            {
+                InitSso();
+                std::memcpy(sso_.buffer, str, len);
+                SetSsoSize(len);
+            }
+            else
+            {
+                InitHeap(len);
+                std::memcpy(heap_.data, str, len);
+                heap_.data[len] = '\0';
+            }
+        }
+
+        // Constructor from StringView - uses global default allocator
+        String(StringView sv)
+            requires std::is_same_v<Allocator, comb::DefaultAllocator>
+            : allocator_{&comb::GetDefaultAllocator()}
+        {
+            if (sv.Size() <= SsoCapacity)
+            {
+                InitSso();
+                std::memcpy(sso_.buffer, sv.Data(), sv.Size());
+                SetSsoSize(sv.Size());
+            }
+            else
+            {
+                InitHeap(sv.Size());
+                std::memcpy(heap_.data, sv.Data(), sv.Size());
+                heap_.data[sv.Size()] = '\0';
+            }
+        }
+
+        // Constructor with allocator (empty string, SSO mode)
         explicit String(Allocator& allocator) noexcept
             : allocator_{&allocator}
         {
