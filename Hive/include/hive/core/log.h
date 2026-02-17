@@ -89,7 +89,7 @@ namespace hive
 
     inline void LogGeneral(const LogCategory &cat, LogSeverity sev, const char *msg)
     {
-        Assert(LogManager::IsInitialized(), "LogManager not initialized");
+        if (!LogManager::IsInitialized()) return;
         LogManager::GetInstance().Log(cat, sev, msg);
     }
 
