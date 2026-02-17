@@ -4,6 +4,7 @@
 #include <cstring>
 #include <utility>
 #include <type_traits>
+#include <initializer_list>
 #include <hive/core/assert.h>
 #include <comb/default_allocator.h>
 
@@ -99,6 +100,37 @@ namespace wax
             Reserve(initial_capacity);
         }
 
+        // Initializer list constructor - uses global default allocator
+        Vector(std::initializer_list<T> init)
+            requires std::is_same_v<Allocator, comb::DefaultAllocator>
+            : data_{nullptr}
+            , size_{0}
+            , capacity_{0}
+            , allocator_{&comb::GetDefaultAllocator()}
+        {
+            Reserve(init.size());
+            for (const auto& val : init)
+            {
+                new (&data_[size_]) T(val);
+                ++size_;
+            }
+        }
+
+        // Initializer list constructor with allocator
+        Vector(Allocator& allocator, std::initializer_list<T> init)
+            : data_{nullptr}
+            , size_{0}
+            , capacity_{0}
+            , allocator_{&allocator}
+        {
+            Reserve(init.size());
+            for (const auto& val : init)
+            {
+                new (&data_[size_]) T(val);
+                ++size_;
+            }
+        }
+
         // Destructor
         ~Vector() noexcept
         {
@@ -111,9 +143,64 @@ namespace wax
             }
         }
 
-        // Disable copy (for now - requires deep copy logic)
-        Vector(const Vector&) = delete;
-        Vector& operator=(const Vector&) = delete;
+        // Copy constructor
+        Vector(const Vector& other)
+            : data_{nullptr}
+            , size_{0}
+            , capacity_{0}
+            , allocator_{other.allocator_}
+        {
+            if (other.size_ > 0)
+            {
+                Reserve(other.size_);
+                if constexpr (std::is_trivially_copyable_v<T>)
+                {
+                    std::memcpy(data_, other.data_, other.size_ * sizeof(T));
+                }
+                else
+                {
+                    for (size_t i = 0; i < other.size_; ++i)
+                    {
+                        new (&data_[i]) T(other.data_[i]);
+                    }
+                }
+                size_ = other.size_;
+            }
+        }
+
+        // Copy assignment
+        Vector& operator=(const Vector& other)
+        {
+            if (this != &other)
+            {
+                Clear();
+                if (data_)
+                {
+                    allocator_->Deallocate(data_);
+                    data_ = nullptr;
+                    capacity_ = 0;
+                }
+
+                allocator_ = other.allocator_;
+                if (other.size_ > 0)
+                {
+                    Reserve(other.size_);
+                    if constexpr (std::is_trivially_copyable_v<T>)
+                    {
+                        std::memcpy(data_, other.data_, other.size_ * sizeof(T));
+                    }
+                    else
+                    {
+                        for (size_t i = 0; i < other.size_; ++i)
+                        {
+                            new (&data_[i]) T(other.data_[i]);
+                        }
+                    }
+                    size_ = other.size_;
+                }
+            }
+            return *this;
+        }
 
         // Move constructor
         Vector(Vector&& other) noexcept
