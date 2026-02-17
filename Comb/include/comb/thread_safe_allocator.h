@@ -1,6 +1,7 @@
 #pragma once
 
 #include <comb/allocator_concepts.h>
+#include <hive/profiling/profiler.h>
 #include <mutex>
 
 namespace comb
@@ -84,7 +85,7 @@ namespace comb
          */
         [[nodiscard]] void* Allocate(size_t size, size_t alignment, const char* tag = nullptr)
         {
-            std::lock_guard<std::mutex> lock{mutex_};
+            std::lock_guard<HIVE_PROFILE_LOCKABLE_BASE(std::mutex)> lock{mutex_};
             return allocator_->Allocate(size, alignment, tag);
         }
 
@@ -95,7 +96,7 @@ namespace comb
          */
         void Deallocate(void* ptr)
         {
-            std::lock_guard<std::mutex> lock{mutex_};
+            std::lock_guard<HIVE_PROFILE_LOCKABLE_BASE(std::mutex)> lock{mutex_};
             allocator_->Deallocate(ptr);
         }
 
@@ -129,7 +130,7 @@ namespace comb
          */
         [[nodiscard]] size_t GetUsedMemory() const
         {
-            std::lock_guard<std::mutex> lock{mutex_};
+            std::lock_guard<HIVE_PROFILE_LOCKABLE_BASE(std::mutex)> lock{mutex_};
             return allocator_->GetUsedMemory();
         }
 
@@ -138,12 +139,12 @@ namespace comb
          */
         [[nodiscard]] size_t GetTotalMemory() const
         {
-            std::lock_guard<std::mutex> lock{mutex_};
+            std::lock_guard<HIVE_PROFILE_LOCKABLE_BASE(std::mutex)> lock{mutex_};
             return allocator_->GetTotalMemory();
         }
 
     private:
         UnderlyingAllocator* allocator_;
-        mutable std::mutex mutex_;
+        mutable HIVE_PROFILE_LOCKABLE_N(std::mutex, mutex_, "AllocatorMutex");
     };
 }

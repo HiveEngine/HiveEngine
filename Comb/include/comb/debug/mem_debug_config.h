@@ -133,6 +133,8 @@
     // Debug Constants
     // ========================================================================
 
+    #include <cstring>  // For memcpy
+
     namespace comb::debug
     {
         // Guard magic value (0xDEADBEEF)
@@ -149,6 +151,20 @@
 
         // Callstack depth (if enabled)
         constexpr uint32_t MaxCallstackDepth = 16;
+
+        // Safe guard read/write (handles potentially misaligned back guards)
+        inline void WriteGuard(void* addr) noexcept
+        {
+            uint32_t magic = GuardMagic;
+            std::memcpy(addr, &magic, sizeof(uint32_t));
+        }
+
+        inline uint32_t ReadGuard(const void* addr) noexcept
+        {
+            uint32_t value;
+            std::memcpy(&value, addr, sizeof(uint32_t));
+            return value;
+        }
     }
 
 #else // COMB_MEM_DEBUG = 0

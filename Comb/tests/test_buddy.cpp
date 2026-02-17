@@ -114,10 +114,10 @@ namespace
     auto test6 = larvae::RegisterTest("BuddyAllocator", "MixedSizes", []() {
         comb::BuddyAllocator buddy{4_KB};
 
-        void* p1 = buddy.Allocate(50, 8);
+        void* p1 = buddy.Allocate(40, 8);
         void* p2 = buddy.Allocate(100, 8);
         void* p3 = buddy.Allocate(200, 8);
-        void* p4 = buddy.Allocate(500, 8);
+        void* p4 = buddy.Allocate(480, 8);
         void* p5 = buddy.Allocate(1000, 8);
 
         larvae::AssertNotNull(p1);

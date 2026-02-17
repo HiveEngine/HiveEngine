@@ -2,6 +2,7 @@
 
 #include <comb/allocator_concepts.h>
 #include <hive/core/assert.h>
+#include <hive/profiling/profiler.h>
 #include <comb/utils.h>
 #include <comb/platform.h>
 #include <cstddef>
@@ -100,6 +101,19 @@ namespace comb
         {
             size_t size;  // Block size (for deallocation)
         };
+
+        // Header padded to max_align_t so user data starts properly aligned.
+        // Blocks are power-of-2 sized and naturally aligned (>= 64B),
+        // so block + HeaderPrefix is aligned to max_align_t.
+        static constexpr size_t HeaderPrefix =
+            (sizeof(AllocationHeader) + alignof(std::max_align_t) - 1)
+            & ~(alignof(std::max_align_t) - 1);
+
+        // Debug: header + front guard, padded for alignment.
+        // Front guard lives in the padding between header and user data.
+        static constexpr size_t DebugHeaderPrefix =
+            (sizeof(AllocationHeader) + sizeof(uint32_t) + alignof(std::max_align_t) - 1)
+            & ~(alignof(std::max_align_t) - 1);
 
         struct FreeBlock
         {
@@ -239,14 +253,14 @@ namespace comb
         [[nodiscard]] void* Allocate(size_t size, size_t alignment, const char* tag = nullptr)
         {
 #if COMB_MEM_DEBUG
-            return AllocateDebug(size, alignment, tag);
+            void* ptr = AllocateDebug(size, alignment, tag);
 #else
             (void)tag;  // Suppress unused warning
 
             hive::Assert(alignment <= alignof(std::max_align_t),
                          "BuddyAllocator alignment limited to max_align_t");
 
-            size_t totalSize = size + sizeof(AllocationHeader);
+            size_t totalSize = size + HeaderPrefix;
             size_t blockSize = NextPowerOfTwo(totalSize);
             if (blockSize < MinBlockSize)
             {
@@ -288,9 +302,14 @@ namespace comb
 
             used_memory_ += blockSize;
 
-            void* ptr = reinterpret_cast<std::byte*>(block) + sizeof(AllocationHeader);
-            return ptr;
+            void* ptr = reinterpret_cast<std::byte*>(block) + HeaderPrefix;
 #endif
+
+            if (ptr)
+            {
+                HIVE_PROFILE_ALLOC(ptr, size, "BuddyAllocator");
+            }
+            return ptr;
         }
 
         /**
@@ -304,14 +323,16 @@ namespace comb
          */
         void Deallocate(void* ptr)
         {
-#if COMB_MEM_DEBUG
-            DeallocateDebug(ptr);
-#else
             if (!ptr)
                 return;
 
+            HIVE_PROFILE_FREE(ptr, "BuddyAllocator");
+
+#if COMB_MEM_DEBUG
+            DeallocateDebug(ptr);
+#else
             auto* header = reinterpret_cast<AllocationHeader*>(
-                static_cast<std::byte*>(ptr) - sizeof(AllocationHeader)
+                static_cast<std::byte*>(ptr) - HeaderPrefix
             );
 
             size_t blockSize = header->size;
@@ -503,12 +524,12 @@ namespace comb
         hive::Assert(alignment <= alignof(std::max_align_t),
                      "BuddyAllocator alignment limited to max_align_t");
 
-        // 1. Calculate space needed (user size + guard bytes)
+        // 1. Calculate space needed
+        // Layout: [AllocationHeader][...padding...][GUARD_FRONT (4B)][user data][GUARD_BACK (4B)]
+        // User data at block + DebugHeaderPrefix, properly aligned.
+        // Front guard fits in the padding (guaranteed by DebugHeaderPrefix formula).
         const size_t guardSize = sizeof(uint32_t);
-        const size_t debugTotalSize = size + 2 * guardSize;
-
-        // Round size up to power-of-2, including header AND guard bytes
-        size_t totalSize = debugTotalSize + sizeof(AllocationHeader);
+        size_t totalSize = DebugHeaderPrefix + size + guardSize;
         size_t blockSize = NextPowerOfTwo(totalSize);
         if (blockSize < MinBlockSize)
         {
@@ -559,7 +580,7 @@ namespace comb
 
         // Track memory using release mode calculation (excluding guard bytes)
         // This ensures GetUsedMemory() returns consistent values between debug and release
-        size_t releaseTotalSize = size + sizeof(AllocationHeader);
+        size_t releaseTotalSize = size + HeaderPrefix;
         size_t releaseBlockSize = NextPowerOfTwo(releaseTotalSize);
         if (releaseBlockSize < MinBlockSize)
         {
@@ -567,19 +588,11 @@ namespace comb
         }
         used_memory_ += releaseBlockSize;
 
-        // 3. Add guard bytes after header
-        // Layout: [AllocationHeader][GUARD_FRONT][user data][GUARD_BACK]
-        void* rawPtr = reinterpret_cast<std::byte*>(block) + sizeof(AllocationHeader);
+        // 3. Place guard bytes and user data
+        void* userPtr = reinterpret_cast<std::byte*>(block) + DebugHeaderPrefix;
 
-        auto* guardFront = static_cast<uint32_t*>(rawPtr);
-        *guardFront = GuardMagic;
-
-        void* userPtr = static_cast<std::byte*>(rawPtr) + guardSize;
-
-        auto* guardBack = reinterpret_cast<uint32_t*>(
-            static_cast<std::byte*>(userPtr) + size
-        );
-        *guardBack = GuardMagic;
+        WriteGuard(static_cast<std::byte*>(userPtr) - guardSize);
+        WriteGuard(static_cast<std::byte*>(userPtr) + size);
 
         // 4. Initialize memory with pattern (detect uninitialized reads)
         if constexpr (kMemDebugEnabled)
@@ -633,10 +646,7 @@ namespace comb
         {
             if (!info->CheckGuards())
             {
-                auto* guardFront = info->GetGuardFront();
-                auto* guardBack = info->GetGuardBack();
-
-                if (*guardFront != GuardMagic)
+                if (info->ReadGuardFront() != GuardMagic)
                 {
                     hive::LogError(comb::LogCombRoot,
                                    "[MEM_DEBUG] [{}] Buffer UNDERRUN detected! Address: {}, Size: {}, Tag: {}",
@@ -644,7 +654,7 @@ namespace comb
                     hive::Assert(false, "Buffer underrun detected");
                 }
 
-                if (*guardBack != GuardMagic)
+                if (info->ReadGuardBack() != GuardMagic)
                 {
                     hive::LogError(comb::LogCombRoot,
                                    "[MEM_DEBUG] [{}] Buffer OVERRUN detected! Address: {}, Size: {}, Tag: {}",
@@ -657,7 +667,7 @@ namespace comb
         // 3. Calculate release block size BEFORE unregistering (info will be destroyed)
         // Track memory using release mode calculation (excluding guard bytes)
         // This ensures GetUsedMemory() returns consistent values between debug and release
-        size_t releaseTotalSize = info->size + sizeof(AllocationHeader);
+        size_t releaseTotalSize = info->size + HeaderPrefix;
         size_t releaseBlockSize = NextPowerOfTwo(releaseTotalSize);
         if (releaseBlockSize < MinBlockSize)
         {
@@ -678,11 +688,9 @@ namespace comb
         registry_->UnregisterAllocation(ptr);
 
         // 7. Get block pointer (before header)
-        // Layout: [AllocationHeader][Guard Front][user data][Guard Back]
-        // ptr = userPtr
-        // We need to go back to the start of the block (before AllocationHeader)
-        const size_t guardSize = sizeof(uint32_t);
-        void* blockPtr = static_cast<std::byte*>(ptr) - guardSize - sizeof(AllocationHeader);
+        // Layout: [AllocationHeader][...padding...][Guard Front][user data][Guard Back]
+        // ptr = userPtr at block + DebugHeaderPrefix
+        void* blockPtr = static_cast<std::byte*>(ptr) - DebugHeaderPrefix;
 
         auto* header = reinterpret_cast<AllocationHeader*>(blockPtr);
         size_t blockSize = header->size;

@@ -218,7 +218,7 @@ namespace comb
         [[nodiscard]] void* Allocate(size_t size, size_t alignment, const char* tag = nullptr)
         {
 #if COMB_MEM_DEBUG
-            return AllocateDebug(size, alignment, tag);
+            void* result = AllocateDebug(size, alignment, tag);
 #else
             (void)tag;  // Suppress unused warning
 
@@ -246,8 +246,10 @@ namespace comb
 
             // Allocate
             current_ = aligned_current + size;
-            return reinterpret_cast<void*>(aligned_addr);
+            void* result = reinterpret_cast<void*>(aligned_addr);
 #endif
+
+            return result;
         }
 
         /**
@@ -432,15 +434,11 @@ namespace comb
         release_current_ = release_aligned + size;
 
         // 3. Write guard bytes
-        auto* guardFront = static_cast<uint32_t*>(rawPtr);
-        *guardFront = GuardMagic;
+        WriteGuard(rawPtr);
 
         void* userPtr = reinterpret_cast<void*>(user_addr_aligned);
 
-        auto* guardBack = reinterpret_cast<uint32_t*>(
-            static_cast<std::byte*>(userPtr) + size
-        );
-        *guardBack = GuardMagic;
+        WriteGuard(static_cast<std::byte*>(userPtr) + size);
 
         // 4. Initialize memory with pattern (detect uninitialized reads)
         if constexpr (kMemDebugEnabled)
@@ -496,10 +494,7 @@ namespace comb
         {
             if (!info->CheckGuards())
             {
-                auto* guardFront = info->GetGuardFront();
-                auto* guardBack = info->GetGuardBack();
-
-                if (*guardFront != GuardMagic)
+                if (info->ReadGuardFront() != GuardMagic)
                 {
                     hive::LogError(comb::LogCombRoot,
                                    "[MEM_DEBUG] [{}] Buffer UNDERRUN detected! Address: {}, Size: {}, Tag: {}",
@@ -507,7 +502,7 @@ namespace comb
                     hive::Assert(false, "Buffer underrun detected");
                 }
 
-                if (*guardBack != GuardMagic)
+                if (info->ReadGuardBack() != GuardMagic)
                 {
                     hive::LogError(comb::LogCombRoot,
                                    "[MEM_DEBUG] [{}] Buffer OVERRUN detected! Address: {}, Size: {}, Tag: {}",

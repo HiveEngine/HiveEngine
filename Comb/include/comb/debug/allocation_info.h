@@ -139,23 +139,19 @@ struct AllocationInfo
     }
 
     /**
-     * Get guard front pointer
+     * Read front guard value (memcpy-safe for potentially misaligned addresses)
      */
-    [[nodiscard]] uint32_t* GetGuardFront() const noexcept
+    [[nodiscard]] uint32_t ReadGuardFront() const noexcept
     {
-        return reinterpret_cast<uint32_t*>(
-            static_cast<std::byte*>(address) - GuardSize
-        );
+        return ReadGuard(static_cast<std::byte*>(address) - GuardSize);
     }
 
     /**
-     * Get guard back pointer
+     * Read back guard value (memcpy-safe for potentially misaligned addresses)
      */
-    [[nodiscard]] uint32_t* GetGuardBack() const noexcept
+    [[nodiscard]] uint32_t ReadGuardBack() const noexcept
     {
-        return reinterpret_cast<uint32_t*>(
-            static_cast<std::byte*>(address) + size
-        );
+        return ReadGuard(static_cast<std::byte*>(address) + size);
     }
 
     /**
@@ -164,8 +160,8 @@ struct AllocationInfo
      */
     [[nodiscard]] bool CheckGuards() const noexcept
     {
-        return *GetGuardFront() == GuardMagic &&
-               *GetGuardBack() == GuardMagic;
+        return ReadGuardFront() == GuardMagic &&
+               ReadGuardBack() == GuardMagic;
     }
 
     /**
