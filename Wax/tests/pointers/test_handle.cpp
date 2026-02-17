@@ -183,4 +183,89 @@ namespace
 
         larvae::AssertEqual(NonTrivial::destructor_count, 3);
     });
+
+    auto test10 = larvae::RegisterTest("WaxHandle", "MoveConstructPool", []() {
+        comb::LinearAllocator alloc{4096};
+        wax::HandlePool<Entity, comb::LinearAllocator> pool1{alloc, 10};
+
+        auto h1 = pool1.Create(1, 0.0f, 0.0f);
+        auto h2 = pool1.Create(2, 0.0f, 0.0f);
+
+        wax::HandlePool<Entity, comb::LinearAllocator> pool2{std::move(pool1)};
+
+        larvae::AssertEqual(pool2.Count(), size_t{2});
+        larvae::AssertTrue(pool2.IsValid(h1));
+        larvae::AssertTrue(pool2.IsValid(h2));
+        larvae::AssertEqual(pool2.Get(h1)->id, 1);
+        larvae::AssertEqual(pool2.Get(h2)->id, 2);
+    });
+
+    auto test11 = larvae::RegisterTest("WaxHandle", "MoveAssignPool", []() {
+        comb::LinearAllocator alloc{8192};
+        wax::HandlePool<Entity, comb::LinearAllocator> pool1{alloc, 10};
+        wax::HandlePool<Entity, comb::LinearAllocator> pool2{alloc, 5};
+
+        auto h1 = pool1.Create(1, 0.0f, 0.0f);
+        [[maybe_unused]] auto h_old = pool2.Create(99, 0.0f, 0.0f);
+
+        pool2 = std::move(pool1);
+
+        larvae::AssertEqual(pool2.Count(), size_t{1});
+        larvae::AssertTrue(pool2.IsValid(h1));
+        larvae::AssertEqual(pool2.Get(h1)->id, 1);
+    });
+
+    auto test12 = larvae::RegisterTest("WaxHandle", "PoolExhaustion", []() {
+        comb::LinearAllocator alloc{4096};
+        wax::HandlePool<Entity, comb::LinearAllocator> pool{alloc, 3};
+
+        auto h1 = pool.Create(1, 0.0f, 0.0f);
+        auto h2 = pool.Create(2, 0.0f, 0.0f);
+        auto h3 = pool.Create(3, 0.0f, 0.0f);
+
+        larvae::AssertFalse(h1.IsNull());
+        larvae::AssertFalse(h2.IsNull());
+        larvae::AssertFalse(h3.IsNull());
+        larvae::AssertTrue(pool.IsFull());
+        larvae::AssertEqual(pool.Count(), size_t{3});
+
+        // Pool full: returns invalid handle
+        auto h4 = pool.Create(4, 0.0f, 0.0f);
+        larvae::AssertTrue(h4.IsNull());
+
+        // Destroy one, create another
+        pool.Destroy(h2);
+        larvae::AssertFalse(pool.IsFull());
+
+        auto h5 = pool.Create(5, 0.0f, 0.0f);
+        larvae::AssertFalse(h5.IsNull());
+        larvae::AssertEqual(pool.Get(h5)->id, 5);
+    });
+
+    auto test13 = larvae::RegisterTest("WaxHandle", "EmptyPool", []() {
+        comb::LinearAllocator alloc{4096};
+        wax::HandlePool<Entity, comb::LinearAllocator> pool{alloc, 10};
+
+        larvae::AssertTrue(pool.IsEmpty());
+        larvae::AssertEqual(pool.Count(), size_t{0});
+        larvae::AssertEqual(pool.Capacity(), size_t{10});
+        larvae::AssertFalse(pool.IsFull());
+    });
+
+    auto test14 = larvae::RegisterTest("WaxHandle", "DestroyInvalidHandleNoOp", []() {
+        comb::LinearAllocator alloc{4096};
+        wax::HandlePool<Entity, comb::LinearAllocator> pool{alloc, 10};
+
+        // Destroy invalid handle - should be no-op
+        pool.Destroy(wax::Handle<Entity>::Invalid());
+        larvae::AssertEqual(pool.Count(), size_t{0});
+
+        // Destroy handle with wrong generation
+        auto h = pool.Create(1, 0.0f, 0.0f);
+        pool.Destroy(h);
+
+        // Double-destroy same handle - should be no-op
+        pool.Destroy(h);
+        larvae::AssertEqual(pool.Count(), size_t{0});
+    });
 }
