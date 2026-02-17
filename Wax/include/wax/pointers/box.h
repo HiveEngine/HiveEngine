@@ -4,6 +4,7 @@
 #include <type_traits>
 #include <hive/core/assert.h>
 #include <comb/new.h>
+#include <comb/default_allocator.h>
 
 namespace wax
 {
@@ -58,7 +59,7 @@ namespace wax
      *   auto moved = std::move(camera);
      * @endcode
      */
-    template<typename T, typename Allocator>
+    template<typename T, typename Allocator = comb::DefaultAllocator>
     class Box
     {
     public:
@@ -200,5 +201,14 @@ namespace wax
     {
         T* ptr = comb::New<T>(allocator, std::forward<Args>(args)...);
         return Box<T, Allocator>{allocator, ptr};
+    }
+
+    // Default allocator overload
+    template<typename T, typename... Args>
+    [[nodiscard]] Box<T, comb::DefaultAllocator> MakeBox(Args&&... args)
+    {
+        auto& allocator = comb::GetDefaultAllocator();
+        T* ptr = comb::New<T>(allocator, std::forward<Args>(args)...);
+        return Box<T, comb::DefaultAllocator>{allocator, ptr};
     }
 }

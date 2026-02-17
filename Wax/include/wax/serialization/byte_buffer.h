@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <cstring>
 #include <hive/core/assert.h>
+#include <comb/default_allocator.h>
 #include <wax/serialization/byte_span.h>
 #include <wax/containers/vector.h>
 
@@ -46,10 +47,23 @@ namespace wax
      *
      * @tparam Allocator Comb allocator type
      */
-    template<typename Allocator>
+    template<typename Allocator = comb::DefaultAllocator>
     class ByteBuffer
     {
     public:
+        // Default constructor - uses global default allocator
+        ByteBuffer() noexcept
+            requires std::is_same_v<Allocator, comb::DefaultAllocator>
+            : data_{comb::GetDefaultAllocator()}
+        {}
+
+        // Default constructor with capacity - uses global default allocator
+        explicit ByteBuffer(size_t initial_capacity) noexcept
+            requires std::is_same_v<Allocator, comb::DefaultAllocator>
+            : data_{comb::GetDefaultAllocator(), initial_capacity}
+        {}
+
+        // Constructor with allocator
         explicit ByteBuffer(Allocator& allocator) noexcept
             : data_{allocator}
         {}

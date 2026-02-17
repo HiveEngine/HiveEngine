@@ -94,7 +94,7 @@ namespace comb
     {
     private:
         static constexpr size_t MinBlockSize = 64;
-        static constexpr size_t MaxLevels = 20;  // 64B to 32MB
+        static constexpr size_t MaxLevels = 28;  // 64B to 8GB
 
         struct AllocationHeader
         {
