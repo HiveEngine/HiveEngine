@@ -138,6 +138,7 @@ namespace queen
             : allocator_{&allocator}
             , top_{0}
             , bottom_{0}
+            , retired_head_{nullptr}
         {
             void* mem = allocator_->Allocate(sizeof(CircularBuffer<T, Allocator>), alignof(CircularBuffer<T, Allocator>));
             auto* initial_buffer = new (mem) CircularBuffer<T, Allocator>(allocator, initial_capacity);
@@ -152,6 +153,7 @@ namespace queen
                 buf->~CircularBuffer<T, Allocator>();
                 allocator_->Deallocate(buf);
             }
+            FreeRetiredBuffers();
         }
 
         WorkStealingDeque(const WorkStealingDeque&) = delete;
@@ -175,8 +177,10 @@ namespace queen
 
             if (b - t > static_cast<int64_t>(buf->Capacity()) - 1)
             {
+                auto* old_buf = buf;
                 buf = buf->Grow(b, t);
                 buffer_.store(buf, std::memory_order_release);
+                RetireBuffer(old_buf);
             }
 
             buf->Put(b, item);
@@ -238,7 +242,7 @@ namespace queen
 
             if (t < b)
             {
-                auto* buf = buffer_.load(std::memory_order_consume);
+                auto* buf = buffer_.load(std::memory_order_acquire);
                 T item = buf->Get(t);
                 if (!top_.compare_exchange_strong(t, t + 1,
                                                    std::memory_order_seq_cst,
@@ -281,9 +285,37 @@ namespace queen
         }
 
     private:
+        struct RetiredNode
+        {
+            CircularBuffer<T, Allocator>* buffer;
+            RetiredNode* next;
+        };
+
+        void RetireBuffer(CircularBuffer<T, Allocator>* buf)
+        {
+            void* mem = allocator_->Allocate(sizeof(RetiredNode), alignof(RetiredNode));
+            auto* node = new (mem) RetiredNode{buf, retired_head_};
+            retired_head_ = node;
+        }
+
+        void FreeRetiredBuffers()
+        {
+            RetiredNode* node = retired_head_;
+            while (node != nullptr)
+            {
+                RetiredNode* next = node->next;
+                node->buffer->~CircularBuffer<T, Allocator>();
+                allocator_->Deallocate(node->buffer);
+                allocator_->Deallocate(node);
+                node = next;
+            }
+            retired_head_ = nullptr;
+        }
+
         Allocator* allocator_;
         std::atomic<int64_t> top_;
         std::atomic<int64_t> bottom_;
         std::atomic<CircularBuffer<T, Allocator>*> buffer_;
+        RetiredNode* retired_head_;
     };
 }

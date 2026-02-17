@@ -60,10 +60,5 @@ namespace queen
         {
             return entity == other.entity;
         }
-
-        [[nodiscard]] bool operator!=(const Parent& other) const noexcept
-        {
-            return entity != other.entity;
-        }
     };
 }

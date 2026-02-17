@@ -247,11 +247,12 @@ namespace queen
                 WaitGroup* wg;
             };
 
-            // Use thread-local storage for task data (simple approach)
-            thread_local TaskData tasks[256];
+            static constexpr size_t kMaxTasks = 256;
+            thread_local TaskData tasks[kMaxTasks];
             thread_local size_t task_idx = 0;
 
-            auto& td = tasks[task_idx % 256];
+            hive::Assert(task_idx < kMaxTasks, "ParallelScheduler: too many concurrent tasks");
+            auto& td = tasks[task_idx % kMaxTasks];
             task_idx++;
 
             td.scheduler = this;

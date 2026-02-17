@@ -217,15 +217,22 @@ namespace queen
                     std::memcpy(dst, src, meta_.size);
                 }
 
-                // Move ticks from last element to swapped position
+                if (meta_.destruct != nullptr)
+                {
+                    meta_.destruct(src);
+                }
+
                 ticks_[index] = ticks_[size_ - 1];
+            }
+            else
+            {
+                if (meta_.destruct != nullptr)
+                {
+                    meta_.destruct(GetRaw(index));
+                }
             }
 
             --size_;
-            if (meta_.destruct != nullptr && index == size_)
-            {
-                meta_.destruct(GetRaw(size_));
-            }
         }
 
         [[nodiscard]] void* GetRaw(size_t index) noexcept

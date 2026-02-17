@@ -27,7 +27,7 @@ namespace queen
      * - Memory: O(max_allocated_entities)
      *
      * Limitations:
-     * - Generation wraps after 65536 deallocations of same index
+     * - Generation wraps at 65536 deallocations of same index (rare false positives)
      * - Not thread-safe
      * - Generations array grows monotonically (never shrinks)
      *
@@ -89,10 +89,7 @@ namespace queen
             uint32_t index = entity.Index();
 
             Entity::GenerationType& gen = generations_[index];
-            if (gen < Entity::kMaxGeneration)
-            {
-                ++gen;
-            }
+            ++gen;
 
             free_list_.PushBack(index);
         }

@@ -1,7 +1,6 @@
 #pragma once
 
 #include <queen/core/type_id.h>
-#include <hive/core/assert.h>
 
 namespace queen
 {
@@ -50,12 +49,7 @@ namespace queen
         static constexpr TypeId type_id = TypeIdOf<T>();
         static constexpr bool is_mutable = false;
 
-        constexpr Res() noexcept : ptr_{nullptr} {}
-
-        explicit constexpr Res(const T* ptr) noexcept : ptr_{ptr}
-        {
-            hive::Assert(ptr != nullptr, "Res<T> requires non-null resource pointer");
-        }
+        explicit constexpr Res(const T* ptr) noexcept : ptr_{ptr} {}
 
         [[nodiscard]] constexpr const T& operator*() const noexcept
         {
@@ -131,12 +125,7 @@ namespace queen
         static constexpr TypeId type_id = TypeIdOf<T>();
         static constexpr bool is_mutable = true;
 
-        constexpr ResMut() noexcept : ptr_{nullptr} {}
-
-        explicit constexpr ResMut(T* ptr) noexcept : ptr_{ptr}
-        {
-            hive::Assert(ptr != nullptr, "ResMut<T> requires non-null resource pointer");
-        }
+        explicit constexpr ResMut(T* ptr) noexcept : ptr_{ptr} {}
 
         [[nodiscard]] constexpr T& operator*() const noexcept
         {

@@ -208,16 +208,6 @@ namespace queen
             }
         }
 
-        /**
-         * Execute the system (legacy version without tick tracking)
-         */
-        void Execute(World& world)
-        {
-            if (executor_fn_ != nullptr && enabled_)
-            {
-                executor_fn_(world, user_data_);
-            }
-        }
 
         [[nodiscard]] bool HasExecutor() const noexcept
         {

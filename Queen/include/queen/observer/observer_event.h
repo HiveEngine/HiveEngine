@@ -237,11 +237,6 @@ namespace queen
             return trigger == other.trigger && component_id == other.component_id;
         }
 
-        [[nodiscard]] constexpr bool operator!=(const ObserverKey& other) const noexcept
-        {
-            return !(*this == other);
-        }
-
         /**
          * Create key from compile-time trigger type
          */

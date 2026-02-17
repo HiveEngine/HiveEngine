@@ -1,7 +1,6 @@
 #pragma once
 
 #include <queen/core/type_id.h>
-#include <queen/core/entity.h>
 #include <cstdint>
 
 namespace queen

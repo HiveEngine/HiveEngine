@@ -73,8 +73,32 @@ namespace queen
 
         ArchetypeGraph(const ArchetypeGraph&) = delete;
         ArchetypeGraph& operator=(const ArchetypeGraph&) = delete;
-        ArchetypeGraph(ArchetypeGraph&&) = default;
-        ArchetypeGraph& operator=(ArchetypeGraph&&) = default;
+
+        ArchetypeGraph(ArchetypeGraph&& other) noexcept
+            : allocator_{other.allocator_}
+            , archetypes_{static_cast<wax::HashMap<ArchetypeId, Archetype<Allocator>*, Allocator>&&>(other.archetypes_)}
+            , archetype_storage_{static_cast<wax::Vector<Archetype<Allocator>*, Allocator>&&>(other.archetype_storage_)}
+            , empty_archetype_{other.empty_archetype_}
+        {
+            other.empty_archetype_ = nullptr;
+        }
+
+        ArchetypeGraph& operator=(ArchetypeGraph&& other) noexcept
+        {
+            if (this != &other)
+            {
+                for (size_t i = 0; i < archetype_storage_.Size(); ++i)
+                {
+                    comb::Delete(*allocator_, archetype_storage_[i]);
+                }
+                allocator_ = other.allocator_;
+                archetypes_ = static_cast<wax::HashMap<ArchetypeId, Archetype<Allocator>*, Allocator>&&>(other.archetypes_);
+                archetype_storage_ = static_cast<wax::Vector<Archetype<Allocator>*, Allocator>&&>(other.archetype_storage_);
+                empty_archetype_ = other.empty_archetype_;
+                other.empty_archetype_ = nullptr;
+            }
+            return *this;
+        }
 
         [[nodiscard]] Archetype<Allocator>* GetEmptyArchetype() noexcept
         {

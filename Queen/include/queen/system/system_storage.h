@@ -191,25 +191,20 @@ namespace queen
          * @param world The world to run the system on
          * @param id System to run
          */
-        void RunSystem(World& world, SystemId id)
+        void RunSystem(World& world, SystemId id, Tick current_tick)
         {
             SystemDescriptor<Allocator>* system = GetSystem(id);
             if (system != nullptr)
             {
-                system->Execute(world);
+                system->Execute(world, current_tick);
             }
         }
 
-        /**
-         * Run all registered systems in registration order
-         *
-         * @param world The world to run systems on
-         */
-        void RunAll(World& world)
+        void RunAll(World& world, Tick current_tick)
         {
             for (size_t i = 0; i < systems_.Size(); ++i)
             {
-                systems_[i].Execute(world);
+                systems_[i].Execute(world, current_tick);
             }
         }
 

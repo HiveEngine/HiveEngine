@@ -30,11 +30,6 @@ namespace queen
             return value_ == other.value_;
         }
 
-        [[nodiscard]] constexpr bool operator!=(ObserverId other) const noexcept
-        {
-            return value_ != other.value_;
-        }
-
     private:
         uint32_t value_;
     };

@@ -291,6 +291,8 @@ namespace queen
                     {
                         std::memcpy(dst, src, meta.size);
                     }
+
+                    dst_col->GetTicks(dest_row) = src_col.GetTicks(source_row);
                     ++moved_count;
                 }
             }

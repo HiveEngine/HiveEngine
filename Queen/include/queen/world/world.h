@@ -635,15 +635,12 @@ namespace queen
          */
         void RunSystem(SystemId id)
         {
-            systems_.RunSystem(*this, id);
+            systems_.RunSystem(*this, id, current_tick_);
         }
 
-        /**
-         * Run all registered systems in registration order
-         */
         void RunAllSystems()
         {
-            systems_.RunAll(*this);
+            systems_.RunAll(*this, current_tick_);
         }
 
         /**
@@ -922,6 +919,7 @@ namespace queen
             hive::Assert(IsAlive(child), "Child entity must be alive");
             hive::Assert(IsAlive(parent), "Parent entity must be alive");
             hive::Assert(!(child == parent), "Entity cannot be its own parent");
+            hive::Assert(!IsDescendantOf(parent, child), "SetParent would create a cycle");
 
             // 1. If child already has a parent, remove from old parent's children
             if (Parent* old_parent_comp = Get<Parent>(child))
@@ -1121,8 +1119,9 @@ namespace queen
          */
         [[nodiscard]] bool IsDescendantOf(Entity entity, Entity ancestor) const
         {
+            static constexpr uint32_t kMaxHierarchyDepth = 1024;
             Entity current = entity;
-            while (true)
+            for (uint32_t i = 0; i < kMaxHierarchyDepth; ++i)
             {
                 const Parent* parent_comp = Get<Parent>(current);
                 if (parent_comp == nullptr || !parent_comp->IsValid())
@@ -1137,15 +1136,15 @@ namespace queen
 
                 current = parent_comp->entity;
             }
+            hive::Assert(false, "Hierarchy depth exceeds maximum - possible cycle");
+            return false;
         }
 
-        /**
-         * Get the root of the hierarchy containing this entity
-         */
         [[nodiscard]] Entity GetRoot(Entity entity) const
         {
+            static constexpr uint32_t kMaxHierarchyDepth = 1024;
             Entity current = entity;
-            while (true)
+            for (uint32_t i = 0; i < kMaxHierarchyDepth; ++i)
             {
                 const Parent* parent_comp = Get<Parent>(current);
                 if (parent_comp == nullptr || !parent_comp->IsValid())
@@ -1154,16 +1153,16 @@ namespace queen
                 }
                 current = parent_comp->entity;
             }
+            hive::Assert(false, "Hierarchy depth exceeds maximum - possible cycle");
+            return entity;
         }
 
-        /**
-         * Get the depth of an entity in its hierarchy (0 = root)
-         */
         [[nodiscard]] uint32_t GetDepth(Entity entity) const
         {
+            static constexpr uint32_t kMaxHierarchyDepth = 1024;
             uint32_t depth = 0;
             Entity current = entity;
-            while (true)
+            for (uint32_t i = 0; i < kMaxHierarchyDepth; ++i)
             {
                 const Parent* parent_comp = Get<Parent>(current);
                 if (parent_comp == nullptr || !parent_comp->IsValid())
@@ -1173,6 +1172,8 @@ namespace queen
                 ++depth;
                 current = parent_comp->entity;
             }
+            hive::Assert(false, "Hierarchy depth exceeds maximum - possible cycle");
+            return depth;
         }
 
         /**
@@ -1637,7 +1638,7 @@ namespace queen
 
         commands_.Clear();
         spawn_count_ = 0;
-        ResetBlocks();
+        ClearBlocks();
     }
 }
 

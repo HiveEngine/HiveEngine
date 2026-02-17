@@ -6,8 +6,6 @@
 #include <comb/thread_safe_allocator.h>
 #include <atomic>
 #include <thread>
-#include <functional>
-#include <random>
 #include <mutex>
 
 namespace queen
@@ -154,7 +152,6 @@ namespace queen
             , idle_strategy_{idle_strategy}
             , running_{false}
             , pending_tasks_{0}
-            , next_worker_{0}
         {
             // Allocate global submission queue
             // The deque uses safe_allocator_ internally for Grow() which can happen from any thread
@@ -498,6 +495,5 @@ namespace queen
         IdleStrategy idle_strategy_;
         std::atomic<bool> running_;
         std::atomic<int64_t> pending_tasks_;
-        std::atomic<size_t> next_worker_;
     };
 }

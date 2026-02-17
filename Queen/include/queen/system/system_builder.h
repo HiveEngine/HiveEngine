@@ -68,26 +68,8 @@ namespace queen
             InitializeFromTerms();
         }
 
-        /**
-         * Set the system to run after another system
-         */
-        SystemBuilder& After(SystemId other)
-        {
-            // Store ordering constraint (to be used by scheduler)
-            // For now, just a placeholder - will be implemented with scheduler
-            (void)other;
-            return *this;
-        }
-
-        /**
-         * Set the system to run before another system
-         */
-        SystemBuilder& Before(SystemId other)
-        {
-            // Store ordering constraint (to be used by scheduler)
-            (void)other;
-            return *this;
-        }
+        // After/Before ordering constraints are handled by the dependency graph
+        // via AccessDescriptor conflict detection. Explicit ordering is not yet implemented.
 
         /**
          * Mark system as exclusive (requires exclusive world access)

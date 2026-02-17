@@ -100,10 +100,7 @@ namespace queen
         template<typename T>
         ObserverBuilder& With()
         {
-            // Store filter component type for matching
-            // This would require filter support in Observer
-            // For now, this is a placeholder for future expansion
-            (void)TypeIdOf<T>();
+            static_assert(sizeof(T) == 0, "Observer::With<T>() filter is not yet implemented");
             return *this;
         }
 
