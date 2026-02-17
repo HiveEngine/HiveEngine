@@ -354,4 +354,51 @@ namespace {
 
         larvae::AssertEqual(rc.GetRefCount(), 1u);
     });
+
+    auto test24 = larvae::RegisterTest("WaxRc", "GetAllocator", []() {
+        comb::LinearAllocator alloc{1024};
+
+        auto rc = wax::MakeRc<int>(alloc, 42);
+
+        larvae::AssertNotNull(rc.GetAllocator());
+        larvae::AssertTrue(rc.GetAllocator() == &alloc);
+
+        wax::Rc<int, comb::LinearAllocator> null_rc;
+        larvae::AssertNull(null_rc.GetAllocator());
+    });
+
+    auto test25 = larvae::RegisterTest("WaxRc", "CopyFromNull", []() {
+        wax::Rc<int, comb::LinearAllocator> null_rc;
+
+        wax::Rc<int, comb::LinearAllocator> copy{null_rc};
+
+        larvae::AssertTrue(copy.IsNull());
+        larvae::AssertEqual(copy.GetRefCount(), 0u);
+    });
+
+    auto test26 = larvae::RegisterTest("WaxRc", "CopyAssignNull", []() {
+        comb::LinearAllocator alloc{1024};
+        TestStruct::destruct_count = 0;
+
+        auto rc = wax::MakeRc<TestStruct>(alloc, 10, 3.14f);
+        wax::Rc<TestStruct, comb::LinearAllocator> null_rc;
+
+        rc = null_rc;
+
+        larvae::AssertTrue(rc.IsNull());
+        larvae::AssertEqual(TestStruct::destruct_count, 1);
+    });
+
+    auto test27 = larvae::RegisterTest("WaxRc", "SelfCopyAssignment", []() {
+        comb::LinearAllocator alloc{1024};
+
+        auto rc = wax::MakeRc<int>(alloc, 42);
+
+        auto& ref = rc;
+        rc = ref;
+
+        larvae::AssertTrue(rc.IsValid());
+        larvae::AssertEqual(*rc, 42);
+        larvae::AssertEqual(rc.GetRefCount(), 1u);
+    });
 }

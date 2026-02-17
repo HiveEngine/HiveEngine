@@ -214,13 +214,11 @@ namespace queen
         {
             TypeId id = TypeIdOf<T>();
 
-            // Try to find existing queue
-            if (auto* entry = queues_.Find(id))
+            if (auto* index = queues_.Find(id))
             {
-                return *static_cast<EventQueue<T, Allocator>*>((*entry)->queue);
+                return *static_cast<EventQueue<T, Allocator>*>(entries_[*index].queue);
             }
 
-            // Create new queue
             void* memory = allocator_->Allocate(sizeof(EventQueue<T, Allocator>), alignof(EventQueue<T, Allocator>));
             hive::Assert(memory != nullptr, "Failed to allocate EventQueue");
 
@@ -239,14 +237,15 @@ namespace queen
             };
             entry.type_id = id;
 
+            size_t new_index = entries_.Size();
             entries_.PushBack(entry);
-            queues_.Insert(id, &entries_.Back());
+            queues_.Insert(id, new_index);
 
             return *queue;
         }
 
         Allocator* allocator_;
-        wax::HashMap<TypeId, QueueEntry*, Allocator> queues_;
+        wax::HashMap<TypeId, size_t, Allocator> queues_;
         wax::Vector<QueueEntry, Allocator> entries_;
     };
 }

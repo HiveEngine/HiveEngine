@@ -223,15 +223,7 @@ namespace queen
     private:
         CommandBuffer<Allocator>& CreateBuffer(std::thread::id id)
         {
-            // If we have room in pre-allocated buffers, use it
-            if (buffer_count_ < thread_buffers_.Size())
-            {
-                thread_buffers_[buffer_count_].thread_id = id;
-                return thread_buffers_[buffer_count_++].buffer;
-            }
-
-            // Otherwise allocate a new buffer
-            thread_buffers_.PushBack(ThreadBuffer{id, *allocator_});
+            thread_buffers_.EmplaceBack(id, *allocator_);
             return thread_buffers_[buffer_count_++].buffer;
         }
 

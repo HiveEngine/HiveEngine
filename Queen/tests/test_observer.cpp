@@ -657,4 +657,74 @@ namespace
 
         larvae::AssertEqual(call_count, 1);
     });
+
+    // ─────────────────────────────────────────────────────────────
+    // Observer With<T>() Filter Tests
+    // ─────────────────────────────────────────────────────────────
+
+    auto test_with_filter_matches = larvae::RegisterTest("QueenObserver", "WithFilterMatchingEntity", []() {
+        queen::World world{};
+        int call_count = 0;
+
+        world.Observer<queen::OnAdd<Health>>("FilteredObserver")
+            .With<Position>()
+            .Each([&call_count](queen::Entity, const Health&) { ++call_count; });
+
+        // Entity with Position — observer should fire when Health is added
+        auto entity = world.Spawn(Position{1.0f, 2.0f, 3.0f});
+        world.Add(entity, Health{100.0f, 100.0f});
+
+        larvae::AssertEqual(call_count, 1);
+    });
+
+    auto test_with_filter_no_match = larvae::RegisterTest("QueenObserver", "WithFilterNonMatchingEntity", []() {
+        queen::World world{};
+        int call_count = 0;
+
+        world.Observer<queen::OnAdd<Health>>("FilteredObserver")
+            .With<Position>()
+            .Each([&call_count](queen::Entity, const Health&) { ++call_count; });
+
+        // Entity WITHOUT Position — observer should NOT fire
+        auto entity = world.Spawn().Build();
+        world.Add(entity, Health{100.0f, 100.0f});
+
+        larvae::AssertEqual(call_count, 0);
+    });
+
+    auto test_with_multiple_filters = larvae::RegisterTest("QueenObserver", "WithMultipleFilters", []() {
+        queen::World world{};
+        int call_count = 0;
+
+        world.Observer<queen::OnAdd<Health>>("MultiFilter")
+            .With<Position>()
+            .With<Velocity>()
+            .Each([&call_count](queen::Entity, const Health&) { ++call_count; });
+
+        // Has Position but NOT Velocity — should NOT fire
+        auto e1 = world.Spawn(Position{1.0f, 2.0f, 3.0f});
+        world.Add(e1, Health{100.0f, 100.0f});
+        larvae::AssertEqual(call_count, 0);
+
+        // Has Position + Velocity — should fire
+        auto e2 = world.Spawn(Position{0.0f, 0.0f, 0.0f}, Velocity{1.0f, 0.0f, 0.0f});
+        world.Add(e2, Health{50.0f, 100.0f});
+        larvae::AssertEqual(call_count, 1);
+    });
+
+    auto test_with_filter_no_filter = larvae::RegisterTest("QueenObserver", "WithoutFilterFiresAlways", []() {
+        queen::World world{};
+        int call_count = 0;
+
+        world.Observer<queen::OnAdd<Health>>("NoFilter")
+            .Each([&call_count](queen::Entity, const Health&) { ++call_count; });
+
+        auto e1 = world.Spawn().Build();
+        world.Add(e1, Health{100.0f, 100.0f});
+
+        auto e2 = world.Spawn(Position{1.0f, 2.0f, 3.0f});
+        world.Add(e2, Health{50.0f, 100.0f});
+
+        larvae::AssertEqual(call_count, 2);
+    });
 }

@@ -662,4 +662,489 @@ auto roundtrip_struct = larvae::RegisterTest("BinarySerialization", "RoundTripSt
     larvae::AssertTrue(loaded.z > 3.4f && loaded.z < 3.6f);
 });
 
+// ============================================================================
+// ByteSpan Additional Tests
+// ============================================================================
+
+auto bytespan_at = larvae::RegisterTest("ByteSpan", "At", []() {
+    uint8_t data[] = {10, 20, 30};
+    wax::ByteSpan span{data, 3};
+
+    larvae::AssertEqual(span.At(0), static_cast<uint8_t>(10));
+    larvae::AssertEqual(span.At(1), static_cast<uint8_t>(20));
+    larvae::AssertEqual(span.At(2), static_cast<uint8_t>(30));
+});
+
+auto bytespan_read = larvae::RegisterTest("ByteSpan", "ReadTyped", []() {
+    uint8_t data[] = {0x78, 0x56, 0x34, 0x12, 0xCD, 0xAB};
+    wax::ByteSpan span{data, 6};
+
+    uint32_t val32 = span.Read<uint32_t>(0);
+    larvae::AssertEqual(val32, 0x12345678u);
+
+    uint16_t val16 = span.Read<uint16_t>(4);
+    larvae::AssertEqual(val16, static_cast<uint16_t>(0xABCD));
+});
+
+auto bytespan_tryread = larvae::RegisterTest("ByteSpan", "TryRead", []() {
+    uint8_t data[] = {0x78, 0x56, 0x34, 0x12};
+    wax::ByteSpan span{data, 4};
+
+    uint32_t val32;
+    larvae::AssertTrue(span.TryRead(0, val32));
+    larvae::AssertEqual(val32, 0x12345678u);
+
+    // Out of bounds
+    uint32_t overflow;
+    larvae::AssertFalse(span.TryRead(2, overflow));
+
+    // Exact end
+    uint16_t val16;
+    larvae::AssertTrue(span.TryRead(2, val16));
+    larvae::AssertEqual(val16, static_cast<uint16_t>(0x1234));
+});
+
+auto bytespan_equality = larvae::RegisterTest("ByteSpan", "Equality", []() {
+    uint8_t data1[] = {1, 2, 3};
+    uint8_t data2[] = {1, 2, 3};
+    uint8_t data3[] = {1, 2, 4};
+    uint8_t data4[] = {1, 2};
+
+    wax::ByteSpan span1{data1, 3};
+    wax::ByteSpan span2{data2, 3};
+    wax::ByteSpan span3{data3, 3};
+    wax::ByteSpan span4{data4, 2};
+    wax::ByteSpan span_self{data1, 3};
+
+    larvae::AssertTrue(span1 == span2);    // Same content, different buffer
+    larvae::AssertFalse(span1 == span3);   // Different content
+    larvae::AssertFalse(span1 == span4);   // Different size
+    larvae::AssertTrue(span1 == span_self); // Same pointer
+
+    wax::ByteSpan empty1;
+    wax::ByteSpan empty2;
+    larvae::AssertTrue(empty1 == empty2);  // Both empty
+});
+
+auto bytespan_array_ctor = larvae::RegisterTest("ByteSpan", "ArrayConstructor", []() {
+    uint8_t data[] = {5, 10, 15, 20};
+    wax::ByteSpan span{data};
+
+    larvae::AssertEqual(span.Size(), 4u);
+    larvae::AssertEqual(span[0], static_cast<uint8_t>(5));
+    larvae::AssertEqual(span[3], static_cast<uint8_t>(20));
+});
+
+// ============================================================================
+// ByteBuffer Additional Tests
+// ============================================================================
+
+auto bytebuffer_append_typed = larvae::RegisterTest("ByteBuffer", "AppendTyped", []() {
+    comb::LinearAllocator alloc{1024};
+    wax::ByteBuffer<comb::LinearAllocator> buffer{alloc};
+
+    uint32_t val = 0x12345678;
+    buffer.Append(val);
+
+    larvae::AssertEqual(buffer.Size(), 4u);
+    larvae::AssertEqual(buffer[0], static_cast<uint8_t>(0x78));
+    larvae::AssertEqual(buffer[1], static_cast<uint8_t>(0x56));
+    larvae::AssertEqual(buffer[2], static_cast<uint8_t>(0x34));
+    larvae::AssertEqual(buffer[3], static_cast<uint8_t>(0x12));
+});
+
+auto bytebuffer_append_span = larvae::RegisterTest("ByteBuffer", "AppendByteSpan", []() {
+    comb::LinearAllocator alloc{1024};
+    wax::ByteBuffer<comb::LinearAllocator> buffer{alloc};
+
+    uint8_t data[] = {10, 20, 30};
+    wax::ByteSpan span{data, 3};
+
+    buffer.Append(span);
+
+    larvae::AssertEqual(buffer.Size(), 3u);
+    larvae::AssertEqual(buffer[0], static_cast<uint8_t>(10));
+    larvae::AssertEqual(buffer[1], static_cast<uint8_t>(20));
+    larvae::AssertEqual(buffer[2], static_cast<uint8_t>(30));
+});
+
+auto bytebuffer_resize = larvae::RegisterTest("ByteBuffer", "Resize", []() {
+    comb::LinearAllocator alloc{1024};
+    wax::ByteBuffer<comb::LinearAllocator> buffer{alloc};
+
+    buffer.Append(static_cast<uint8_t>(1));
+    buffer.Append(static_cast<uint8_t>(2));
+    buffer.Append(static_cast<uint8_t>(3));
+
+    buffer.Resize(5);
+    larvae::AssertEqual(buffer.Size(), 5u);
+    larvae::AssertEqual(buffer[0], static_cast<uint8_t>(1));
+    larvae::AssertEqual(buffer[1], static_cast<uint8_t>(2));
+    larvae::AssertEqual(buffer[2], static_cast<uint8_t>(3));
+
+    buffer.Resize(1);
+    larvae::AssertEqual(buffer.Size(), 1u);
+    larvae::AssertEqual(buffer[0], static_cast<uint8_t>(1));
+});
+
+auto bytebuffer_view_offset = larvae::RegisterTest("ByteBuffer", "ViewWithOffset", []() {
+    comb::LinearAllocator alloc{1024};
+    wax::ByteBuffer<comb::LinearAllocator> buffer{alloc};
+
+    buffer.Append(static_cast<uint8_t>(10));
+    buffer.Append(static_cast<uint8_t>(20));
+    buffer.Append(static_cast<uint8_t>(30));
+    buffer.Append(static_cast<uint8_t>(40));
+
+    wax::ByteSpan sub = buffer.View(1, 2);
+    larvae::AssertEqual(sub.Size(), 2u);
+    larvae::AssertEqual(sub[0], static_cast<uint8_t>(20));
+    larvae::AssertEqual(sub[1], static_cast<uint8_t>(30));
+});
+
+auto bytebuffer_mutable = larvae::RegisterTest("ByteBuffer", "MutableAccess", []() {
+    comb::LinearAllocator alloc{1024};
+    wax::ByteBuffer<comb::LinearAllocator> buffer{alloc};
+
+    buffer.Append(static_cast<uint8_t>(1));
+    buffer.Append(static_cast<uint8_t>(2));
+    buffer.Append(static_cast<uint8_t>(3));
+
+    // Mutable indexing
+    buffer[1] = 42;
+    larvae::AssertEqual(buffer[1], static_cast<uint8_t>(42));
+
+    // Mutable Data()
+    uint8_t* ptr = buffer.Data();
+    ptr[0] = 99;
+    larvae::AssertEqual(buffer[0], static_cast<uint8_t>(99));
+});
+
+auto bytebuffer_iterators = larvae::RegisterTest("ByteBuffer", "Iterators", []() {
+    comb::LinearAllocator alloc{1024};
+    wax::ByteBuffer<comb::LinearAllocator> buffer{alloc};
+
+    buffer.Append(static_cast<uint8_t>(1));
+    buffer.Append(static_cast<uint8_t>(2));
+    buffer.Append(static_cast<uint8_t>(3));
+
+    // Const iteration
+    size_t sum = 0;
+    for (uint8_t b : buffer)
+    {
+        sum += b;
+    }
+    larvae::AssertEqual(sum, 6u);
+
+    // Mutable iteration
+    for (uint8_t& b : buffer)
+    {
+        b *= 10;
+    }
+    larvae::AssertEqual(buffer[0], static_cast<uint8_t>(10));
+    larvae::AssertEqual(buffer[1], static_cast<uint8_t>(20));
+    larvae::AssertEqual(buffer[2], static_cast<uint8_t>(30));
+});
+
+// ============================================================================
+// BinaryWriter Additional Tests
+// ============================================================================
+
+auto writer_varint_signed = larvae::RegisterTest("BinaryWriter", "WriteVarIntSigned", []() {
+    comb::LinearAllocator alloc{1024};
+    wax::BinaryWriter<comb::LinearAllocator> writer{alloc};
+
+    // 0 -> ZigZag 0 -> 1 byte
+    writer.WriteVarIntSigned(0);
+    larvae::AssertEqual(writer.Size(), 1u);
+    larvae::AssertEqual(writer.View()[0], static_cast<uint8_t>(0));
+
+    writer.Clear();
+
+    // -1 -> ZigZag 1 -> 1 byte
+    writer.WriteVarIntSigned(-1);
+    larvae::AssertEqual(writer.Size(), 1u);
+    larvae::AssertEqual(writer.View()[0], static_cast<uint8_t>(1));
+
+    writer.Clear();
+
+    // 1 -> ZigZag 2 -> 1 byte
+    writer.WriteVarIntSigned(1);
+    larvae::AssertEqual(writer.Size(), 1u);
+    larvae::AssertEqual(writer.View()[0], static_cast<uint8_t>(2));
+});
+
+auto writer_stringz = larvae::RegisterTest("BinaryWriter", "WriteStringZ", []() {
+    comb::LinearAllocator alloc{1024};
+    wax::BinaryWriter<comb::LinearAllocator> writer{alloc};
+
+    writer.WriteStringZ("Hi");
+
+    // "Hi" + null = 3 bytes
+    larvae::AssertEqual(writer.Size(), 3u);
+    larvae::AssertEqual(writer.View()[0], static_cast<uint8_t>('H'));
+    larvae::AssertEqual(writer.View()[1], static_cast<uint8_t>('i'));
+    larvae::AssertEqual(writer.View()[2], static_cast<uint8_t>(0));
+});
+
+auto writer_stringz_null = larvae::RegisterTest("BinaryWriter", "WriteStringZNull", []() {
+    comb::LinearAllocator alloc{1024};
+    wax::BinaryWriter<comb::LinearAllocator> writer{alloc};
+
+    writer.WriteStringZ(nullptr);
+
+    larvae::AssertEqual(writer.Size(), 1u);
+    larvae::AssertEqual(writer.View()[0], static_cast<uint8_t>(0));
+});
+
+auto writer_padding = larvae::RegisterTest("BinaryWriter", "WritePadding", []() {
+    comb::LinearAllocator alloc{1024};
+    wax::BinaryWriter<comb::LinearAllocator> writer{alloc};
+
+    writer.Write<uint8_t>(0xFF);
+    writer.WritePadding(3);
+
+    larvae::AssertEqual(writer.Size(), 4u);
+    larvae::AssertEqual(writer.View()[0], static_cast<uint8_t>(0xFF));
+    larvae::AssertEqual(writer.View()[1], static_cast<uint8_t>(0));
+    larvae::AssertEqual(writer.View()[2], static_cast<uint8_t>(0));
+    larvae::AssertEqual(writer.View()[3], static_cast<uint8_t>(0));
+});
+
+auto writer_alignment = larvae::RegisterTest("BinaryWriter", "WriteAlignment", []() {
+    comb::LinearAllocator alloc{1024};
+    wax::BinaryWriter<comb::LinearAllocator> writer{alloc};
+
+    writer.Write<uint8_t>(0xFF);         // 1 byte
+    writer.WriteAlignment(4);            // Pad to 4-byte boundary: 3 zeros
+
+    larvae::AssertEqual(writer.Size(), 4u);
+
+    writer.WriteAlignment(4);            // Already aligned: no change
+    larvae::AssertEqual(writer.Size(), 4u);
+});
+
+auto writer_bytes_span = larvae::RegisterTest("BinaryWriter", "WriteBytesSpan", []() {
+    comb::LinearAllocator alloc{1024};
+    wax::BinaryWriter<comb::LinearAllocator> writer{alloc};
+
+    uint8_t data[] = {0xAA, 0xBB, 0xCC};
+    wax::ByteSpan span{data, 3};
+
+    writer.WriteBytes(span);
+
+    larvae::AssertEqual(writer.Size(), 3u);
+    larvae::AssertEqual(writer.View()[0], static_cast<uint8_t>(0xAA));
+    larvae::AssertEqual(writer.View()[1], static_cast<uint8_t>(0xBB));
+    larvae::AssertEqual(writer.View()[2], static_cast<uint8_t>(0xCC));
+});
+
+auto writer_string_cstr = larvae::RegisterTest("BinaryWriter", "WriteStringCStr", []() {
+    comb::LinearAllocator alloc{1024};
+    wax::BinaryWriter<comb::LinearAllocator> writer{alloc};
+
+    writer.WriteString("Test");
+
+    // uint32 length (4) + "Test" (4) = 8 bytes
+    larvae::AssertEqual(writer.Size(), 8u);
+
+    wax::BinaryReader reader{writer.View()};
+    uint32_t len = reader.Read<uint32_t>();
+    larvae::AssertEqual(len, 4u);
+
+    auto str = reader.ReadBytes(4);
+    larvae::AssertEqual(str[0], static_cast<uint8_t>('T'));
+    larvae::AssertEqual(str[3], static_cast<uint8_t>('t'));
+});
+
+auto writer_string_null = larvae::RegisterTest("BinaryWriter", "WriteStringNull", []() {
+    comb::LinearAllocator alloc{1024};
+    wax::BinaryWriter<comb::LinearAllocator> writer{alloc};
+
+    writer.WriteString(static_cast<const char*>(nullptr));
+
+    // Just 4 bytes for length (0)
+    larvae::AssertEqual(writer.Size(), 4u);
+
+    wax::BinaryReader reader{writer.View()};
+    larvae::AssertEqual(reader.Read<uint32_t>(), 0u);
+});
+
+// ============================================================================
+// BinaryReader Additional Tests
+// ============================================================================
+
+auto reader_varint_signed = larvae::RegisterTest("BinaryReader", "ReadVarIntSigned", []() {
+    // ZigZag: 0 -> 0, 1 -> -1, 2 -> 1, 3 -> -2, 4 -> 2
+    uint8_t data[] = {0, 1, 2, 3, 4};
+    wax::BinaryReader reader{data, sizeof(data)};
+
+    larvae::AssertEqual(reader.ReadVarIntSigned(), static_cast<int64_t>(0));
+    larvae::AssertEqual(reader.ReadVarIntSigned(), static_cast<int64_t>(-1));
+    larvae::AssertEqual(reader.ReadVarIntSigned(), static_cast<int64_t>(1));
+    larvae::AssertEqual(reader.ReadVarIntSigned(), static_cast<int64_t>(-2));
+    larvae::AssertEqual(reader.ReadVarIntSigned(), static_cast<int64_t>(2));
+});
+
+auto reader_stringz = larvae::RegisterTest("BinaryReader", "ReadStringZ", []() {
+    uint8_t data[] = {'H', 'i', 0, 'X'};
+    wax::BinaryReader reader{data, sizeof(data)};
+
+    wax::ByteSpan str = reader.ReadStringZ();
+
+    // Returns "Hi\0" (including null terminator)
+    larvae::AssertEqual(str.Size(), 3u);
+    larvae::AssertEqual(str[0], static_cast<uint8_t>('H'));
+    larvae::AssertEqual(str[1], static_cast<uint8_t>('i'));
+    larvae::AssertEqual(str[2], static_cast<uint8_t>(0));
+
+    // Position advanced past null
+    larvae::AssertEqual(reader.Position(), 3u);
+    larvae::AssertEqual(reader.Read<uint8_t>(), static_cast<uint8_t>('X'));
+});
+
+auto reader_tryvarint = larvae::RegisterTest("BinaryReader", "TryReadVarInt", []() {
+    // Valid: 300 = 0xAC 0x02
+    uint8_t data[] = {0xAC, 0x02};
+    wax::BinaryReader reader{data, 2};
+
+    uint64_t value;
+    larvae::AssertTrue(reader.TryReadVarInt(value));
+    larvae::AssertEqual(value, 300u);
+    larvae::AssertTrue(reader.IsEof());
+});
+
+auto reader_tryvarint_incomplete = larvae::RegisterTest("BinaryReader", "TryReadVarIntIncomplete", []() {
+    // Incomplete VarInt: 0x80 means "more bytes follow" but there are none
+    uint8_t data[] = {0x80};
+    wax::BinaryReader reader{data, 1};
+
+    uint64_t value;
+    larvae::AssertFalse(reader.TryReadVarInt(value));
+    larvae::AssertEqual(reader.Position(), 0u); // Position rolled back
+});
+
+auto reader_trypeek = larvae::RegisterTest("BinaryReader", "TryPeek", []() {
+    uint8_t data[] = {42};
+    wax::BinaryReader reader{data, 1};
+
+    uint8_t out;
+    larvae::AssertTrue(reader.TryPeek(out));
+    larvae::AssertEqual(out, static_cast<uint8_t>(42));
+    larvae::AssertEqual(reader.Position(), 0u); // Not advanced
+
+    reader.Skip(1);
+    larvae::AssertFalse(reader.TryPeek(out)); // EOF
+});
+
+auto reader_bytespan_ctor = larvae::RegisterTest("BinaryReader", "ByteSpanConstructor", []() {
+    uint8_t data[] = {0x78, 0x56, 0x34, 0x12};
+    wax::ByteSpan span{data, 4};
+    wax::BinaryReader reader{span};
+
+    larvae::AssertEqual(reader.Size(), 4u);
+    larvae::AssertEqual(reader.Read<uint32_t>(), 0x12345678u);
+});
+
+auto reader_tryreadbytes = larvae::RegisterTest("BinaryReader", "TryReadBytes", []() {
+    uint8_t data[] = {1, 2, 3, 4, 5};
+    wax::BinaryReader reader{data, 5};
+
+    wax::ByteSpan out;
+
+    larvae::AssertTrue(reader.TryReadBytes(3, out));
+    larvae::AssertEqual(out.Size(), 3u);
+    larvae::AssertEqual(out[0], static_cast<uint8_t>(1));
+    larvae::AssertEqual(out[2], static_cast<uint8_t>(3));
+
+    // Not enough remaining
+    larvae::AssertFalse(reader.TryReadBytes(5, out));
+    larvae::AssertTrue(out.IsEmpty());
+});
+
+auto reader_read_out = larvae::RegisterTest("BinaryReader", "ReadOutputParam", []() {
+    uint8_t data[] = {0x78, 0x56, 0x34, 0x12};
+    wax::BinaryReader reader{data, 4};
+
+    uint32_t value = 0;
+    reader.Read(value);
+    larvae::AssertEqual(value, 0x12345678u);
+});
+
+// ============================================================================
+// Additional Round-trip Tests
+// ============================================================================
+
+auto roundtrip_varint_signed = larvae::RegisterTest("BinarySerialization", "RoundTripVarIntSigned", []() {
+    comb::LinearAllocator alloc{1024};
+    wax::BinaryWriter<comb::LinearAllocator> writer{alloc};
+
+    writer.WriteVarIntSigned(0);
+    writer.WriteVarIntSigned(1);
+    writer.WriteVarIntSigned(-1);
+    writer.WriteVarIntSigned(100);
+    writer.WriteVarIntSigned(-100);
+    writer.WriteVarIntSigned(INT64_MAX);
+    writer.WriteVarIntSigned(INT64_MIN);
+
+    wax::BinaryReader reader{writer.View()};
+    larvae::AssertEqual(reader.ReadVarIntSigned(), static_cast<int64_t>(0));
+    larvae::AssertEqual(reader.ReadVarIntSigned(), static_cast<int64_t>(1));
+    larvae::AssertEqual(reader.ReadVarIntSigned(), static_cast<int64_t>(-1));
+    larvae::AssertEqual(reader.ReadVarIntSigned(), static_cast<int64_t>(100));
+    larvae::AssertEqual(reader.ReadVarIntSigned(), static_cast<int64_t>(-100));
+    larvae::AssertEqual(reader.ReadVarIntSigned(), INT64_MAX);
+    larvae::AssertEqual(reader.ReadVarIntSigned(), INT64_MIN);
+});
+
+auto roundtrip_stringz = larvae::RegisterTest("BinarySerialization", "RoundTripStringZ", []() {
+    comb::LinearAllocator alloc{1024};
+    wax::BinaryWriter<comb::LinearAllocator> writer{alloc};
+
+    writer.WriteStringZ("Hello");
+    writer.WriteStringZ("World");
+
+    wax::BinaryReader reader{writer.View()};
+
+    auto str1 = reader.ReadStringZ();
+    larvae::AssertEqual(str1.Size(), 6u); // "Hello\0"
+    larvae::AssertEqual(str1[0], static_cast<uint8_t>('H'));
+    larvae::AssertEqual(str1[4], static_cast<uint8_t>('o'));
+    larvae::AssertEqual(str1[5], static_cast<uint8_t>(0));
+
+    auto str2 = reader.ReadStringZ();
+    larvae::AssertEqual(str2.Size(), 6u); // "World\0"
+    larvae::AssertEqual(str2[0], static_cast<uint8_t>('W'));
+});
+
+auto roundtrip_string_cstr = larvae::RegisterTest("BinarySerialization", "RoundTripStringCStr", []() {
+    comb::LinearAllocator alloc{1024};
+    wax::BinaryWriter<comb::LinearAllocator> writer{alloc};
+
+    writer.WriteString("Test");
+
+    wax::BinaryReader reader{writer.View()};
+    auto str = reader.ReadString();
+
+    larvae::AssertEqual(str.Size(), 4u);
+    larvae::AssertEqual(str[0], static_cast<uint8_t>('T'));
+    larvae::AssertEqual(str[1], static_cast<uint8_t>('e'));
+    larvae::AssertEqual(str[2], static_cast<uint8_t>('s'));
+    larvae::AssertEqual(str[3], static_cast<uint8_t>('t'));
+});
+
+auto roundtrip_alignment = larvae::RegisterTest("BinarySerialization", "RoundTripWithAlignment", []() {
+    comb::LinearAllocator alloc{1024};
+    wax::BinaryWriter<comb::LinearAllocator> writer{alloc};
+
+    writer.Write<uint8_t>(0xFF);
+    writer.WriteAlignment(4);    // 3 bytes padding
+    writer.Write<uint32_t>(0xDEADBEEF);
+
+    wax::BinaryReader reader{writer.View()};
+    larvae::AssertEqual(reader.Read<uint8_t>(), static_cast<uint8_t>(0xFF));
+    reader.Skip(3); // Skip padding
+    larvae::AssertEqual(reader.Read<uint32_t>(), 0xDEADBEEFu);
+});
+
 } // anonymous namespace

@@ -386,4 +386,89 @@ namespace
         larvae::AssertEqual(after_update, 1.0f);
         larvae::AssertEqual(after_run_all, 2.0f);
     });
+
+    // ─────────────────────────────────────────────────────────────
+    // Explicit Ordering Tests (After / Before)
+    // ─────────────────────────────────────────────────────────────
+
+    auto test_after_by_id = larvae::RegisterTest("QueenScheduler", "AfterById", []() {
+        queen::World world{};
+        int order = 0;
+        int a_order = 0;
+        int b_order = 0;
+
+        auto id_a = world.System("A")
+            .Run([&](queen::World&) { a_order = ++order; });
+
+        world.System("B")
+            .After(id_a)
+            .Run([&](queen::World&) { b_order = ++order; });
+
+        world.Update();
+
+        // B must run after A
+        larvae::AssertTrue(b_order > a_order);
+    });
+
+    auto test_after_by_name = larvae::RegisterTest("QueenScheduler", "AfterByName", []() {
+        queen::World world{};
+        int order = 0;
+        int a_order = 0;
+        int b_order = 0;
+
+        world.System("A")
+            .Run([&](queen::World&) { a_order = ++order; });
+
+        world.System("B")
+            .After("A")
+            .Run([&](queen::World&) { b_order = ++order; });
+
+        world.Update();
+
+        larvae::AssertTrue(b_order > a_order);
+    });
+
+    auto test_before_by_id = larvae::RegisterTest("QueenScheduler", "BeforeById", []() {
+        queen::World world{};
+        int order = 0;
+        int a_order = 0;
+        int b_order = 0;
+
+        auto id_b = world.System("B")
+            .Run([&](queen::World&) { b_order = ++order; });
+
+        // A registered after B, but must run before B
+        world.System("A")
+            .Before(id_b)
+            .Run([&](queen::World&) { a_order = ++order; });
+
+        world.Update();
+
+        larvae::AssertTrue(a_order < b_order);
+    });
+
+    auto test_after_chain = larvae::RegisterTest("QueenScheduler", "AfterChain", []() {
+        queen::World world{};
+        int order = 0;
+        int a_order = 0;
+        int b_order = 0;
+        int c_order = 0;
+
+        auto id_a = world.System("A")
+            .Run([&](queen::World&) { a_order = ++order; });
+
+        auto id_b = world.System("B")
+            .After(id_a)
+            .Run([&](queen::World&) { b_order = ++order; });
+
+        world.System("C")
+            .After(id_b)
+            .Run([&](queen::World&) { c_order = ++order; });
+
+        world.Update();
+
+        // Must be A < B < C
+        larvae::AssertTrue(a_order < b_order);
+        larvae::AssertTrue(b_order < c_order);
+    });
 }

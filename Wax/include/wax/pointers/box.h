@@ -59,7 +59,7 @@ namespace wax
      *   auto moved = std::move(camera);
      * @endcode
      */
-    template<typename T, typename Allocator = comb::DefaultAllocator>
+    template<typename T, comb::Allocator Allocator = comb::DefaultAllocator>
     class Box
     {
     public:
@@ -162,13 +162,14 @@ namespace wax
             allocator_ = nullptr;
         }
 
-        constexpr void Reset(T* ptr) noexcept
+        constexpr void Reset(Allocator& allocator, T* ptr) noexcept
         {
             if (ptr_ && allocator_)
             {
                 comb::Delete(*allocator_, ptr_);
             }
             ptr_ = ptr;
+            allocator_ = &allocator;
         }
 
         [[nodiscard]] constexpr bool operator==(const Box& other) const noexcept
@@ -176,19 +177,9 @@ namespace wax
             return ptr_ == other.ptr_;
         }
 
-        [[nodiscard]] constexpr bool operator!=(const Box& other) const noexcept
-        {
-            return ptr_ != other.ptr_;
-        }
-
         [[nodiscard]] constexpr bool operator==(std::nullptr_t) const noexcept
         {
             return ptr_ == nullptr;
-        }
-
-        [[nodiscard]] constexpr bool operator!=(std::nullptr_t) const noexcept
-        {
-            return ptr_ != nullptr;
         }
 
     private:
@@ -196,7 +187,7 @@ namespace wax
         Allocator* allocator_;
     };
 
-    template<typename T, typename Allocator, typename... Args>
+    template<typename T, comb::Allocator Allocator, typename... Args>
     [[nodiscard]] Box<T, Allocator> MakeBox(Allocator& allocator, Args&&... args)
     {
         T* ptr = comb::New<T>(allocator, std::forward<Args>(args)...);

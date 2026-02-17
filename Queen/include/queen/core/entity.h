@@ -1,8 +1,6 @@
 #pragma once
 
 #include <cstdint>
-#include <cstddef>
-#include <functional>
 
 namespace queen
 {
@@ -34,7 +32,7 @@ namespace queen
      *
      * Limitations:
      * - Max ~4 billion concurrent entities (32-bit index)
-     * - Generation wraps after 65536 recycles (false positives rare)
+     * - Generation saturates at 65535 (recycled indices lose use-after-free detection)
      * - Entity validity requires EntityAllocator lookup
      *
      * Example:
@@ -138,11 +136,6 @@ namespace queen
             return index_ == other.index_ && generation_ == other.generation_;
         }
 
-        [[nodiscard]] constexpr bool operator!=(const Entity& other) const noexcept
-        {
-            return !(*this == other);
-        }
-
         [[nodiscard]] constexpr bool operator<(const Entity& other) const noexcept
         {
             if (index_ != other.index_)
@@ -178,14 +171,23 @@ namespace queen
     static_assert(std::is_trivially_copyable_v<Entity>, "Entity must be trivially copyable");
 }
 
-namespace std
+namespace queen
 {
-    template<>
-    struct hash<queen::Entity>
+    struct EntityHash
     {
-        size_t operator()(const queen::Entity& e) const noexcept
+        [[nodiscard]] constexpr size_t operator()(const Entity& e) const noexcept
         {
-            return e.ToU64();
+            return static_cast<size_t>(e.Index())
+                 | (static_cast<size_t>(e.Generation()) << 32);
         }
     };
 }
+
+template<>
+struct std::hash<queen::Entity>
+{
+    [[nodiscard]] constexpr size_t operator()(const queen::Entity& e) const noexcept
+    {
+        return queen::EntityHash{}(e);
+    }
+};

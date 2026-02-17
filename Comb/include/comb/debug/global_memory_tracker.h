@@ -186,11 +186,8 @@ public:
             globalStats.totalBytesAllocated += allocStats.totalBytesAllocated;
             globalStats.overheadBytes += allocStats.overheadBytes;
 
-            // Peak is max across all allocators
-            if (allocStats.peakBytesUsed > globalStats.peakBytesUsed)
-            {
-                globalStats.peakBytesUsed = allocStats.peakBytesUsed;
-            }
+            // Sum peaks across allocators (upper bound — individual peaks may not coincide)
+            globalStats.peakBytesUsed += allocStats.peakBytesUsed;
         }
 
         return globalStats;

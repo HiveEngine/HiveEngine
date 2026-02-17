@@ -1,11 +1,13 @@
 #pragma once
 
 #include <queen/system/system.h>
+#include <queen/system/system_storage.h>
 #include <queen/system/resource_param.h>
 #include <queen/query/query_term.h>
 #include <queen/query/query.h>
 #include <queen/command/commands.h>
 #include <comb/allocator_concepts.h>
+#include <hive/core/assert.h>
 
 namespace queen
 {
@@ -69,23 +71,50 @@ namespace queen
         }
 
         /**
-         * Set the system to run after another system
+         * Declare that this system must run after another system
+         *
+         * @param id SystemId of the system to run after
          */
-        SystemBuilder& After(SystemId other)
+        SystemBuilder& After(SystemId id)
         {
-            // Store ordering constraint (to be used by scheduler)
-            // For now, just a placeholder - will be implemented with scheduler
-            (void)other;
+            descriptor_->AddAfter(id);
             return *this;
         }
 
         /**
-         * Set the system to run before another system
+         * Declare that this system must run after another system (by name)
+         *
+         * @param name Name of the system to run after (must already be registered)
          */
-        SystemBuilder& Before(SystemId other)
+        SystemBuilder& After(const char* name)
         {
-            // Store ordering constraint (to be used by scheduler)
-            (void)other;
+            auto* other = storage_->GetSystemByName(name);
+            hive::Assert(other != nullptr, "After(): system not found");
+            descriptor_->AddAfter(other->Id());
+            return *this;
+        }
+
+        /**
+         * Declare that this system must run before another system
+         *
+         * @param id SystemId of the system to run before
+         */
+        SystemBuilder& Before(SystemId id)
+        {
+            descriptor_->AddBefore(id);
+            return *this;
+        }
+
+        /**
+         * Declare that this system must run before another system (by name)
+         *
+         * @param name Name of the system to run before (must already be registered)
+         */
+        SystemBuilder& Before(const char* name)
+        {
+            auto* other = storage_->GetSystemByName(name);
+            hive::Assert(other != nullptr, "Before(): system not found");
+            descriptor_->AddBefore(other->Id());
             return *this;
         }
 
@@ -296,6 +325,34 @@ namespace queen
             , storage_{&storage}
             , descriptor_{descriptor}
         {
+        }
+
+        SystemBuilder& After(SystemId id)
+        {
+            descriptor_->AddAfter(id);
+            return *this;
+        }
+
+        SystemBuilder& After(const char* name)
+        {
+            auto* other = storage_->GetSystemByName(name);
+            hive::Assert(other != nullptr, "After(): system not found");
+            descriptor_->AddAfter(other->Id());
+            return *this;
+        }
+
+        SystemBuilder& Before(SystemId id)
+        {
+            descriptor_->AddBefore(id);
+            return *this;
+        }
+
+        SystemBuilder& Before(const char* name)
+        {
+            auto* other = storage_->GetSystemByName(name);
+            hive::Assert(other != nullptr, "Before(): system not found");
+            descriptor_->AddBefore(other->Id());
+            return *this;
         }
 
         SystemBuilder& Exclusive()

@@ -202,4 +202,76 @@ namespace
         float expected = 4.0f / 16.0f;
         larvae::AssertEqual(set.LoadFactor(), expected);
     });
+
+    auto test13 = larvae::RegisterTest("WaxHashSet", "MoveAssignment", []() {
+        comb::BuddyAllocator alloc{16384};
+        wax::HashSet<int, comb::BuddyAllocator> set1{alloc, 16};
+        wax::HashSet<int, comb::BuddyAllocator> set2{alloc, 16};
+
+        set1.Insert(1);
+        set1.Insert(2);
+        set1.Insert(3);
+
+        set2.Insert(100);
+
+        set2 = static_cast<wax::HashSet<int, comb::BuddyAllocator>&&>(set1);
+
+        larvae::AssertEqual(set2.Count(), size_t{3});
+        larvae::AssertTrue(set2.Contains(1));
+        larvae::AssertTrue(set2.Contains(2));
+        larvae::AssertTrue(set2.Contains(3));
+        larvae::AssertFalse(set2.Contains(100));
+    });
+
+    auto test14 = larvae::RegisterTest("WaxHashSet", "EmptySetIteration", []() {
+        comb::LinearAllocator alloc{4096};
+        wax::HashSet<int, comb::LinearAllocator> set{alloc, 16};
+
+        int count = 0;
+        for (auto it = set.begin(); it != set.end(); ++it)
+        {
+            ++count;
+        }
+
+        larvae::AssertEqual(count, 0);
+    });
+
+    auto test15 = larvae::RegisterTest("WaxHashSet", "ConstIteration", []() {
+        comb::LinearAllocator alloc{4096};
+        wax::HashSet<int, comb::LinearAllocator> set{alloc, 16};
+
+        set.Insert(10);
+        set.Insert(20);
+        set.Insert(30);
+
+        const auto& const_set = set;
+
+        int sum = 0;
+        int count = 0;
+        for (auto it = const_set.begin(); it != const_set.end(); ++it)
+        {
+            sum += *it;
+            ++count;
+        }
+
+        larvae::AssertEqual(count, 3);
+        larvae::AssertEqual(sum, 60);
+    });
+
+    auto test16 = larvae::RegisterTest("WaxHashSet", "RangeForLoop", []() {
+        comb::LinearAllocator alloc{4096};
+        wax::HashSet<int, comb::LinearAllocator> set{alloc, 16};
+
+        set.Insert(5);
+        set.Insert(10);
+        set.Insert(15);
+
+        int sum = 0;
+        for (int val : set)
+        {
+            sum += val;
+        }
+
+        larvae::AssertEqual(sum, 30);
+    });
 }

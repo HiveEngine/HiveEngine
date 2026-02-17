@@ -68,6 +68,12 @@ namespace queen
             unfinished_deps_ = count;
         }
 
+        constexpr void IncrementDependencyCount() noexcept
+        {
+            ++dependency_count_;
+            ++unfinished_deps_;
+        }
+
         /**
          * Reset to pending state for a new frame
          */

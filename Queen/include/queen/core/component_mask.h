@@ -4,7 +4,6 @@
 #include <wax/containers/vector.h>
 #include <hive/core/assert.h>
 #include <cstdint>
-#include <cstring>
 
 namespace queen
 {

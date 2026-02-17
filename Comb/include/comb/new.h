@@ -7,11 +7,13 @@
  * Functions:
  * - New<T>(allocator, args...): Allocate + construct object
  * - Delete(allocator, ptr): Destruct + deallocate object
+ * - NewArray<T>(allocator, count): Allocate + default-construct array
+ * - DeleteArray(allocator, ptr, count): Destruct + deallocate array
  *
  * Features:
  * - Type-safe: Compiler ensures correct alignment
- * - Exception-safe: Deallocates on construction failure (if exceptions enabled)
- * - Debug tracking: Integrates with COMB_MEM_DEBUG
+ * - Concept-constrained: Only works with comb::Allocator types
+ * - Skips destructors for trivially destructible types
  * - Zero overhead: Inline functions, no vtables
  *
  * Example:
@@ -30,9 +32,10 @@
 
 #pragma once
 
+#include <comb/allocator_concepts.h>
 #include <new>           // For placement new
 #include <utility>       // For std::forward
-#include <type_traits>   // For alignment
+#include <type_traits>   // For is_trivially_destructible_v
 
 namespace comb
 {
@@ -41,86 +44,66 @@ namespace comb
  * Allocate and construct an object using allocator
  *
  * @tparam T Object type to construct
- * @tparam Allocator Allocator type (must satisfy Allocator concept)
+ * @tparam Alloc Allocator type (must satisfy comb::Allocator concept)
  * @tparam Args Constructor argument types
  * @param allocator Allocator to use
  * @param args Constructor arguments
  * @return Pointer to constructed object, or nullptr if allocation failed
- *
- * Thread-safe: Depends on allocator
- *
- * NOTE: If allocation fails, returns nullptr (no exceptions).
- * Always check return value!
  */
-template<typename T, typename Allocator, typename... Args>
-inline T* New(Allocator& allocator, Args&&... args)
+template<typename T, Allocator Alloc, typename... Args>
+[[nodiscard]] T* New(Alloc& allocator, Args&&... args)
 {
-    // Allocate memory with proper alignment
     void* memory = allocator.Allocate(sizeof(T), alignof(T));
 
     if (memory == nullptr)
     {
-        // Allocation failed - return nullptr
         return nullptr;
     }
 
-    // Construct object in allocated memory (placement new)
-    // NOTE: If exceptions are disabled (game engine default), this won't throw
-    T* obj = new (memory) T(std::forward<Args>(args)...);
-
-    return obj;
+    return new (memory) T(std::forward<Args>(args)...);
 }
 
 /**
  * Destruct and deallocate an object using allocator
  *
  * @tparam T Object type
- * @tparam Allocator Allocator type
+ * @tparam Alloc Allocator type (must satisfy comb::Allocator concept)
  * @param allocator Allocator to use (must be same as used for New)
- * @param ptr Pointer to object (can be nullptr)
- *
- * Thread-safe: Depends on allocator
- *
- * NOTE: If ptr is nullptr, this is a no-op.
+ * @param ptr Pointer to object (nullptr is a no-op)
  */
-template<typename T, typename Allocator>
-inline void Delete(Allocator& allocator, T* ptr)
+template<typename T, Allocator Alloc>
+void Delete(Alloc& allocator, T* ptr)
 {
     if (ptr == nullptr)
     {
-        return;  // No-op for nullptr (like standard delete)
+        return;
     }
 
-    // Call destructor
-    ptr->~T();
+    if constexpr (!std::is_trivially_destructible_v<T>)
+    {
+        ptr->~T();
+    }
 
-    // Deallocate memory
     allocator.Deallocate(ptr);
 }
 
 /**
- * Allocate and construct an array of objects using allocator
+ * Allocate and default-construct an array of objects using allocator
  *
  * @tparam T Element type
- * @tparam Allocator Allocator type
+ * @tparam Alloc Allocator type (must satisfy comb::Allocator concept)
  * @param allocator Allocator to use
  * @param count Number of elements to allocate
  * @return Pointer to first element, or nullptr if allocation failed
- *
- * Thread-safe: Depends on allocator
- *
- * NOTE: All elements are default-constructed.
- * Use NewArray with initializer for custom construction.
  */
-template<typename T, typename Allocator>
-inline T* NewArray(Allocator& allocator, size_t count)
+template<typename T, Allocator Alloc>
+[[nodiscard]] T* NewArray(Alloc& allocator, size_t count)
 {
     if (count == 0)
     {
         return nullptr;
     }
 
-    // Allocate memory for array
     void* memory = allocator.Allocate(sizeof(T) * count, alignof(T));
 
     if (memory == nullptr)
@@ -128,7 +111,6 @@ inline T* NewArray(Allocator& allocator, size_t count)
         return nullptr;
     }
 
-    // Default-construct each element
     T* array = static_cast<T*>(memory);
     for (size_t i = 0; i < count; ++i)
     {
@@ -142,28 +124,27 @@ inline T* NewArray(Allocator& allocator, size_t count)
  * Destruct and deallocate an array of objects
  *
  * @tparam T Element type
- * @tparam Allocator Allocator type
+ * @tparam Alloc Allocator type (must satisfy comb::Allocator concept)
  * @param allocator Allocator to use
- * @param ptr Pointer to first element (can be nullptr)
+ * @param ptr Pointer to first element (nullptr is a no-op)
  * @param count Number of elements in array
- *
- * Thread-safe: Depends on allocator
  */
-template<typename T, typename Allocator>
-inline void DeleteArray(Allocator& allocator, T* ptr, size_t count)
+template<typename T, Allocator Alloc>
+void DeleteArray(Alloc& allocator, T* ptr, size_t count)
 {
     if (ptr == nullptr)
     {
         return;
     }
 
-    // Call destructors in reverse order
-    for (size_t i = count; i > 0; --i)
+    if constexpr (!std::is_trivially_destructible_v<T>)
     {
-        ptr[i - 1].~T();
+        for (size_t i = count; i > 0; --i)
+        {
+            ptr[i - 1].~T();
+        }
     }
 
-    // Deallocate memory
     allocator.Deallocate(ptr);
 }
 

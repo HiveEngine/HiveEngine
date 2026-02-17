@@ -40,7 +40,7 @@ namespace
     });
 
     auto test2 = larvae::RegisterTest("QueenResourceParam", "ResDefaultConstruction", []() {
-        queen::Res<Time> res{};
+        queen::Res<Time> res{nullptr};
 
         larvae::AssertFalse(res.IsValid());
         larvae::AssertNull(res.Get());
@@ -74,7 +74,7 @@ namespace
     auto test7 = larvae::RegisterTest("QueenResourceParam", "ResBoolConversion", []() {
         Time time{1.0f, 0.016f};
         queen::Res<Time> valid_res{&time};
-        queen::Res<Time> invalid_res{};
+        queen::Res<Time> invalid_res{nullptr};
 
         larvae::AssertTrue(static_cast<bool>(valid_res));
         larvae::AssertFalse(static_cast<bool>(invalid_res));
@@ -93,7 +93,7 @@ namespace
     });
 
     auto test9 = larvae::RegisterTest("QueenResourceParam", "ResMutDefaultConstruction", []() {
-        queen::ResMut<Time> res{};
+        queen::ResMut<Time> res{nullptr};
 
         larvae::AssertFalse(res.IsValid());
         larvae::AssertNull(res.Get());

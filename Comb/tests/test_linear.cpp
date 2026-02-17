@@ -1,5 +1,6 @@
 #include <larvae/larvae.h>
 #include <comb/linear_allocator.h>
+#include <comb/new.h>
 #include <cstring>
 
 namespace {

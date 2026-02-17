@@ -65,7 +65,6 @@ namespace wax
             }
 
             bool operator==(const Iterator& other) const { return index_ == other.index_; }
-            bool operator!=(const Iterator& other) const { return index_ != other.index_; }
 
         private:
             void SkipEmpty()
@@ -100,7 +99,6 @@ namespace wax
             }
 
             bool operator==(const ConstIterator& other) const { return index_ == other.index_; }
-            bool operator!=(const ConstIterator& other) const { return index_ != other.index_; }
 
         private:
             void SkipEmpty()
@@ -398,6 +396,7 @@ namespace wax
 
         static constexpr size_t NextPowerOfTwo(size_t n)
         {
+            if (n == 0) return 1;
             --n;
             n |= n >> 1;
             n |= n >> 2;

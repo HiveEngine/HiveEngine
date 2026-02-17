@@ -103,7 +103,8 @@ namespace comb
          * Get the underlying allocator (not thread-safe access!)
          *
          * Warning: Direct access to underlying allocator bypasses thread safety.
-         * Only use for operations that don't require thread safety (e.g., GetUsedMemory).
+         * Prefer using the wrapper's methods (GetUsedMemory, GetTotalMemory) which are mutex-protected.
+         * Only use Underlying() for allocator-specific methods not exposed by the wrapper.
          */
         [[nodiscard]] UnderlyingAllocator& Underlying() noexcept
         {

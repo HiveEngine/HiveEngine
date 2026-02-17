@@ -98,11 +98,6 @@ namespace queen
             return value_ == other.value_;
         }
 
-        [[nodiscard]] constexpr bool operator!=(const EventId& other) const noexcept
-        {
-            return value_ != other.value_;
-        }
-
         [[nodiscard]] constexpr bool IsValid() const noexcept
         {
             return value_ != 0;

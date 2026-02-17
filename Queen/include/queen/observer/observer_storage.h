@@ -172,26 +172,7 @@ namespace queen
          * @param component Pointer to component data (may be nullptr for OnRemove)
          */
         void Trigger(TriggerType trigger, TypeId component_id,
-                    World& world, Entity entity, const void* component)
-        {
-            ObserverKey key{trigger, component_id};
-
-            auto* indices = lookup_.Find(key);
-            if (indices == nullptr)
-            {
-                return; // No observers for this key
-            }
-
-            // Invoke all matching observers
-            for (size_t i = 0; i < indices->Size(); ++i)
-            {
-                uint32_t idx = (*indices)[i];
-                if (idx < observers_.Size())
-                {
-                    observers_[idx].Invoke(world, entity, component);
-                }
-            }
-        }
+                    World& world, Entity entity, const void* component); // Defined in observer_storage_impl.h
 
         /**
          * Trigger all observers matching a trigger event type

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <queen/scheduler/thread_pool.h>
+#include <hive/core/assert.h>
 #include <atomic>
 #include <cstddef>
 
@@ -109,11 +110,12 @@ namespace queen
      *
      * Example:
      * @code
-     *   std::vector<int> data(1000);
+     *   wax::Vector<int, Alloc> data{alloc};
+     *   data.Resize(1000);
      *
-     *   parallel_for(pool, 0, data.size(),
+     *   parallel_for(pool, 0, data.Size(),
      *       [](size_t i, void* ud) {
-     *           auto* vec = static_cast<std::vector<int>*>(ud);
+     *           auto* vec = static_cast<wax::Vector<int, Alloc>*>(ud);
      *           (*vec)[i] = static_cast<int>(i * 2);
      *       }, &data);
      * @endcode
@@ -164,12 +166,12 @@ namespace queen
                 WaitGroup* wg;
             };
 
-            // We need to allocate ChunkData somewhere - use a static approach for simplicity
-            // In production, this would use an allocator
-            thread_local ChunkData chunks[1024];
+                static constexpr size_t kMaxChunks = 1024;
+            thread_local ChunkData chunks[kMaxChunks];
             thread_local size_t chunk_idx = 0;
 
-            auto& cd = chunks[chunk_idx % 1024];
+            hive::Assert(num_chunks <= kMaxChunks, "parallel_for: too many chunks, increase kMaxChunks or chunk_size");
+            auto& cd = chunks[chunk_idx % kMaxChunks];
             chunk_idx++;
 
             cd.func = func;
@@ -252,10 +254,11 @@ namespace queen
                 WaitGroup* wg;
             };
 
-            thread_local WrappedTask wrapped_tasks[1024];
+            static constexpr size_t kMaxWrapped = 1024;
+            thread_local WrappedTask wrapped_tasks[kMaxWrapped];
             thread_local size_t wrapped_idx = 0;
 
-            auto& wt = wrapped_tasks[wrapped_idx % 1024];
+            auto& wt = wrapped_tasks[wrapped_idx % kMaxWrapped];
             wrapped_idx++;
 
             wt.func = func;

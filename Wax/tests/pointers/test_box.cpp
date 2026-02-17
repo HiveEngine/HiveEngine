@@ -183,7 +183,7 @@ namespace {
         auto box = wax::MakeBox<int>(alloc, 42);
         int* new_ptr = comb::New<int>(alloc, 99);
 
-        box.Reset(new_ptr);
+        box.Reset(alloc, new_ptr);
 
         larvae::AssertTrue(box.IsValid());
         larvae::AssertEqual(*box, 99);
@@ -248,5 +248,32 @@ namespace {
 
         larvae::AssertTrue(box2 == nullptr);
         larvae::AssertFalse(box2 != nullptr);
+    });
+
+    auto test18 = larvae::RegisterTest("WaxBox", "GetAllocator", []() {
+        comb::LinearAllocator alloc{1024};
+
+        auto box = wax::MakeBox<int>(alloc, 42);
+
+        larvae::AssertNotNull(box.GetAllocator());
+        larvae::AssertTrue(box.GetAllocator() == &alloc);
+
+        wax::Box<int, comb::LinearAllocator> null_box;
+        larvae::AssertNull(null_box.GetAllocator());
+    });
+
+    auto test19 = larvae::RegisterTest("WaxBox", "MoveAssignmentDestroysOld", []() {
+        comb::LinearAllocator alloc{1024};
+        TestStruct::destruct_count = 0;
+
+        auto box1 = wax::MakeBox<TestStruct>(alloc, 1, 1.0f);
+        auto box2 = wax::MakeBox<TestStruct>(alloc, 2, 2.0f);
+
+        box2 = std::move(box1);
+
+        // Old box2 value should have been destroyed
+        larvae::AssertEqual(TestStruct::destruct_count, 1);
+        larvae::AssertEqual(box2->value, 1);
+        larvae::AssertTrue(box1.IsNull());
     });
 }

@@ -8,7 +8,6 @@
 #include <wax/containers/vector.h>
 #include <wax/containers/hash_map.h>
 #include <hive/core/assert.h>
-#include <algorithm>
 #include <type_traits>
 
 namespace queen
@@ -20,11 +19,11 @@ namespace queen
         template<comb::Allocator Allocator>
         ArchetypeId ComputeArchetypeId(const wax::Vector<TypeId, Allocator>& sorted_types)
         {
-            ArchetypeId hash = 14695981039346656037ULL;
+            ArchetypeId hash = kFnv1aOffset;
             for (size_t i = 0; i < sorted_types.Size(); ++i)
             {
                 hash ^= sorted_types[i];
-                hash *= 1099511628211ULL;
+                hash *= kFnv1aPrime;
             }
             return hash;
         }

@@ -502,4 +502,167 @@ namespace {
 
         larvae::AssertEqual(vec.Size(), 3u);
     });
+
+    // =============================================================================
+    // Copy Semantics
+    // =============================================================================
+
+    auto test32 = larvae::RegisterTest("WaxVector", "CopyConstructor", []() {
+        comb::LinearAllocator alloc{1024};
+        wax::LinearVector<int> vec1{alloc};
+
+        vec1.PushBack(10);
+        vec1.PushBack(20);
+        vec1.PushBack(30);
+
+        wax::LinearVector<int> vec2{vec1};
+
+        larvae::AssertEqual(vec2.Size(), 3u);
+        larvae::AssertEqual(vec2[0], 10);
+        larvae::AssertEqual(vec2[1], 20);
+        larvae::AssertEqual(vec2[2], 30);
+
+        // Modify original, copy unaffected
+        vec1[0] = 999;
+        larvae::AssertEqual(vec2[0], 10);
+    });
+
+    auto test33 = larvae::RegisterTest("WaxVector", "CopyAssignment", []() {
+        comb::LinearAllocator alloc{1024};
+        wax::LinearVector<int> vec1{alloc};
+        wax::LinearVector<int> vec2{alloc};
+
+        vec1.PushBack(1);
+        vec1.PushBack(2);
+        vec1.PushBack(3);
+
+        vec2.PushBack(100);
+
+        vec2 = vec1;
+
+        larvae::AssertEqual(vec2.Size(), 3u);
+        larvae::AssertEqual(vec2[0], 1);
+        larvae::AssertEqual(vec2[1], 2);
+        larvae::AssertEqual(vec2[2], 3);
+    });
+
+    auto test34 = larvae::RegisterTest("WaxVector", "CopyEmptyVector", []() {
+        comb::LinearAllocator alloc{1024};
+        wax::LinearVector<int> vec1{alloc};
+        wax::LinearVector<int> vec2{vec1};
+
+        larvae::AssertEqual(vec2.Size(), 0u);
+        larvae::AssertTrue(vec2.IsEmpty());
+    });
+
+    // =============================================================================
+    // Initializer List
+    // =============================================================================
+
+    auto test35 = larvae::RegisterTest("WaxVector", "InitializerListWithAllocator", []() {
+        comb::LinearAllocator alloc{1024};
+        wax::LinearVector<int> vec{alloc, {10, 20, 30, 40, 50}};
+
+        larvae::AssertEqual(vec.Size(), 5u);
+        larvae::AssertEqual(vec[0], 10);
+        larvae::AssertEqual(vec[1], 20);
+        larvae::AssertEqual(vec[2], 30);
+        larvae::AssertEqual(vec[3], 40);
+        larvae::AssertEqual(vec[4], 50);
+    });
+
+    // =============================================================================
+    // Non-Trivial Types
+    // =============================================================================
+
+    struct Tracked
+    {
+        static int alive_count;
+        int value;
+
+        Tracked(int v = 0) : value{v} { ++alive_count; }
+        ~Tracked() { --alive_count; }
+        Tracked(const Tracked& o) : value{o.value} { ++alive_count; }
+        Tracked(Tracked&& o) noexcept : value{o.value} { o.value = -1; ++alive_count; }
+        Tracked& operator=(const Tracked& o) { value = o.value; return *this; }
+        Tracked& operator=(Tracked&& o) noexcept { value = o.value; o.value = -1; return *this; }
+    };
+
+    int Tracked::alive_count = 0;
+
+    auto test36 = larvae::RegisterTest("WaxVector", "NonTrivialDestructors", []() {
+        Tracked::alive_count = 0;
+
+        {
+            comb::LinearAllocator alloc{4096};
+            wax::Vector<Tracked, comb::LinearAllocator> vec{alloc};
+
+            vec.EmplaceBack(1);
+            vec.EmplaceBack(2);
+            vec.EmplaceBack(3);
+
+            larvae::AssertTrue(Tracked::alive_count >= 3);
+
+            vec.Clear();
+            larvae::AssertEqual(vec.Size(), 0u);
+        }
+
+        larvae::AssertEqual(Tracked::alive_count, 0);
+    });
+
+    auto test37 = larvae::RegisterTest("WaxVector", "NonTrivialResizeShrink", []() {
+        Tracked::alive_count = 0;
+
+        comb::LinearAllocator alloc{4096};
+        wax::Vector<Tracked, comb::LinearAllocator> vec{alloc};
+
+        vec.EmplaceBack(1);
+        vec.EmplaceBack(2);
+        vec.EmplaceBack(3);
+        vec.EmplaceBack(4);
+        vec.EmplaceBack(5);
+
+        int before = Tracked::alive_count;
+        vec.Resize(2);
+        // 3 elements destroyed
+        larvae::AssertEqual(Tracked::alive_count, before - 3);
+        larvae::AssertEqual(vec.Size(), 2u);
+        larvae::AssertEqual(vec[0].value, 1);
+        larvae::AssertEqual(vec[1].value, 2);
+    });
+
+    auto test38 = larvae::RegisterTest("WaxVector", "NonTrivialCopy", []() {
+        Tracked::alive_count = 0;
+
+        comb::LinearAllocator alloc{4096};
+        wax::Vector<Tracked, comb::LinearAllocator> vec1{alloc};
+
+        vec1.EmplaceBack(10);
+        vec1.EmplaceBack(20);
+
+        wax::Vector<Tracked, comb::LinearAllocator> vec2{vec1};
+
+        larvae::AssertEqual(vec2.Size(), 2u);
+        larvae::AssertEqual(vec2[0].value, 10);
+        larvae::AssertEqual(vec2[1].value, 20);
+
+        // Both vectors have live objects
+        larvae::AssertTrue(Tracked::alive_count >= 4);
+    });
+
+    auto test39 = larvae::RegisterTest("WaxVector", "NonTrivialPopBack", []() {
+        Tracked::alive_count = 0;
+
+        comb::LinearAllocator alloc{4096};
+        wax::Vector<Tracked, comb::LinearAllocator> vec{alloc};
+
+        vec.EmplaceBack(1);
+        vec.EmplaceBack(2);
+        vec.EmplaceBack(3);
+
+        int before = Tracked::alive_count;
+        vec.PopBack();
+        larvae::AssertEqual(Tracked::alive_count, before - 1);
+        larvae::AssertEqual(vec.Size(), 2u);
+    });
 }

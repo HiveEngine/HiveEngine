@@ -1,7 +1,6 @@
 #pragma once
 
 #include <cstdint>
-#include <functional>
 
 namespace queen
 {
@@ -48,7 +47,6 @@ namespace queen
         }
 
         constexpr bool operator==(const SystemId& other) const noexcept = default;
-        constexpr bool operator!=(const SystemId& other) const noexcept = default;
 
         constexpr bool operator<(const SystemId& other) const noexcept
         {
@@ -58,17 +56,5 @@ namespace queen
     private:
         static constexpr uint32_t kInvalidIndex = ~uint32_t{0};
         uint32_t index_;
-    };
-}
-
-namespace std
-{
-    template<>
-    struct hash<queen::SystemId>
-    {
-        size_t operator()(const queen::SystemId& id) const noexcept
-        {
-            return std::hash<uint32_t>{}(id.Index());
-        }
     };
 }

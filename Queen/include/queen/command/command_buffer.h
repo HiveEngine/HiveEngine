@@ -160,8 +160,37 @@ namespace queen
 
         CommandBuffer(const CommandBuffer&) = delete;
         CommandBuffer& operator=(const CommandBuffer&) = delete;
-        CommandBuffer(CommandBuffer&&) = default;
-        CommandBuffer& operator=(CommandBuffer&&) = default;
+
+        CommandBuffer(CommandBuffer&& other) noexcept
+            : allocator_{other.allocator_}
+            , commands_{static_cast<wax::Vector<detail::Command, Allocator>&&>(other.commands_)}
+            , spawned_entities_{static_cast<wax::Vector<Entity, Allocator>&&>(other.spawned_entities_)}
+            , head_block_{other.head_block_}
+            , current_block_{other.current_block_}
+            , spawn_count_{other.spawn_count_}
+        {
+            other.head_block_ = nullptr;
+            other.current_block_ = nullptr;
+            other.spawn_count_ = 0;
+        }
+
+        CommandBuffer& operator=(CommandBuffer&& other) noexcept
+        {
+            if (this != &other)
+            {
+                ClearBlocks();
+                allocator_ = other.allocator_;
+                commands_ = static_cast<wax::Vector<detail::Command, Allocator>&&>(other.commands_);
+                spawned_entities_ = static_cast<wax::Vector<Entity, Allocator>&&>(other.spawned_entities_);
+                head_block_ = other.head_block_;
+                current_block_ = other.current_block_;
+                spawn_count_ = other.spawn_count_;
+                other.head_block_ = nullptr;
+                other.current_block_ = nullptr;
+                other.spawn_count_ = 0;
+            }
+            return *this;
+        }
 
         /**
          * Queue a spawn command for a new entity
@@ -305,10 +334,6 @@ namespace queen
             spawned_entities_.Clear();
             spawn_count_ = 0;
 
-            // Use ClearBlocks() instead of ResetBlocks() to properly release memory.
-            // This follows the Frame Arena pattern: allocate fresh each frame.
-            // With BuddyAllocator, memory is returned to the pool.
-            // With LinearAllocator, Deallocate() is a no-op but pointers are nullified.
             ClearBlocks();
         }
 
@@ -414,18 +439,6 @@ namespace queen
 
             head_block_ = nullptr;
             current_block_ = nullptr;
-        }
-
-        void ResetBlocks()
-        {
-            detail::CommandDataBlock* block = head_block_;
-            while (block != nullptr)
-            {
-                block->used = 0;
-                block = block->next;
-            }
-
-            current_block_ = head_block_;
         }
 
         bool IsPendingEntity(Entity entity) const noexcept

@@ -203,28 +203,9 @@ namespace queen
 
             for (size_t i = 0; i < count_; ++i)
             {
-                if (entries_[i].reflection.name != nullptr)
+                if (detail::StringsEqual(entries_[i].reflection.name, name))
                 {
-                    // Simple string compare
-                    const char* a = entries_[i].reflection.name;
-                    const char* b = name;
-                    bool equal = true;
-
-                    while (*a && *b)
-                    {
-                        if (*a != *b)
-                        {
-                            equal = false;
-                            break;
-                        }
-                        ++a;
-                        ++b;
-                    }
-
-                    if (equal && *a == *b)
-                    {
-                        return &entries_[i];
-                    }
+                    return &entries_[i];
                 }
             }
 

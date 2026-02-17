@@ -66,13 +66,35 @@ namespace queen
      *   void* field_ptr = static_cast<std::byte*>(component_ptr) + info.offset;
      * @endcode
      */
+    namespace detail
+    {
+        /**
+         * Constexpr-safe string comparison (no <cstring> dependency)
+         */
+        constexpr bool StringsEqual(const char* a, const char* b) noexcept
+        {
+            if (a == b) return true;
+            if (a == nullptr || b == nullptr) return false;
+
+            while (*a && *b)
+            {
+                if (*a != *b) return false;
+                ++a;
+                ++b;
+            }
+            return *a == *b;
+        }
+    }
+
     struct FieldInfo
     {
         const char* name = nullptr;
         size_t offset = 0;
         size_t size = 0;
         FieldType type = FieldType::Invalid;
-        TypeId nested_type_id = 0;  // For FieldType::Struct, the TypeId of the nested type
+        TypeId nested_type_id = 0;          // For FieldType::Struct, the TypeId of the nested type
+        const FieldInfo* nested_fields = nullptr;   // For Struct: field layout of the nested type
+        size_t nested_field_count = 0;              // For Struct: number of nested fields
 
         [[nodiscard]] constexpr bool IsValid() const noexcept
         {

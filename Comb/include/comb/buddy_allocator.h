@@ -348,6 +348,34 @@ namespace comb
             return "BuddyAllocator";
         }
 
+        /**
+         * Reset allocator to initial state
+         *
+         * All existing allocations become invalid.
+         * Rebuilds the free list as a single top-level block.
+         */
+        void Reset()
+        {
+            for (size_t i = 0; i < MaxLevels; ++i)
+            {
+                free_lists_[i] = nullptr;
+            }
+
+            size_t topLevel = GetLevel(capacity_);
+            auto* block = static_cast<FreeBlock*>(memory_block_);
+            block->next = nullptr;
+            free_lists_[topLevel] = block;
+
+            used_memory_ = 0;
+
+#if COMB_MEM_DEBUG
+            if (registry_)
+            {
+                registry_->Clear();
+            }
+#endif
+        }
+
     private:
         // Convert size to level (0 = 64B, 1 = 128B, 2 = 256B, etc.)
         constexpr size_t GetLevel(size_t size) const

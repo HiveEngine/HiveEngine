@@ -100,10 +100,7 @@ namespace queen
         template<typename T>
         ObserverBuilder& With()
         {
-            // Store filter component type for matching
-            // This would require filter support in Observer
-            // For now, this is a placeholder for future expansion
-            (void)TypeIdOf<T>();
+            observer_->AddFilter(TypeIdOf<T>());
             return *this;
         }
 

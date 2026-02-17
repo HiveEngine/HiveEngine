@@ -153,34 +153,8 @@ namespace
         larvae::AssertEqual(map[42], 200);
     });
 
-    auto test11 = larvae::RegisterTest("WaxHashMap", "StringKeys", []() {
+    auto test11 = larvae::RegisterTest("WaxHashMap", "FloatValues", []() {
         comb::BuddyAllocator alloc{16384};
-
-        struct StringHash
-        {
-            size_t operator()(const char* str) const
-            {
-                size_t hash = 5381;
-                while (*str)
-                {
-                    hash = ((hash << 5) + hash) + static_cast<unsigned char>(*str++);
-                }
-                return hash;
-            }
-        };
-
-        struct StringEqual
-        {
-            bool operator()(const char* a, const char* b) const
-            {
-                while (*a && *b && *a == *b)
-                {
-                    ++a;
-                    ++b;
-                }
-                return *a == *b;
-            }
-        };
 
         wax::HashMap<int, float, comb::BuddyAllocator> map{alloc, 16};
 
@@ -264,5 +238,90 @@ namespace
         auto* found = map.Find(42);
         larvae::AssertNotNull(found);
         larvae::AssertEqual(found->value, 100);
+    });
+
+    auto test16 = larvae::RegisterTest("WaxHashMap", "MoveAssignment", []() {
+        comb::BuddyAllocator alloc{16384};
+        wax::HashMap<int, int, comb::BuddyAllocator> map1{alloc, 16};
+        wax::HashMap<int, int, comb::BuddyAllocator> map2{alloc, 16};
+
+        map1.Insert(1, 10);
+        map1.Insert(2, 20);
+
+        map2.Insert(100, 1000);
+
+        map2 = static_cast<wax::HashMap<int, int, comb::BuddyAllocator>&&>(map1);
+
+        larvae::AssertEqual(map2.Count(), size_t{2});
+        larvae::AssertNotNull(map2.Find(1));
+        larvae::AssertEqual(*map2.Find(1), 10);
+        larvae::AssertNotNull(map2.Find(2));
+        larvae::AssertEqual(*map2.Find(2), 20);
+        larvae::AssertFalse(map2.Contains(100));
+    });
+
+    auto test17 = larvae::RegisterTest("WaxHashMap", "EmptyMapIteration", []() {
+        comb::LinearAllocator alloc{4096};
+        wax::HashMap<int, int, comb::LinearAllocator> map{alloc, 16};
+
+        int count = 0;
+        for (auto it = map.begin(); it != map.end(); ++it)
+        {
+            ++count;
+        }
+
+        larvae::AssertEqual(count, 0);
+    });
+
+    auto test18 = larvae::RegisterTest("WaxHashMap", "OperatorBracketDefaultConstruct", []() {
+        comb::BuddyAllocator alloc{8192};
+        wax::HashMap<int, int, comb::BuddyAllocator> map{alloc, 16};
+
+        // Access missing key creates default value
+        int& val = map[99];
+        larvae::AssertEqual(val, 0);
+        larvae::AssertEqual(map.Count(), size_t{1});
+        larvae::AssertTrue(map.Contains(99));
+
+        // Modify through reference
+        val = 42;
+        larvae::AssertEqual(map[99], 42);
+    });
+
+    auto test19 = larvae::RegisterTest("WaxHashMap", "ConstFind", []() {
+        comb::LinearAllocator alloc{4096};
+        wax::HashMap<int, int, comb::LinearAllocator> map{alloc, 16};
+
+        map.Insert(1, 10);
+        map.Insert(2, 20);
+
+        const auto& const_map = map;
+
+        const int* found = const_map.Find(1);
+        larvae::AssertNotNull(found);
+        larvae::AssertEqual(*found, 10);
+
+        const int* not_found = const_map.Find(999);
+        larvae::AssertNull(not_found);
+    });
+
+    auto test20 = larvae::RegisterTest("WaxHashMap", "RangeForLoop", []() {
+        comb::LinearAllocator alloc{4096};
+        wax::HashMap<int, int, comb::LinearAllocator> map{alloc, 16};
+
+        map.Insert(1, 10);
+        map.Insert(2, 20);
+        map.Insert(3, 30);
+
+        int sum_keys = 0;
+        int sum_values = 0;
+        for (const auto& [key, value] : map)
+        {
+            sum_keys += key;
+            sum_values += value;
+        }
+
+        larvae::AssertEqual(sum_keys, 6);
+        larvae::AssertEqual(sum_values, 60);
     });
 }

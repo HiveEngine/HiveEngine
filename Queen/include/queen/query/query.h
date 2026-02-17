@@ -88,8 +88,7 @@ namespace queen
         template<typename... Terms>
         constexpr bool HasChangeFilterV = HasChangeFilter<Terms...>::value;
 
-        // Get ticks pointer for a change filter term
-        template<typename Allocator, typename Archetype, typename ChangeFilterTerm>
+        template<typename Archetype, typename ChangeFilterTerm>
         const ComponentTicks* GetTicksPtr(Archetype* arch)
         {
             using ComponentT = typename ChangeFilterTerm::ComponentType;
@@ -97,11 +96,6 @@ namespace queen
             if (column == nullptr) return nullptr;
             return column->TicksData();
         }
-
-        // Forward declaration
-        template<size_t I, typename TicksTuple, typename... ChangeFilterTerms>
-        bool CheckAllFiltersImpl(const TicksTuple& ticks_ptrs, size_t row, Tick last_run,
-                                 std::tuple<ChangeFilterTerms...>);
 
         template<size_t I, typename TicksTuple, typename... ChangeFilterTerms>
         bool CheckAllFiltersImpl(const TicksTuple& ticks_ptrs, size_t row, Tick last_run,
@@ -144,7 +138,7 @@ namespace queen
             {
                 // Get ticks for each change filter component
                 auto ticks_ptrs = std::make_tuple(
-                    GetTicksPtr<Allocator, Archetype, ChangeFilterTerms>(arch)...
+                    GetTicksPtr<Archetype, ChangeFilterTerms>(arch)...
                 );
 
                 // Check all filters

@@ -400,4 +400,57 @@ namespace
 
         larvae::AssertEqual(data.output.load(), 84);
     });
+
+    // ============================================================================
+    // Park Idle Strategy Tests
+    // ============================================================================
+
+    auto test_park_basic = larvae::RegisterTest("QueenThreadPool", "ParkStrategyBasic", []() {
+        constexpr size_t kAllocSize = 4 * 1024 * 1024;
+        comb::LinearAllocator alloc{kAllocSize};
+
+        queen::ThreadPool<comb::LinearAllocator> pool{alloc, 2, queen::IdleStrategy::Park, 64};
+
+        larvae::AssertEqual(static_cast<int>(pool.GetIdleStrategy()), static_cast<int>(queen::IdleStrategy::Park));
+
+        pool.Start();
+
+        std::atomic<int> counter{0};
+
+        for (int i = 0; i < 10; ++i)
+        {
+            pool.Submit([](void* ptr) {
+                auto* c = static_cast<std::atomic<int>*>(ptr);
+                c->fetch_add(1, std::memory_order_relaxed);
+            }, &counter);
+        }
+
+        pool.WaitAll();
+        pool.Stop();
+
+        larvae::AssertEqual(counter.load(), 10);
+    });
+
+    auto test_park_stop_wakes = larvae::RegisterTest("QueenThreadPool", "ParkStopWakesWorkers", []() {
+        constexpr size_t kAllocSize = 4 * 1024 * 1024;
+        comb::LinearAllocator alloc{kAllocSize};
+
+        queen::ThreadPool<comb::LinearAllocator> pool{alloc, 2, queen::IdleStrategy::Park, 64};
+
+        pool.Start();
+
+        // No tasks submitted — workers should be parked
+        // Stop should wake them and they should exit cleanly
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        pool.Stop();
+
+        // Verify workers stopped
+        for (size_t i = 0; i < pool.WorkerCount(); ++i)
+        {
+            larvae::AssertEqual(
+                static_cast<int>(pool.GetWorkerState(i)),
+                static_cast<int>(queen::WorkerState::Stopped)
+            );
+        }
+    });
 }
