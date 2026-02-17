@@ -97,13 +97,15 @@ set_target_properties(larvae_benchmark
 )
 
 # ============================================================================
-# GUI Test Runner (ImGui)
+# GUI Test Runner (ImGui) — requires OpenGL, skip on headless builds
 # ============================================================================
 
-# Find OpenGL
+option(HIVE_BUILD_GUI_TESTS "Build the ImGui GUI test runner" ON)
+
+if(HIVE_BUILD_GUI_TESTS)
+
 find_package(OpenGL REQUIRED)
 
-# FetchContent for GLFW and ImGui
 include(FetchContent)
 
 # GLFW - only fetch if not already provided by Terra
@@ -190,3 +192,5 @@ if(WIN32)
             WIN32_EXECUTABLE TRUE
     )
 endif()
+
+endif() # HIVE_BUILD_GUI_TESTS
