@@ -18,11 +18,9 @@ namespace {
 
     const char* MmapTestDir()
     {
-#ifdef _WIN32
-        return "test_mmap_dir";
-#else
-        return "/tmp/test_mmap_dir";
-#endif
+        static std::string path =
+            (std::filesystem::temp_directory_path() / "hive_test_mmap_dir").string();
+        return path.c_str();
     }
 
     void SetupMmapDir()

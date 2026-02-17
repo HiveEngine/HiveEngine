@@ -7,6 +7,7 @@
 #include <comb/default_allocator.h>
 #include <cstring>
 #include <cstdio>
+#include <filesystem>
 
 namespace {
 
@@ -16,14 +17,11 @@ namespace {
         return alloc.Get();
     }
 
-    // Temp file path for tests — overwritten each time
     const char* TempPakPath()
     {
-#ifdef _WIN32
-        return "test_output.npak";
-#else
-        return "/tmp/test_output.npak";
-#endif
+        static std::string path =
+            (std::filesystem::temp_directory_path() / "hive_test_output.npak").string();
+        return path.c_str();
     }
 
     void CleanupTempPak()

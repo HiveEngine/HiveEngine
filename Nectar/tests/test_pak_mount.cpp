@@ -9,6 +9,7 @@
 #include <comb/default_allocator.h>
 #include <cstring>
 #include <cstdio>
+#include <filesystem>
 
 namespace {
 
@@ -20,11 +21,9 @@ namespace {
 
     const char* TempMountPakPath()
     {
-#ifdef _WIN32
-        return "test_mount.npak";
-#else
-        return "/tmp/test_mount.npak";
-#endif
+        static std::string path =
+            (std::filesystem::temp_directory_path() / "hive_test_mount.npak").string();
+        return path.c_str();
     }
 
     void CleanupMountPak()
