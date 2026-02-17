@@ -63,7 +63,7 @@ namespace queen
          * @param member_ptr Pointer-to-member for the field
          */
         template<typename T, typename C>
-        constexpr void Field(const char* name, T C::* member_ptr) noexcept
+        void Field(const char* name, T C::* member_ptr) noexcept
         {
             hive::Assert(count_ < MaxFields, "Too many fields, increase MaxFields");
 
@@ -82,10 +82,22 @@ namespace queen
                 info.type = detail::GetFieldType<T>();
             }
 
-            // For struct types, store the nested type ID
+            // For struct types, store the nested type ID and reflection data if available
             if (info.type == FieldType::Struct)
             {
                 info.nested_type_id = TypeIdOf<T>();
+
+                // If the nested type is Reflectable, capture its field layout
+                if constexpr (requires(ComponentReflector<MaxFields>& r) { T::Reflect(r); })
+                {
+                    static ComponentReflector<MaxFields> nested = []() {
+                        ComponentReflector<MaxFields> r;
+                        T::Reflect(r);
+                        return r;
+                    }();
+                    info.nested_fields = nested.Data();
+                    info.nested_field_count = nested.Count();
+                }
             }
         }
 
@@ -114,7 +126,7 @@ namespace queen
         {
             for (size_t i = 0; i < count_; ++i)
             {
-                if (StringsEqual(fields_[i].name, name))
+                if (detail::StringsEqual(fields_[i].name, name))
                 {
                     return &fields_[i];
                 }
@@ -145,25 +157,15 @@ namespace queen
 
     private:
         template<typename T, typename C>
-        static constexpr size_t GetMemberOffset(T C::* member_ptr) noexcept
+        static size_t GetMemberOffset(T C::* member_ptr) noexcept
         {
-            // Use offsetof-like calculation via nullptr dereference at compile time
-            // This is safe because we're only computing the offset, not dereferencing
-            return reinterpret_cast<size_t>(&(static_cast<C*>(nullptr)->*member_ptr));
-        }
-
-        static constexpr bool StringsEqual(const char* a, const char* b) noexcept
-        {
-            if (a == b) return true;
-            if (a == nullptr || b == nullptr) return false;
-
-            while (*a && *b)
-            {
-                if (*a != *b) return false;
-                ++a;
-                ++b;
-            }
-            return *a == *b;
+            // Use stack-allocated storage to avoid nullptr dereference UB
+            alignas(C) unsigned char storage[sizeof(C)]{};
+            return static_cast<size_t>(
+                reinterpret_cast<const unsigned char*>(
+                    &(reinterpret_cast<C*>(storage)->*member_ptr)
+                ) - storage
+            );
         }
 
         FieldInfo fields_[MaxFields]{};
@@ -192,24 +194,10 @@ namespace queen
         {
             for (size_t i = 0; i < field_count; ++i)
             {
-                // Manual string compare
-                const char* a = fields[i].name;
-                const char* b = field_name;
-                if (a == b) return &fields[i];
-                if (a == nullptr || b == nullptr) continue;
-
-                bool equal = true;
-                while (*a && *b)
+                if (detail::StringsEqual(fields[i].name, field_name))
                 {
-                    if (*a != *b)
-                    {
-                        equal = false;
-                        break;
-                    }
-                    ++a;
-                    ++b;
+                    return &fields[i];
                 }
-                if (equal && *a == *b) return &fields[i];
             }
             return nullptr;
         }

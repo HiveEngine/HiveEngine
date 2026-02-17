@@ -100,9 +100,19 @@ namespace queen
                 writer.template Write<uint64_t>(reinterpret_cast<const Entity*>(field_ptr)->ToU64());
                 break;
             case FieldType::Struct:
-                // Nested struct - write raw bytes for now
-                // Full support requires ComponentRegistry lookup
-                writer.WriteBytes(field_ptr, field.size);
+                if (field.nested_fields != nullptr)
+                {
+                    // Recursively serialize nested struct fields
+                    for (size_t i = 0; i < field.nested_field_count; ++i)
+                    {
+                        SerializeField(field_ptr, field.nested_fields[i], writer);
+                    }
+                }
+                else
+                {
+                    // Fallback: raw bytes for non-reflectable nested types
+                    writer.WriteBytes(field_ptr, field.size);
+                }
                 break;
             case FieldType::Invalid:
                 break;
@@ -156,8 +166,19 @@ namespace queen
                 *reinterpret_cast<Entity*>(field_ptr) = Entity::FromU64(reader.Read<uint64_t>());
                 break;
             case FieldType::Struct:
-                // Nested struct - read raw bytes for now
-                reader.ReadBytes(field_ptr, field.size);
+                if (field.nested_fields != nullptr)
+                {
+                    // Recursively deserialize nested struct fields
+                    for (size_t i = 0; i < field.nested_field_count; ++i)
+                    {
+                        DeserializeField(field_ptr, field.nested_fields[i], reader);
+                    }
+                }
+                else
+                {
+                    // Fallback: raw bytes for non-reflectable nested types
+                    reader.ReadBytes(field_ptr, field.size);
+                }
                 break;
             case FieldType::Invalid:
                 break;
