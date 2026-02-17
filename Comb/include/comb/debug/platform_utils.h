@@ -22,6 +22,7 @@
 
 #include <hive/core/assert.h>
 #include <cstdint>
+#include <cstdio>
 
 // Platform includes (use Hive's platform detection macros)
 #if HIVE_PLATFORM_WINDOWS

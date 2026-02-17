@@ -1,6 +1,7 @@
 #pragma once
 
 #include <queen/scheduler/thread_pool.h>
+#include <hive/core/assert.h>
 #include <atomic>
 #include <cstddef>
 

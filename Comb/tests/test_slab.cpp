@@ -1,6 +1,7 @@
 #include <larvae/larvae.h>
 #include <comb/slab_allocator.h>
 #include <comb/allocator_concepts.h>
+#include <comb/new.h>
 
 namespace
 {

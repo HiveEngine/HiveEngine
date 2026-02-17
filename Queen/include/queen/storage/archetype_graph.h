@@ -4,6 +4,7 @@
 #include <queen/core/component_info.h>
 #include <queen/storage/archetype.h>
 #include <comb/allocator_concepts.h>
+#include <comb/new.h>
 #include <wax/containers/vector.h>
 #include <wax/containers/hash_map.h>
 

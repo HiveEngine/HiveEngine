@@ -6,6 +6,7 @@
 #include <queen/system/system_storage.h>
 #include <queen/core/tick.h>
 #include <comb/allocator_concepts.h>
+#include <hive/core/assert.h>
 #include <atomic>
 
 namespace queen
