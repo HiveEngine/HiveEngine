@@ -7,11 +7,15 @@
  * It must be included AFTER the World class is fully defined.
  */
 
+#include <hive/profiling/profiler.h>
+
 namespace queen
 {
     template<comb::Allocator Allocator>
     void Scheduler<Allocator>::RunAll(World& world, SystemStorage<Allocator>& storage)
     {
+        HIVE_PROFILE_SCOPE_N("Scheduler::RunAll");
+
         // Rebuild graph if needed
         if (graph_.IsDirty())
         {
@@ -39,6 +43,8 @@ namespace queen
                 SystemDescriptor<Allocator>* system = storage.GetSystemByIndex(node_index);
                 if (system != nullptr)
                 {
+                    HIVE_PROFILE_SCOPE_N("ExecuteSystem");
+                    HIVE_PROFILE_ZONE_NAME(system->Name(), std::strlen(system->Name()));
                     system->Execute(world, current_tick);
                 }
 

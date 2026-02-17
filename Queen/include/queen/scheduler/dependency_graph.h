@@ -5,6 +5,7 @@
 #include <queen/system/access_descriptor.h>
 #include <wax/containers/vector.h>
 #include <comb/allocator_concepts.h>
+#include <hive/profiling/profiler.h>
 
 namespace queen
 {
@@ -64,6 +65,7 @@ namespace queen
          */
         void Build(const SystemStorage<Allocator>& storage)
         {
+            HIVE_PROFILE_SCOPE_N("DependencyGraph::Build");
             Clear();
 
             const size_t system_count = storage.SystemCount();

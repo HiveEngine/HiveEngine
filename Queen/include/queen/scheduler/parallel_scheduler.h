@@ -7,7 +7,9 @@
 #include <queen/core/tick.h>
 #include <comb/allocator_concepts.h>
 #include <hive/core/assert.h>
+#include <hive/profiling/profiler.h>
 #include <atomic>
+#include <cstring>
 
 namespace queen
 {
@@ -296,6 +298,8 @@ namespace queen
             SystemDescriptor<Allocator>* system = storage.GetSystemByIndex(node_index);
             if (system != nullptr)
             {
+                HIVE_PROFILE_SCOPE_N("ExecuteSystem");
+                HIVE_PROFILE_ZONE_NAME(system->Name(), std::strlen(system->Name()));
                 system->Execute(world, tick);
             }
 

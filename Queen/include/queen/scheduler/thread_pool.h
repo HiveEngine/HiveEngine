@@ -4,10 +4,12 @@
 #include <queen/scheduler/worker_context.h>
 #include <comb/allocator_concepts.h>
 #include <comb/thread_safe_allocator.h>
+#include <hive/profiling/profiler.h>
 #include <atomic>
 #include <thread>
 #include <mutex>
 #include <condition_variable>
+#include <cstdio>
 
 namespace queen
 {
@@ -274,6 +276,8 @@ namespace queen
          */
         void Submit(Task::Func func, void* user_data)
         {
+            HIVE_PROFILE_SCOPE_N("ThreadPool::Submit");
+
             Task task{func, user_data};
 
             // Increment pending count BEFORE pushing (prevents race with workers)
@@ -281,7 +285,7 @@ namespace queen
 
             // Push to global queue - protected by mutex for multi-producer safety
             {
-                std::lock_guard<std::mutex> lock{submit_mutex_};
+                std::lock_guard<HIVE_PROFILE_LOCKABLE_BASE(std::mutex)> lock{submit_mutex_};
                 global_queue_->Push(task);
             }
 
@@ -381,6 +385,11 @@ namespace queen
             constexpr int kSpinAttempts = 64; // Spin before yielding
             int idle_spins = 0;
 
+            // Name this thread for Tracy
+            char thread_name[32];
+            std::snprintf(thread_name, sizeof(thread_name), "Worker %zu", ctx->id);
+            HIVE_PROFILE_THREAD(thread_name);
+
             // Set worker index for this thread (used by World::Query for per-thread allocators)
             queen::WorkerContext::SetCurrentWorkerIndex(ctx->id);
 
@@ -414,7 +423,10 @@ namespace queen
                 if (task.IsValid())
                 {
                     ctx->state.store(WorkerState::Running, std::memory_order_relaxed);
-                    task.Execute();
+                    {
+                        HIVE_PROFILE_SCOPE_N("TaskExecute");
+                        task.Execute();
+                    }
                     pending_tasks_.fetch_sub(1, std::memory_order_release);
                 }
                 else
@@ -455,6 +467,7 @@ namespace queen
 
         Task TrySteal(WorkerContext* ctx)
         {
+            HIVE_PROFILE_SCOPE_N("TrySteal");
             // Random starting point to reduce contention
             uint32_t start = XorShift32(ctx->rng_state) % static_cast<uint32_t>(worker_count_);
 
@@ -504,9 +517,9 @@ namespace queen
         SafeAllocator safe_allocator_;  // Thread-safe wrapper for deque allocations (Grow)
         WorkerContext* workers_;
         WorkStealingDeque<Task, SafeAllocator>* global_queue_;  // Main submission queue
-        mutable std::mutex submit_mutex_;  // Protects global_queue_ Push (multi-producer)
+        mutable HIVE_PROFILE_LOCKABLE_N(std::mutex, submit_mutex_, "SubmitMutex");
         std::condition_variable park_cv_;   // Wakes parked workers
-        std::mutex park_mutex_;             // Protects park_cv_
+        std::mutex park_mutex_;             // Protects park_cv_ (not tracked, used with condition_variable)
         size_t worker_count_;
         IdleStrategy idle_strategy_;
         std::atomic<bool> running_;

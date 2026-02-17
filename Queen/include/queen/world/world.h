@@ -22,6 +22,7 @@
 #include <wax/containers/vector.h>
 #include <wax/containers/hash_map.h>
 #include <hive/core/assert.h>
+#include <hive/profiling/profiler.h>
 #include <cstring>
 #include <mutex>
 
@@ -201,6 +202,7 @@ namespace queen
 
         void Despawn(Entity entity)
         {
+            HIVE_PROFILE_SCOPE_N("World::Despawn");
             if (!IsAlive(entity))
             {
                 return;
@@ -305,6 +307,7 @@ namespace queen
         template<typename T>
         void Add(Entity entity, T&& component)
         {
+            HIVE_PROFILE_SCOPE_N("World::Add");
             if (!IsAlive(entity))
             {
                 return;
@@ -346,6 +349,7 @@ namespace queen
         template<typename T>
         void Remove(Entity entity)
         {
+            HIVE_PROFILE_SCOPE_N("World::Remove");
             if (!IsAlive(entity))
             {
                 return;
@@ -576,7 +580,7 @@ namespace queen
         template<typename... Terms>
         [[nodiscard]] queen::Query<PersistentAllocator, Terms...> Query()
         {
-            std::lock_guard<std::mutex> lock{allocators_.PersistentMutex()};
+            std::lock_guard<HIVE_PROFILE_LOCKABLE_BASE(std::mutex)> lock{allocators_.PersistentMutex()};
             return queen::Query<PersistentAllocator, Terms...>{allocators_.Persistent(), component_index_};
         }
 
@@ -591,7 +595,7 @@ namespace queen
         template<typename... Terms, typename Callback>
         void QueryEach(Callback&& callback)
         {
-            std::lock_guard<std::mutex> lock{allocators_.PersistentMutex()};
+            std::lock_guard<HIVE_PROFILE_LOCKABLE_BASE(std::mutex)> lock{allocators_.PersistentMutex()};
             queen::Query<PersistentAllocator, Terms...> query{allocators_.Persistent(), component_index_};
             callback(query);
             // Query destructor runs here while still holding the lock
@@ -605,7 +609,7 @@ namespace queen
         template<typename... Terms, typename F>
         void QueryEachLocked(F&& func)
         {
-            std::lock_guard<std::mutex> lock{allocators_.PersistentMutex()};
+            std::lock_guard<HIVE_PROFILE_LOCKABLE_BASE(std::mutex)> lock{allocators_.PersistentMutex()};
             queen::Query<PersistentAllocator, Terms...> query{allocators_.Persistent(), component_index_};
             query.Each(std::forward<F>(func));
             // Query destructor runs here while still holding the lock
@@ -619,7 +623,7 @@ namespace queen
         template<typename... Terms, typename F>
         void QueryEachWithEntityLocked(F&& func)
         {
-            std::lock_guard<std::mutex> lock{allocators_.PersistentMutex()};
+            std::lock_guard<HIVE_PROFILE_LOCKABLE_BASE(std::mutex)> lock{allocators_.PersistentMutex()};
             queen::Query<PersistentAllocator, Terms...> query{allocators_.Persistent(), component_index_};
             query.EachWithEntity(std::forward<F>(func));
             // Query destructor runs here while still holding the lock
@@ -701,10 +705,14 @@ namespace queen
          */
         void Update()
         {
+            HIVE_PROFILE_SCOPE_N("World::Update");
             IncrementTick();
             events_.SwapBuffers();  // Swap event buffers for new frame
             scheduler_.RunAll(*this, systems_);
             allocators_.ResetFrame();
+            HIVE_PROFILE_PLOT("World::EntityCount", static_cast<int64_t>(EntityCount()));
+            HIVE_PROFILE_PLOT("World::ArchetypeCount", static_cast<int64_t>(ArchetypeCount()));
+            HIVE_PROFILE_FRAME;
         }
 
         /**
@@ -719,6 +727,7 @@ namespace queen
          */
         void UpdateParallel(size_t worker_count = 0)
         {
+            HIVE_PROFILE_SCOPE_N("World::UpdateParallel");
             IncrementTick();
             events_.SwapBuffers();  // Swap event buffers for new frame
 
@@ -735,6 +744,9 @@ namespace queen
             parallel_scheduler_->RunAll(*this, systems_);
             allocators_.ResetFrame();
             allocators_.ResetThreadFrames();
+            HIVE_PROFILE_PLOT("World::EntityCount", static_cast<int64_t>(EntityCount()));
+            HIVE_PROFILE_PLOT("World::ArchetypeCount", static_cast<int64_t>(ArchetypeCount()));
+            HIVE_PROFILE_FRAME;
         }
 
         /**
@@ -1199,6 +1211,7 @@ namespace queen
          */
         void DespawnRecursive(Entity entity)
         {
+            HIVE_PROFILE_SCOPE_N("World::DespawnRecursive");
             if (!IsAlive(entity))
             {
                 return;
@@ -1294,6 +1307,7 @@ namespace queen
         void MoveEntity(Entity entity, EntityRecord& record,
                        Archetype<ComponentAllocator>* old_arch, Archetype<ComponentAllocator>* new_arch)
         {
+            HIVE_PROFILE_SCOPE_N("World::MoveEntity");
             uint32_t old_row = record.row;
 
             uint32_t new_row = new_arch->AllocateRow(entity, current_tick_);
@@ -1430,6 +1444,7 @@ namespace queen
 
         Entity Build()
         {
+            HIVE_PROFILE_SCOPE_N("World::Spawn");
             Entity entity = world_->AllocateEntity();
 
             Archetype<ComponentAllocator>* archetype = world_->archetype_graph_.GetEmptyArchetype();
@@ -1487,6 +1502,7 @@ namespace queen
     template<comb::Allocator Allocator>
     void CommandBuffer<Allocator>::Flush(World& world)
     {
+        HIVE_PROFILE_SCOPE_N("CommandBuffer::Flush");
         spawned_entities_.Clear();
         spawned_entities_.Reserve(spawn_count_);
 

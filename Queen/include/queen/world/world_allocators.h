@@ -6,6 +6,7 @@
 #include <comb/thread_safe_allocator.h>
 #include <wax/containers/vector.h>
 #include <hive/core/assert.h>
+#include <hive/profiling/profiler.h>
 #include <mutex>
 
 namespace queen
@@ -19,32 +20,34 @@ namespace queen
     class ThreadSafeBuddyAllocator
     {
     public:
-        ThreadSafeBuddyAllocator(comb::BuddyAllocator& allocator, std::mutex& mutex)
+        using MutexType = HIVE_PROFILE_LOCKABLE_BASE(std::mutex);
+
+        ThreadSafeBuddyAllocator(comb::BuddyAllocator& allocator, MutexType& mutex)
             : allocator_{&allocator}
             , mutex_{&mutex}
         {}
 
         [[nodiscard]] void* Allocate(size_t size, size_t alignment, const char* tag = nullptr)
         {
-            std::lock_guard<std::mutex> lock{*mutex_};
+            std::lock_guard<MutexType> lock{*mutex_};
             return allocator_->Allocate(size, alignment, tag);
         }
 
         void Deallocate(void* ptr)
         {
-            std::lock_guard<std::mutex> lock{*mutex_};
+            std::lock_guard<MutexType> lock{*mutex_};
             allocator_->Deallocate(ptr);
         }
 
         [[nodiscard]] size_t GetUsedMemory() const
         {
-            std::lock_guard<std::mutex> lock{*mutex_};
+            std::lock_guard<MutexType> lock{*mutex_};
             return allocator_->GetUsedMemory();
         }
 
         [[nodiscard]] size_t GetTotalMemory() const
         {
-            std::lock_guard<std::mutex> lock{*mutex_};
+            std::lock_guard<MutexType> lock{*mutex_};
             return allocator_->GetTotalMemory();
         }
 
@@ -55,7 +58,7 @@ namespace queen
 
     private:
         comb::BuddyAllocator* allocator_;
-        std::mutex* mutex_;
+        MutexType* mutex_;
     };
 
     /**
@@ -232,7 +235,7 @@ namespace queen
          * Use this when you need to protect a sequence of operations
          * on the persistent allocator (e.g., Query construction).
          */
-        [[nodiscard]] std::mutex& PersistentMutex() noexcept
+        [[nodiscard]] ThreadSafeBuddyAllocator::MutexType& PersistentMutex() noexcept
         {
             return persistent_mutex_;
         }
@@ -388,7 +391,7 @@ namespace queen
          */
         [[nodiscard]] void* PersistentAllocateThreadSafe(size_t size, size_t alignment, const char* tag = nullptr)
         {
-            std::lock_guard<std::mutex> lock{persistent_mutex_};
+            std::lock_guard<ThreadSafeBuddyAllocator::MutexType> lock{persistent_mutex_};
             return persistent_.Allocate(size, alignment, tag);
         }
 
@@ -397,7 +400,7 @@ namespace queen
          */
         void PersistentDeallocateThreadSafe(void* ptr)
         {
-            std::lock_guard<std::mutex> lock{persistent_mutex_};
+            std::lock_guard<ThreadSafeBuddyAllocator::MutexType> lock{persistent_mutex_};
             persistent_.Deallocate(ptr);
         }
 
@@ -406,6 +409,6 @@ namespace queen
         comb::BuddyAllocator components_;
         comb::LinearAllocator frame_;
         wax::Vector<comb::LinearAllocator, comb::BuddyAllocator> thread_frames_;
-        mutable std::mutex persistent_mutex_;  // Protects persistent_ during parallel execution
+        mutable HIVE_PROFILE_LOCKABLE_N(std::mutex, persistent_mutex_, "PersistentAllocatorMutex");  // Protects persistent_ during parallel execution
     };
 }
