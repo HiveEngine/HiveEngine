@@ -76,8 +76,104 @@
       }
     },
     {
-      "name": "LINUX_GLFW_VULKAN",
+      "name": "linux-base",
+      "hidden": true,
+      "displayName": "Linux Clang Base",
+      "description": "Base configuration for Clang on Linux (WSL)",
+      "generator": "Ninja",
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "clang",
+        "CMAKE_CXX_COMPILER": "clang++",
+        "CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS": "clang-scan-deps-18",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "SWARM_USE_VULKAN": "OFF",
+        "terra_use_glfw": "OFF",
+        "HIVE_BUILD_GUI_TESTS": "OFF"
+      },
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      }
+    },
+    {
+      "name": "linux-debug",
+      "inherits": "linux-base",
       "displayName": "Linux Clang Debug",
+      "description": "Debug build on Linux",
+      "binaryDir": "$env{HOME}/build/hive/linux-debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "HIVE_ENABLE_LTO": "OFF",
+        "HIVE_WARNINGS_AS_ERRORS": "OFF"
+      }
+    },
+    {
+      "name": "linux-asan",
+      "inherits": "linux-base",
+      "displayName": "Linux Clang ASan",
+      "description": "Debug build with AddressSanitizer on Linux",
+      "binaryDir": "$env{HOME}/build/hive/linux-asan",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "HIVE_ENABLE_LTO": "OFF",
+        "HIVE_ENABLE_SANITIZERS": "ON",
+        "HIVE_SANITIZER_TYPE": "Address"
+      }
+    },
+    {
+      "name": "linux-ubsan",
+      "inherits": "linux-base",
+      "displayName": "Linux Clang UBSan",
+      "description": "Debug build with UndefinedBehaviorSanitizer on Linux",
+      "binaryDir": "$env{HOME}/build/hive/linux-ubsan",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "HIVE_ENABLE_LTO": "OFF",
+        "HIVE_ENABLE_SANITIZERS": "ON",
+        "HIVE_SANITIZER_TYPE": "UndefinedBehavior"
+      }
+    },
+    {
+      "name": "linux-tsan",
+      "inherits": "linux-base",
+      "displayName": "Linux Clang TSan",
+      "description": "Debug build with ThreadSanitizer on Linux",
+      "binaryDir": "$env{HOME}/build/hive/linux-tsan",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "HIVE_ENABLE_LTO": "OFF",
+        "HIVE_ENABLE_SANITIZERS": "ON",
+        "HIVE_SANITIZER_TYPE": "Thread"
+      }
+    },
+    {
+      "name": "llvm-windows-profile",
+      "inherits": "llvm-windows-base",
+      "displayName": "LLVM Windows Profile",
+      "description": "Optimized build with Tracy profiling enabled",
+      "binaryDir": "${sourceDir}/out/build/llvm-profile",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Profile",
+        "HIVE_FEATURE_PROFILER": "ON",
+        "HIVE_ENABLE_LTO": "OFF"
+      }
+    },
+    {
+      "name": "linux-profile",
+      "inherits": "linux-base",
+      "displayName": "Linux Clang Profile",
+      "description": "Optimized build with Tracy profiling on Linux",
+      "binaryDir": "$env{HOME}/build/hive/linux-profile",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Profile",
+        "HIVE_FEATURE_PROFILER": "ON",
+        "HIVE_ENABLE_LTO": "OFF"
+      }
+    },
+    {
+      "name": "LINUX_GLFW_VULKAN",
+      "displayName": "Linux Clang Debug (GLFW+Vulkan)",
       "description": "Using compilers: C = /usr/bin/clang, CXX = /usr/bin/clang++",
       "generator": "Ninja",
       "binaryDir": "${sourceDir}/out/build/${presetName}",
@@ -110,6 +206,30 @@
     {
       "name": "llvm-windows-ubsan",
       "configurePreset": "llvm-windows-ubsan"
+    },
+    {
+      "name": "llvm-windows-profile",
+      "configurePreset": "llvm-windows-profile"
+    },
+    {
+      "name": "linux-debug",
+      "configurePreset": "linux-debug"
+    },
+    {
+      "name": "linux-asan",
+      "configurePreset": "linux-asan"
+    },
+    {
+      "name": "linux-ubsan",
+      "configurePreset": "linux-ubsan"
+    },
+    {
+      "name": "linux-tsan",
+      "configurePreset": "linux-tsan"
+    },
+    {
+      "name": "linux-profile",
+      "configurePreset": "linux-profile"
     }
   ]
 }
