@@ -1,11 +1,13 @@
 #pragma once
 
 #include <queen/system/system.h>
+#include <queen/system/system_storage.h>
 #include <queen/system/resource_param.h>
 #include <queen/query/query_term.h>
 #include <queen/query/query.h>
 #include <queen/command/commands.h>
 #include <comb/allocator_concepts.h>
+#include <hive/core/assert.h>
 
 namespace queen
 {
@@ -68,8 +70,53 @@ namespace queen
             InitializeFromTerms();
         }
 
-        // After/Before ordering constraints are handled by the dependency graph
-        // via AccessDescriptor conflict detection. Explicit ordering is not yet implemented.
+        /**
+         * Declare that this system must run after another system
+         *
+         * @param id SystemId of the system to run after
+         */
+        SystemBuilder& After(SystemId id)
+        {
+            descriptor_->AddAfter(id);
+            return *this;
+        }
+
+        /**
+         * Declare that this system must run after another system (by name)
+         *
+         * @param name Name of the system to run after (must already be registered)
+         */
+        SystemBuilder& After(const char* name)
+        {
+            auto* other = storage_->GetSystemByName(name);
+            hive::Assert(other != nullptr, "After(): system not found");
+            descriptor_->AddAfter(other->Id());
+            return *this;
+        }
+
+        /**
+         * Declare that this system must run before another system
+         *
+         * @param id SystemId of the system to run before
+         */
+        SystemBuilder& Before(SystemId id)
+        {
+            descriptor_->AddBefore(id);
+            return *this;
+        }
+
+        /**
+         * Declare that this system must run before another system (by name)
+         *
+         * @param name Name of the system to run before (must already be registered)
+         */
+        SystemBuilder& Before(const char* name)
+        {
+            auto* other = storage_->GetSystemByName(name);
+            hive::Assert(other != nullptr, "Before(): system not found");
+            descriptor_->AddBefore(other->Id());
+            return *this;
+        }
 
         /**
          * Mark system as exclusive (requires exclusive world access)
@@ -278,6 +325,34 @@ namespace queen
             , storage_{&storage}
             , descriptor_{descriptor}
         {
+        }
+
+        SystemBuilder& After(SystemId id)
+        {
+            descriptor_->AddAfter(id);
+            return *this;
+        }
+
+        SystemBuilder& After(const char* name)
+        {
+            auto* other = storage_->GetSystemByName(name);
+            hive::Assert(other != nullptr, "After(): system not found");
+            descriptor_->AddAfter(other->Id());
+            return *this;
+        }
+
+        SystemBuilder& Before(SystemId id)
+        {
+            descriptor_->AddBefore(id);
+            return *this;
+        }
+
+        SystemBuilder& Before(const char* name)
+        {
+            auto* other = storage_->GetSystemByName(name);
+            hive::Assert(other != nullptr, "Before(): system not found");
+            descriptor_->AddBefore(other->Id());
+            return *this;
         }
 
         SystemBuilder& Exclusive()

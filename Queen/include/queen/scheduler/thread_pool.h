@@ -7,6 +7,7 @@
 #include <atomic>
 #include <thread>
 #include <mutex>
+#include <condition_variable>
 
 namespace queen
 {
@@ -249,6 +250,9 @@ namespace queen
                 workers_[i].should_stop.store(true, std::memory_order_release);
             }
 
+            // Wake all parked workers so they see should_stop
+            park_cv_.notify_all();
+
             // Wait for all workers to finish
             for (size_t i = 0; i < worker_count_; ++i)
             {
@@ -279,6 +283,12 @@ namespace queen
             {
                 std::lock_guard<std::mutex> lock{submit_mutex_};
                 global_queue_->Push(task);
+            }
+
+            // Wake a parked worker if using Park strategy
+            if (idle_strategy_ == IdleStrategy::Park)
+            {
+                park_cv_.notify_one();
             }
         }
 
@@ -479,10 +489,14 @@ namespace queen
                 break;
 
             case IdleStrategy::Park:
-                // TODO: Use condition variable for true parking
-                // For now, just yield
-                std::this_thread::yield();
+            {
+                std::unique_lock<std::mutex> lock{park_mutex_};
+                park_cv_.wait_for(lock, std::chrono::milliseconds(1), [this] {
+                    return pending_tasks_.load(std::memory_order_acquire) > 0
+                        || !running_.load(std::memory_order_acquire);
+                });
                 break;
+            }
             }
         }
 
@@ -491,6 +505,8 @@ namespace queen
         WorkerContext* workers_;
         WorkStealingDeque<Task, SafeAllocator>* global_queue_;  // Main submission queue
         mutable std::mutex submit_mutex_;  // Protects global_queue_ Push (multi-producer)
+        std::condition_variable park_cv_;   // Wakes parked workers
+        std::mutex park_mutex_;             // Protects park_cv_
         size_t worker_count_;
         IdleStrategy idle_strategy_;
         std::atomic<bool> running_;

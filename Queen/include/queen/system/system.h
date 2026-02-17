@@ -67,6 +67,7 @@ namespace queen
     {
     public:
         static constexpr size_t kMaxNameLength = 63;
+        static constexpr size_t kMaxExplicitDeps = 8;
 
         SystemDescriptor(Allocator& allocator, SystemId id, const char* name)
             : id_{id}
@@ -116,9 +117,13 @@ namespace queen
             , destructor_fn_{other.destructor_fn_}
             , executor_mode_{other.executor_mode_}
             , enabled_{other.enabled_}
+            , after_count_{other.after_count_}
+            , before_count_{other.before_count_}
             , last_run_tick_{other.last_run_tick_}
         {
             std::memcpy(name_, other.name_, sizeof(name_));
+            std::memcpy(explicit_after_, other.explicit_after_, sizeof(SystemId) * after_count_);
+            std::memcpy(explicit_before_, other.explicit_before_, sizeof(SystemId) * before_count_);
             other.user_data_ = nullptr;
             other.destructor_fn_ = nullptr;
         }
@@ -146,6 +151,10 @@ namespace queen
                 destructor_fn_ = other.destructor_fn_;
                 executor_mode_ = other.executor_mode_;
                 enabled_ = other.enabled_;
+                after_count_ = other.after_count_;
+                before_count_ = other.before_count_;
+                std::memcpy(explicit_after_, other.explicit_after_, sizeof(SystemId) * after_count_);
+                std::memcpy(explicit_before_, other.explicit_before_, sizeof(SystemId) * before_count_);
                 last_run_tick_ = other.last_run_tick_;
 
                 other.user_data_ = nullptr;
@@ -214,6 +223,27 @@ namespace queen
             return executor_fn_ != nullptr;
         }
 
+        void AddAfter(SystemId id) noexcept
+        {
+            if (after_count_ < kMaxExplicitDeps)
+            {
+                explicit_after_[after_count_++] = id;
+            }
+        }
+
+        void AddBefore(SystemId id) noexcept
+        {
+            if (before_count_ < kMaxExplicitDeps)
+            {
+                explicit_before_[before_count_++] = id;
+            }
+        }
+
+        [[nodiscard]] uint8_t AfterCount() const noexcept { return after_count_; }
+        [[nodiscard]] uint8_t BeforeCount() const noexcept { return before_count_; }
+        [[nodiscard]] SystemId AfterDep(uint8_t i) const noexcept { return explicit_after_[i]; }
+        [[nodiscard]] SystemId BeforeDep(uint8_t i) const noexcept { return explicit_before_[i]; }
+
     private:
         SystemId id_;
         Allocator* allocator_;
@@ -225,6 +255,10 @@ namespace queen
         void (*destructor_fn_)(void*);
         SystemExecutor executor_mode_;
         bool enabled_;
-        Tick last_run_tick_{0}; // Tick when this system last ran (0 = never)
+        uint8_t after_count_{0};
+        uint8_t before_count_{0};
+        SystemId explicit_after_[kMaxExplicitDeps];
+        SystemId explicit_before_[kMaxExplicitDeps];
+        Tick last_run_tick_{0};
     };
 }

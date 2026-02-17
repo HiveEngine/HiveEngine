@@ -114,6 +114,37 @@ namespace queen
                 nodes_[i].SetDependencyCount(dep_count);
             }
 
+            // Add explicit ordering edges (After/Before constraints)
+            for (size_t i = 0; i < system_count; ++i)
+            {
+                const auto* system = storage.GetSystemByIndex(i);
+                if (system == nullptr) continue;
+
+                // After(id) means: this system must run after id
+                for (uint8_t a = 0; a < system->AfterCount(); ++a)
+                {
+                    SystemId after_id = system->AfterDep(a);
+                    uint32_t after_idx = after_id.Index();
+                    if (after_idx < system_count)
+                    {
+                        adjacency_[after_idx].PushBack(static_cast<uint32_t>(i));
+                        nodes_[i].IncrementDependencyCount();
+                    }
+                }
+
+                // Before(id) means: this system must run before id
+                for (uint8_t b = 0; b < system->BeforeCount(); ++b)
+                {
+                    SystemId before_id = system->BeforeDep(b);
+                    uint32_t before_idx = before_id.Index();
+                    if (before_idx < system_count)
+                    {
+                        adjacency_[i].PushBack(before_idx);
+                        nodes_[before_idx].IncrementDependencyCount();
+                    }
+                }
+            }
+
             // Find root systems (no dependencies)
             for (size_t i = 0; i < nodes_.Size(); ++i)
             {

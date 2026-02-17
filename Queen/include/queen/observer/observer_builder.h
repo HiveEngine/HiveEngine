@@ -100,7 +100,7 @@ namespace queen
         template<typename T>
         ObserverBuilder& With()
         {
-            static_assert(sizeof(T) == 0, "Observer::With<T>() filter is not yet implemented");
+            observer_->AddFilter(TypeIdOf<T>());
             return *this;
         }
 

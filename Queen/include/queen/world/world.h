@@ -286,6 +286,22 @@ namespace queen
             return record->archetype->template HasComponent<T>();
         }
 
+        [[nodiscard]] bool HasComponent(Entity entity, TypeId type_id) const noexcept
+        {
+            if (!IsAlive(entity))
+            {
+                return false;
+            }
+
+            const EntityRecord* record = entity_locations_.Get(entity);
+            if (record == nullptr || record->archetype == nullptr)
+            {
+                return false;
+            }
+
+            return record->archetype->HasComponent(type_id);
+        }
+
         template<typename T>
         void Add(Entity entity, T&& component)
         {
@@ -1644,5 +1660,6 @@ namespace queen
 
 // Include method implementations now that World is complete
 #include <queen/system/system_builder_impl.h>
+#include <queen/observer/observer_storage_impl.h>
 #include <queen/scheduler/scheduler_impl.h>
 #include <queen/scheduler/parallel_scheduler_impl.h>
