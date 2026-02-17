@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <cstring>
+#include <functional>
 #include <hive/core/assert.h>
 
 namespace nectar
