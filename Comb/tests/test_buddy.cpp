@@ -1,5 +1,8 @@
 #include <larvae/larvae.h>
 #include <comb/buddy_allocator.h>
+#include <comb/allocator_concepts.h>
+#include <comb/new.h>
+#include <cstring>
 
 namespace
 {
@@ -214,5 +217,235 @@ namespace
 
         buddy.Deallocate(nullptr);
         larvae::AssertEqual(buddy.GetUsedMemory(), 0u);
+    });
+
+    // =============================================================================
+    // Concept Satisfaction
+    // =============================================================================
+
+    auto test12 = larvae::RegisterTest("BuddyAllocator", "ConceptSatisfaction", []() {
+        larvae::AssertTrue((comb::Allocator<comb::BuddyAllocator>));
+    });
+
+    // =============================================================================
+    // Reset
+    // =============================================================================
+
+    auto test13 = larvae::RegisterTest("BuddyAllocator", "ResetFreesAllMemory", []() {
+        comb::BuddyAllocator buddy{4_KB};
+
+        void* p1 = buddy.Allocate(100, 8);
+        void* p2 = buddy.Allocate(200, 8);
+        void* p3 = buddy.Allocate(500, 8);
+        larvae::AssertNotNull(p1);
+        larvae::AssertNotNull(p2);
+        larvae::AssertNotNull(p3);
+        larvae::AssertTrue(buddy.GetUsedMemory() > 0);
+
+        buddy.Reset();
+
+        larvae::AssertEqual(buddy.GetUsedMemory(), 0u);
+    });
+
+    auto test14 = larvae::RegisterTest("BuddyAllocator", "ResetAllowsReuse", []() {
+        comb::BuddyAllocator buddy{1_KB};
+
+        // Fill most of the allocator
+        void* p1 = buddy.Allocate(900, 8);
+        larvae::AssertNotNull(p1);
+
+        // No more room
+        void* p2 = buddy.Allocate(200, 8);
+        larvae::AssertNull(p2);
+
+        buddy.Reset();
+
+        // Can allocate again
+        void* p3 = buddy.Allocate(900, 8);
+        larvae::AssertNotNull(p3);
+
+        buddy.Deallocate(p3);
+    });
+
+    auto test15 = larvae::RegisterTest("BuddyAllocator", "ResetThenFullCycle", []() {
+        comb::BuddyAllocator buddy{4_KB};
+
+        for (int cycle = 0; cycle < 5; ++cycle)
+        {
+            void* ptrs[8];
+            for (int i = 0; i < 8; ++i)
+            {
+                ptrs[i] = buddy.Allocate(64, 8);
+                larvae::AssertNotNull(ptrs[i]);
+            }
+
+            buddy.Reset();
+            larvae::AssertEqual(buddy.GetUsedMemory(), 0u);
+        }
+    });
+
+    // =============================================================================
+    // Alignment
+    // =============================================================================
+
+    auto test16 = larvae::RegisterTest("BuddyAllocator", "AllocatedPointersAreUsable", []() {
+        comb::BuddyAllocator buddy{1_MB};
+
+        // BuddyAllocator blocks are power-of-2 sized; alignment depends on block placement.
+        // In debug mode, guard bytes may offset the user pointer.
+        // Verify that allocations for various sizes are valid and usable.
+        void* ptr1 = buddy.Allocate(100, 8);
+        void* ptr2 = buddy.Allocate(200, 8);
+        void* ptr3 = buddy.Allocate(500, 8);
+
+        larvae::AssertNotNull(ptr1);
+        larvae::AssertNotNull(ptr2);
+        larvae::AssertNotNull(ptr3);
+
+        // Memory should be writable
+        std::memset(ptr1, 0xAA, 100);
+        std::memset(ptr2, 0xBB, 200);
+        std::memset(ptr3, 0xCC, 500);
+
+        larvae::AssertEqual(static_cast<unsigned char*>(ptr1)[0], static_cast<unsigned char>(0xAA));
+        larvae::AssertEqual(static_cast<unsigned char*>(ptr2)[0], static_cast<unsigned char>(0xBB));
+        larvae::AssertEqual(static_cast<unsigned char*>(ptr3)[0], static_cast<unsigned char>(0xCC));
+
+        buddy.Deallocate(ptr1);
+        buddy.Deallocate(ptr2);
+        buddy.Deallocate(ptr3);
+    });
+
+    auto test17 = larvae::RegisterTest("BuddyAllocator", "ManyDifferentSizes", []() {
+        comb::BuddyAllocator buddy{1_MB};
+
+        void* ptrs[20];
+        for (int i = 0; i < 20; ++i)
+        {
+            ptrs[i] = buddy.Allocate(48 + static_cast<size_t>(i) * 16, 8);
+            larvae::AssertNotNull(ptrs[i]);
+        }
+
+        for (int i = 0; i < 20; ++i)
+        {
+            buddy.Deallocate(ptrs[i]);
+        }
+
+        larvae::AssertEqual(buddy.GetUsedMemory(), 0u);
+    });
+
+    // =============================================================================
+    // Move Semantics
+    // =============================================================================
+
+    auto test18 = larvae::RegisterTest("BuddyAllocator", "MoveConstructorTransfersOwnership", []() {
+        comb::BuddyAllocator buddy1{1_MB};
+        void* ptr = buddy1.Allocate(100, 8);
+        larvae::AssertNotNull(ptr);
+        size_t used = buddy1.GetUsedMemory();
+
+        comb::BuddyAllocator buddy2{std::move(buddy1)};
+
+        larvae::AssertEqual(buddy2.GetUsedMemory(), used);
+        larvae::AssertEqual(buddy2.GetTotalMemory(), 1_MB);
+        larvae::AssertStringEqual(buddy2.GetName(), "BuddyAllocator");
+
+        buddy2.Deallocate(ptr);
+        larvae::AssertEqual(buddy2.GetUsedMemory(), 0u);
+    });
+
+    auto test19 = larvae::RegisterTest("BuddyAllocator", "MoveAssignmentTransfersOwnership", []() {
+        comb::BuddyAllocator buddy1{1_MB};
+        void* ptr = buddy1.Allocate(200, 8);
+        larvae::AssertNotNull(ptr);
+        size_t used = buddy1.GetUsedMemory();
+
+        comb::BuddyAllocator buddy2{4_KB};
+
+        buddy2 = std::move(buddy1);
+
+        larvae::AssertEqual(buddy2.GetUsedMemory(), used);
+        larvae::AssertEqual(buddy2.GetTotalMemory(), 1_MB);
+
+        buddy2.Deallocate(ptr);
+        larvae::AssertEqual(buddy2.GetUsedMemory(), 0u);
+    });
+
+    auto test20 = larvae::RegisterTest("BuddyAllocator", "MoveConstructorNullifiesSource", []() {
+        comb::BuddyAllocator buddy1{1_MB};
+        static_cast<void>(buddy1.Allocate(100, 8));
+
+        comb::BuddyAllocator buddy2{std::move(buddy1)};
+
+        larvae::AssertEqual(buddy1.GetTotalMemory(), 0u);
+        larvae::AssertEqual(buddy1.GetUsedMemory(), 0u);
+    });
+
+    // =============================================================================
+    // New/Delete
+    // =============================================================================
+
+    auto test21 = larvae::RegisterTest("BuddyAllocator", "NewDeleteWorks", []() {
+        comb::BuddyAllocator buddy{1_MB};
+
+        struct TestObj
+        {
+            int value;
+            TestObj(int v) : value{v} {}
+        };
+
+        TestObj* obj = comb::New<TestObj>(buddy, 42);
+        larvae::AssertNotNull(obj);
+        larvae::AssertEqual(obj->value, 42);
+
+        comb::Delete(buddy, obj);
+        larvae::AssertEqual(buddy.GetUsedMemory(), 0u);
+    });
+
+    auto test22 = larvae::RegisterTest("BuddyAllocator", "DeleteCallsDestructor", []() {
+        comb::BuddyAllocator buddy{1_MB};
+
+        struct TestObj
+        {
+            bool* destroyed;
+            TestObj(bool* d) : destroyed{d} { *destroyed = false; }
+            ~TestObj() { *destroyed = true; }
+        };
+
+        bool destroyed = false;
+        TestObj* obj = comb::New<TestObj>(buddy, &destroyed);
+        larvae::AssertFalse(destroyed);
+
+        comb::Delete(buddy, obj);
+        larvae::AssertTrue(destroyed);
+    });
+
+    // =============================================================================
+    // Memory Access
+    // =============================================================================
+
+    auto test23 = larvae::RegisterTest("BuddyAllocator", "AllocatedMemoryIsWritable", []() {
+        comb::BuddyAllocator buddy{1_MB};
+
+        void* ptr = buddy.Allocate(256, 8);
+        auto* byte_ptr = static_cast<unsigned char*>(ptr);
+
+        std::memset(byte_ptr, 0x42, 256);
+
+        for (size_t i = 0; i < 256; ++i)
+        {
+            larvae::AssertEqual(byte_ptr[i], static_cast<unsigned char>(0x42));
+        }
+
+        buddy.Deallocate(ptr);
+    });
+
+    // =============================================================================
+    // GetName
+    // =============================================================================
+
+    auto test24 = larvae::RegisterTest("BuddyAllocator", "GetNameReturnsCorrectName", []() {
+        comb::BuddyAllocator buddy{1_KB};
+        larvae::AssertStringEqual(buddy.GetName(), "BuddyAllocator");
     });
 }

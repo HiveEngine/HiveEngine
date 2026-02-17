@@ -1,5 +1,6 @@
 #include <larvae/larvae.h>
 #include <comb/pool_allocator.h>
+#include <comb/allocator_concepts.h>
 #include <comb/new.h>
 #include <cstring>
 
@@ -284,5 +285,126 @@ namespace
         }
         comb::Delete(pool, new1);
         comb::Delete(pool, new2);
+    });
+
+    // =============================================================================
+    // Concept Satisfaction
+    // =============================================================================
+
+    auto test18 = larvae::RegisterTest("PoolAllocator", "ConceptSatisfaction", []() {
+        larvae::AssertTrue((comb::Allocator<comb::PoolAllocator<TestObject>>));
+        larvae::AssertTrue((comb::Allocator<comb::PoolAllocator<LargeObject>>));
+    });
+
+    // =============================================================================
+    // Alignment
+    // =============================================================================
+
+    auto test19 = larvae::RegisterTest("PoolAllocator", "MultipleAllocationsAreUsable", []() {
+        // In debug mode, guard bytes may offset the user pointer, so we test
+        // that allocations are valid and writable rather than strict alignment.
+        comb::PoolAllocator<LargeObject> pool{10};
+
+        void* ptrs[10];
+        for (int i = 0; i < 10; ++i)
+        {
+            ptrs[i] = pool.Allocate(sizeof(LargeObject), alignof(LargeObject));
+            larvae::AssertNotNull(ptrs[i]);
+
+            // Memory should be writable
+            std::memset(ptrs[i], static_cast<int>(i), sizeof(LargeObject));
+        }
+
+        // Verify each allocation's data is intact
+        for (int i = 0; i < 10; ++i)
+        {
+            auto* bytes = static_cast<unsigned char*>(ptrs[i]);
+            larvae::AssertEqual(bytes[0], static_cast<unsigned char>(i));
+        }
+
+        for (int i = 0; i < 10; ++i)
+        {
+            pool.Deallocate(ptrs[i]);
+        }
+    });
+
+    auto test20 = larvae::RegisterTest("PoolAllocator", "DefaultAlignmentRespected", []() {
+        comb::PoolAllocator<TestObject> pool{10};
+
+        for (int i = 0; i < 10; ++i)
+        {
+            void* ptr = pool.Allocate(sizeof(TestObject), alignof(TestObject));
+            larvae::AssertNotNull(ptr);
+            larvae::AssertEqual(reinterpret_cast<uintptr_t>(ptr) % alignof(TestObject), 0u);
+            pool.Deallocate(ptr);
+        }
+    });
+
+    // =============================================================================
+    // Move Semantics
+    // =============================================================================
+
+    auto test21 = larvae::RegisterTest("PoolAllocator", "MoveConstructorTransfersOwnership", []() {
+        comb::PoolAllocator<TestObject> pool1{10};
+
+        void* ptr = pool1.Allocate(sizeof(TestObject), alignof(TestObject));
+        larvae::AssertNotNull(ptr);
+        larvae::AssertEqual(pool1.GetUsedCount(), 1u);
+
+        comb::PoolAllocator<TestObject> pool2{std::move(pool1)};
+
+        larvae::AssertEqual(pool2.GetUsedCount(), 1u);
+        larvae::AssertEqual(pool2.GetCapacity(), 10u);
+
+        pool2.Deallocate(ptr);
+        larvae::AssertEqual(pool2.GetUsedCount(), 0u);
+    });
+
+    auto test22 = larvae::RegisterTest("PoolAllocator", "MoveAssignmentTransfersOwnership", []() {
+        comb::PoolAllocator<TestObject> pool1{10};
+        comb::PoolAllocator<TestObject> pool2{5};
+
+        void* ptr = pool1.Allocate(sizeof(TestObject), alignof(TestObject));
+        larvae::AssertNotNull(ptr);
+
+        pool2 = std::move(pool1);
+
+        larvae::AssertEqual(pool2.GetUsedCount(), 1u);
+        larvae::AssertEqual(pool2.GetCapacity(), 10u);
+
+        pool2.Deallocate(ptr);
+        larvae::AssertEqual(pool2.GetUsedCount(), 0u);
+    });
+
+    auto test23 = larvae::RegisterTest("PoolAllocator", "MoveConstructorNullifiesSource", []() {
+        comb::PoolAllocator<TestObject> pool1{10};
+        static_cast<void>(pool1.Allocate(sizeof(TestObject), alignof(TestObject)));
+
+        comb::PoolAllocator<TestObject> pool2{std::move(pool1)};
+
+        larvae::AssertEqual(pool1.GetCapacity(), 0u);
+        larvae::AssertEqual(pool1.GetUsedCount(), 0u);
+    });
+
+    // =============================================================================
+    // GetUsedMemory
+    // =============================================================================
+
+    auto test24 = larvae::RegisterTest("PoolAllocator", "GetUsedMemoryTracksCorrectly", []() {
+        comb::PoolAllocator<TestObject> pool{10};
+
+        larvae::AssertEqual(pool.GetUsedMemory(), 0u);
+
+        void* ptr1 = pool.Allocate(sizeof(TestObject), alignof(TestObject));
+        larvae::AssertEqual(pool.GetUsedMemory(), sizeof(TestObject));
+
+        void* ptr2 = pool.Allocate(sizeof(TestObject), alignof(TestObject));
+        larvae::AssertEqual(pool.GetUsedMemory(), 2 * sizeof(TestObject));
+
+        pool.Deallocate(ptr1);
+        larvae::AssertEqual(pool.GetUsedMemory(), sizeof(TestObject));
+
+        pool.Deallocate(ptr2);
+        larvae::AssertEqual(pool.GetUsedMemory(), 0u);
     });
 }
