@@ -98,7 +98,6 @@ namespace wax
             }
 
             bool operator==(const Iterator& other) const { return index_ == other.index_; }
-            bool operator!=(const Iterator& other) const { return index_ != other.index_; }
 
             const K& Key() const { return *buckets_[index_].Key(); }
             V& Value() { return *buckets_[index_].Value(); }
@@ -139,7 +138,6 @@ namespace wax
             }
 
             bool operator==(const ConstIterator& other) const { return index_ == other.index_; }
-            bool operator!=(const ConstIterator& other) const { return index_ != other.index_; }
 
             const K& Key() const { return *buckets_[index_].Key(); }
             const V& Value() const { return *buckets_[index_].Value(); }
@@ -608,6 +606,7 @@ namespace wax
 
         static constexpr size_t NextPowerOfTwo(size_t n)
         {
+            if (n == 0) return 1;
             --n;
             n |= n >> 1;
             n |= n >> 2;

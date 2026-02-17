@@ -6,6 +6,7 @@
 #include <type_traits>
 #include <initializer_list>
 #include <hive/core/assert.h>
+#include <comb/allocator_concepts.h>
 #include <comb/default_allocator.h>
 
 namespace wax
@@ -53,7 +54,7 @@ namespace wax
      *   }
      * @endcode
      */
-    template<typename T, typename Allocator = comb::DefaultAllocator>
+    template<typename T, comb::Allocator Allocator = comb::DefaultAllocator>
     class Vector
     {
     public:
@@ -343,6 +344,8 @@ namespace wax
             {
                 return;
             }
+
+            hive::Check(new_capacity <= SIZE_MAX / sizeof(T), "Vector capacity overflow");
 
             T* new_data = static_cast<T*>(allocator_->Allocate(new_capacity * sizeof(T), alignof(T)));
             hive::Check(new_data != nullptr, "Vector allocation failed");

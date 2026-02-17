@@ -153,34 +153,8 @@ namespace
         larvae::AssertEqual(map[42], 200);
     });
 
-    auto test11 = larvae::RegisterTest("WaxHashMap", "StringKeys", []() {
+    auto test11 = larvae::RegisterTest("WaxHashMap", "FloatValues", []() {
         comb::BuddyAllocator alloc{16384};
-
-        struct StringHash
-        {
-            size_t operator()(const char* str) const
-            {
-                size_t hash = 5381;
-                while (*str)
-                {
-                    hash = ((hash << 5) + hash) + static_cast<unsigned char>(*str++);
-                }
-                return hash;
-            }
-        };
-
-        struct StringEqual
-        {
-            bool operator()(const char* a, const char* b) const
-            {
-                while (*a && *b && *a == *b)
-                {
-                    ++a;
-                    ++b;
-                }
-                return *a == *b;
-            }
-        };
 
         wax::HashMap<int, float, comb::BuddyAllocator> map{alloc, 16};
 

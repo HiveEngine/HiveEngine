@@ -57,11 +57,6 @@ namespace wax
             return index == other.index && generation == other.generation;
         }
 
-        [[nodiscard]] constexpr bool operator!=(const Handle& other) const noexcept
-        {
-            return !(*this == other);
-        }
-
         [[nodiscard]] static constexpr Handle Invalid() noexcept
         {
             return Handle{UINT32_MAX, 0};

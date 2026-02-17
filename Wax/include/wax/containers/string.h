@@ -6,6 +6,7 @@
 #include <utility>
 #include <type_traits>
 #include <hive/core/assert.h>
+#include <comb/allocator_concepts.h>
 #include <comb/default_allocator.h>
 #include <wax/containers/string_view.h>
 
@@ -73,7 +74,7 @@ namespace wax
      *   const char* c_str = path.CStr();
      * @endcode
      */
-    template<typename Allocator = comb::DefaultAllocator>
+    template<comb::Allocator Allocator = comb::DefaultAllocator>
     class String
     {
     public:
@@ -746,80 +747,62 @@ namespace wax
     };
 
     // Comparison operators
-    template<typename Allocator>
+    template<comb::Allocator Allocator>
     [[nodiscard]] bool operator==(const String<Allocator>& lhs, const String<Allocator>& rhs) noexcept
     {
         return lhs.Equals(rhs);
     }
 
-    template<typename Allocator>
+    template<comb::Allocator Allocator>
     [[nodiscard]] bool operator==(const String<Allocator>& lhs, StringView rhs) noexcept
     {
         return lhs.Equals(rhs);
     }
 
-    template<typename Allocator>
+    template<comb::Allocator Allocator>
     [[nodiscard]] bool operator==(StringView lhs, const String<Allocator>& rhs) noexcept
     {
         return rhs.Equals(lhs);
     }
 
-    template<typename Allocator>
-    [[nodiscard]] bool operator!=(const String<Allocator>& lhs, const String<Allocator>& rhs) noexcept
-    {
-        return !lhs.Equals(rhs);
-    }
-
-    template<typename Allocator>
-    [[nodiscard]] bool operator!=(const String<Allocator>& lhs, StringView rhs) noexcept
-    {
-        return !lhs.Equals(rhs);
-    }
-
-    template<typename Allocator>
-    [[nodiscard]] bool operator!=(StringView lhs, const String<Allocator>& rhs) noexcept
-    {
-        return !rhs.Equals(lhs);
-    }
-
-    template<typename Allocator>
+    template<comb::Allocator Allocator>
     [[nodiscard]] bool operator<(const String<Allocator>& lhs, const String<Allocator>& rhs) noexcept
     {
         return lhs.Compare(rhs) < 0;
     }
 
-    template<typename Allocator>
+    template<comb::Allocator Allocator>
     [[nodiscard]] bool operator<(const String<Allocator>& lhs, StringView rhs) noexcept
     {
         return lhs.Compare(rhs) < 0;
     }
 
-    template<typename Allocator>
+    template<comb::Allocator Allocator>
     [[nodiscard]] bool operator<(StringView lhs, const String<Allocator>& rhs) noexcept
     {
         return rhs.Compare(lhs) > 0;
     }
 
-    template<typename Allocator>
+    template<comb::Allocator Allocator>
     [[nodiscard]] bool operator<=(const String<Allocator>& lhs, const String<Allocator>& rhs) noexcept
     {
         return lhs.Compare(rhs) <= 0;
     }
 
-    template<typename Allocator>
+    template<comb::Allocator Allocator>
     [[nodiscard]] bool operator>(const String<Allocator>& lhs, const String<Allocator>& rhs) noexcept
     {
         return lhs.Compare(rhs) > 0;
     }
 
-    template<typename Allocator>
+    template<comb::Allocator Allocator>
     [[nodiscard]] bool operator>=(const String<Allocator>& lhs, const String<Allocator>& rhs) noexcept
     {
         return lhs.Compare(rhs) >= 0;
     }
 
     // Concatenation operator
-    template<typename Allocator>
+    template<comb::Allocator Allocator>
     [[nodiscard]] String<Allocator> operator+(const String<Allocator>& lhs, const String<Allocator>& rhs)
     {
         String<Allocator> result = lhs;
@@ -827,7 +810,7 @@ namespace wax
         return result;
     }
 
-    template<typename Allocator>
+    template<comb::Allocator Allocator>
     [[nodiscard]] String<Allocator> operator+(const String<Allocator>& lhs, StringView rhs)
     {
         String<Allocator> result = lhs;
@@ -835,7 +818,7 @@ namespace wax
         return result;
     }
 
-    template<typename Allocator>
+    template<comb::Allocator Allocator>
     [[nodiscard]] String<Allocator> operator+(const String<Allocator>& lhs, const char* rhs)
     {
         String<Allocator> result = lhs;

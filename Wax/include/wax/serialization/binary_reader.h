@@ -239,7 +239,7 @@ namespace wax
         {
             uint64_t encoded = ReadVarInt();
             // ZigZag decoding: (n >> 1) ^ -(n & 1)
-            return static_cast<int64_t>((encoded >> 1) ^ (~(encoded & 1) + 1));
+            return static_cast<int64_t>((encoded >> 1) ^ -(encoded & 1));
         }
 
         /**

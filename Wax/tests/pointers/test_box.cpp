@@ -183,7 +183,7 @@ namespace {
         auto box = wax::MakeBox<int>(alloc, 42);
         int* new_ptr = comb::New<int>(alloc, 99);
 
-        box.Reset(new_ptr);
+        box.Reset(alloc, new_ptr);
 
         larvae::AssertTrue(box.IsValid());
         larvae::AssertEqual(*box, 99);

@@ -58,7 +58,7 @@ namespace wax
      *   // Object destroyed when last Rc goes out of scope
      * @endcode
      */
-    template<typename T, typename Allocator = comb::DefaultAllocator>
+    template<typename T, comb::Allocator Allocator = comb::DefaultAllocator>
     class Rc
     {
     private:
@@ -76,7 +76,7 @@ namespace wax
         };
 
         // Friend declarations for MakeRc
-        template<typename U, typename A, typename... Args>
+        template<typename U, comb::Allocator A, typename... Args>
         friend Rc<U, A> MakeRc(A& allocator, Args&&... args);
 
         template<typename U, typename... Args>
@@ -226,19 +226,9 @@ namespace wax
             return control_ == other.control_;
         }
 
-        [[nodiscard]] bool operator!=(const Rc& other) const noexcept
-        {
-            return control_ != other.control_;
-        }
-
         [[nodiscard]] bool operator==(std::nullptr_t) const noexcept
         {
             return control_ == nullptr;
-        }
-
-        [[nodiscard]] bool operator!=(std::nullptr_t) const noexcept
-        {
-            return control_ != nullptr;
         }
 
     private:
@@ -264,7 +254,7 @@ namespace wax
     };
 
     // Helper function to create an Rc
-    template<typename T, typename Allocator, typename... Args>
+    template<typename T, comb::Allocator Allocator, typename... Args>
     [[nodiscard]] Rc<T, Allocator> MakeRc(Allocator& allocator, Args&&... args)
     {
         using ControlBlock = typename Rc<T, Allocator>::ControlBlock;
