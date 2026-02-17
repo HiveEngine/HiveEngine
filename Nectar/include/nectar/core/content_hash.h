@@ -1,12 +1,35 @@
 #pragma once
 
-#include <nectar/core/asset_id.h>
 #include <wax/serialization/byte_span.h>
 #include <cstdint>
 #include <cstddef>
 
 namespace nectar
 {
+    /// Fixed-capacity hex string (32 chars) for 128-bit hash display.
+    class HexString32
+    {
+    public:
+        static constexpr size_t kCapacity = 32;
+
+        constexpr HexString32() noexcept : buffer_{}, size_{0} { buffer_[0] = '\0'; }
+
+        constexpr HexString32(const char* str, size_t len) noexcept : buffer_{}, size_{0}
+        {
+            size_t n = len <= kCapacity ? len : kCapacity;
+            for (size_t i = 0; i < n; ++i) buffer_[i] = str[i];
+            buffer_[n] = '\0';
+            size_ = n;
+        }
+
+        [[nodiscard]] constexpr const char* CStr() const noexcept { return buffer_; }
+        [[nodiscard]] constexpr size_t Size() const noexcept { return size_; }
+
+    private:
+        char buffer_[kCapacity + 1];
+        size_t size_;
+    };
+
     /// 128-bit content hash for asset data identity (CAS key).
     /// Uses FNV-1a internally for now — will swap to Blake3 later.
     class ContentHash
@@ -48,7 +71,7 @@ namespace nectar
             return static_cast<size_t>(high_ ^ low_);
         }
 
-        [[nodiscard]] AssetIdString ToString() const noexcept
+        [[nodiscard]] HexString32 ToString() const noexcept
         {
             constexpr char kHex[] = "0123456789abcdef";
             char buf[33];
@@ -67,7 +90,7 @@ namespace nectar
             }
             buf[32] = '\0';
 
-            return AssetIdString{buf, 32};
+            return HexString32{buf, 32};
         }
 
         [[nodiscard]] constexpr bool operator==(const ContentHash& other) const noexcept
