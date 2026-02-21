@@ -7,7 +7,7 @@
 # ============================================================================
 
 add_executable(Testbed
-    src/main.cpp
+        src/linux_main.cpp
 #    src/systemmodule.cpp
 #    src/logtestbed.cpp
 )

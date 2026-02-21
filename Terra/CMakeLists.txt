@@ -45,18 +45,7 @@ if(terra_use_glfw STREQUAL "ON")
 
     target_sources(Terra
         PRIVATE
-            src/terra/window/glfw/window_glfw.cpp
+            src/terra/glfw_terra.cpp
+            src/terra/linux_glfw_terra.cpp
     )
-
-    if(UNIX)
-        target_sources(Terra
-            PRIVATE
-                src/terra/window/glfw/window_glfw_linux.cpp
-        )
-    elseif(WIN32)
-        target_sources(Terra
-            PRIVATE
-                src/terra/window/glfw/window_glfw_win32.cpp
-        )
-    endif()
 endif()

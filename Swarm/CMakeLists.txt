@@ -7,7 +7,10 @@ add_subdirectory(extern/diligentcore)
 
 target_sources(Swarm
         PRIVATE
-        src/swarm_module.cpp
+		src/swarm.cpp
+        src/diligent_swarm.cpp
+		src/diligent_swarm_vulkan.cpp
+		src/diligent_swarm_linux_vulkan.cpp
 )
 
 target_include_directories(Swarm
@@ -22,8 +25,9 @@ target_link_libraries(Swarm
         Wax
         Terra
 
-        Diligent-GraphicsEngineVk-shared
-        Diligent-BuildSettings
+		Diligent-GraphicsEngineVk-static
+		Diligent-GraphicsEngine
+		Diligent-BuildSettings
 )
 
 target_compile_features(Swarm
