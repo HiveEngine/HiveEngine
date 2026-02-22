@@ -88,12 +88,13 @@ bool Engine::Init()
         return false;
     }
 
+    swarm::SetupGraphicPipeline(renderContext_);
     return true;
 }
 
 void Engine::Shutdown()
 {
-    swarm::ShutdownRenderContext(&renderContext_);
+    swarm::ShutdownRenderContext(renderContext_);
     swarm::ShutdownSystem();
 
     terra::ShutdownWindowContext(&windowContext_);

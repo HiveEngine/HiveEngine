@@ -8,5 +8,8 @@ namespace swarm
         Diligent::IDeviceContext *context_{nullptr};
 
         Diligent::ISwapChain *swapchain_{nullptr}; //Can be null if offscreen rendering
+
+        //TEMP
+        Diligent::IPipelineState *pipeline_{nullptr};
     };
 }

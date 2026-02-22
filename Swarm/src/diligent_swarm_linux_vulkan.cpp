@@ -1,5 +1,4 @@
 #include <swarm/precomp.h>
-#if defined(SWARM_LINUX)
 #include <swarm/swarm.h>
 #include <swarm/platform/linux_swarm.h>
 #include <swarm/platform/diligent_swarm.h>
@@ -9,9 +8,9 @@ namespace swarm
 {
     extern bool InitRenderContextCommon(RenderContext *renderContext);
 
-    bool InitRenderContextWayland(RenderContext *renderContext, wl_display *display, wl_surface *surface)
+    bool InitRenderContextWayland(RenderContext &renderContext, wl_display *display, wl_surface *surface)
     {
-        if (!InitRenderContextCommon(renderContext))
+        if (!InitRenderContextCommon(&renderContext))
         {
             return false;
         }
@@ -31,15 +30,15 @@ namespace swarm
 
             nativeWindow.pDisplay = display;
             nativeWindow.pWaylandSurface = surface;
-            factory->CreateSwapChainVk(renderContext->device_, renderContext->context_, desc, nativeWindow, &renderContext->swapchain_);
+            factory->CreateSwapChainVk(renderContext.device_, renderContext.context_, desc, nativeWindow, &renderContext.swapchain_);
         }
 
         return true;
     }
 
-    bool InitRenderContextX11(RenderContext *renderContext, Display *display, Window window)
+    bool InitRenderContextX11(RenderContext &renderContext, Display *display, Window window)
     {
-        if (!InitRenderContextCommon(renderContext))
+        if (!InitRenderContextCommon(&renderContext))
         {
             return false;
         }
@@ -54,10 +53,9 @@ namespace swarm
 
             nativeWindow.pDisplay = display;
             nativeWindow.WindowId = window;
-            factory->CreateSwapChainVk(renderContext->device_, renderContext->context_, desc, nativeWindow, &renderContext->swapchain_);
+            factory->CreateSwapChainVk(renderContext.device_, renderContext.context_, desc, nativeWindow, &renderContext.swapchain_);
         }
 
         return true;
     }
 }
-#endif

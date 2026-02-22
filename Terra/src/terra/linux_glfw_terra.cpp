@@ -1,5 +1,4 @@
 #include <terra/precomp.h>
-#if defined(TERRA_LINUX)
 #include <terra/platform/glfw_terra.h>
 #define TERRA_NATIVE_LINUX
 #include <terra/terra_native.h>
@@ -33,4 +32,3 @@ namespace terra
         return nativeWindow;
     }
 }
-#endif

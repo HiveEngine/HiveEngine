@@ -1,4 +1,5 @@
 #pragma once
+
 namespace swarm
 {
     //Opaque handle
@@ -6,8 +7,10 @@ namespace swarm
 
     bool InitSystem();
     void ShutdownSystem();
-    void ShutdownRenderContext(RenderContext *renderContext);
+    void ShutdownRenderContext(RenderContext &renderContext);
 
     void Render(RenderContext *renderContext);
 
+
+    void SetupGraphicPipeline(RenderContext &renderContext);
 }

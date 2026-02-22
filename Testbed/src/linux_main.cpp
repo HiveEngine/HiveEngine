@@ -1,7 +1,4 @@
 #include <testbed/precomp.h>
-#if defined(TESTBED_LINUX)
-
-
 #include <terra/terra.h>
 #include <terra/platform/glfw_terra.h>
 
@@ -90,7 +87,7 @@ bool Engine::Init()
     {
         case terra::NativeWindowType::X11:
         {
-            if (!swarm::InitRenderContextX11(&renderContext_, nativeWindow.x11Display_, nativeWindow.x11Window_))
+            if (!swarm::InitRenderContextX11(renderContext_, nativeWindow.x11Display_, nativeWindow.x11Window_))
             {
                 return false;
             }
@@ -98,7 +95,7 @@ bool Engine::Init()
         }
         case terra::NativeWindowType::WAYLAND:
         {
-            if (!swarm::InitRenderContextWayland(&renderContext_, nativeWindow.wlDisplay_, nativeWindow.wlSurface_))
+            if (!swarm::InitRenderContextWayland(renderContext_, nativeWindow.wlDisplay_, nativeWindow.wlSurface_))
             {
                 return false;
             }
@@ -106,12 +103,14 @@ bool Engine::Init()
         }
     }
 
+
+    swarm::SetupGraphicPipeline(renderContext_);
     return true;
 }
 
 void Engine::Shutdown()
 {
-    swarm::ShutdownRenderContext(&renderContext_);
+    swarm::ShutdownRenderContext(renderContext_);
     swarm::ShutdownSystem();
 
     terra::ShutdownWindowContext(&windowContext_);
@@ -137,5 +136,3 @@ int main()
     Engine engine;
     engine.Run();
 }
-
-#endif

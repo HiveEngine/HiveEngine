@@ -6,12 +6,11 @@
 # Executable Configuration
 # ============================================================================
 
-add_executable(Testbed
-        src/linux_main.cpp
-        src/win32_main.cpp
-#    src/systemmodule.cpp
-#    src/logtestbed.cpp
-)
+add_executable(Testbed src/linux_main.cpp)
+
+if(WIN32)
+    target_sources(Testbed PRIVATE src/win32_main.cpp)
+endif ()
 
 target_include_directories(Testbed
     PUBLIC

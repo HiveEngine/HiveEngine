@@ -10,10 +10,15 @@ target_sources(Swarm
 		src/swarm.cpp
         src/diligent_swarm.cpp
 		src/diligent_swarm_vulkan.cpp
-
-		src/diligent_swarm_linux_vulkan.cpp
-		src/diligent_swarm_win32_vulkan.cpp
 )
+
+if(UNIX)
+	target_sources(Swarm PRIVATE src/diligent_swarm_linux_vulkan.cpp)
+endif ()
+
+if(WIN32)
+	target_sources(Swarm PRIVATE src/diligent_swarm_win32_vulkan.cpp)
+endif ()
 
 target_include_directories(Swarm
         PUBLIC

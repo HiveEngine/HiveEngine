@@ -11,8 +11,8 @@
 namespace swarm
 {
     //display and surface can be null for offscreen rendering
-    bool InitRenderContextWayland(RenderContext *renderContext, wl_display *display, wl_surface *surface);
+    bool InitRenderContextWayland(RenderContext &renderContext, wl_display *display, wl_surface *surface);
 
     //display and window can be null for offscreen rendering
-    bool InitRenderContextX11(RenderContext *renderContext, Display *display, Window window);
+    bool InitRenderContextX11(RenderContext &renderContext, Display *display, Window window);
 }
