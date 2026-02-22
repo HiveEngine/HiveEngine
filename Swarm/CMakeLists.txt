@@ -10,7 +10,9 @@ target_sources(Swarm
 		src/swarm.cpp
         src/diligent_swarm.cpp
 		src/diligent_swarm_vulkan.cpp
+
 		src/diligent_swarm_linux_vulkan.cpp
+		src/diligent_swarm_win32_vulkan.cpp
 )
 
 target_include_directories(Swarm

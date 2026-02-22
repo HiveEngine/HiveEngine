@@ -47,5 +47,6 @@ if(terra_use_glfw STREQUAL "ON")
         PRIVATE
             src/terra/glfw_terra.cpp
             src/terra/linux_glfw_terra.cpp
+            src/terra/win32_glfw_terra.cpp
     )
 endif()

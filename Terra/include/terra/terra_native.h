@@ -22,11 +22,13 @@ namespace terra
     };
 }
 #elif defined(TERRA_NATIVE_WIN32)
+#include <Windows.h>
 namespace terra
 {
     struct NativeWindow
     {
-
+        HINSTANCE instance_{nullptr};
+        HWND window_{nullptr};
     };
 }
 #else

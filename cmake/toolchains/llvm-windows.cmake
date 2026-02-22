@@ -18,8 +18,8 @@ else()
 endif()
 
 # Set compilers
-set(CMAKE_C_COMPILER "${LLVM_ROOT}/bin/clang.exe" CACHE FILEPATH "C compiler")
-set(CMAKE_CXX_COMPILER "${LLVM_ROOT}/bin/clang++.exe" CACHE FILEPATH "C++ compiler")
+set(CMAKE_C_COMPILER "${LLVM_ROOT}/bin/clang-cl.exe" CACHE FILEPATH "C compiler")
+set(CMAKE_CXX_COMPILER "${LLVM_ROOT}/bin/clang-cl.exe" CACHE FILEPATH "C++ compiler")
 set(CMAKE_AR "${LLVM_ROOT}/bin/llvm-ar.exe" CACHE FILEPATH "Archiver")
 set(CMAKE_RANLIB "${LLVM_ROOT}/bin/llvm-ranlib.exe" CACHE FILEPATH "Ranlib")
 set(CMAKE_LINKER "${LLVM_ROOT}/bin/lld-link.exe" CACHE FILEPATH "Linker")

@@ -8,6 +8,7 @@
 
 add_executable(Testbed
         src/linux_main.cpp
+        src/win32_main.cpp
 #    src/systemmodule.cpp
 #    src/logtestbed.cpp
 )

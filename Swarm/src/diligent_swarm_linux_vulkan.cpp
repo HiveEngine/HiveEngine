@@ -1,4 +1,5 @@
 #include <swarm/precomp.h>
+#if defined(SWARM_LINUX)
 #include <swarm/swarm.h>
 #include <swarm/platform/linux_swarm.h>
 #include <swarm/platform/diligent_swarm.h>
@@ -59,3 +60,4 @@ namespace swarm
         return true;
     }
 }
+#endif

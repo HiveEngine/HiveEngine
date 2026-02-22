@@ -1,21 +1,18 @@
 #include <testbed/precomp.h>
-#if defined(TESTBED_LINUX)
-
 
 #include <terra/terra.h>
 #include <terra/platform/glfw_terra.h>
-
-#define TERRA_NATIVE_LINUX
+#define TERRA_NATIVE_WIN32
 #include <terra/terra_native.h>
 
 #include <swarm/swarm.h>
-#include <swarm/platform/linux_swarm.h>
+#include <swarm/platform/win32_swarm.h>
 #include <swarm/platform/diligent_swarm.h>
+
+#include <hive/core/log.h>
 
 
 #include <iostream>
-#include <hive/core/log.h>
-
 
 struct PlatformContext
 {
@@ -86,24 +83,9 @@ bool Engine::Init()
     }
 
     terra::NativeWindow nativeWindow = terra::GetNativeWindow(&windowContext_);
-    switch (nativeWindow.type_)
+    if (!swarm::InitRenderContextWin32(&renderContext_, nativeWindow.instance_, nativeWindow.window_))
     {
-        case terra::NativeWindowType::X11:
-        {
-            if (!swarm::InitRenderContextX11(&renderContext_, nativeWindow.x11Display_, nativeWindow.x11Window_))
-            {
-                return false;
-            }
-            break;
-        }
-        case terra::NativeWindowType::WAYLAND:
-        {
-            if (!swarm::InitRenderContextWayland(&renderContext_, nativeWindow.wlDisplay_, nativeWindow.wlSurface_))
-            {
-                return false;
-            }
-            break;
-        }
+        return false;
     }
 
     return true;
@@ -137,5 +119,3 @@ int main()
     Engine engine;
     engine.Run();
 }
-
-#endif
