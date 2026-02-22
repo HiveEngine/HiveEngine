@@ -10,3 +10,6 @@
 [submodule "Hive/extern/fmt"]
 	path = Hive/extern/fmt
 	url = https://github.com/fmtlib/fmt.git
+[submodule "Swarm/extern/diligentcore"]
+	path = Swarm/extern/diligentcore
+	url = https://github.com/DiligentGraphics/DiligentCore.git

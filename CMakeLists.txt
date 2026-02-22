@@ -108,22 +108,22 @@ set(terra_use_glfw ${HIVE_FEATURE_GLFW} CACHE BOOL "Enable GLFW windowing" FORCE
 
 # Disable RTTI (Run-Time Type Information)
 # Saves 15-20% binary size, improves performance
-if(MSVC)
-    add_compile_options(/GR-)
-else()
-    add_compile_options(-fno-rtti)
-endif()
-
-# Disable C++ Exceptions
-# Saves 5-10% binary size, improves performance
-# WARNING: STL will call std::terminate on errors
-if(MSVC)
-    # Remove CMake's default /EHsc flag to avoid D9025 warning
-    string(REPLACE "/EHsc" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
-    add_compile_options(/EHs-c-)
-else()
-    add_compile_options(-fno-exceptions)
-endif()
+#if(MSVC)
+#    add_compile_options(/GR-)
+#else()
+#    add_compile_options(-fno-rtti)
+#endif()
+#
+## Disable C++ Exceptions
+## Saves 5-10% binary size, improves performance
+## WARNING: STL will call std::terminate on errors
+#if(MSVC)
+#    # Remove CMake's default /EHsc flag to avoid D9025 warning
+#    string(REPLACE "/EHsc" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+#    add_compile_options(/EHs-c-)
+#else()
+#    add_compile_options(-fno-exceptions)
+#endif()
 
 # ============================================================================
 # Compiler Flags
@@ -211,7 +211,7 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     # Debug flags
     if(CMAKE_BUILD_TYPE STREQUAL "Debug")
         add_compile_options(-O0 -g3)
-        add_compile_definitions(_GLIBCXX_DEBUG)
+#        add_compile_definitions(_GLIBCXX_DEBUG)
     endif()
 
     # Release flags
@@ -385,15 +385,19 @@ foreach(CONFIG ${CMAKE_CONFIGURATION_TYPES})
     set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_${CONFIG_UPPER} ${CMAKE_BINARY_DIR}/lib/${CONFIG})
 endforeach()
 
+#include_directories("C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/MSVC/14.43.34808/atlmfc/include")
+#link_directories("C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/MSVC/14.43.34808/atlmfc/lib/x64")
+
 add_subdirectory(Hive)
-#add_subdirectory(Terra)
+add_subdirectory(Terra)
 add_subdirectory(Larvae)
 add_subdirectory(Comb)
 add_subdirectory(Wax)
 add_subdirectory(Nectar)
 add_subdirectory(Queen)
 add_subdirectory(Brood)
-#add_subdirectory(Testbed)
+add_subdirectory(Swarm)
+add_subdirectory(Testbed)
 #add_subdirectory(Cells)
 
 message(STATUS "")
