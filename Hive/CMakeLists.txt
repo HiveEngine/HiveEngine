@@ -53,6 +53,7 @@ add_library(Hive STATIC)
 target_include_directories(Hive
     PUBLIC
         include
+        extern/hmm
     PRIVATE
         src
 )
@@ -75,3 +76,10 @@ target_sources(Hive
         src/hive/core/module.cpp
         src/hive/core/moduleregistry.cpp
 )
+
+if(WIN32)
+    target_sources(Hive PRIVATE src/hive/platform/dynamic_library_win32.cpp)
+elseif(UNIX)
+    target_sources(Hive PRIVATE src/hive/platform/dynamic_library_linux.cpp)
+    target_link_libraries(Hive PRIVATE dl)
+endif()
