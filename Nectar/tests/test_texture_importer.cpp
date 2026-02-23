@@ -272,7 +272,7 @@ namespace {
 
     auto t9 = larvae::RegisterTest("NectarTexture", "VersionAndTypeName", []() {
         nectar::TextureImporter importer;
-        larvae::AssertEqual(importer.Version(), uint32_t{1});
+        larvae::AssertEqual(importer.Version(), uint32_t{2});
         larvae::AssertTrue(importer.TypeName().Equals("Texture"));
     });
 
