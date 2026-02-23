@@ -1,154 +1,155 @@
 #pragma once
 
 #include <algorithm>
+#include <cstddef>
+#include <new>
 
 namespace hive
 {
-   template <class>
-   struct max_sizeof;
 
-   template <class... Ts>
-   struct max_sizeof<std::tuple<Ts...>>
-   {
-      static constexpr auto value = (std::max)({sizeof(Ts)...});
-   };
+template<class>
+struct MaxSizeof;
 
-   template <class T>
-   constexpr auto max_sizeof_v = max_sizeof<T>::value;
+template<class... Ts>
+struct MaxSizeof<std::tuple<Ts...>>
+{
+    static constexpr auto value = (std::max)({sizeof(Ts)...});
+};
 
-   template <class>
-   struct max_alignof;
+template<class T>
+constexpr auto kMaxSizeof = MaxSizeof<T>::value;
 
-   template <class... Ts>
-   struct max_alignof<std::tuple<Ts...>>
-   {
-      static constexpr auto value = (std::max)({alignof(Ts)...});
-   };
+template<class>
+struct MaxAlignof;
 
-   template <class T>
-   constexpr auto max_alignof_v = max_alignof<T>::value;
+template<class... Ts>
+struct MaxAlignof<std::tuple<Ts...>>
+{
+    static constexpr auto value = (std::max)({alignof(Ts)...});
+};
 
-   // Functor
-   template <typename R, typename... Args>
-   class Functor
-   {
-      // Interface polymorphique
-      struct invoquable
-      {
-         virtual R invoquer(Args&&...) = 0;
-         virtual invoquable* cloner(void*) const = 0;
-         virtual ~invoquable() = default;
-      };
+template<class T>
+constexpr auto kMaxAlignof = MaxAlignof<T>::value;
 
-      // Implémentation pour une fonction libre
-      class fonction : public invoquable
-      {
-         R (*ptr)(Args...);
+template<typename R, typename... Args>
+class Functor
+{
+    struct Callable
+    {
+        Callable() = default;
+        Callable(const Callable&) = default;
+        Callable& operator=(const Callable&) = default;
+        virtual ~Callable() = default;
 
-      public:
-         fonction(R (*ptr)(Args...)) noexcept : ptr{ptr} {}
+        virtual R Invoke(Args&&...) = 0;
+        virtual Callable* Clone(void*) const = 0;
+    };
 
-         R invoquer(Args&&... args) override
-         {
-            return ptr(std::forward<Args>(args)...);
-         }
+    class FreeFunction : public Callable
+    {
+    public:
+        explicit FreeFunction(R (*fn)(Args...)) noexcept : fn_{fn} {}
 
-         fonction* cloner(void* p) const override
-         {
-            return new(p) fonction{*this};
-         }
-      };
+        R Invoke(Args&&... args) override {
+            return fn_(static_cast<Args&&>(args)...);
+        }
 
-      // Implémentation pour une méthode d'instance
-      template <class T>
-      class methode_instance : public invoquable
-      {
-         T* inst;
-         R (T::*ptr)(Args...);
+        FreeFunction* Clone(void* dst) const override {
+            return ::new(dst) FreeFunction{*this};
+        }
 
-      public:
-         methode_instance(T* inst, R (T::*ptr)(Args...)) noexcept : inst{inst}, ptr{ptr} {}
+    private:
+        R (*fn_)(Args...);
+    };
 
-         R invoquer(Args&&... args) override
-         {
-            return (inst->*ptr)(std::forward<Args>(args)...);
-         }
+    template<class T>
+    class MemberFunction : public Callable
+    {
+    public:
+        MemberFunction(T* obj, R (T::*fn)(Args...)) noexcept : obj_{obj}, fn_{fn} {}
 
-         methode_instance* cloner(void* p) const override
-         {
-            return new(p) methode_instance{*this};
-         }
-      };
+        R Invoke(Args&&... args) override {
+            return (obj_->*fn_)(static_cast<Args&&>(args)...);
+        }
 
-      // Implémentation pour une méthode d'instance const
-      template <class T>
-      class methode_instance_const : public invoquable
-      {
-         T* inst;
-         R (T::*ptr)(Args...) const;
+        MemberFunction* Clone(void* dst) const override {
+            return ::new(dst) MemberFunction{*this};
+        }
 
-      public:
-         methode_instance_const(T* inst, R (T::*ptr)(Args...) const) noexcept : inst{inst}, ptr{ptr} {}
+    private:
+        T* obj_;
+        R (T::*fn_)(Args...);
+    };
 
-         R invoquer(Args&&... args) override
-         {
-            return (inst->*ptr)(std::forward<Args>(args)...);
-         }
+    template<class T>
+    class ConstMemberFunction : public Callable
+    {
+    public:
+        ConstMemberFunction(T* obj, R (T::*fn)(Args...) const) noexcept : obj_{obj}, fn_{fn} {}
 
-         methode_instance_const* cloner(void* p) const override
-         {
-            return new(p) methode_instance_const{*this};
-         }
-      };
+        R Invoke(Args&&... args) override {
+            return (obj_->*fn_)(static_cast<Args&&>(args)...);
+        }
 
-      using types = std::tuple<
-         fonction,
-         methode_instance<Functor<R, Args...>>,
-         methode_instance_const<Functor<R, Args...>>
-      >;
+        ConstMemberFunction* Clone(void* dst) const override {
+            return ::new(dst) ConstMemberFunction{*this};
+        }
 
-      alignas(max_alignof_v<types>) char buf[max_sizeof_v<types>];
-      invoquable* ptr{};
+    private:
+        T* obj_;
+        R (T::*fn_)(Args...) const;
+    };
 
-      void* internal_buffer() { return buf; }
+    using Types = std::tuple<
+        FreeFunction,
+        MemberFunction<Functor<R, Args...>>,
+        ConstMemberFunction<Functor<R, Args...>>
+    >;
 
-   public:
-      [[nodiscard]] bool IsEmpty() const noexcept { return !ptr; }
+    alignas(kMaxAlignof<Types>) char buffer_[kMaxSizeof<Types>];
+    Callable* callable_{};
 
-      Functor() = default;
+public:
+    [[nodiscard]] bool IsEmpty() const noexcept { return !callable_; }
 
-      Functor(R (*fct)(Args...))
-         : ptr{new(internal_buffer()) fonction{fct}} {}
+    Functor() = default;
 
-      template <class T>
-      Functor(T* inst, R (T::*fct)(Args...))
-         : ptr{new(internal_buffer()) methode_instance<T>{inst, fct}} {}
+    Functor(R (*fn)(Args...))
+        : callable_{::new(buffer_) FreeFunction{fn}}
+    {}
 
-      template <class T>
-      Functor(T* inst, R (T::*fct)(Args...) const)
-         : ptr{new(internal_buffer()) methode_instance_const<T>{inst, fct}} {}
+    template<class T>
+    Functor(T* obj, R (T::*fn)(Args...))
+        : callable_{::new(buffer_) MemberFunction<T>{obj, fn}}
+    {}
 
-      Functor(const Functor& other)
-         : ptr{other.IsEmpty() ? nullptr : other.ptr->cloner(internal_buffer())} {}
+    template<class T>
+    Functor(T* obj, R (T::*fn)(Args...) const)
+        : callable_{::new(buffer_) ConstMemberFunction<T>{obj, fn}}
+    {}
 
-      Functor& operator=(const Functor& other)
-      {
-         if (this != &other)
-         {
-            if (ptr) ptr->~invoquable();
-            ptr = other.IsEmpty() ? nullptr : other.ptr->cloner(internal_buffer());
-         }
-         return *this;
-      }
+    Functor(const Functor& other)
+        : callable_{other.IsEmpty() ? nullptr : other.callable_->Clone(buffer_)}
+    {}
 
-      ~Functor()
-      {
-         if (ptr) ptr->~invoquable();
-      }
+    Functor& operator=(const Functor& other) {
+        if (this != &other)
+        {
+            if (callable_)
+                callable_->~Callable();
+            callable_ = other.IsEmpty() ? nullptr : other.callable_->Clone(buffer_);
+        }
+        return *this;
+    }
 
-      R operator()(Args... args)
-      {
-         return ptr->invoquer(std::forward<Args>(args)...);
-      }
-   };
-}
+    ~Functor() {
+        if (callable_)
+            callable_->~Callable();
+    }
+
+    R operator()(Args... args) {
+        return callable_->Invoke(static_cast<Args&&>(args)...);
+    }
+};
+
+} // namespace hive
