@@ -26,7 +26,7 @@ namespace hive
             return *m_Instance;
         }
 
-        static inline bool IsInitialized()
+        [[nodiscard]] static inline bool IsInitialized()
         {
             return m_Instance != nullptr;
         }

@@ -3,9 +3,6 @@
 // ============================================================================
 // HiveEngine Configuration Header
 // ============================================================================
-// This header centralizes all compile-time configuration for the engine.
-// All macros are defined via CMake and can be toggled at build time.
-// ============================================================================
 
 // ============================================================================
 // Platform Detection (auto-detected)

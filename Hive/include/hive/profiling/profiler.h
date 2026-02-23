@@ -10,6 +10,7 @@
     #define HIVE_PROFILE_SCOPE              ZoneScoped
     #define HIVE_PROFILE_SCOPE_N(name)      ZoneScopedN(name)
     #define HIVE_PROFILE_SCOPE_C(color)     ZoneScopedC(color)
+    #define HIVE_PROFILE_SCOPE_NC(name, color) ZoneScopedNC(name, color)
 
     // Frame markers
     #define HIVE_PROFILE_FRAME              FrameMark
@@ -38,6 +39,7 @@
     #define HIVE_PROFILE_SCOPE              (void)0
     #define HIVE_PROFILE_SCOPE_N(name)      (void)0
     #define HIVE_PROFILE_SCOPE_C(color)     (void)0
+    #define HIVE_PROFILE_SCOPE_NC(name, color) (void)0
 
     #define HIVE_PROFILE_FRAME              (void)0
     #define HIVE_PROFILE_FRAME_N(name)      (void)0

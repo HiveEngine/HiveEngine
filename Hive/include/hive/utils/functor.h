@@ -1,5 +1,7 @@
 #pragma once
 
+#include <algorithm>
+
 namespace hive
 {
    template <class>
@@ -111,7 +113,7 @@ namespace hive
       void* internal_buffer() { return buf; }
 
    public:
-      bool empty() const noexcept { return !ptr; }
+      [[nodiscard]] bool IsEmpty() const noexcept { return !ptr; }
 
       Functor() = default;
 
@@ -127,14 +129,14 @@ namespace hive
          : ptr{new(internal_buffer()) methode_instance_const<T>{inst, fct}} {}
 
       Functor(const Functor& other)
-         : ptr{other.empty() ? nullptr : other.ptr->cloner(internal_buffer())} {}
+         : ptr{other.IsEmpty() ? nullptr : other.ptr->cloner(internal_buffer())} {}
 
       Functor& operator=(const Functor& other)
       {
          if (this != &other)
          {
             if (ptr) ptr->~invoquable();
-            ptr = other.empty() ? nullptr : other.ptr->cloner(internal_buffer());
+            ptr = other.IsEmpty() ? nullptr : other.ptr->cloner(internal_buffer());
          }
          return *this;
       }
