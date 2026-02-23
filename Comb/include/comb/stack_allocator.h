@@ -370,9 +370,9 @@ namespace comb
         }
 
     private:
-        void* memory_block_{nullptr};   // Base memory block
-        size_t capacity_{0};             // Total capacity in bytes
-        size_t current_{0};              // Current allocation offset
+        void* memory_block_{nullptr};
+        size_t capacity_{0};
+        size_t current_{0};
 
 #if COMB_MEM_DEBUG
         // Debug tracking (zero overhead when COMB_MEM_DEBUG=0)

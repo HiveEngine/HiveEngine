@@ -101,6 +101,17 @@ namespace comb
         }
 
         /**
+         * Get the usable size of an allocation's block (lock-free)
+         *
+         * Safe to call without a lock because the block header is
+         * immutable between Allocate and Deallocate.
+         */
+        [[nodiscard]] size_t GetBlockUsableSize(const void* ptr) const
+        {
+            return allocator_->GetBlockUsableSize(ptr);
+        }
+
+        /**
          * Get the underlying allocator (not thread-safe access!)
          *
          * Warning: Direct access to underlying allocator bypasses thread safety.
@@ -120,7 +131,7 @@ namespace comb
         /**
          * Get allocator name
          */
-        [[nodiscard]] const char* GetName() const
+        [[nodiscard]] const char* GetName() const noexcept
         {
             return "ThreadSafeAllocator";
         }

@@ -370,6 +370,32 @@ namespace comb
         }
 
         /**
+         * Get the usable size of an allocation's block
+         *
+         * Returns how many bytes can safely be read/written from the
+         * user pointer. This is the buddy block size minus header overhead,
+         * which is always >= the originally requested size.
+         *
+         * @param ptr User pointer previously returned by Allocate
+         * @return Usable byte count, or 0 if ptr is null
+         */
+        [[nodiscard]] size_t GetBlockUsableSize(const void* ptr) const
+        {
+            if (!ptr) return 0;
+#if COMB_MEM_DEBUG
+            auto* header = reinterpret_cast<const AllocationHeader*>(
+                static_cast<const std::byte*>(ptr) - DebugHeaderPrefix
+            );
+            return header->size - DebugHeaderPrefix;
+#else
+            auto* header = reinterpret_cast<const AllocationHeader*>(
+                static_cast<const std::byte*>(ptr) - HeaderPrefix
+            );
+            return header->size - HeaderPrefix;
+#endif
+        }
+
+        /**
          * Reset allocator to initial state
          *
          * All existing allocations become invalid.
@@ -399,7 +425,7 @@ namespace comb
 
     private:
         // Convert size to level (0 = 64B, 1 = 128B, 2 = 256B, etc.)
-        constexpr size_t GetLevel(size_t size) const
+        [[nodiscard]] constexpr size_t GetLevel(size_t size) const noexcept
         {
             size_t blockSize = MinBlockSize;
             size_t level = 0;
@@ -414,13 +440,13 @@ namespace comb
         }
 
         // Convert level to block size
-        constexpr size_t GetBlockSize(size_t level) const
+        [[nodiscard]] constexpr size_t GetBlockSize(size_t level) const noexcept
         {
             return MinBlockSize << level;
         }
 
         // Calculate buddy offset using XOR
-        size_t GetBuddyOffset(size_t offset, size_t blockSize) const
+        [[nodiscard]] size_t GetBuddyOffset(size_t offset, size_t blockSize) const noexcept
         {
             return offset ^ blockSize;
         }
@@ -578,8 +604,7 @@ namespace comb
         auto* header = reinterpret_cast<AllocationHeader*>(block);
         header->size = blockSize;
 
-        // Track memory using release mode calculation (excluding guard bytes)
-        // This ensures GetUsedMemory() returns consistent values between debug and release
+        // Track used_memory_ with release layout (no guards) for consistent stats
         size_t releaseTotalSize = size + HeaderPrefix;
         size_t releaseBlockSize = NextPowerOfTwo(releaseTotalSize);
         if (releaseBlockSize < MinBlockSize)

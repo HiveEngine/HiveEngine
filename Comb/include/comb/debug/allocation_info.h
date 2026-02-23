@@ -36,8 +36,6 @@ namespace comb::debug
 {
 
 /**
- * Allocation metadata
- *
  * Stores information about a single allocation for debugging.
  * Size: ~48 bytes without callstacks, ~176 bytes with callstacks
  */
@@ -47,20 +45,8 @@ struct AllocationInfo
     // Core Information (Always Present)
     // ========================================================================
 
-    /**
-     * User pointer (after guard bytes)
-     * This is the address returned to the user
-     */
     void* address{nullptr};
-
-    /**
-     * User-requested size (excluding guard bytes)
-     */
     size_t size{0};
-
-    /**
-     * Requested alignment
-     */
     size_t alignment{0};
 
     /**
@@ -79,16 +65,7 @@ struct AllocationInfo
      */
     const char* tag{nullptr};
 
-    /**
-     * Unique allocation ID (monotonically increasing)
-     * Useful for tracking allocation history and correlating leaks
-     */
     uint32_t allocationId{0};
-
-    /**
-     * Thread ID that performed the allocation
-     * Cross-platform: Use comb::debug::GetThreadId()
-     */
     uint32_t threadId{0};
 
     // ========================================================================

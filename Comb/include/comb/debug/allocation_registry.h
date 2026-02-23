@@ -95,7 +95,6 @@ public:
 
         std::lock_guard<std::mutex> lock(mutex_);
 
-        // Check for double allocation (same address already registered)
         if (allocations_.find(info.address) != allocations_.end())
         {
             hive::LogError(comb::LogCombRoot,
@@ -105,17 +104,14 @@ public:
             return;
         }
 
-        // Insert into registry
         allocations_[info.address] = info;
 
-        // Update stats
         stats_.totalAllocations++;
         stats_.currentAllocations++;
         stats_.currentBytesUsed += info.size;
         stats_.totalBytesAllocated += info.size;
         stats_.overheadBytes += info.GetTotalSize() - info.size;
 
-        // Update peak
         if (stats_.currentBytesUsed > stats_.peakBytesUsed)
         {
             stats_.peakBytesUsed = stats_.currentBytesUsed;
@@ -149,13 +145,11 @@ public:
             return nullptr;
         }
 
-        // Update stats
         stats_.totalDeallocations++;
         stats_.currentAllocations--;
         stats_.currentBytesUsed -= it->second.size;
         stats_.overheadBytes -= (it->second.GetTotalSize() - it->second.size);
 
-        // Remove from registry
         allocations_.erase(it);
 
         return nullptr;  // Allocation no longer valid
@@ -266,7 +260,6 @@ public:
             return;
         }
 
-        // Leaks detected!
         hive::LogError(comb::LogCombRoot,
                        "[MEM_DEBUG] [{}] MEMORY LEAKS DETECTED: {} allocations not freed",
                        allocatorName, allocations_.size());
@@ -351,14 +344,12 @@ public:
 
         const uintptr_t start = reinterpret_cast<uintptr_t>(startAddress);
 
-        // Iterate and remove allocations >= startAddress
         for (auto it = allocations_.begin(); it != allocations_.end(); )
         {
             const uintptr_t addr = reinterpret_cast<uintptr_t>(it->first);
 
             if (addr >= start)
             {
-                // Update stats before removing
                 stats_.currentAllocations--;
                 stats_.currentBytesUsed -= it->second.size;
                 stats_.overheadBytes -= (it->second.GetTotalSize() - it->second.size);
@@ -425,16 +416,9 @@ public:
     }
 
 private:
-    // Hash table: address -> AllocationInfo
     std::unordered_map<void*, AllocationInfo> allocations_;
-
-    // Statistics
     AllocationStats stats_{};
-
-    // Next allocation ID (monotonically increasing, atomic)
     std::atomic<uint32_t> nextAllocationId_{1};
-
-    // Mutex for thread-safety
     mutable std::mutex mutex_;
 };
 

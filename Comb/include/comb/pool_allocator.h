@@ -376,11 +376,11 @@ namespace comb
         }
 
     private:
-        void* memory_block_{nullptr};      // Pre-allocated memory block
-        void* free_list_head_{nullptr};    // Head of free-list
-        size_t capacity_{0};               // Total number of objects
-        size_t used_count_{0};             // Number of objects currently allocated
-        size_t total_size_{0};             // Total size in bytes (for FreePages)
+        void* memory_block_{nullptr};
+        void* free_list_head_{nullptr};
+        size_t capacity_{0};
+        size_t used_count_{0};
+        size_t total_size_{0};
 
 #if COMB_MEM_DEBUG
         // Debug tracking (zero overhead when COMB_MEM_DEBUG=0)

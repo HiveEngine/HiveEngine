@@ -227,7 +227,7 @@ namespace comb::debug
 // Static Assertions (Compile-Time Checks)
 // ============================================================================
 
-// Ensure callstacks are only enabled when MEM_DEBUG is enabled
+// Callstacks require MEM_DEBUG
 static_assert(
     COMB_MEM_DEBUG_CALLSTACKS == 0 || COMB_MEM_DEBUG == 1,
     "COMB_MEM_DEBUG_CALLSTACKS requires COMB_MEM_DEBUG=1"

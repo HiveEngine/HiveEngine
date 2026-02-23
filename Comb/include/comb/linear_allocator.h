@@ -151,10 +151,9 @@ namespace comb
         [[nodiscard]] const char* GetName() const;
 
     private:
-        // Core allocator state
-        void* base_{nullptr};      // Start of memory arena
-        void* current_{nullptr};   // Current allocation position
-        size_t capacity_{0};       // Total capacity in bytes
+        void* base_{nullptr};
+        void* current_{nullptr};
+        size_t capacity_{0};
 
 #if COMB_MEM_DEBUG
         // Debug tracking (zero overhead when COMB_MEM_DEBUG=0)
@@ -165,8 +164,7 @@ namespace comb
         std::unique_ptr<debug::AllocationRegistry> registry_;
         std::unique_ptr<debug::AllocationHistory> history_;
 
-        // Virtual "release mode" pointer - tracks what current_ would be without guard bytes
-        // This allows GetUsedMemory() to return consistent values between debug and release
+        // Tracks current_ without guard bytes — keeps GetUsedMemory() consistent across debug/release
         void* release_current_{nullptr};
 #endif
     };
