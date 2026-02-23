@@ -172,6 +172,7 @@ if(MSVC)
             /wd4530              # Disable: C++ exception handler (from external headers with /EHs-c-)
             -Wno-unsafe-buffer-usage          # Too noisy for low-level engine code
             -Wno-unsafe-buffer-usage-in-libc-call  # Same family, flags memcpy/memset
+            -Wno-c++98-compat                 # C++20 project, no need for C++98 compat warnings
     )
 
     if(HIVE_WARNINGS_AS_ERRORS)
