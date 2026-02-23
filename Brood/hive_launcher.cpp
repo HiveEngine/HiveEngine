@@ -162,8 +162,6 @@ int main(int argc, char* argv[])
 
         if (s.gameplay.IsRegistered())
             s.gameplay.Unregister(world);
-        if (s.gameplay.IsLoaded())
-            s.gameplay.Unload();
 
         if (s.project)
         {
@@ -172,6 +170,12 @@ int main(int argc, char* argv[])
             comb::Delete(s.alloc.Get(), s.project);
             s.project = nullptr;
         }
+
+        // gameplay.Unload() is NOT called here: the World still has system
+        // lambdas whose code lives in the DLL (e.g. FreeCamera). Calling
+        // FreeLibrary now would unmap that code while the World still
+        // references it. Instead, GameplayModule::~GameplayModule() will
+        // call FreeLibrary after Run() returns and the World is destroyed.
     };
 
     callbacks.user_data = &state;
