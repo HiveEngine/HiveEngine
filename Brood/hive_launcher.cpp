@@ -12,9 +12,28 @@
 #include <comb/default_allocator.h>
 #include <comb/new.h>
 
+#if HIVE_FEATURE_VULKAN || HIVE_FEATURE_D3D12
+#include <swarm/swarm.h>
+#endif
+
+#if HIVE_MODE_EDITOR
+#include <forge/imgui_integration.h>
+#include <forge/hierarchy_panel.h>
+#include <forge/inspector_panel.h>
+#include <forge/asset_browser.h>
+#include <forge/toolbar.h>
+#include <forge/selection.h>
+#include <forge/undo.h>
+#include <terra/platform/glfw_terra.h>
+#include <queen/reflect/component_registry.h>
+#include <imgui.h>
+#include <imgui_internal.h>
+#endif
+
 #include <cstdio>
 #include <cstring>
 #include <filesystem>
+#include <memory>
 #include <string>
 
 namespace
@@ -48,7 +67,129 @@ struct LauncherState
     waggle::ProjectManager* project{nullptr};
     waggle::GameplayModule gameplay;
     const char* project_path{nullptr};
+
+#if HIVE_MODE_EDITOR
+    forge::EditorSelection selection;
+    std::unique_ptr<forge::UndoStack> undo{std::make_unique<forge::UndoStack>()};
+    forge::GizmoState gizmo;
+    forge::PlayState play_state{forge::PlayState::Editing};
+    queen::ComponentRegistry<256> component_registry;
+    std::string assets_root;
+    bool first_frame{true};
+    swarm::ViewportRT* viewport_rt{nullptr};
+    void* viewport_texture{nullptr};
+#endif
 };
+
+#if HIVE_MODE_EDITOR
+void SetupDefaultDockLayout(ImGuiID dockspace_id)
+{
+    ImGui::DockBuilderRemoveNode(dockspace_id);
+    ImGui::DockBuilderAddNode(dockspace_id, ImGuiDockNodeFlags_DockSpace);
+    ImGui::DockBuilderSetNodeSize(dockspace_id, ImGui::GetMainViewport()->Size);
+
+    ImGuiID center = dockspace_id;
+    ImGuiID left   = ImGui::DockBuilderSplitNode(center, ImGuiDir_Left, 0.20f, nullptr, &center);
+    ImGuiID right  = ImGui::DockBuilderSplitNode(center, ImGuiDir_Right, 0.25f, nullptr, &center);
+    ImGuiID bottom = ImGui::DockBuilderSplitNode(center, ImGuiDir_Down, 0.25f, nullptr, &center);
+
+    ImGui::DockBuilderDockWindow("Hierarchy", left);
+    ImGui::DockBuilderDockWindow("Inspector", right);
+    ImGui::DockBuilderDockWindow("Asset Browser", bottom);
+    ImGui::DockBuilderDockWindow("Viewport", center);
+
+    ImGui::DockBuilderFinish(dockspace_id);
+}
+
+void DrawEditor(waggle::EngineContext& ctx, LauncherState& state)
+{
+    // Fullscreen dockspace
+    ImGuiWindowFlags window_flags = ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoDocking
+        | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize
+        | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoBringToFrontOnFocus
+        | ImGuiWindowFlags_NoNavFocus;
+
+    const ImGuiViewport* viewport = ImGui::GetMainViewport();
+    ImGui::SetNextWindowPos(viewport->WorkPos);
+    ImGui::SetNextWindowSize(viewport->WorkSize);
+    ImGui::SetNextWindowViewport(viewport->ID);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+
+    ImGui::Begin("DockSpace", nullptr, window_flags);
+    ImGui::PopStyleVar(3);
+
+    ImGuiID dockspace_id = ImGui::GetID("HiveEditorDockSpace");
+    if (state.first_frame)
+    {
+        SetupDefaultDockLayout(dockspace_id);
+        state.first_frame = false;
+    }
+    ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), ImGuiDockNodeFlags_None);
+
+    // Menu bar with toolbar
+    if (ImGui::BeginMenuBar())
+    {
+        if (ImGui::BeginMenu("File"))
+        {
+            if (ImGui::MenuItem("Exit"))
+                ctx.app->RequestStop();
+            ImGui::EndMenu();
+        }
+
+        ImGui::SeparatorEx(ImGuiSeparatorFlags_Vertical, 2.f);
+
+        forge::ToolbarAction action = forge::DrawToolbarButtons(state.play_state, state.gizmo);
+        if (action.play_pressed)
+            state.play_state = forge::PlayState::Playing;
+        if (action.pause_pressed)
+            state.play_state = forge::PlayState::Paused;
+        if (action.stop_pressed)
+            state.play_state = forge::PlayState::Editing;
+
+        ImGui::EndMenuBar();
+    }
+
+    ImGui::End(); // DockSpace
+
+    // Hierarchy
+    if (ImGui::Begin("Hierarchy"))
+        forge::DrawHierarchyPanel(*ctx.world, state.selection);
+    ImGui::End();
+
+    // Inspector
+    if (ImGui::Begin("Inspector"))
+        forge::DrawInspectorPanel(*ctx.world, state.selection, state.component_registry, *state.undo);
+    ImGui::End();
+
+    // Asset Browser
+    if (ImGui::Begin("Asset Browser"))
+        forge::DrawAssetBrowser(state.assets_root.c_str());
+    ImGui::End();
+
+    // Viewport
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+    if (ImGui::Begin("Viewport"))
+    {
+        ImVec2 size = ImGui::GetContentRegionAvail();
+        if (state.viewport_rt && state.viewport_texture && size.x > 0 && size.y > 0)
+        {
+            uint32_t w = static_cast<uint32_t>(size.x);
+            uint32_t h = static_cast<uint32_t>(size.y);
+            if (w != swarm::GetViewportRTWidth(state.viewport_rt) || h != swarm::GetViewportRTHeight(state.viewport_rt))
+            {
+                forge::ForgeUnregisterViewportRT(state.viewport_texture);
+                swarm::ResizeViewportRT(state.viewport_rt, w, h);
+                state.viewport_texture = forge::ForgeRegisterViewportRT(ctx.render_context, state.viewport_rt);
+            }
+            ImGui::Image(state.viewport_texture, size);
+        }
+    }
+    ImGui::End();
+    ImGui::PopStyleVar();
+}
+#endif
 
 } // anonymous namespace
 
@@ -95,6 +236,8 @@ int main(int argc, char* argv[])
     waggle::EngineConfig config{};
     config.window_title = window_title.c_str();
 #if HIVE_MODE_EDITOR
+    config.window_width = 1920;
+    config.window_height = 1080;
     config.mode = waggle::EngineMode::Editor;
 #elif HIVE_MODE_HEADLESS
     config.mode = waggle::EngineMode::Headless;
@@ -125,7 +268,19 @@ int main(int argc, char* argv[])
 
         world.InsertResource(waggle::ProjectContext{s.project});
 
+#if HIVE_MODE_EDITOR
+        if (ctx.render_context && ctx.window)
+        {
+            forge::ForgeImGuiInit(ctx.render_context, ctx.window->window_);
+            s.viewport_rt = swarm::CreateViewportRT(ctx.render_context, 1280, 720);
+            s.viewport_texture = forge::ForgeRegisterViewportRT(ctx.render_context, s.viewport_rt);
+        }
+#endif
+
         auto root = std::string{s.project->Paths().root.CStr(), s.project->Paths().root.Size()};
+#if HIVE_MODE_EDITOR
+        s.assets_root = root + "/assets";
+#endif
 #if HIVE_PLATFORM_WINDOWS
         auto dll_path = root + "/gameplay.dll";
 #else
@@ -151,14 +306,44 @@ int main(int argc, char* argv[])
         return true;
     };
 
-    callbacks.on_frame = [](waggle::EngineContext&, void* ud) {
+    callbacks.on_frame = [](waggle::EngineContext& ctx, void* ud) {
         auto& s = *static_cast<LauncherState*>(ud);
         s.project->Update();
+
+#if HIVE_MODE_EDITOR
+        if (ctx.render_context)
+        {
+            if (s.viewport_rt)
+            {
+                swarm::BeginViewportRT(ctx.render_context, s.viewport_rt);
+                swarm::DrawPipeline(ctx.render_context);
+                swarm::EndViewportRT(ctx.render_context, s.viewport_rt);
+            }
+
+            forge::ForgeImGuiNewFrame();
+            DrawEditor(ctx, s);
+            forge::ForgeImGuiRender(ctx.render_context);
+        }
+#elif HIVE_FEATURE_VULKAN || HIVE_FEATURE_D3D12
+        if (ctx.render_context)
+            swarm::DrawPipeline(ctx.render_context);
+#endif
     };
 
     callbacks.on_shutdown = [](waggle::EngineContext& ctx, void* ud) {
         auto& s = *static_cast<LauncherState*>(ud);
         auto& world = *ctx.world;
+
+#if HIVE_MODE_EDITOR
+        if (ctx.render_context)
+        {
+            if (s.viewport_texture)
+                forge::ForgeUnregisterViewportRT(s.viewport_texture);
+            if (s.viewport_rt)
+                swarm::DestroyViewportRT(s.viewport_rt);
+            forge::ForgeImGuiShutdown(ctx.render_context);
+        }
+#endif
 
         if (s.gameplay.IsRegistered())
             s.gameplay.Unregister(world);

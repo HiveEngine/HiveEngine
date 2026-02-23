@@ -125,6 +125,10 @@ target_link_libraries(hive_launcher
         Nectar
 )
 
+if(HIVE_ENGINE_MODE STREQUAL "Editor")
+    target_link_libraries(hive_launcher PRIVATE Forge)
+endif()
+
 set_target_properties(hive_launcher
     PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin

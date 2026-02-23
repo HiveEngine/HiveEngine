@@ -8,7 +8,8 @@ namespace swarm
 {
     extern bool InitRenderContextCommon(RenderContext *renderContext);
 
-    bool InitRenderContextWayland(RenderContext &renderContext, wl_display *display, wl_surface *surface)
+    bool InitRenderContextWayland(RenderContext &renderContext, wl_display *display, wl_surface *surface,
+                                   uint32_t width, uint32_t height)
     {
         if (!InitRenderContextCommon(&renderContext))
         {
@@ -20,10 +21,9 @@ namespace swarm
             //Create swapchain
             auto* factory = Diligent::GetEngineFactoryVk();
 
-            //TODO get this info from function parameter
             Diligent::SwapChainDesc desc;
-            desc.Width = 600;
-            desc.Height = 500;
+            desc.Width = width;
+            desc.Height = height;
 
 
             Diligent::LinuxNativeWindow nativeWindow;
@@ -36,7 +36,8 @@ namespace swarm
         return true;
     }
 
-    bool InitRenderContextX11(RenderContext &renderContext, Display *display, Window window)
+    bool InitRenderContextX11(RenderContext &renderContext, Display *display, Window window,
+                              uint32_t width, uint32_t height)
     {
         if (!InitRenderContextCommon(&renderContext))
         {
@@ -49,6 +50,8 @@ namespace swarm
             auto* factory = Diligent::GetEngineFactoryVk();
 
             Diligent::SwapChainDesc desc;
+            desc.Width = width;
+            desc.Height = height;
             Diligent::LinuxNativeWindow nativeWindow;
 
             nativeWindow.pDisplay = display;

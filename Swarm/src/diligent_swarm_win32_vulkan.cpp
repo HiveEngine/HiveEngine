@@ -10,7 +10,8 @@ namespace swarm
 {
     extern bool InitRenderContextCommon(RenderContext *renderContext);
 
-    bool InitRenderContextWin32(RenderContext *renderContext, HINSTANCE instance, HWND window)
+    bool InitRenderContextWin32(RenderContext *renderContext, HINSTANCE instance, HWND window,
+                                uint32_t width, uint32_t height)
     {
         if (!InitRenderContextCommon(renderContext))
         {
@@ -21,8 +22,8 @@ namespace swarm
         {
             auto* factory = Diligent::GetEngineFactoryVk();
             Diligent::SwapChainDesc swapChainDesc;
-            swapChainDesc.Width = 600;
-            swapChainDesc.Height = 500;
+            swapChainDesc.Width = width;
+            swapChainDesc.Height = height;
 
             Diligent::Win32NativeWindow nativeWindow;
             nativeWindow.hWnd = window;

@@ -64,6 +64,38 @@ namespace swarm
     }
 
 
+    void BeginFrame(RenderContext* ctx)
+    {
+        using namespace Diligent;
+        ITextureView* pRTV = ctx->swapchain_->GetCurrentBackBufferRTV();
+        ITextureView* pDSV = ctx->swapchain_->GetDepthBufferDSV();
+        ctx->context_->SetRenderTargets(1, &pRTV, pDSV, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+        const float ClearColor[] = {0.350f, 0.350f, 0.350f, 1.0f};
+        ctx->context_->ClearRenderTarget(pRTV, ClearColor, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+        ctx->context_->ClearDepthStencil(pDSV, CLEAR_DEPTH_FLAG, 1.f, 0, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+    }
+
+    void EndFrame(RenderContext* ctx)
+    {
+        ctx->swapchain_->Present();
+    }
+
+    void ResizeSwapchain(RenderContext* ctx, uint32_t width, uint32_t height)
+    {
+        if (ctx->swapchain_ && width > 0 && height > 0)
+            ctx->swapchain_->Resize(width, height);
+    }
+
+    void DrawPipeline(RenderContext *ctx)
+    {
+        using namespace Diligent;
+        ctx->context_->SetPipelineState(ctx->pipeline_);
+        DrawAttribs drawAttrs;
+        drawAttrs.NumVertices = 3;
+        ctx->context_->Draw(drawAttrs);
+    }
+
     void Render(RenderContext *renderContext)
     {
         using namespace Diligent;
@@ -136,6 +168,94 @@ void main(in  PSInput  PSIn,
     PSOut.Color = float4(PSIn.Color.rgb, 1.0);
 }
 )";
+
+    // ---- Viewport render target (offscreen) ----
+
+    struct ViewportRT
+    {
+        Diligent::RefCntAutoPtr<Diligent::ITexture> color;
+        Diligent::RefCntAutoPtr<Diligent::ITexture> depth;
+        Diligent::ITextureView* rtv{nullptr};
+        Diligent::ITextureView* dsv{nullptr};
+        Diligent::ITextureView* srv{nullptr};
+        Diligent::IRenderDevice* device{nullptr};
+        uint32_t width{0};
+        uint32_t height{0};
+    };
+
+    static void CreateViewportRTTextures(ViewportRT* rt, uint32_t w, uint32_t h, Diligent::TEXTURE_FORMAT fmt)
+    {
+        using namespace Diligent;
+        rt->color.Release();
+        rt->depth.Release();
+        rt->width = w;
+        rt->height = h;
+
+        TextureDesc colorDesc;
+        colorDesc.Name      = "ViewportRT Color";
+        colorDesc.Type      = RESOURCE_DIM_TEX_2D;
+        colorDesc.Width     = w;
+        colorDesc.Height    = h;
+        colorDesc.Format    = fmt;
+        colorDesc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
+        rt->device->CreateTexture(colorDesc, nullptr, &rt->color);
+        rt->rtv = rt->color->GetDefaultView(TEXTURE_VIEW_RENDER_TARGET);
+        rt->srv = rt->color->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE);
+
+        TextureDesc depthDesc;
+        depthDesc.Name      = "ViewportRT Depth";
+        depthDesc.Type      = RESOURCE_DIM_TEX_2D;
+        depthDesc.Width     = w;
+        depthDesc.Height    = h;
+        depthDesc.Format    = TEX_FORMAT_D32_FLOAT;
+        depthDesc.BindFlags = BIND_DEPTH_STENCIL;
+        rt->device->CreateTexture(depthDesc, nullptr, &rt->depth);
+        rt->dsv = rt->depth->GetDefaultView(TEXTURE_VIEW_DEPTH_STENCIL);
+    }
+
+    ViewportRT* CreateViewportRT(RenderContext* ctx, uint32_t width, uint32_t height)
+    {
+        auto* rt = new ViewportRT();
+        rt->device = ctx->device_;
+        auto fmt = ctx->swapchain_->GetDesc().ColorBufferFormat;
+        CreateViewportRTTextures(rt, width, height, fmt);
+        return rt;
+    }
+
+    void DestroyViewportRT(ViewportRT* rt)
+    {
+        delete rt;
+    }
+
+    void ResizeViewportRT(ViewportRT* rt, uint32_t width, uint32_t height)
+    {
+        if (width > 0 && height > 0 && (rt->width != width || rt->height != height))
+        {
+            auto fmt = rt->color->GetDesc().Format;
+            CreateViewportRTTextures(rt, width, height, fmt);
+        }
+    }
+
+    uint32_t GetViewportRTWidth(const ViewportRT* rt) { return rt->width; }
+    uint32_t GetViewportRTHeight(const ViewportRT* rt) { return rt->height; }
+    void* GetViewportRTSRV(const ViewportRT* rt) { return rt->srv; }
+
+    void BeginViewportRT(RenderContext* ctx, ViewportRT* rt)
+    {
+        using namespace Diligent;
+        ctx->context_->SetRenderTargets(1, &rt->rtv, rt->dsv, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+        const float ClearColor[] = {0.180f, 0.180f, 0.180f, 1.0f};
+        ctx->context_->ClearRenderTarget(rt->rtv, ClearColor, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+        ctx->context_->ClearDepthStencil(rt->dsv, CLEAR_DEPTH_FLAG, 1.f, 0, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+    }
+
+    void EndViewportRT(RenderContext* ctx, ViewportRT* rt)
+    {
+        (void)rt;
+        // Transition back to shader resource happens automatically via Diligent state tracking.
+        // Just reset render targets so Diligent knows we're done.
+        ctx->context_->SetRenderTargets(0, nullptr, nullptr, Diligent::RESOURCE_STATE_TRANSITION_MODE_NONE);
+    }
 
     void SetupGraphicPipeline(RenderContext &renderContext)
     {

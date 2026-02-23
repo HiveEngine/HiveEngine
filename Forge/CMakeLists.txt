@@ -50,25 +50,10 @@ set_source_files_properties(
 if(HIVE_FEATURE_VULKAN)
     list(APPEND FORGE_IMGUI_SOURCES ${imgui_SOURCE_DIR}/backends/imgui_impl_vulkan.cpp)
 
-    # Force-include volk.h so Vulkan function pointers are available
     set_source_files_properties(
         ${imgui_SOURCE_DIR}/backends/imgui_impl_vulkan.cpp
         PROPERTIES
-            COMPILE_OPTIONS "-include;${CMAKE_SOURCE_DIR}/Swarm/extern/volk/volk.h;-Wno-old-style-cast;-Wno-sign-conversion;-Wno-conversion;-Wno-unused-parameter;-Wno-missing-field-initializers;-Wno-double-promotion"
-    )
-endif()
-
-# ============================================================================
-# D3D12 ImGui backend
-# ============================================================================
-
-if(HIVE_FEATURE_D3D12)
-    list(APPEND FORGE_IMGUI_SOURCES ${imgui_SOURCE_DIR}/backends/imgui_impl_dx12.cpp)
-
-    set_source_files_properties(
-        ${imgui_SOURCE_DIR}/backends/imgui_impl_dx12.cpp
-        PROPERTIES
-            COMPILE_OPTIONS "-Wno-old-style-cast;-Wno-sign-conversion;-Wno-conversion;-Wno-unused-parameter;-Wno-missing-field-initializers;-Wno-double-promotion;-Wno-cast-align"
+            COMPILE_OPTIONS "-Wno-old-style-cast;-Wno-sign-conversion;-Wno-conversion;-Wno-unused-parameter;-Wno-missing-field-initializers;-Wno-double-promotion"
     )
 endif()
 
@@ -114,13 +99,10 @@ target_link_libraries(Forge
         glfw
 )
 
-# Vulkan: volk + headers include paths
+# Vulkan: volk + Vulkan-Headers for imgui_impl_vulkan and imgui_integration
 if(HIVE_FEATURE_VULKAN)
-    target_include_directories(Forge
-        PRIVATE
-            ${CMAKE_SOURCE_DIR}/Swarm/extern/vulkan-headers/include
-            ${CMAKE_SOURCE_DIR}/Swarm/extern/volk
-    )
+    target_link_libraries(Forge PRIVATE volk::volk Vulkan::Headers)
+    target_compile_definitions(Forge PRIVATE IMGUI_IMPL_VULKAN_USE_VOLK)
 
     # Platform surface defines
     if(WIN32)
@@ -130,9 +112,7 @@ if(HIVE_FEATURE_VULKAN)
     endif()
 endif()
 
-# D3D12: system libs
-if(HIVE_FEATURE_D3D12)
-    target_link_libraries(Forge PRIVATE d3d12.lib dxgi.lib d3dcompiler.lib)
-endif()
+# Forge includes Diligent headers (via swarm/platform/diligent_swarm.h) which need exceptions + RTTI
+target_compile_options(Forge PRIVATE /EHsc /GR)
 
 target_compile_features(Forge PUBLIC cxx_std_20)

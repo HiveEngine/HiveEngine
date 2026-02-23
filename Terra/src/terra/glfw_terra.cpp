@@ -26,10 +26,9 @@ namespace terra
     {
         glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API); //Disable glfw to create the OpenGL context. We will manage that in swarm
 
-        //TODO get this from the InitWindowContext parameter or something else
-        windowContext->title_ = "Hive Engine";
-        windowContext->width_ = 600;
-        windowContext->height_ = 600;
+        if (windowContext->width_ <= 0) windowContext->width_ = 1280;
+        if (windowContext->height_ <= 0) windowContext->height_ = 720;
+        if (!windowContext->title_) windowContext->title_ = "Hive Engine";
         windowContext->window_ = glfwCreateWindow(windowContext->width_, windowContext->height_, windowContext->title_,
                                                   nullptr, nullptr);
 

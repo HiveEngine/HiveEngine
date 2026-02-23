@@ -52,6 +52,9 @@ int Run(const EngineConfig& config, const EngineCallbacks& callbacks)
 
 #if HIVE_FEATURE_GLFW
     terra::WindowContext window_ctx{};
+    window_ctx.title_ = config.window_title;
+    window_ctx.width_ = static_cast<int>(config.window_width);
+    window_ctx.height_ = static_cast<int>(config.window_height);
     terra::WindowContext* window_ptr = nullptr;
 
 #if HIVE_FEATURE_VULKAN || HIVE_FEATURE_D3D12
@@ -96,15 +99,18 @@ int Run(const EngineConfig& config, const EngineCallbacks& callbacks)
             bool render_ok = false;
 
 #ifdef _WIN32
-            render_ok = swarm::InitRenderContextWin32(&render_ctx, native.instance_, native.window_);
+            render_ok = swarm::InitRenderContextWin32(&render_ctx, native.instance_, native.window_,
+                static_cast<uint32_t>(window_ctx.width_), static_cast<uint32_t>(window_ctx.height_));
 #elif defined(__linux__)
             switch (native.type_)
             {
                 case terra::NativeWindowType::X11:
-                    render_ok = swarm::InitRenderContextX11(render_ctx, native.x11Display_, native.x11Window_);
+                    render_ok = swarm::InitRenderContextX11(render_ctx, native.x11Display_, native.x11Window_,
+                        static_cast<uint32_t>(window_ctx.width_), static_cast<uint32_t>(window_ctx.height_));
                     break;
                 case terra::NativeWindowType::WAYLAND:
-                    render_ok = swarm::InitRenderContextWayland(render_ctx, native.wlDisplay_, native.wlSurface_);
+                    render_ok = swarm::InitRenderContextWayland(render_ctx, native.wlDisplay_, native.wlSurface_,
+                        static_cast<uint32_t>(window_ctx.width_), static_cast<uint32_t>(window_ctx.height_));
                     break;
             }
 #endif
@@ -166,12 +172,17 @@ int Run(const EngineConfig& config, const EngineCallbacks& callbacks)
             if (config.auto_tick)
                 app.Tick();
 
+#if HIVE_FEATURE_VULKAN || HIVE_FEATURE_D3D12
+            if (renderer_active)
+                swarm::BeginFrame(&render_ctx);
+#endif
+
             if (callbacks.on_frame)
                 callbacks.on_frame(ctx, callbacks.user_data);
 
 #if HIVE_FEATURE_VULKAN || HIVE_FEATURE_D3D12
             if (renderer_active)
-                swarm::Render(&render_ctx);
+                swarm::EndFrame(&render_ctx);
 #endif
         }
     }

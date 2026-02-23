@@ -1,38 +1,114 @@
 #include <forge/imgui_integration.h>
 #include <forge/theme.h>
 
-#include <swarm/imgui_bridge.h>
-#include <swarm/swapchain.h>
-#include <swarm/commands.h>
-#include <swarm/device.h>
+#include <swarm/swarm.h>
+#include <swarm/platform/diligent_swarm.h>
 
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
 #include <ImGuizmo.h>
 
-#if SWARM_VULKAN
-#include <volk.h>
-#include <imgui_impl_vulkan.h>
-#endif
+#if HIVE_FEATURE_VULKAN
 
-#if SWARM_D3D12
-#include <imgui_impl_dx12.h>
-#include <d3d12.h>
-#endif
+#include <imgui_impl_vulkan.h>
+
+#include <RenderDeviceVk.h>
+#include <DeviceContextVk.h>
+#include <TextureViewVk.h>
+#include <CommandQueueVk.h>
 
 namespace forge
 {
-    // ========================================================================
-    // Vulkan backend
-    // ========================================================================
+    static VkDevice           s_device         = VK_NULL_HANDLE;
+    static VkDescriptorPool   s_descriptor_pool = VK_NULL_HANDLE;
+    static VkRenderPass       s_render_pass    = VK_NULL_HANDLE;
 
-#if SWARM_VULKAN
+    static constexpr uint32_t kMaxFramesInFlight = 3;
+    static VkFramebuffer      s_framebuffers[kMaxFramesInFlight] = {};
+    static uint32_t           s_frame_idx = 0;
 
-    static VkDescriptorPool s_imgui_pool = VK_NULL_HANDLE;
-    static VkSampler        s_linear_sampler = VK_NULL_HANDLE;
-
-    bool ForgeImGuiInit(swarm::Device& device, swarm::Swapchain& swapchain, GLFWwindow* window)
+    static VkFormat DiligentToVkFormat(Diligent::TEXTURE_FORMAT fmt)
     {
+        using namespace Diligent;
+        switch (fmt)
+        {
+            case TEX_FORMAT_RGBA8_UNORM:       return VK_FORMAT_R8G8B8A8_UNORM;
+            case TEX_FORMAT_RGBA8_UNORM_SRGB:  return VK_FORMAT_R8G8B8A8_SRGB;
+            case TEX_FORMAT_BGRA8_UNORM:       return VK_FORMAT_B8G8R8A8_UNORM;
+            case TEX_FORMAT_BGRA8_UNORM_SRGB:  return VK_FORMAT_B8G8R8A8_SRGB;
+            case TEX_FORMAT_RGB10A2_UNORM:     return VK_FORMAT_A2B10G10R10_UNORM_PACK32;
+            case TEX_FORMAT_RGBA16_FLOAT:      return VK_FORMAT_R16G16B16A16_SFLOAT;
+            default:                           return VK_FORMAT_UNDEFINED;
+        }
+    }
+
+    static bool CreateImGuiRenderPass(VkDevice device, VkFormat colorFormat)
+    {
+        VkAttachmentDescription att{};
+        att.format         = colorFormat;
+        att.samples        = VK_SAMPLE_COUNT_1_BIT;
+        att.loadOp         = VK_ATTACHMENT_LOAD_OP_LOAD;
+        att.storeOp        = VK_ATTACHMENT_STORE_OP_STORE;
+        att.stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        att.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        att.initialLayout  = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        att.finalLayout    = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+        VkAttachmentReference ref{};
+        ref.attachment = 0;
+        ref.layout     = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+        VkSubpassDescription subpass{};
+        subpass.pipelineBindPoint    = VK_PIPELINE_BIND_POINT_GRAPHICS;
+        subpass.colorAttachmentCount = 1;
+        subpass.pColorAttachments    = &ref;
+
+        VkRenderPassCreateInfo ci{};
+        ci.sType           = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+        ci.attachmentCount = 1;
+        ci.pAttachments    = &att;
+        ci.subpassCount    = 1;
+        ci.pSubpasses      = &subpass;
+
+        return vkCreateRenderPass(device, &ci, nullptr, &s_render_pass) == VK_SUCCESS;
+    }
+
+    bool ForgeImGuiInit(swarm::RenderContext* ctx, GLFWwindow* window)
+    {
+        auto* deviceVk = static_cast<Diligent::IRenderDeviceVk*>(ctx->device_);
+
+        VkInstance       vkInstance   = deviceVk->GetVkInstance();
+        VkPhysicalDevice vkPhysDev   = deviceVk->GetVkPhysicalDevice();
+        VkDevice         vkDevice    = deviceVk->GetVkDevice();
+
+        s_device = vkDevice;
+
+        // Queue info
+        auto* cmdQueue   = ctx->context_->LockCommandQueue();
+        auto* cmdQueueVk = static_cast<Diligent::ICommandQueueVk*>(cmdQueue);
+        VkQueue  vkQueue      = cmdQueueVk->GetVkQueue();
+        uint32_t queueFamily  = cmdQueueVk->GetQueueFamilyIndex();
+        ctx->context_->UnlockCommandQueue();
+
+        // Swapchain format
+        auto& scDesc   = ctx->swapchain_->GetDesc();
+        VkFormat format = DiligentToVkFormat(scDesc.ColorBufferFormat);
+
+        // Render pass for ImGui pipeline
+        if (!CreateImGuiRenderPass(vkDevice, format))
+            return false;
+
+        // Descriptor pool for ImGui
+        VkDescriptorPoolSize poolSize{VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 100};
+        VkDescriptorPoolCreateInfo poolCI{};
+        poolCI.sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+        poolCI.flags         = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+        poolCI.maxSets       = 100;
+        poolCI.poolSizeCount = 1;
+        poolCI.pPoolSizes    = &poolSize;
+        vkCreateDescriptorPool(vkDevice, &poolCI, nullptr, &s_descriptor_pool);
+
+        // ImGui setup
         IMGUI_CHECKVERSION();
         ImGui::CreateContext();
         ImGuiIO& io = ImGui::GetIO();
@@ -43,76 +119,53 @@ namespace forge
 
         ImGui_ImplGlfw_InitForVulkan(window, true);
 
-        auto info = swarm::GetImGuiVulkanInfo(device);
-        auto vk_device = static_cast<VkDevice>(info.device);
+        ImGui_ImplVulkan_InitInfo vkInit{};
+        vkInit.Instance       = vkInstance;
+        vkInit.PhysicalDevice = vkPhysDev;
+        vkInit.Device         = vkDevice;
+        vkInit.QueueFamily    = queueFamily;
+        vkInit.Queue          = vkQueue;
+        vkInit.DescriptorPool = s_descriptor_pool;
+        vkInit.MinImageCount  = scDesc.BufferCount;
+        vkInit.ImageCount     = scDesc.BufferCount;
+        vkInit.PipelineInfoMain.RenderPass = s_render_pass;
+        vkInit.PipelineInfoMain.Subpass    = 0;
 
-        // Descriptor pool for ImGui (separate from Swarm's bindless pool)
-        VkDescriptorPoolSize pool_sizes[] = {
-            {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 100},
-        };
-        VkDescriptorPoolCreateInfo pool_ci{};
-        pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-        pool_ci.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
-        pool_ci.maxSets = 100;
-        pool_ci.poolSizeCount = 1;
-        pool_ci.pPoolSizes = pool_sizes;
-        vkCreateDescriptorPool(vk_device, &pool_ci, nullptr, &s_imgui_pool);
-
-        // Dynamic rendering format
-        auto sc_fmt = swarm::SwapchainGetFormat(swapchain);
-        auto vk_format = static_cast<VkFormat>(swarm::GetNativeFormat(sc_fmt));
-
-        ImGui_ImplVulkan_InitInfo vk_init{};
-        vk_init.Instance = static_cast<VkInstance>(info.instance);
-        vk_init.PhysicalDevice = static_cast<VkPhysicalDevice>(info.physical_device);
-        vk_init.Device = vk_device;
-        vk_init.Queue = static_cast<VkQueue>(info.graphics_queue);
-        vk_init.QueueFamily = info.queue_family;
-        vk_init.DescriptorPool = s_imgui_pool;
-        vk_init.MinImageCount = info.image_count;
-        vk_init.ImageCount = info.image_count;
-        vk_init.UseDynamicRendering = true;
-        vk_init.PipelineInfoMain.PipelineRenderingCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR;
-        vk_init.PipelineInfoMain.PipelineRenderingCreateInfo.colorAttachmentCount = 1;
-        vk_init.PipelineInfoMain.PipelineRenderingCreateInfo.pColorAttachmentFormats = &vk_format;
-
-        ImGui_ImplVulkan_Init(&vk_init);
-
-        // Linear sampler for ImGui::Image (scene viewport)
-        VkSamplerCreateInfo samp_ci{};
-        samp_ci.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-        samp_ci.magFilter = VK_FILTER_LINEAR;
-        samp_ci.minFilter = VK_FILTER_LINEAR;
-        samp_ci.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-        samp_ci.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-        samp_ci.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-        samp_ci.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-        vkCreateSampler(vk_device, &samp_ci, nullptr, &s_linear_sampler);
+        ImGui_ImplVulkan_Init(&vkInit);
 
         return true;
     }
 
-    void ForgeImGuiShutdown(swarm::Device& device)
+    void ForgeImGuiShutdown(swarm::RenderContext* ctx)
     {
-        auto info = swarm::GetImGuiVulkanInfo(device);
-        auto vk_device = static_cast<VkDevice>(info.device);
+        vkDeviceWaitIdle(s_device);
 
-        swarm::DeviceWaitIdle(device);
         ImGui_ImplVulkan_Shutdown();
         ImGui_ImplGlfw_Shutdown();
         ImGui::DestroyContext();
 
-        if (s_linear_sampler != VK_NULL_HANDLE)
+        for (auto& fb : s_framebuffers)
         {
-            vkDestroySampler(vk_device, s_linear_sampler, nullptr);
-            s_linear_sampler = VK_NULL_HANDLE;
+            if (fb != VK_NULL_HANDLE)
+            {
+                vkDestroyFramebuffer(s_device, fb, nullptr);
+                fb = VK_NULL_HANDLE;
+            }
         }
 
-        if (s_imgui_pool != VK_NULL_HANDLE)
+        if (s_render_pass != VK_NULL_HANDLE)
         {
-            vkDestroyDescriptorPool(vk_device, s_imgui_pool, nullptr);
-            s_imgui_pool = VK_NULL_HANDLE;
+            vkDestroyRenderPass(s_device, s_render_pass, nullptr);
+            s_render_pass = VK_NULL_HANDLE;
         }
+
+        if (s_descriptor_pool != VK_NULL_HANDLE)
+        {
+            vkDestroyDescriptorPool(s_device, s_descriptor_pool, nullptr);
+            s_descriptor_pool = VK_NULL_HANDLE;
+        }
+
+        s_device = VK_NULL_HANDLE;
     }
 
     void ForgeImGuiNewFrame()
@@ -123,177 +176,74 @@ namespace forge
         ImGuizmo::BeginFrame();
     }
 
-    void ForgeImGuiRender(swarm::CommandBuffer& cmd, swarm::Device& device,
-                          swarm::TextureHandle backbuffer, uint32_t width, uint32_t height)
+    void ForgeImGuiRender(swarm::RenderContext* ctx)
     {
         ImGui::Render();
 
-        // Begin render pass for ImGui (Load existing scene content)
-        swarm::ColorAttachment color_att{};
-        color_att.texture = backbuffer;
-        color_att.load_op = swarm::LoadOp::Load;
-        color_att.store_op = swarm::StoreOp::Store;
+        auto& scDesc = ctx->swapchain_->GetDesc();
 
-        swarm::RenderingInfo ri{};
-        ri.render_area = {0, 0, width, height};
-        ri.color_attachments = &color_att;
-        ri.color_attachment_count = 1;
-        swarm::CmdBeginRendering(cmd, ri, device);
+        // Flush Diligent's pending commands (transitions + clear from BeginFrame)
+        // so the backbuffer is in COLOR_ATTACHMENT_OPTIMAL before our raw Vulkan pass.
+        ctx->context_->Flush();
 
-        auto* vk_cmd = static_cast<VkCommandBuffer>(swarm::GetRawCommandBuffer(cmd));
-        ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), vk_cmd);
+        // Get a fresh Vulkan command buffer for ImGui rendering
+        auto* contextVk = static_cast<Diligent::IDeviceContextVk*>(ctx->context_);
+        VkCommandBuffer cmdBuf = contextVk->GetVkCommandBuffer();
 
-        swarm::CmdEndRendering(cmd);
+        auto* pRTV  = ctx->swapchain_->GetCurrentBackBufferRTV();
+        auto* rtvVk = static_cast<Diligent::ITextureViewVk*>(pRTV);
+        VkImageView imageView = rtvVk->GetVulkanImageView();
+
+        // Recycle old framebuffer, create new one for this frame's backbuffer
+        if (s_framebuffers[s_frame_idx] != VK_NULL_HANDLE)
+            vkDestroyFramebuffer(s_device, s_framebuffers[s_frame_idx], nullptr);
+
+        VkFramebufferCreateInfo fbCI{};
+        fbCI.sType           = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+        fbCI.renderPass      = s_render_pass;
+        fbCI.attachmentCount = 1;
+        fbCI.pAttachments    = &imageView;
+        fbCI.width           = scDesc.Width;
+        fbCI.height          = scDesc.Height;
+        fbCI.layers          = 1;
+        vkCreateFramebuffer(s_device, &fbCI, nullptr, &s_framebuffers[s_frame_idx]);
+
+        // Begin ImGui render pass
+        VkRenderPassBeginInfo rpBI{};
+        rpBI.sType       = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+        rpBI.renderPass  = s_render_pass;
+        rpBI.framebuffer = s_framebuffers[s_frame_idx];
+        rpBI.renderArea  = {{0, 0}, {scDesc.Width, scDesc.Height}};
+
+        vkCmdBeginRenderPass(cmdBuf, &rpBI, VK_SUBPASS_CONTENTS_INLINE);
+        ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmdBuf);
+        vkCmdEndRenderPass(cmdBuf);
+
+        s_frame_idx = (s_frame_idx + 1) % kMaxFramesInFlight;
     }
 
-    uint64_t ForgeRegisterTexture(swarm::Device& device, swarm::TextureHandle texture)
+    void* ForgeRegisterViewportRT(swarm::RenderContext* ctx, swarm::ViewportRT* rt)
     {
-        auto* view = static_cast<VkImageView>(swarm::GetTextureNativeView(device, texture));
-        VkDescriptorSet ds = ImGui_ImplVulkan_AddTexture(
-            s_linear_sampler, view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-        return reinterpret_cast<uint64_t>(ds);
+        auto* srv = static_cast<Diligent::ITextureView*>(swarm::GetViewportRTSRV(rt));
+        auto* srvVk = static_cast<Diligent::ITextureViewVk*>(srv);
+        VkImageView imageView = srvVk->GetVulkanImageView();
+
+        VkSamplerCreateInfo samplerCI{};
+        samplerCI.sType     = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+        samplerCI.magFilter = VK_FILTER_LINEAR;
+        samplerCI.minFilter = VK_FILTER_LINEAR;
+
+        VkSampler sampler = VK_NULL_HANDLE;
+        vkCreateSampler(s_device, &samplerCI, nullptr, &sampler);
+
+        return ImGui_ImplVulkan_AddTexture(sampler, imageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
     }
 
-    void ForgeUnregisterTexture(uint64_t texture_id)
+    void ForgeUnregisterViewportRT(void* texture_id)
     {
-        if (texture_id)
-            ImGui_ImplVulkan_RemoveTexture(reinterpret_cast<VkDescriptorSet>(texture_id));
+        ImGui_ImplVulkan_RemoveTexture(static_cast<VkDescriptorSet>(texture_id));
     }
 
-#endif // SWARM_VULKAN
+} // namespace forge
 
-    // ========================================================================
-    // D3D12 backend
-    // ========================================================================
-
-#if SWARM_D3D12
-
-    // SRV descriptor allocator for ImGui D3D12 backend.
-    // Allocates from the tail of Swarm's SRV heap (slots 499999, 499998, ...).
-    static uint32_t s_next_imgui_descriptor = 499999;
-    static uint32_t s_srv_increment = 0;
-
-    static void ImGuiSrvAlloc(ImGui_ImplDX12_InitInfo* info,
-                              D3D12_CPU_DESCRIPTOR_HANDLE* out_cpu,
-                              D3D12_GPU_DESCRIPTOR_HANDLE* out_gpu)
-    {
-        uint32_t slot = s_next_imgui_descriptor--;
-
-        D3D12_CPU_DESCRIPTOR_HANDLE cpu = info->SrvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
-        D3D12_GPU_DESCRIPTOR_HANDLE gpu = info->SrvDescriptorHeap->GetGPUDescriptorHandleForHeapStart();
-        cpu.ptr += static_cast<SIZE_T>(slot) * s_srv_increment;
-        gpu.ptr += static_cast<UINT64>(slot) * s_srv_increment;
-
-        *out_cpu = cpu;
-        *out_gpu = gpu;
-    }
-
-    static void ImGuiSrvFree(ImGui_ImplDX12_InitInfo*, D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE)
-    {
-        // Slots reclaimed when the heap is destroyed
-    }
-
-    bool ForgeImGuiInit(swarm::Device& device, swarm::Swapchain& swapchain, GLFWwindow* window)
-    {
-        IMGUI_CHECKVERSION();
-        ImGui::CreateContext();
-        ImGuiIO& io = ImGui::GetIO();
-        io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-        io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
-
-        ApplyForgeTheme();
-
-        ImGui_ImplGlfw_InitForOther(window, true);
-
-        auto swarm_info = swarm::GetImGuiD3D12Info(device);
-        auto* heap = static_cast<ID3D12DescriptorHeap*>(swarm_info.cbv_srv_uav_heap);
-        s_srv_increment = swarm_info.cbv_srv_uav_increment;
-
-        auto sc_fmt = swarm::SwapchainGetFormat(swapchain);
-        auto dx_format = static_cast<DXGI_FORMAT>(swarm::GetNativeFormat(sc_fmt));
-
-        ImGui_ImplDX12_InitInfo init_info{};
-        init_info.Device = static_cast<ID3D12Device*>(swarm_info.device);
-        init_info.CommandQueue = static_cast<ID3D12CommandQueue*>(swarm_info.command_queue);
-        init_info.NumFramesInFlight = static_cast<int>(swarm_info.num_frames_in_flight);
-        init_info.RTVFormat = dx_format;
-        init_info.SrvDescriptorHeap = heap;
-        init_info.SrvDescriptorAllocFn = ImGuiSrvAlloc;
-        init_info.SrvDescriptorFreeFn = ImGuiSrvFree;
-
-        ImGui_ImplDX12_Init(&init_info);
-
-        return true;
-    }
-
-    void ForgeImGuiShutdown(swarm::Device& device)
-    {
-        swarm::DeviceWaitIdle(device);
-        ImGui_ImplDX12_Shutdown();
-        ImGui_ImplGlfw_Shutdown();
-        ImGui::DestroyContext();
-    }
-
-    void ForgeImGuiNewFrame()
-    {
-        ImGui_ImplDX12_NewFrame();
-        ImGui_ImplGlfw_NewFrame();
-        ImGui::NewFrame();
-        ImGuizmo::BeginFrame();
-    }
-
-    void ForgeImGuiRender(swarm::CommandBuffer& cmd, swarm::Device& device,
-                          swarm::TextureHandle backbuffer, uint32_t width, uint32_t height)
-    {
-        ImGui::Render();
-
-        swarm::ColorAttachment color_att{};
-        color_att.texture = backbuffer;
-        color_att.load_op = swarm::LoadOp::Load;
-        color_att.store_op = swarm::StoreOp::Store;
-
-        swarm::RenderingInfo ri{};
-        ri.render_area = {0, 0, width, height};
-        ri.color_attachments = &color_att;
-        ri.color_attachment_count = 1;
-        swarm::CmdBeginRendering(cmd, ri, device);
-
-        auto* dx_cmd = static_cast<ID3D12GraphicsCommandList*>(swarm::GetRawCommandBuffer(cmd));
-        ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), dx_cmd);
-
-        swarm::CmdEndRendering(cmd);
-    }
-
-    uint64_t ForgeRegisterTexture(swarm::Device& device, swarm::TextureHandle texture)
-    {
-        auto info = swarm::GetImGuiD3D12Info(device);
-        auto* dx_device = static_cast<ID3D12Device*>(info.device);
-        auto* heap = static_cast<ID3D12DescriptorHeap*>(info.cbv_srv_uav_heap);
-        auto* resource = static_cast<ID3D12Resource*>(swarm::GetTextureNativeView(device, texture));
-        if (!resource) return 0;
-
-        uint32_t slot = s_next_imgui_descriptor--;
-
-        D3D12_CPU_DESCRIPTOR_HANDLE cpu_handle = heap->GetCPUDescriptorHandleForHeapStart();
-        D3D12_GPU_DESCRIPTOR_HANDLE gpu_handle = heap->GetGPUDescriptorHandleForHeapStart();
-        cpu_handle.ptr += static_cast<SIZE_T>(slot) * s_srv_increment;
-        gpu_handle.ptr += static_cast<UINT64>(slot) * s_srv_increment;
-
-        D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc{};
-        auto desc = resource->GetDesc();
-        srv_desc.Format = desc.Format;
-        srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-        srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-        srv_desc.Texture2D.MipLevels = desc.MipLevels;
-        dx_device->CreateShaderResourceView(resource, &srv_desc, cpu_handle);
-
-        return gpu_handle.ptr;
-    }
-
-    void ForgeUnregisterTexture(uint64_t /*texture_id*/)
-    {
-        // D3D12 descriptors are freed when the heap is destroyed
-    }
-
-#endif // SWARM_D3D12
-}
+#endif // HIVE_FEATURE_VULKAN

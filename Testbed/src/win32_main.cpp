@@ -83,7 +83,8 @@ bool Engine::Init()
     }
 
     terra::NativeWindow nativeWindow = terra::GetNativeWindow(&windowContext_);
-    if (!swarm::InitRenderContextWin32(&renderContext_, nativeWindow.instance_, nativeWindow.window_))
+    if (!swarm::InitRenderContextWin32(&renderContext_, nativeWindow.instance_, nativeWindow.window_,
+                                       static_cast<uint32_t>(windowContext_.width_), static_cast<uint32_t>(windowContext_.height_)))
     {
         return false;
     }
@@ -108,9 +109,6 @@ void Engine::Loop()
     {
         terra::PollEvents();
         GameLogic(platformContext);
-
-        //TODO remove this
-        glfwSwapBuffers(platformContext.windowContext_->window_);
     }
 }
 
