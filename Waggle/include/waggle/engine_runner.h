@@ -7,7 +7,9 @@
 namespace terra { struct WindowContext; }
 #endif
 
-// TODO: Re-add Swarm forward declarations once Diligent renderer API is migrated
+#if HIVE_FEATURE_VULKAN || HIVE_FEATURE_D3D12
+namespace swarm { struct RenderContext; }
+#endif
 
 namespace waggle
 {
@@ -39,7 +41,9 @@ namespace waggle
         terra::WindowContext* window{nullptr};
 #endif
 
-        // TODO: Re-add Swarm device/swapchain/frame_mgr once migrated to Diligent
+#if HIVE_FEATURE_VULKAN || HIVE_FEATURE_D3D12
+        swarm::RenderContext* render_context{nullptr};
+#endif
     };
 
     struct EngineCallbacks

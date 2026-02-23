@@ -28,10 +28,6 @@ target_link_libraries(Waggle
 
 if(HIVE_FEATURE_VULKAN OR HIVE_FEATURE_D3D12)
     target_link_libraries(Waggle PUBLIC Swarm)
-    # TODO: Re-add render sources once Diligent renderer integration is done
-    # src/waggle/render/renderer_init.cpp
-    # src/waggle/render/render_frame.cpp
-    # src/waggle/render/asset_systems.cpp
 endif()
 
 if(HIVE_FEATURE_GLFW)

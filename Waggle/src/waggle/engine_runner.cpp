@@ -11,6 +11,20 @@
 #include <antennae/keyboard.h>
 #endif
 
+#if (HIVE_FEATURE_VULKAN || HIVE_FEATURE_D3D12) && HIVE_FEATURE_GLFW
+#include <swarm/swarm.h>
+#include <swarm/platform/diligent_swarm.h>
+#ifdef _WIN32
+    #define TERRA_NATIVE_WIN32
+    #include <terra/terra_native.h>
+    #include <swarm/platform/win32_swarm.h>
+#elif defined(__linux__)
+    #define TERRA_NATIVE_LINUX
+    #include <terra/terra_native.h>
+    #include <swarm/platform/linux_swarm.h>
+#endif
+#endif
+
 static const hive::LogCategory LogEngine{"Waggle.EngineRunner"};
 
 namespace waggle
@@ -40,6 +54,11 @@ int Run(const EngineConfig& config, const EngineCallbacks& callbacks)
     terra::WindowContext window_ctx{};
     terra::WindowContext* window_ptr = nullptr;
 
+#if HIVE_FEATURE_VULKAN || HIVE_FEATURE_D3D12
+    swarm::RenderContext render_ctx{};
+    bool renderer_active = false;
+#endif
+
     if (graphical)
     {
         // ---- Window ----
@@ -60,7 +79,51 @@ int Run(const EngineConfig& config, const EngineCallbacks& callbacks)
         window_ptr = &window_ctx;
         ctx.window = window_ptr;
 
-        // TODO: Initialize Diligent renderer here once the Swarm API is migrated
+        // ---- Renderer ----
+#if HIVE_FEATURE_VULKAN || HIVE_FEATURE_D3D12
+        if (config.auto_renderer)
+        {
+            if (!swarm::InitSystem())
+            {
+                hive::LogError(LogEngine, "Failed to initialize Swarm");
+                terra::ShutdownWindowContext(window_ptr);
+                terra::ShutdownSystem();
+                moduleRegistry.ShutdownModules();
+                return 1;
+            }
+
+            terra::NativeWindow native = terra::GetNativeWindow(window_ptr);
+            bool render_ok = false;
+
+#ifdef _WIN32
+            render_ok = swarm::InitRenderContextWin32(&render_ctx, native.instance_, native.window_);
+#elif defined(__linux__)
+            switch (native.type_)
+            {
+                case terra::NativeWindowType::X11:
+                    render_ok = swarm::InitRenderContextX11(render_ctx, native.x11Display_, native.x11Window_);
+                    break;
+                case terra::NativeWindowType::WAYLAND:
+                    render_ok = swarm::InitRenderContextWayland(render_ctx, native.wlDisplay_, native.wlSurface_);
+                    break;
+            }
+#endif
+
+            if (!render_ok)
+            {
+                hive::LogError(LogEngine, "Failed to create render context");
+                swarm::ShutdownSystem();
+                terra::ShutdownWindowContext(window_ptr);
+                terra::ShutdownSystem();
+                moduleRegistry.ShutdownModules();
+                return 1;
+            }
+
+            swarm::SetupGraphicPipeline(render_ctx);
+            ctx.render_context = &render_ctx;
+            renderer_active = true;
+        }
+#endif
     }
 #else
     (void)graphical;
@@ -74,6 +137,13 @@ int Run(const EngineConfig& config, const EngineCallbacks& callbacks)
 #if HIVE_FEATURE_GLFW
             if (graphical)
             {
+#if HIVE_FEATURE_VULKAN || HIVE_FEATURE_D3D12
+                if (renderer_active)
+                {
+                    swarm::ShutdownRenderContext(render_ctx);
+                    swarm::ShutdownSystem();
+                }
+#endif
                 terra::ShutdownWindowContext(window_ptr);
                 terra::ShutdownSystem();
             }
@@ -99,7 +169,10 @@ int Run(const EngineConfig& config, const EngineCallbacks& callbacks)
             if (callbacks.on_frame)
                 callbacks.on_frame(ctx, callbacks.user_data);
 
-            // TODO: Render frame with Diligent once migrated
+#if HIVE_FEATURE_VULKAN || HIVE_FEATURE_D3D12
+            if (renderer_active)
+                swarm::Render(&render_ctx);
+#endif
         }
     }
     else
@@ -124,6 +197,13 @@ int Run(const EngineConfig& config, const EngineCallbacks& callbacks)
 #if HIVE_FEATURE_GLFW
     if (graphical)
     {
+#if HIVE_FEATURE_VULKAN || HIVE_FEATURE_D3D12
+        if (renderer_active)
+        {
+            swarm::ShutdownRenderContext(render_ctx);
+            swarm::ShutdownSystem();
+        }
+#endif
         terra::ShutdownWindowContext(window_ptr);
         terra::ShutdownSystem();
     }

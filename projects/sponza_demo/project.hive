@@ -1,0 +1,7 @@
+[project]
+name = "Sponza Demo"
+version = "0.1.0"
+
+[paths]
+assets = "assets"
+cache = "assets/.nectar"
