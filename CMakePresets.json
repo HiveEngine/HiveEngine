@@ -9,9 +9,7 @@
       "generator": "Ninja",
       "toolchainFile": "${sourceDir}/cmake/toolchains/llvm-windows.cmake",
       "cacheVariables": {
-        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
-        "SWARM_USE_VULKAN": "ON",
-        "terra_use_glfw": "ON"
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
       }
     },
     {
@@ -86,8 +84,8 @@
         "CMAKE_CXX_COMPILER": "clang++",
         "CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS": "clang-scan-deps-18",
         "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
-        "SWARM_USE_VULKAN": "OFF",
-        "terra_use_glfw": "OFF",
+        "HIVE_FEATURE_VULKAN": "ON",
+        "HIVE_FEATURE_GLFW": "ON",
         "HIVE_BUILD_GUI_TESTS": "OFF"
       },
       "condition": {
@@ -145,6 +143,20 @@
         "HIVE_ENABLE_LTO": "OFF",
         "HIVE_ENABLE_SANITIZERS": "ON",
         "HIVE_SANITIZER_TYPE": "Thread"
+      }
+    },
+    {
+      "name": "llvm-windows-d3d12-debug",
+      "inherits": "llvm-windows-base",
+      "displayName": "LLVM Windows D3D12 Debug",
+      "description": "Debug build with D3D12 backend instead of Vulkan",
+      "binaryDir": "${sourceDir}/out/build/llvm-d3d12-debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "HIVE_FEATURE_VULKAN": "OFF",
+        "HIVE_FEATURE_D3D12": "ON",
+        "HIVE_ENABLE_LTO": "OFF",
+        "HIVE_WARNINGS_AS_ERRORS": "OFF"
       }
     },
     {
@@ -230,6 +242,10 @@
     {
       "name": "linux-profile",
       "configurePreset": "linux-profile"
+    },
+    {
+      "name": "llvm-windows-d3d12-debug",
+      "configurePreset": "llvm-windows-d3d12-debug"
     }
   ]
 }
