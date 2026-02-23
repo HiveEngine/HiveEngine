@@ -81,18 +81,16 @@ namespace queen
             , remaining_count_{0}
             , allocator_{&allocator}
         {
-            // Create internal pool
             void* pool_mem = allocator_->Allocate(
                 sizeof(ThreadPool<Allocator>),
                 alignof(ThreadPool<Allocator>)
             );
-            pool_ = new (pool_mem) ThreadPool<Allocator>(allocator, worker_count);
+            pool_ = new (pool_mem) ThreadPool<Allocator>{allocator, worker_count};
             pool_->Start();
         }
 
         ~ParallelScheduler()
         {
-            // Clean up remaining array
             if (remaining_ != nullptr)
             {
                 for (size_t i = 0; i < remaining_count_; ++i)
@@ -102,7 +100,6 @@ namespace queen
                 allocator_->Deallocate(remaining_);
             }
 
-            // Clean up internal pool if we own it
             if (owns_pool_ && pool_ != nullptr)
             {
                 pool_->Stop();
@@ -206,14 +203,12 @@ namespace queen
                 return;
             }
 
-            // Allocate new array
             void* mem = allocator_->Allocate(
                 sizeof(std::atomic<uint16_t>) * count,
                 alignof(std::atomic<uint16_t>)
             );
             remaining_ = static_cast<std::atomic<uint16_t>*>(mem);
 
-            // Construct atomics
             for (size_t i = 0; i < count; ++i)
             {
                 new (&remaining_[i]) std::atomic<uint16_t>{0};
@@ -291,10 +286,8 @@ namespace queen
                 return;
             }
 
-            // Mark as running
             node->SetState(SystemState::Running);
 
-            // Execute the system
             SystemDescriptor<Allocator>* system = storage.GetSystemByIndex(node_index);
             if (system != nullptr)
             {
@@ -303,10 +296,8 @@ namespace queen
                 system->Execute(world, tick);
             }
 
-            // Mark as complete
             node->SetState(SystemState::Complete);
 
-            // Notify dependents
             const auto* dependents = graph_.GetDependents(node_index);
             if (dependents != nullptr)
             {
@@ -314,7 +305,6 @@ namespace queen
                 {
                     uint32_t dep_idx = (*dependents)[i];
 
-                    // Decrement remaining count atomically
                     uint16_t prev = remaining_[dep_idx].fetch_sub(1, std::memory_order_acq_rel);
 
                     // If we were the last dependency, submit the dependent
@@ -325,7 +315,6 @@ namespace queen
                 }
             }
 
-            // Signal completion
             wg.Done();
         }
 

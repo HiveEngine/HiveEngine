@@ -151,14 +151,12 @@ namespace queen
             , frame_{frame_size}
             , thread_frames_{persistent_}  // Use persistent for the vector itself
         {
-            // Auto-detect thread count if 0
             if (thread_count == 0)
             {
                 thread_count = std::thread::hardware_concurrency();
                 if (thread_count == 0) thread_count = 4;  // Fallback
             }
 
-            // Create per-thread frame allocators
             thread_frames_.Reserve(thread_count);
             for (size_t i = 0; i < thread_count; ++i)
             {

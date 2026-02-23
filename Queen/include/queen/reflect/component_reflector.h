@@ -1,6 +1,8 @@
 #pragma once
 
 #include <queen/reflect/field_info.h>
+#include <queen/reflect/field_attributes.h>
+#include <queen/reflect/enum_reflection.h>
 #include <queen/core/type_id.h>
 #include <queen/core/entity.h>
 #include <hive/core/assert.h>
@@ -9,6 +11,93 @@
 
 namespace queen
 {
+    // Forward declaration
+    template<size_t MaxFields>
+    class ComponentReflector;
+
+    namespace detail
+    {
+        // Detect wax::FixedString without including the header.
+        // FixedString has: static constexpr size_t MaxCapacity = 22, CStr(), Size()
+        template<typename T>
+        concept IsFixedString = requires(const T& s) {
+            { T::MaxCapacity } -> std::convertible_to<size_t>;
+            { s.CStr() } -> std::same_as<const char*>;
+            { s.Size() } -> std::same_as<size_t>;
+        } && (sizeof(T) == 24) && std::is_trivially_copyable_v<T>;
+    }
+
+    /**
+     * Chaining builder for field annotations
+     *
+     * Returned by ComponentReflector::Field(). Allows chaining editor
+     * attributes without requiring a separate registration step.
+     * Return value is safely discardable (backward-compatible).
+     *
+     * Example:
+     * @code
+     *   r.Field("speed", &T::speed).Range(0.f, 100.f).Tooltip("Movement speed");
+     *   r.Field("name", &T::name);  // no chaining — zero cost
+     * @endcode
+     */
+    class FieldBuilder
+    {
+    public:
+        constexpr FieldBuilder(FieldInfo& info, FieldAttributes& attrs) noexcept
+            : info_{info}
+            , attrs_{attrs}
+        {}
+
+        FieldBuilder& Range(float min, float max, float step = 0.f) noexcept
+        {
+            EnsureAttributes();
+            attrs_.min = min;
+            attrs_.max = max;
+            attrs_.step = step;
+            return *this;
+        }
+
+        FieldBuilder& Tooltip(const char* text) noexcept
+        {
+            EnsureAttributes();
+            attrs_.tooltip = text;
+            return *this;
+        }
+
+        FieldBuilder& Category(const char* cat) noexcept
+        {
+            EnsureAttributes();
+            attrs_.category = cat;
+            return *this;
+        }
+
+        FieldBuilder& DisplayName(const char* name) noexcept
+        {
+            EnsureAttributes();
+            attrs_.display_name = name;
+            return *this;
+        }
+
+        FieldBuilder& Flag(FieldFlag flag) noexcept
+        {
+            EnsureAttributes();
+            attrs_.flags |= static_cast<uint32_t>(flag);
+            return *this;
+        }
+
+    private:
+        void EnsureAttributes() noexcept
+        {
+            if (info_.attributes == nullptr)
+            {
+                info_.attributes = &attrs_;
+            }
+        }
+
+        FieldInfo& info_;
+        FieldAttributes& attrs_;
+    };
+
     /**
      * Component field registration builder
      *
@@ -19,12 +108,6 @@ namespace queen
      * This is an intermediate solution while waiting for C++26 reflection.
      * Components must define a static Reflect() function that uses this class.
      *
-     * Memory layout:
-     * ┌────────────────────────────────────────────────────────────────┐
-     * │ fields_: FieldInfo[MaxFields] (MaxFields * 40 bytes)           │
-     * │ count_: size_t (8 bytes)                                       │
-     * └────────────────────────────────────────────────────────────────┘
-     *
      * Performance characteristics:
      * - Field registration: O(1) - array append
      * - Field lookup by name: O(n) - linear search
@@ -32,7 +115,6 @@ namespace queen
      *
      * Limitations:
      * - Fixed maximum field count (template parameter)
-     * - No support for arrays/vectors (yet)
      * - No support for inheritance
      *
      * Example:
@@ -40,10 +122,20 @@ namespace queen
      *   struct Position {
      *       float x, y, z;
      *
-     *       static void Reflect(ComponentReflector& r) {
+     *       static void Reflect(ComponentReflector<>& r) {
      *           r.Field("x", &Position::x);
      *           r.Field("y", &Position::y);
      *           r.Field("z", &Position::z);
+     *       }
+     *   };
+     *
+     *   struct Enemy {
+     *       float speed;
+     *       RenderMode mode;
+     *
+     *       static void Reflect(ComponentReflector<>& r) {
+     *           r.Field("speed", &Enemy::speed).Range(0.f, 100.f);
+     *           r.Field("mode", &Enemy::mode);
      *       }
      *   };
      * @endcode
@@ -59,23 +151,48 @@ namespace queen
         /**
          * Register a field with automatic type deduction
          *
+         * Returns a FieldBuilder for optional chaining of editor annotations.
+         * The return value can safely be discarded.
+         *
          * @param name Field name (must be string literal or static storage)
          * @param member_ptr Pointer-to-member for the field
+         * @return FieldBuilder for chaining annotations
          */
         template<typename T, typename C>
-        void Field(const char* name, T C::* member_ptr) noexcept
+        FieldBuilder Field(const char* name, T C::* member_ptr) noexcept
         {
             hive::Assert(count_ < MaxFields, "Too many fields, increase MaxFields");
 
-            FieldInfo& info = fields_[count_++];
+            size_t idx = count_++;
+            FieldInfo& info = fields_[idx];
             info.name = name;
             info.offset = GetMemberOffset(member_ptr);
             info.size = sizeof(T);
 
-            // Special case for Entity
+            // Type deduction
             if constexpr (std::is_same_v<T, Entity>)
             {
                 info.type = FieldType::Entity;
+            }
+            else if constexpr (std::is_enum_v<T>)
+            {
+                info.type = FieldType::Enum;
+
+                // Auto-lookup EnumInfo<T> if specialized
+                if constexpr (ReflectableEnum<T>)
+                {
+                    info.enum_info = &EnumInfo<T>::Get();
+                }
+            }
+            else if constexpr (detail::IsFixedString<T>)
+            {
+                info.type = FieldType::String;
+            }
+            else if constexpr (std::is_array_v<T>)
+            {
+                info.type = FieldType::FixedArray;
+                info.element_count = std::extent_v<T>;
+                info.element_type = detail::GetFieldType<std::remove_extent_t<T>>();
             }
             else
             {
@@ -90,15 +207,20 @@ namespace queen
                 // If the nested type is Reflectable, capture its field layout
                 if constexpr (requires(ComponentReflector<MaxFields>& r) { T::Reflect(r); })
                 {
-                    static ComponentReflector<MaxFields> nested = []() {
-                        ComponentReflector<MaxFields> r;
-                        T::Reflect(r);
-                        return r;
-                    }();
-                    info.nested_fields = nested.Data();
-                    info.nested_field_count = nested.Count();
+                    // Holder avoids copying the reflector (which would leave
+                    // FieldInfo::attributes pointers dangling).
+                    struct NestedHolder
+                    {
+                        ComponentReflector<MaxFields> reflector;
+                        NestedHolder() { T::Reflect(reflector); }
+                    };
+                    static NestedHolder nested;
+                    info.nested_fields = nested.reflector.Data();
+                    info.nested_field_count = nested.reflector.Count();
                 }
             }
+
+            return FieldBuilder{info, attributes_[idx]};
         }
 
         /**
@@ -169,6 +291,7 @@ namespace queen
         }
 
         FieldInfo fields_[MaxFields]{};
+        FieldAttributes attributes_[MaxFields]{};
         size_t count_ = 0;
     };
 

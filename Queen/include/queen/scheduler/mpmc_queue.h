@@ -54,11 +54,9 @@ namespace queen
             , head_{0}
             , tail_{0}
         {
-            // Allocate buffer
             void* mem = allocator_->Allocate(sizeof(Cell) * capacity_, alignof(Cell));
             buffer_ = static_cast<Cell*>(mem);
 
-            // Initialize sequence numbers
             for (size_t i = 0; i < capacity_; ++i)
             {
                 buffer_[i].sequence.store(i, std::memory_order_relaxed);
@@ -69,7 +67,6 @@ namespace queen
         {
             if (buffer_ != nullptr)
             {
-                // Destruct any remaining items
                 size_t head = head_.load(std::memory_order_relaxed);
                 size_t tail = tail_.load(std::memory_order_relaxed);
 
@@ -129,7 +126,7 @@ namespace queen
             }
 
             // Write data and update sequence
-            new (&cell->data) T(item);
+            new (&cell->data) T{item};
             cell->sequence.store(pos + 1, std::memory_order_release);
             return true;
         }

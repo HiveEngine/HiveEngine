@@ -114,6 +114,46 @@ namespace queen
                     writer.WriteBytes(field_ptr, field.size);
                 }
                 break;
+            case FieldType::Enum:
+            {
+                // Serialize as raw bytes matching the underlying type size
+                size_t enum_size = field.enum_info ? field.enum_info->underlying_size : field.size;
+                switch (enum_size)
+                {
+                    case 1: writer.template Write<uint8_t>(*reinterpret_cast<const uint8_t*>(field_ptr)); break;
+                    case 2: writer.template Write<uint16_t>(*reinterpret_cast<const uint16_t*>(field_ptr)); break;
+                    case 4: writer.template Write<uint32_t>(*reinterpret_cast<const uint32_t*>(field_ptr)); break;
+                    case 8: writer.template Write<uint64_t>(*reinterpret_cast<const uint64_t*>(field_ptr)); break;
+                    default: writer.WriteBytes(field_ptr, field.size); break;
+                }
+                break;
+            }
+            case FieldType::String:
+            {
+                // FixedString: write length (uint8) + chars
+                // Layout: char buffer[23] at offset 0, uint8_t size at offset 23
+                uint8_t len = *reinterpret_cast<const uint8_t*>(
+                    static_cast<const std::byte*>(field_ptr) + (field.size - 1));
+                writer.template Write<uint8_t>(len);
+                writer.WriteBytes(field_ptr, len);
+                break;
+            }
+            case FieldType::FixedArray:
+            {
+                // Write each element sequentially
+                size_t elem_size = (field.element_count > 0) ? (field.size / field.element_count) : 0;
+                for (size_t i = 0; i < field.element_count; ++i)
+                {
+                    const auto* elem_ptr = static_cast<const std::byte*>(field_ptr) + (i * elem_size);
+                    FieldInfo elem_field{};
+                    elem_field.name = "";
+                    elem_field.offset = 0;
+                    elem_field.size = elem_size;
+                    elem_field.type = field.element_type;
+                    SerializeField(elem_ptr, elem_field, writer);
+                }
+                break;
+            }
             case FieldType::Invalid:
                 break;
         }
@@ -180,6 +220,47 @@ namespace queen
                     reader.ReadBytes(field_ptr, field.size);
                 }
                 break;
+            case FieldType::Enum:
+            {
+                size_t enum_size = field.enum_info ? field.enum_info->underlying_size : field.size;
+                switch (enum_size)
+                {
+                    case 1: *reinterpret_cast<uint8_t*>(field_ptr) = reader.Read<uint8_t>(); break;
+                    case 2: *reinterpret_cast<uint16_t*>(field_ptr) = reader.Read<uint16_t>(); break;
+                    case 4: *reinterpret_cast<uint32_t*>(field_ptr) = reader.Read<uint32_t>(); break;
+                    case 8: *reinterpret_cast<uint64_t*>(field_ptr) = reader.Read<uint64_t>(); break;
+                    default: reader.ReadBytes(field_ptr, field.size); break;
+                }
+                break;
+            }
+            case FieldType::String:
+            {
+                // FixedString: read length (uint8) + chars, then null-terminate
+                uint8_t len = reader.Read<uint8_t>();
+                reader.ReadBytes(field_ptr, len);
+                // Null-terminate the buffer
+                auto* char_ptr = reinterpret_cast<char*>(field_ptr);
+                char_ptr[len] = '\0';
+                // Write size byte (last byte of the FixedString struct)
+                *reinterpret_cast<uint8_t*>(
+                    static_cast<std::byte*>(field_ptr) + (field.size - 1)) = len;
+                break;
+            }
+            case FieldType::FixedArray:
+            {
+                size_t elem_size = (field.element_count > 0) ? (field.size / field.element_count) : 0;
+                for (size_t i = 0; i < field.element_count; ++i)
+                {
+                    auto* elem_ptr = static_cast<std::byte*>(field_ptr) + (i * elem_size);
+                    FieldInfo elem_field{};
+                    elem_field.name = "";
+                    elem_field.offset = 0;
+                    elem_field.size = elem_size;
+                    elem_field.type = field.element_type;
+                    DeserializeField(elem_ptr, elem_field, reader);
+                }
+                break;
+            }
             case FieldType::Invalid:
                 break;
         }

@@ -119,11 +119,9 @@ namespace queen
         {
             using FuncType = std::decay_t<F>;
 
-            // Allocate storage for the lambda
             void* user_data = allocator_->Allocate(sizeof(FuncType), alignof(FuncType));
             new (user_data) FuncType{std::forward<F>(func)};
 
-            // Create type-erased callback wrapper
             auto callback = [](World& world, Entity entity, const void* component, void* data) {
                 (void)world;
                 FuncType* fn = static_cast<FuncType*>(data);

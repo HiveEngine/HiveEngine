@@ -36,6 +36,9 @@ namespace queen
 
         // Compound
         Struct,     // Nested reflectable struct
+        Enum,       // Backed by integer, with EnumReflectionBase* for name mapping
+        String,     // wax::FixedString (fixed-capacity, no allocator)
+        FixedArray, // C-style T[N] array
     };
 
     /**
@@ -86,6 +89,9 @@ namespace queen
         }
     }
 
+    struct FieldAttributes;
+    struct EnumReflectionBase;
+
     struct FieldInfo
     {
         const char* name = nullptr;
@@ -95,6 +101,12 @@ namespace queen
         TypeId nested_type_id = 0;          // For FieldType::Struct, the TypeId of the nested type
         const FieldInfo* nested_fields = nullptr;   // For Struct: field layout of the nested type
         size_t nested_field_count = 0;              // For Struct: number of nested fields
+
+        // Phase 1 extensions
+        const EnumReflectionBase* enum_info = nullptr;   // For Enum: name↔value mapping
+        size_t element_count = 0;                        // For FixedArray: number of elements
+        FieldType element_type = FieldType::Invalid;     // For FixedArray: element type
+        const FieldAttributes* attributes = nullptr;     // Editor annotations (optional)
 
         [[nodiscard]] constexpr bool IsValid() const noexcept
         {
@@ -124,6 +136,21 @@ namespace queen
         [[nodiscard]] constexpr bool IsStruct() const noexcept
         {
             return type == FieldType::Struct;
+        }
+
+        [[nodiscard]] constexpr bool IsEnum() const noexcept
+        {
+            return type == FieldType::Enum;
+        }
+
+        [[nodiscard]] constexpr bool IsString() const noexcept
+        {
+            return type == FieldType::String;
+        }
+
+        [[nodiscard]] constexpr bool IsFixedArray() const noexcept
+        {
+            return type == FieldType::FixedArray;
         }
     };
 

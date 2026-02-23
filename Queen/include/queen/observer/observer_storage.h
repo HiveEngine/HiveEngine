@@ -99,7 +99,6 @@ namespace queen
             TriggerType trigger = GetTriggerType<TriggerEvent>();
             TypeId component_id = GetTriggerComponentId<TriggerEvent>();
 
-            // Store at current size (0-based index)
             uint32_t index = static_cast<uint32_t>(observers_.Size());
             observers_.EmplaceBack(*allocator_, id, name, trigger, component_id);
 
@@ -258,14 +257,12 @@ namespace queen
             auto* indices = lookup_.Find(key);
             if (indices == nullptr)
             {
-                // Create new vector for this key
                 wax::Vector<uint32_t, Allocator> new_indices{*allocator_};
                 new_indices.PushBack(observer_index);
                 lookup_.Insert(key, std::move(new_indices));
             }
             else
             {
-                // Add to existing vector
                 indices->PushBack(observer_index);
             }
         }

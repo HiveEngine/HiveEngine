@@ -106,7 +106,6 @@ namespace queen
         {
             std::thread::id current_id = std::this_thread::get_id();
 
-            // Search for existing buffer for this thread
             for (size_t i = 0; i < buffer_count_; ++i)
             {
                 if (thread_buffers_[i].thread_id == current_id)
@@ -115,7 +114,6 @@ namespace queen
                 }
             }
 
-            // Create new buffer for this thread
             return CreateBuffer(current_id);
         }
 

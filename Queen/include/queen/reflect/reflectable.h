@@ -71,18 +71,32 @@ namespace queen
     template<Reflectable T>
     ComponentReflection GetReflectionData() noexcept
     {
-        // Static storage for reflection data (initialized once on first call)
-        static ComponentReflector<32> reflector = []() {
-            ComponentReflector<32> r;
-            T::Reflect(r);
-            return r;
-        }();
+        // Holder struct ensures the reflector is constructed in-place (no copy).
+        // A copy would leave FieldInfo::attributes pointers dangling because
+        // they point into the reflector's internal attributes_ array.
+        // The name buffer stores a null-terminated copy because TypeNameOf()
+        // returns a string_view trimmed via remove_suffix — .data() would
+        // include trailing characters from the original __PRETTY_FUNCTION__.
+        struct Holder
+        {
+            ComponentReflector<32> reflector;
+            char name[128]{};
+            Holder()
+            {
+                T::Reflect(reflector);
+                auto sv = TypeNameOf<T>();
+                auto len = sv.size() < 127 ? sv.size() : size_t{127};
+                for (size_t i = 0; i < len; ++i) name[i] = sv[i];
+                name[len] = '\0';
+            }
+        };
+        static Holder holder;
 
         ComponentReflection result;
-        result.fields = reflector.Data();
-        result.field_count = reflector.Count();
+        result.fields = holder.reflector.Data();
+        result.field_count = holder.reflector.Count();
         result.type_id = TypeIdOf<T>();
-        result.name = TypeNameOf<T>().data();
+        result.name = holder.name;
         return result;
     }
 

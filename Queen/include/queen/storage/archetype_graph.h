@@ -117,6 +117,11 @@ namespace queen
             return archetype_storage_.Size();
         }
 
+        [[nodiscard]] const wax::Vector<Archetype<Allocator>*, Allocator>& GetArchetypes() const noexcept
+        {
+            return archetype_storage_;
+        }
+
         template<typename T>
         [[nodiscard]] Archetype<Allocator>* GetOrCreateAddTarget(Archetype<Allocator>& source)
         {

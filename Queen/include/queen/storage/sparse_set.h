@@ -172,7 +172,7 @@ namespace queen
 
             sparse_[index] = static_cast<uint32_t>(count_);
             dense_[count_] = entity;
-            new (&data_[count_]) T(value);
+            new (&data_[count_]) T{value};
             ++count_;
 
             return true;
@@ -191,7 +191,7 @@ namespace queen
 
             sparse_[index] = static_cast<uint32_t>(count_);
             dense_[count_] = entity;
-            new (&data_[count_]) T(static_cast<T&&>(value));
+            new (&data_[count_]) T{static_cast<T&&>(value)};
             ++count_;
 
             return true;
@@ -211,7 +211,7 @@ namespace queen
 
             sparse_[index] = static_cast<uint32_t>(count_);
             dense_[count_] = entity;
-            new (&data_[count_]) T(static_cast<Args&&>(args)...);
+            new (&data_[count_]) T{static_cast<Args&&>(args)...};
             ++count_;
 
             return true;
@@ -233,7 +233,7 @@ namespace queen
             {
                 Entity last_entity = dense_[count_ - 1];
                 dense_[dense_index] = last_entity;
-                new (&data_[dense_index]) T(static_cast<T&&>(data_[count_ - 1]));
+                new (&data_[dense_index]) T{static_cast<T&&>(data_[count_ - 1])};
                 data_[count_ - 1].~T();
 
                 sparse_[last_entity.Index()] = dense_index;

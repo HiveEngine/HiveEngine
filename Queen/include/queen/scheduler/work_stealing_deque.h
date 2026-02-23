@@ -89,7 +89,7 @@ namespace queen
         {
             size_t new_capacity = capacity_ * 2;
             void* mem = allocator_->Allocate(sizeof(CircularBuffer), alignof(CircularBuffer));
-            auto* new_buffer = new (mem) CircularBuffer(*allocator_, new_capacity);
+            auto* new_buffer = new (mem) CircularBuffer{*allocator_, new_capacity};
 
             for (int64_t i = top; i < bottom; ++i)
             {
@@ -154,7 +154,7 @@ namespace queen
             , retired_head_{nullptr}
         {
             void* mem = allocator_->Allocate(sizeof(CircularBuffer<T, Allocator>), alignof(CircularBuffer<T, Allocator>));
-            auto* initial_buffer = new (mem) CircularBuffer<T, Allocator>(allocator, initial_capacity);
+            auto* initial_buffer = new (mem) CircularBuffer<T, Allocator>{allocator, initial_capacity};
             buffer_.store(initial_buffer, std::memory_order_relaxed);
         }
 

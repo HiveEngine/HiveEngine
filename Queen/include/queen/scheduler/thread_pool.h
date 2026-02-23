@@ -156,32 +156,29 @@ namespace queen
             , running_{false}
             , pending_tasks_{0}
         {
-            // Allocate global submission queue
             // The deque uses safe_allocator_ internally for Grow() which can happen from any thread
             void* global_mem = allocator_->Allocate(
                 sizeof(WorkStealingDeque<Task, SafeAllocator>),
                 alignof(WorkStealingDeque<Task, SafeAllocator>)
             );
-            global_queue_ = new (global_mem) WorkStealingDeque<Task, SafeAllocator>(safe_allocator_, deque_capacity * 4);
+            global_queue_ = new (global_mem) WorkStealingDeque<Task, SafeAllocator>{safe_allocator_, deque_capacity * 4};
 
-            // Allocate worker contexts (single-threaded setup)
+            // Single-threaded setup phase
             void* mem = allocator_->Allocate(sizeof(WorkerContext) * worker_count_, alignof(WorkerContext));
             workers_ = static_cast<WorkerContext*>(mem);
 
-            // Construct worker contexts
             for (size_t i = 0; i < worker_count_; ++i)
             {
-                new (&workers_[i]) WorkerContext();
+                new (&workers_[i]) WorkerContext{};
                 workers_[i].id = i;
                 workers_[i].rng_state = static_cast<uint32_t>(i + 1);
 
-                // Allocate per-worker deque (single-threaded setup)
                 // The deque uses safe_allocator_ internally for Grow() which can happen from workers
                 void* deque_mem = allocator_->Allocate(
                     sizeof(WorkStealingDeque<Task, SafeAllocator>),
                     alignof(WorkStealingDeque<Task, SafeAllocator>)
                 );
-                workers_[i].deque = new (deque_mem) WorkStealingDeque<Task, SafeAllocator>(safe_allocator_, deque_capacity);
+                workers_[i].deque = new (deque_mem) WorkStealingDeque<Task, SafeAllocator>{safe_allocator_, deque_capacity};
             }
         }
 
@@ -189,7 +186,6 @@ namespace queen
         {
             Stop();
 
-            // Destroy worker contexts and deques
             for (size_t i = 0; i < worker_count_; ++i)
             {
                 if (workers_[i].deque != nullptr)
@@ -202,7 +198,6 @@ namespace queen
 
             allocator_->Deallocate(workers_);
 
-            // Destroy global queue
             if (global_queue_ != nullptr)
             {
                 global_queue_->~WorkStealingDeque<Task, SafeAllocator>();
@@ -246,7 +241,6 @@ namespace queen
                 return; // Already stopped
             }
 
-            // Signal all workers to stop
             for (size_t i = 0; i < worker_count_; ++i)
             {
                 workers_[i].should_stop.store(true, std::memory_order_release);
@@ -255,7 +249,6 @@ namespace queen
             // Wake all parked workers so they see should_stop
             park_cv_.notify_all();
 
-            // Wait for all workers to finish
             for (size_t i = 0; i < worker_count_; ++i)
             {
                 if (workers_[i].thread.joinable())
