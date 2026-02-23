@@ -14,7 +14,7 @@ namespace nectar
         virtual ~AssetLoader() = default;
 
         /// Load asset from raw bytes. Returns nullptr on failure.
-        virtual T* Load(wax::ByteSpan data, comb::DefaultAllocator& alloc) = 0;
+        [[nodiscard]] virtual T* Load(wax::ByteSpan data, comb::DefaultAllocator& alloc) = 0;
 
         /// Free a previously loaded asset.
         virtual void Unload(T* asset, comb::DefaultAllocator& alloc) = 0;

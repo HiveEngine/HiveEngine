@@ -66,7 +66,6 @@ namespace nectar
             return nullptr;
         }
 
-        // Verify CRC32
         uint32_t computed_crc = Crc32(toc_buf.Data(), header.toc_size);
         if (computed_crc != header.toc_crc32)
         {

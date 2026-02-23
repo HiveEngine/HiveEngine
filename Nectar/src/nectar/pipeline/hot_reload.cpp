@@ -4,6 +4,7 @@
 #include <nectar/database/dependency_graph.h>
 #include <nectar/pipeline/import_pipeline.h>
 #include <nectar/pipeline/cook_pipeline.h>
+#include <nectar/hive/hive_document.h>
 #include <hive/profiling/profiler.h>
 
 namespace nectar
@@ -19,11 +20,32 @@ namespace nectar
         , import_pipe_{&import_pipe}
         , cook_pipe_{&cook_pipe}
         , last_reloaded_{alloc}
+        , base_dir_{alloc}
     {}
 
     void HotReloadManager::WatchDirectory(wax::StringView dir)
     {
         watcher_->Watch(dir);
+    }
+
+    void HotReloadManager::SetBaseDirectory(wax::StringView base_dir)
+    {
+        base_dir_ = wax::String<>{*alloc_};
+        base_dir_.Append(base_dir.Data(), base_dir.Size());
+
+        // Normalize backslashes
+        for (size_t i = 0; i < base_dir_.Size(); ++i)
+            if (base_dir_[i] == '\\') base_dir_[i] = '/';
+
+        // Trailing slash
+        if (base_dir_.Size() > 0 && base_dir_[base_dir_.Size() - 1] != '/')
+            base_dir_.Append("/", 1);
+    }
+
+    void HotReloadManager::SetImportSettingsProvider(ImportSettingsProvider fn, void* user_data)
+    {
+        settings_fn_ = fn;
+        settings_user_data_ = user_data;
     }
 
     size_t HotReloadManager::ProcessChanges(wax::StringView platform)
@@ -43,16 +65,42 @@ namespace nectar
         {
             if (changes[i].kind == FileChangeKind::Deleted) continue;
 
-            auto* record = db_->FindByPath(changes[i].path.View());
+            // Strip base directory to get VFS path
+            wax::StringView lookup_path = changes[i].path.View();
+            wax::String<> vfs_buf{*alloc_};
+            if (base_dir_.Size() > 0)
+            {
+                auto abs = changes[i].path.View();
+                if (abs.Size() > base_dir_.Size() &&
+                    wax::StringView{abs.Data(), base_dir_.Size()} == base_dir_.View())
+                {
+                    vfs_buf.Append(abs.Data() + base_dir_.Size(),
+                                   abs.Size() - base_dir_.Size());
+                    lookup_path = vfs_buf.View();
+                }
+            }
+
+            auto* record = db_->FindByPath(lookup_path);
             if (!record) continue;
 
             AssetId id = record->uuid;
 
-            // Re-import
+            // Re-import (with optional settings)
             ImportRequest req;
-            req.source_path = changes[i].path.View();
+            req.source_path = lookup_path;
             req.asset_id = id;
-            auto result = import_pipe_->ImportAsset(req);
+
+            ImportOutput result{};
+            if (settings_fn_)
+            {
+                HiveDocument settings{*alloc_};
+                settings_fn_(id, lookup_path, settings, settings_user_data_);
+                result = import_pipe_->ImportAsset(req, settings);
+            }
+            else
+            {
+                result = import_pipe_->ImportAsset(req);
+            }
             if (!result.success) continue;
 
             // Invalidate cook cache for this asset and all dependents

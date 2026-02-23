@@ -22,7 +22,6 @@ namespace nectar
         HIVE_PROFILE_SCOPE_N("MappedFile::Open");
         MappedFile result;
 
-        // Convert UTF-8 path to wide string
         // wax::StringView is not null-terminated, so copy to a local buffer
         char narrow[1024];
         size_t len = path.Size() < sizeof(narrow) - 1 ? path.Size() : sizeof(narrow) - 1;

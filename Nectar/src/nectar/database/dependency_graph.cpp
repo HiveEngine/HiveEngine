@@ -15,14 +15,13 @@ namespace nectar
         // Self-loop
         if (from == to) return false;
 
-        // Check if edge already exists
         if (HasEdge(from, to)) return false;
 
         // Cycle check: would adding from->to create a cycle?
         // If `to` can already reach `from`, then adding from->to creates a cycle.
         if (CanReach(to, from)) return false;
 
-        // Ensure both nodes exist in forward/reverse maps
+        // Insert nodes if missing
         if (!forward_.Contains(from))
             forward_.Insert(from, wax::Vector<DependencyEdge>{*alloc_});
         if (!forward_.Contains(to))
@@ -231,7 +230,6 @@ namespace nectar
         // Kahn's algorithm with in-degree counting
         wax::HashMap<AssetId, size_t> in_degree{*alloc_};
 
-        // Initialize in-degree for all known nodes
         for (auto it = forward_.begin(); it != forward_.end(); ++it)
         {
             if (!in_degree.Contains(it.Key()))
@@ -247,14 +245,12 @@ namespace nectar
                     in_degree.Insert(to, size_t{1});
             }
         }
-        // Also add reverse-only nodes (nodes that have no outgoing edges but exist as targets)
         for (auto it = reverse_.begin(); it != reverse_.end(); ++it)
         {
             if (!in_degree.Contains(it.Key()))
                 in_degree.Insert(it.Key(), size_t{0});
         }
 
-        // Find all nodes with in-degree 0
         wax::Vector<AssetId> queue{*alloc_};
         for (auto it = in_degree.begin(); it != in_degree.end(); ++it)
         {

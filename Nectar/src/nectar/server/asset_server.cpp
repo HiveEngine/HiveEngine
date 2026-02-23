@@ -69,6 +69,11 @@ namespace nectar
                     storage->SetStatus(pending->slot_index, AssetStatus::Loading);
                     bool ok = storage->LoadFromData(pending->slot_index, pending->slot_generation,
                                                     completions[i].data.View(), *allocator_);
+                    // Free ByteBuffer immediately — data was copied into asset blob by LoadFromData.
+                    // Without this, ALL ByteBuffers stay alive until end of Update(), causing
+                    // memory peaks when many IO requests complete simultaneously.
+                    completions[i].data = wax::ByteBuffer<>{};
+
                     if (ok)
                         storage->SetStatus(pending->slot_index, AssetStatus::Ready);
                     else

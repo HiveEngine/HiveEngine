@@ -32,19 +32,22 @@ namespace nectar
             now.time_since_epoch()).count();
     }
 
-    static int64_t GetFileMtime(const std::filesystem::path& p)
+    static FileSnapshot GetFileSnapshot(const std::filesystem::path& p)
     {
         std::error_code ec;
         auto ftime = std::filesystem::last_write_time(p, ec);
-        if (ec) return 0;
-        auto dur = ftime.time_since_epoch();
-        return std::chrono::duration_cast<std::chrono::milliseconds>(dur).count();
+        if (ec) return {};
+        int64_t mtime = std::chrono::duration_cast<std::chrono::milliseconds>(
+            ftime.time_since_epoch()).count();
+        auto fsize = std::filesystem::file_size(p, ec);
+        if (ec) fsize = 0;
+        return {mtime, static_cast<int64_t>(fsize)};
     }
 
     void PollingFileWatcher::Poll(wax::Vector<FileChange>& changes)
     {
         int64_t now = GetCurrentTimeMs();
-        if (now - last_poll_time_ < static_cast<int64_t>(interval_ms_))
+        if (last_poll_time_ != 0 && now - last_poll_time_ < static_cast<int64_t>(interval_ms_))
             return;
 
         last_poll_time_ = now;
@@ -61,15 +64,12 @@ namespace nectar
     {
         HIVE_PROFILE_SCOPE_N("FileWatcher::ScanDirectories");
         // Mark all known files as "not seen" by using a temp set
-        // We'll track which files we've seen this scan
         wax::HashMap<wax::String<>, bool> seen{*alloc_, 256};
 
         for (size_t i = 0; i < watched_dirs_.Size(); ++i)
             ScanDirectory(watched_dirs_[i].View(), changes);
 
-        // For files we've scanned, mark them as seen.
-        // But ScanDirectory already handles created/modified.
-        // For deletions, check if known files still exist.
+        // Detect deletions
         wax::Vector<wax::String<>> to_remove{*alloc_};
         for (auto it = known_files_.begin(); it != known_files_.end(); ++it)
         {
@@ -110,7 +110,7 @@ namespace nectar
             for (auto& c : path_str)
                 if (c == '\\') c = '/';
 
-            int64_t mtime = GetFileMtime(entry.path());
+            auto snapshot = GetFileSnapshot(entry.path());
 
             wax::String<> key{*alloc_};
             key.Append(path_str.c_str(), path_str.size());
@@ -118,10 +118,9 @@ namespace nectar
             auto* existing = known_files_.Find(key);
             if (!existing)
             {
-                // New file
                 wax::String<> insert_key{*alloc_};
                 insert_key.Append(path_str.c_str(), path_str.size());
-                known_files_.Insert(static_cast<wax::String<>&&>(insert_key), mtime);
+                known_files_.Insert(static_cast<wax::String<>&&>(insert_key), snapshot);
 
                 FileChange change;
                 change.path = wax::String<>{*alloc_};
@@ -129,10 +128,9 @@ namespace nectar
                 change.kind = FileChangeKind::Created;
                 changes.PushBack(static_cast<FileChange&&>(change));
             }
-            else if (*existing != mtime)
+            else if (existing->mtime != snapshot.mtime || existing->size != snapshot.size)
             {
-                // Modified
-                *existing = mtime;
+                *existing = snapshot;
 
                 FileChange change;
                 change.path = wax::String<>{*alloc_};

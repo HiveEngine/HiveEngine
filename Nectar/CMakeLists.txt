@@ -14,8 +14,10 @@ target_sources(Nectar
 target_include_directories(Nectar
     PUBLIC
         include
+        extern/stb
     PRIVATE
-        ${CMAKE_SOURCE_DIR}/Testbed/include
+        ${CMAKE_SOURCE_DIR}/Hive/extern/tinyobj
+        extern/cgltf
 )
 
 target_link_libraries(Nectar

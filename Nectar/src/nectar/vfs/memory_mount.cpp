@@ -14,7 +14,6 @@ namespace nectar
         wax::String<> key{*alloc_};
         key.Append(path.Data(), path.Size());
 
-        // Check if already exists — remove first to overwrite
         if (files_.Contains(key.View()))
             files_.Remove(key.View());
 

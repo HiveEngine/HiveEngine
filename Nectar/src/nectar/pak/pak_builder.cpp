@@ -118,7 +118,6 @@ namespace nectar
                 }
                 else
                 {
-                    // Store uncompressed
                     be.compressed_size = static_cast<uint32_t>(chunk_size);
                     be.compression = CompressionMethod::None;
                     std::fwrite(chunk.Data(), 1, chunk_size, file);

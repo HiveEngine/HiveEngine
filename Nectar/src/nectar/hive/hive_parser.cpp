@@ -281,7 +281,6 @@ namespace nectar
             }
 
             // Strip inline comment (only outside quotes)
-            // We handle this by checking if the value was fully parsed
             bool parse_ok = false;
             auto value = ParseValue(value_text, alloc, parse_ok);
             if (!parse_ok)

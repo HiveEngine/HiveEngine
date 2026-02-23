@@ -57,7 +57,6 @@ namespace nectar
         wax::ByteSpan payload{blob.Data() + sizeof(AssetBlobHeader),
                               blob.Size() - sizeof(AssetBlobHeader)};
 
-        // Verify content hash
         ContentHash actual = ContentHash::FromData(payload);
         if (!(actual == header.content_hash))
             return wax::ByteSpan{static_cast<const uint8_t*>(nullptr), size_t{0}};

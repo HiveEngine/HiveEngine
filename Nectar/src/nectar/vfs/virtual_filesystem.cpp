@@ -91,7 +91,6 @@ namespace nectar
             }
             else if (normalized_path.StartsWith(prefix))
             {
-                // Check it's a full prefix match (followed by / or end of path)
                 if (normalized_path.Size() == prefix.Size())
                 {
                     relative = wax::StringView{};
@@ -110,7 +109,6 @@ namespace nectar
                 continue;
             }
 
-            // Check if the source actually has this file
             if (mount.source->Exists(relative))
             {
                 out_relative = wax::String<>{*alloc_};

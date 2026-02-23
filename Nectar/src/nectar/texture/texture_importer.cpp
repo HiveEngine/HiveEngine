@@ -14,7 +14,7 @@ namespace nectar
         return {exts, 6};
     }
 
-    uint32_t TextureImporter::Version() const { return 1; }
+    uint32_t TextureImporter::Version() const { return 2; }
 
     wax::StringView TextureImporter::TypeName() const { return "Texture"; }
 
@@ -91,7 +91,6 @@ namespace nectar
             FlipVertical(pixels, width, height, channels);
 
         // Downscale to max_size (halve until within bounds)
-        // We need a temp buffer for downscaling
         uint8_t* current = pixels;
         uint32_t cur_w = width, cur_h = height;
         uint8_t* downscaled = nullptr;
@@ -201,7 +200,6 @@ namespace nectar
             }
         }
 
-        // Cleanup
         stbi_image_free(pixels);
         if (downscaled) std::free(downscaled);
 

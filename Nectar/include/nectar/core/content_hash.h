@@ -3,6 +3,7 @@
 #include <wax/serialization/byte_span.h>
 #include <cstdint>
 #include <cstddef>
+#include <functional>
 
 namespace nectar
 {

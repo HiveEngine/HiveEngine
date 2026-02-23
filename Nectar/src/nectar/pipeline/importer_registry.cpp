@@ -16,7 +16,6 @@ namespace nectar
         for (size_t i = 0; i < exts.Size(); ++i)
         {
             wax::StringView raw{exts[i]};
-            // Store lowercase
             wax::String<> key{*alloc_};
             for (size_t c = 0; c < raw.Size(); ++c)
             {
@@ -37,7 +36,6 @@ namespace nectar
 
     IAssetImporter* ImporterRegistry::FindByExtension(wax::StringView extension) const
     {
-        // Lowercase the query
         wax::String<> key{*alloc_};
         for (size_t i = 0; i < extension.Size(); ++i)
         {

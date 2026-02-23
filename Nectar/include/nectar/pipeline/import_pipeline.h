@@ -56,7 +56,7 @@ namespace nectar
         void ScanOutdated(wax::Vector<AssetId>& out) const;
 
         /// Re-import a batch. Returns count of successful re-imports.
-        size_t ReimportOutdated(const wax::Vector<AssetId>& assets);
+        [[nodiscard]] size_t ReimportOutdated(const wax::Vector<AssetId>& assets);
 
     private:
         comb::DefaultAllocator* alloc_;

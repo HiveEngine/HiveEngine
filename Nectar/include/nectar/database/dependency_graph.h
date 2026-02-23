@@ -58,12 +58,12 @@ namespace nectar
         // -- Cook ordering --
 
         /// Topological sort (Kahn's algorithm). Returns false if cycle detected.
-        bool TopologicalSort(wax::Vector<AssetId>& order) const;
+        [[nodiscard]] bool TopologicalSort(wax::Vector<AssetId>& order) const;
 
         /// Topological sort grouped by parallelism level.
         /// Level 0 = no dependencies, level 1 = depends only on level 0, etc.
         /// Returns false if cycle detected.
-        bool TopologicalSortLevels(wax::Vector<wax::Vector<AssetId>>& levels) const;
+        [[nodiscard]] bool TopologicalSortLevels(wax::Vector<wax::Vector<AssetId>>& levels) const;
 
         // -- Stats --
 

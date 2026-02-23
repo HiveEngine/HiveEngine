@@ -23,8 +23,7 @@ namespace nectar
         wax::String<> path{*alloc_};
         BuildBlobPath(hash, path);
 
-        // Create parent directories
-        auto parent = std::filesystem::path(std::string{path.CStr()}).parent_path();
+        auto parent = std::filesystem::path{std::string{path.CStr()}}.parent_path();
         EnsureDirectoryExists(wax::StringView{parent.string().c_str()});
 
         FILE* file = std::fopen(path.CStr(), "wb");

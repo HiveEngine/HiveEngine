@@ -31,7 +31,13 @@ namespace nectar
         virtual void Poll(wax::Vector<FileChange>& changes) = 0;
     };
 
-    /// Polling-based file watcher using mtime checks.
+    struct FileSnapshot
+    {
+        int64_t mtime{0};
+        int64_t size{0};
+    };
+
+    /// Polling-based file watcher using mtime + size checks.
     class PollingFileWatcher final : public IFileWatcher
     {
     public:
@@ -53,6 +59,6 @@ namespace nectar
         uint32_t interval_ms_;
         int64_t last_poll_time_{0};
         wax::Vector<wax::String<>> watched_dirs_;
-        wax::HashMap<wax::String<>, int64_t> known_files_; // path → mtime
+        wax::HashMap<wax::String<>, FileSnapshot> known_files_;
     };
 }

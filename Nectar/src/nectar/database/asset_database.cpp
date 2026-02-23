@@ -13,7 +13,6 @@ namespace nectar
     {
         if (records_.Contains(record.uuid)) return false;
 
-        // Check path uniqueness
         if (!record.path.IsEmpty())
         {
             wax::String<> path_key{*alloc_, record.path.View()};
@@ -51,7 +50,6 @@ namespace nectar
         auto* existing = records_.Find(uuid);
         if (!existing) return false;
 
-        // Update path index if path changed
         if (!existing->path.View().Equals(record.path.View()))
         {
             if (!existing->path.IsEmpty())

@@ -106,12 +106,10 @@ namespace nectar
             return result;
         }
 
-        // Check cache
         ContentHash cook_key = ComputeCookKey(id, platform);
         auto* cached = cache_->Find(id, platform);
         if (cached && cached->cook_key == cook_key)
         {
-            // Cache hit — load cooked data from CAS
             result.success = true;
             result.cooked_data = cas_->Load(cached->cooked_hash);
             return result;
@@ -131,11 +129,9 @@ namespace nectar
 
         if (result.success)
         {
-            // Store cooked data in CAS
             ContentHash cooked_hash = ContentHash::FromData(result.cooked_data.View());
             (void)cas_->Store(result.cooked_data.View());
 
-            // Update cache
             CookCacheEntry entry{};
             entry.cook_key = cook_key;
             entry.cooked_hash = cooked_hash;
@@ -153,10 +149,8 @@ namespace nectar
         wax::Vector<AssetId> dependents{*alloc_};
         graph.GetTransitiveDependents(changed, DepKind::Hard | DepKind::Build, dependents);
 
-        // Invalidate the changed asset itself
         cache_->Invalidate(changed);
 
-        // Invalidate all transitive dependents
         for (size_t i = 0; i < dependents.Size(); ++i)
             cache_->Invalidate(dependents[i]);
     }
@@ -267,7 +261,6 @@ namespace nectar
             return;
         }
 
-        // Check cache
         ContentHash cook_key = ComputeCookKey(id, platform);
         auto* cached = cache_->Find(id, platform);
         if (cached && cached->cook_key == cook_key)
@@ -295,11 +288,9 @@ namespace nectar
             return;
         }
 
-        // Store in CAS
         ContentHash cooked_hash = ContentHash::FromData(result.cooked_data.View());
         (void)cas_->Store(result.cooked_data.View());
 
-        // Update cache
         CookCacheEntry entry{};
         entry.cook_key = cook_key;
         entry.cooked_hash = cooked_hash;

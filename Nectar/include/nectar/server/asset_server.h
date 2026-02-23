@@ -63,7 +63,7 @@ namespace nectar
 
         /// Returns the loaded asset, or placeholder if not ready. nullptr if nothing available.
         template<typename T>
-        T* Get(const StrongHandle<T>& handle) const
+        [[nodiscard]] T* Get(const StrongHandle<T>& handle) const
         {
             if (handle.IsNull()) return GetPlaceholder<T>();
             auto* storage = FindStorage<T>();
@@ -74,7 +74,7 @@ namespace nectar
         // -- Status --
 
         template<typename T>
-        AssetStatus GetStatus(const StrongHandle<T>& handle) const
+        [[nodiscard]] AssetStatus GetStatus(const StrongHandle<T>& handle) const
         {
             if (handle.IsNull()) return AssetStatus::NotLoaded;
             auto* storage = FindStorage<T>();
@@ -83,7 +83,7 @@ namespace nectar
         }
 
         template<typename T>
-        bool IsReady(const StrongHandle<T>& handle) const
+        [[nodiscard]] bool IsReady(const StrongHandle<T>& handle) const
         {
             return GetStatus(handle) == AssetStatus::Ready;
         }
@@ -150,7 +150,7 @@ namespace nectar
 
         // -- Stats --
 
-        size_t GetTotalAssetCount() const;
+        [[nodiscard]] size_t GetTotalAssetCount() const;
 
         // -- Events --
 
@@ -187,7 +187,7 @@ namespace nectar
         }
 
         template<typename T>
-        size_t GetBytesUsed() const
+        [[nodiscard]] size_t GetBytesUsed() const
         {
             auto* storage = FindStorage<T>();
             return storage ? storage->BytesUsed() : 0;
@@ -212,7 +212,7 @@ namespace nectar
         AssetStorageFor<T>* FindStorage() const;
 
         template<typename T>
-        T* GetPlaceholder() const
+        [[nodiscard]] T* GetPlaceholder() const
         {
             auto* storage = FindStorage<T>();
             return storage ? storage->GetPlaceholder() : nullptr;
@@ -310,7 +310,6 @@ namespace nectar
         nectar::TypeId tid = nectar::TypeIdOf<T>();
         auto& storage = GetOrCreateStorage<T>();
 
-        // Check path cache
         PathKey key{tid, wax::String<>{*allocator_}};
         key.path.Append(path.Data(), path.Size());
 
@@ -326,7 +325,6 @@ namespace nectar
             // Stale entry — will be overwritten below
         }
 
-        // Check loader
         if (!storage.GetLoader())
         {
             auto handle = storage.AllocateSlot();
@@ -338,7 +336,6 @@ namespace nectar
             return StrongHandle<T>{handle, this};
         }
 
-        // Allocate slot
         auto handle = storage.AllocateSlot();
         if (handle.IsNull()) return StrongHandle<T>{};
 
@@ -389,7 +386,6 @@ namespace nectar
         nectar::TypeId tid = nectar::TypeIdOf<T>();
         auto& storage = GetOrCreateStorage<T>();
 
-        // Check cache
         PathKey key{tid, wax::String<>{*allocator_}};
         key.path.Append(name.Data(), name.Size());
 
@@ -404,7 +400,6 @@ namespace nectar
             }
         }
 
-        // Check loader
         if (!storage.GetLoader())
         {
             auto handle = storage.AllocateSlot();
