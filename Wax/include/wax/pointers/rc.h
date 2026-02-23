@@ -86,7 +86,6 @@ namespace wax
         using ValueType = T;
         using AllocatorType = Allocator;
 
-        // Default constructor (empty)
         constexpr Rc() noexcept
             : control_{nullptr}
             , allocator_{nullptr}
@@ -109,7 +108,6 @@ namespace wax
             }
         }
 
-        // Copy assignment
         Rc& operator=(const Rc& other) noexcept
         {
             if (this != &other)
@@ -127,7 +125,6 @@ namespace wax
             return *this;
         }
 
-        // Move constructor
         constexpr Rc(Rc&& other) noexcept
             : control_{other.control_}
             , allocator_{other.allocator_}
@@ -136,7 +133,6 @@ namespace wax
             other.allocator_ = nullptr;
         }
 
-        // Move assignment
         constexpr Rc& operator=(Rc&& other) noexcept
         {
             if (this != &other)
@@ -171,25 +167,21 @@ namespace wax
             return &control_->object;
         }
 
-        // Get underlying pointer
         [[nodiscard]] T* Get() const noexcept
         {
             return control_ ? &control_->object : nullptr;
         }
 
-        // Get allocator
         [[nodiscard]] Allocator* GetAllocator() const noexcept
         {
             return allocator_;
         }
 
-        // Get reference count
         [[nodiscard]] size_t GetRefCount() const noexcept
         {
             return control_ ? control_->ref_count : 0;
         }
 
-        // Unique check (only owner)
         [[nodiscard]] bool IsUnique() const noexcept
         {
             return control_ && control_->ref_count == 1;
@@ -201,7 +193,6 @@ namespace wax
             return control_ != nullptr;
         }
 
-        // Null check
         [[nodiscard]] bool IsNull() const noexcept
         {
             return control_ == nullptr;
@@ -253,7 +244,6 @@ namespace wax
         Allocator* allocator_;
     };
 
-    // Helper function to create an Rc
     template<typename T, comb::Allocator Allocator, typename... Args>
     [[nodiscard]] Rc<T, Allocator> MakeRc(Allocator& allocator, Args&&... args)
     {

@@ -76,7 +76,6 @@ namespace wax
         static constexpr size_t npos = static_cast<size_t>(-1);
         static constexpr size_t MaxCapacity = 22;  // Max characters (buffer is MaxCapacity + 1 for null terminator)
 
-        // Default constructor (empty string)
         constexpr FixedString() noexcept
             : buffer_{}
             , size_{0}
@@ -141,11 +140,9 @@ namespace wax
             size_ = static_cast<uint8_t>(size);
         }
 
-        // Copy constructor (trivial)
         constexpr FixedString(const FixedString&) noexcept = default;
         constexpr FixedString& operator=(const FixedString&) noexcept = default;
 
-        // Move constructor (trivial)
         constexpr FixedString(FixedString&&) noexcept = default;
         constexpr FixedString& operator=(FixedString&&) noexcept = default;
 
@@ -211,7 +208,6 @@ namespace wax
             return buffer_;
         }
 
-        // Null-terminated C string
         [[nodiscard]] constexpr const char* CStr() const noexcept
         {
             return buffer_;

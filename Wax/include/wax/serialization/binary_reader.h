@@ -77,18 +77,12 @@ namespace wax
             return value;
         }
 
-        /**
-         * Read a primitive type into an output parameter
-         */
         template<typename T>
         void Read(T& out) noexcept
         {
             out = Read<T>();
         }
 
-        /**
-         * Try to read a primitive type, returns false if not enough data
-         */
         template<typename T>
         [[nodiscard]] bool TryRead(T& out) noexcept
         {
@@ -104,9 +98,6 @@ namespace wax
             return true;
         }
 
-        /**
-         * Read raw bytes into a buffer
-         */
         void ReadBytes(void* dest, size_t count) noexcept
         {
             hive::Assert(position_ + count <= view_.Size(), "BinaryReader read out of bounds");
@@ -114,9 +105,7 @@ namespace wax
             position_ += count;
         }
 
-        /**
-         * Read raw bytes as a ByteSpan (zero-copy)
-         */
+        /** Zero-copy */
         [[nodiscard]] ByteSpan ReadBytes(size_t count) noexcept
         {
             hive::Assert(position_ + count <= view_.Size(), "BinaryReader read out of bounds");
@@ -125,9 +114,6 @@ namespace wax
             return result;
         }
 
-        /**
-         * Try to read raw bytes, returns empty span if not enough data
-         */
         [[nodiscard]] bool TryReadBytes(size_t count, ByteSpan& out) noexcept
         {
             if (position_ + count > view_.Size())
@@ -200,9 +186,6 @@ namespace wax
             return result;
         }
 
-        /**
-         * Try to read variable-length integer
-         */
         [[nodiscard]] bool TryReadVarInt(uint64_t& out) noexcept
         {
             size_t start_pos = position_;
@@ -242,18 +225,12 @@ namespace wax
             return static_cast<int64_t>((encoded >> 1) ^ -(encoded & 1));
         }
 
-        /**
-         * Skip bytes without reading
-         */
         void Skip(size_t count) noexcept
         {
             hive::Assert(position_ + count <= view_.Size(), "BinaryReader skip out of bounds");
             position_ += count;
         }
 
-        /**
-         * Try to skip bytes
-         */
         [[nodiscard]] bool TrySkip(size_t count) noexcept
         {
             if (position_ + count > view_.Size())
@@ -264,75 +241,49 @@ namespace wax
             return true;
         }
 
-        /**
-         * Seek to an absolute position
-         */
         void Seek(size_t position) noexcept
         {
             hive::Assert(position <= view_.Size(), "BinaryReader seek out of bounds");
             position_ = position;
         }
 
-        /**
-         * Get current position
-         */
         [[nodiscard]] constexpr size_t Position() const noexcept
         {
             return position_;
         }
 
-        /**
-         * Get remaining bytes
-         */
         [[nodiscard]] constexpr size_t Remaining() const noexcept
         {
             return view_.Size() - position_;
         }
 
-        /**
-         * Get total size
-         */
         [[nodiscard]] constexpr size_t Size() const noexcept
         {
             return view_.Size();
         }
 
-        /**
-         * Check if at end of data
-         */
         [[nodiscard]] constexpr bool IsEof() const noexcept
         {
             return position_ >= view_.Size();
         }
 
-        /**
-         * Get underlying buffer view
-         */
         [[nodiscard]] constexpr ByteSpan View() const noexcept
         {
             return view_;
         }
 
-        /**
-         * Get remaining data as ByteSpan
-         */
         [[nodiscard]] constexpr ByteSpan RemainingView() const noexcept
         {
             return view_.Subspan(position_);
         }
 
-        /**
-         * Peek at next byte without advancing
-         */
+        /** Does not advance position */
         [[nodiscard]] uint8_t Peek() const noexcept
         {
             hive::Assert(!IsEof(), "BinaryReader peek at EOF");
             return view_[position_];
         }
 
-        /**
-         * Try to peek at next byte
-         */
         [[nodiscard]] bool TryPeek(uint8_t& out) const noexcept
         {
             if (IsEof())

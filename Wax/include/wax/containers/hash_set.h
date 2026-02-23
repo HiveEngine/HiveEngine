@@ -41,8 +41,8 @@ namespace wax
             uint8_t state{kEmpty};
             uint8_t psl{0};
 
-            K* Key() { return reinterpret_cast<K*>(key_storage); }
-            const K* Key() const { return reinterpret_cast<const K*>(key_storage); }
+            [[nodiscard]] K* Key() { return reinterpret_cast<K*>(key_storage); }
+            [[nodiscard]] const K* Key() const { return reinterpret_cast<const K*>(key_storage); }
         };
 
     public:
@@ -55,7 +55,7 @@ namespace wax
                 SkipEmpty();
             }
 
-            const K& operator*() const { return *buckets_[index_].Key(); }
+            [[nodiscard]] const K& operator*() const { return *buckets_[index_].Key(); }
 
             Iterator& operator++()
             {
@@ -89,7 +89,7 @@ namespace wax
                 SkipEmpty();
             }
 
-            const K& operator*() const { return *buckets_[index_].Key(); }
+            [[nodiscard]] const K& operator*() const { return *buckets_[index_].Key(); }
 
             ConstIterator& operator++()
             {
@@ -279,7 +279,7 @@ namespace wax
             }
         }
 
-        void Clear()
+        void Clear() noexcept
         {
             for (size_t i = 0; i < capacity_; ++i)
             {
@@ -298,10 +298,10 @@ namespace wax
         [[nodiscard]] bool IsEmpty() const noexcept { return count_ == 0; }
         [[nodiscard]] float LoadFactor() const noexcept { return static_cast<float>(count_) / static_cast<float>(capacity_); }
 
-        Iterator begin() { return Iterator{buckets_, 0, capacity_}; }
-        Iterator end() { return Iterator{buckets_, capacity_, capacity_}; }
-        ConstIterator begin() const { return ConstIterator{buckets_, 0, capacity_}; }
-        ConstIterator end() const { return ConstIterator{buckets_, capacity_, capacity_}; }
+        [[nodiscard]] Iterator begin() noexcept { return Iterator{buckets_, 0, capacity_}; }
+        [[nodiscard]] Iterator end() noexcept { return Iterator{buckets_, capacity_, capacity_}; }
+        [[nodiscard]] ConstIterator begin() const noexcept { return ConstIterator{buckets_, 0, capacity_}; }
+        [[nodiscard]] ConstIterator end() const noexcept { return ConstIterator{buckets_, capacity_, capacity_}; }
 
     private:
         [[nodiscard]] bool ShouldRehash() const noexcept

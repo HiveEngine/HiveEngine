@@ -82,17 +82,11 @@ namespace wax
             buffer_.Append(bytes, sizeof(T));
         }
 
-        /**
-         * Write raw bytes
-         */
         void WriteBytes(const void* data, size_t size) noexcept
         {
             buffer_.Append(data, size);
         }
 
-        /**
-         * Write a ByteSpan
-         */
         void WriteBytes(ByteSpan view) noexcept
         {
             buffer_.Append(view);
@@ -111,9 +105,6 @@ namespace wax
             }
         }
 
-        /**
-         * Write a length-prefixed string from pointer and size
-         */
         void WriteString(const char* str, size_t length) noexcept
         {
             Write<uint32_t>(static_cast<uint32_t>(length));
@@ -123,9 +114,6 @@ namespace wax
             }
         }
 
-        /**
-         * Write a null-terminated string (with null terminator)
-         */
         void WriteStringZ(const char* str) noexcept
         {
             if (str)
@@ -169,9 +157,6 @@ namespace wax
             WriteVarInt(encoded);
         }
 
-        /**
-         * Write padding bytes (zeros)
-         */
         void WritePadding(size_t count) noexcept
         {
             for (size_t i = 0; i < count; ++i)
@@ -180,9 +165,6 @@ namespace wax
             }
         }
 
-        /**
-         * Write padding to align to boundary
-         */
         void WriteAlignment(size_t alignment) noexcept
         {
             size_t pos = buffer_.Size();
@@ -190,57 +172,36 @@ namespace wax
             WritePadding(padding);
         }
 
-        /**
-         * Reserve capacity in the internal buffer
-         */
         void Reserve(size_t capacity) noexcept
         {
             buffer_.Reserve(capacity);
         }
 
-        /**
-         * Clear all written data
-         */
         void Clear() noexcept
         {
             buffer_.Clear();
         }
 
-        /**
-         * Get current write position / buffer size
-         */
         [[nodiscard]] size_t Size() const noexcept
         {
             return buffer_.Size();
         }
 
-        /**
-         * Check if buffer is empty
-         */
         [[nodiscard]] bool IsEmpty() const noexcept
         {
             return buffer_.IsEmpty();
         }
 
-        /**
-         * Get view of written data
-         */
         [[nodiscard]] ByteSpan View() const noexcept
         {
             return buffer_.View();
         }
 
-        /**
-         * Get pointer to buffer data
-         */
         [[nodiscard]] const uint8_t* Data() const noexcept
         {
             return buffer_.Data();
         }
 
-        /**
-         * Get reference to underlying buffer
-         */
         [[nodiscard]] ByteBuffer<Allocator>& GetBuffer() noexcept
         {
             return buffer_;

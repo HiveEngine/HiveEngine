@@ -211,7 +211,6 @@ namespace wax
         {
             if (other.IsHeap())
             {
-                // Heap mode: allocate and copy
                 size_t size = other.heap_.size;
                 InitHeap(size);
                 std::memcpy(heap_.data, other.heap_.data, size);
@@ -238,7 +237,6 @@ namespace wax
 
                 if (other.IsHeap())
                 {
-                    // Heap mode: allocate and copy
                     size_t size = other.heap_.size;
                     InitHeap(size);
                     std::memcpy(heap_.data, other.heap_.data, size);
@@ -699,7 +697,6 @@ namespace wax
 
         Allocator* allocator_;
 
-        // Helper functions
         [[nodiscard]] bool IsHeap() const noexcept
         {
             // Test bit 7 of last byte (offset 23)

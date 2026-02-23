@@ -70,7 +70,6 @@ namespace wax
             hive::Assert(ptr_ != nullptr, "Ref cannot be constructed from nullptr");
         }
 
-        // Copy constructor (trivial)
         constexpr Ref(const Ref&) noexcept = default;
         constexpr Ref& operator=(const Ref&) noexcept = default;
 
@@ -85,7 +84,6 @@ namespace wax
             return ptr_;
         }
 
-        // Get underlying pointer
         [[nodiscard]] constexpr T* Get() const noexcept
         {
             return ptr_;
@@ -97,7 +95,6 @@ namespace wax
             return *ptr_;
         }
 
-        // Rebind to a different object
         constexpr void Rebind(T& value) noexcept
         {
             ptr_ = &value;

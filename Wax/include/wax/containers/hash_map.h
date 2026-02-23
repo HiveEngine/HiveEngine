@@ -69,10 +69,10 @@ namespace wax
             uint8_t state{kEmpty};
             uint8_t psl{0};  // Probe Sequence Length (Robin Hood)
 
-            K* Key() { return reinterpret_cast<K*>(key_storage); }
-            const K* Key() const { return reinterpret_cast<const K*>(key_storage); }
-            V* Value() { return reinterpret_cast<V*>(value_storage); }
-            const V* Value() const { return reinterpret_cast<const V*>(value_storage); }
+            [[nodiscard]] K* Key() { return reinterpret_cast<K*>(key_storage); }
+            [[nodiscard]] const K* Key() const { return reinterpret_cast<const K*>(key_storage); }
+            [[nodiscard]] V* Value() { return reinterpret_cast<V*>(value_storage); }
+            [[nodiscard]] const V* Value() const { return reinterpret_cast<const V*>(value_storage); }
         };
 
     public:
@@ -85,7 +85,7 @@ namespace wax
                 SkipEmpty();
             }
 
-            std::pair<const K&, V&> operator*() const
+            [[nodiscard]] std::pair<const K&, V&> operator*() const
             {
                 return {*buckets_[index_].Key(), *buckets_[index_].Value()};
             }
@@ -99,8 +99,8 @@ namespace wax
 
             bool operator==(const Iterator& other) const { return index_ == other.index_; }
 
-            const K& Key() const { return *buckets_[index_].Key(); }
-            V& Value() { return *buckets_[index_].Value(); }
+            [[nodiscard]] const K& Key() const { return *buckets_[index_].Key(); }
+            [[nodiscard]] V& Value() { return *buckets_[index_].Value(); }
 
         private:
             void SkipEmpty()
@@ -125,7 +125,7 @@ namespace wax
                 SkipEmpty();
             }
 
-            std::pair<const K&, const V&> operator*() const
+            [[nodiscard]] std::pair<const K&, const V&> operator*() const
             {
                 return {*buckets_[index_].Key(), *buckets_[index_].Value()};
             }
@@ -139,8 +139,8 @@ namespace wax
 
             bool operator==(const ConstIterator& other) const { return index_ == other.index_; }
 
-            const K& Key() const { return *buckets_[index_].Key(); }
-            const V& Value() const { return *buckets_[index_].Value(); }
+            [[nodiscard]] const K& Key() const { return *buckets_[index_].Key(); }
+            [[nodiscard]] const V& Value() const { return *buckets_[index_].Value(); }
 
         private:
             void SkipEmpty()
@@ -408,7 +408,7 @@ namespace wax
             return *Find(key);
         }
 
-        void Clear()
+        void Clear() noexcept
         {
             for (size_t i = 0; i < capacity_; ++i)
             {
@@ -432,10 +432,10 @@ namespace wax
         [[nodiscard]] bool IsEmpty() const noexcept { return count_ == 0; }
         [[nodiscard]] float LoadFactor() const noexcept { return static_cast<float>(count_) / capacity_; }
 
-        Iterator begin() { return Iterator{buckets_, 0, capacity_}; }
-        Iterator end() { return Iterator{buckets_, capacity_, capacity_}; }
-        ConstIterator begin() const { return ConstIterator{buckets_, 0, capacity_}; }
-        ConstIterator end() const { return ConstIterator{buckets_, capacity_, capacity_}; }
+        [[nodiscard]] Iterator begin() noexcept { return Iterator{buckets_, 0, capacity_}; }
+        [[nodiscard]] Iterator end() noexcept { return Iterator{buckets_, capacity_, capacity_}; }
+        [[nodiscard]] ConstIterator begin() const noexcept { return ConstIterator{buckets_, 0, capacity_}; }
+        [[nodiscard]] ConstIterator end() const noexcept { return ConstIterator{buckets_, capacity_, capacity_}; }
 
     private:
         [[nodiscard]] bool ShouldRehash() const noexcept
