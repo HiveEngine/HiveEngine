@@ -7,10 +7,14 @@
 # ============================================================================
 
 set(LARVAE_TEST_DIRS
+    ${CMAKE_CURRENT_SOURCE_DIR}/../Hive/tests
     ${CMAKE_CURRENT_SOURCE_DIR}/../Comb/tests
     ${CMAKE_CURRENT_SOURCE_DIR}/../Wax/tests
     ${CMAKE_CURRENT_SOURCE_DIR}/../Queen/tests
     ${CMAKE_CURRENT_SOURCE_DIR}/../Nectar/tests
+    ${CMAKE_CURRENT_SOURCE_DIR}/../Swarm/tests
+    ${CMAKE_CURRENT_SOURCE_DIR}/../Waggle/tests
+    ${CMAKE_CURRENT_SOURCE_DIR}/../Antennae/tests
 )
 
 # Glob all test_*.cpp files from specified directories (recursive)
@@ -33,7 +37,10 @@ target_link_libraries(larvae_runner
         Comb
         Wax
         Queen
+        Waggle
+        Antennae
         Nectar
+        Swarm
 )
 
 target_include_directories(larvae_runner
@@ -41,7 +48,10 @@ target_include_directories(larvae_runner
         ${CMAKE_SOURCE_DIR}/Comb/include
         ${CMAKE_SOURCE_DIR}/Wax/include
         ${CMAKE_SOURCE_DIR}/Queen/include
+        ${CMAKE_SOURCE_DIR}/Waggle/include
+        ${CMAKE_SOURCE_DIR}/Antennae/include
         ${CMAKE_SOURCE_DIR}/Nectar/include
+        ${CMAKE_SOURCE_DIR}/Swarm/include
 )
 
 set_target_properties(larvae_runner
@@ -80,7 +90,10 @@ target_link_libraries(larvae_benchmark
         Comb
         Wax
         Queen
+        Waggle
+        Antennae
         Nectar
+        Swarm
 )
 
 target_include_directories(larvae_benchmark
@@ -88,6 +101,8 @@ target_include_directories(larvae_benchmark
         ${CMAKE_SOURCE_DIR}/Comb/include
         ${CMAKE_SOURCE_DIR}/Wax/include
         ${CMAKE_SOURCE_DIR}/Queen/include
+        ${CMAKE_SOURCE_DIR}/Waggle/include
+        ${CMAKE_SOURCE_DIR}/Antennae/include
         ${CMAKE_SOURCE_DIR}/Nectar/include
 )
 
@@ -97,13 +112,38 @@ set_target_properties(larvae_benchmark
 )
 
 # ============================================================================
-# GUI Test Runner (ImGui)
+# Engine Launcher
 # ============================================================================
 
-# Find OpenGL
+add_executable(hive_launcher hive_launcher.cpp)
+
+target_link_libraries(hive_launcher
+    PRIVATE
+        Waggle
+        Hive
+        Comb
+        Nectar
+)
+
+if(HIVE_ENGINE_MODE STREQUAL "Editor")
+    target_link_libraries(hive_launcher PRIVATE Forge)
+endif()
+
+set_target_properties(hive_launcher
+    PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
+)
+
+# ============================================================================
+# GUI Test Runner (ImGui) — requires OpenGL, skip on headless builds
+# ============================================================================
+
+option(HIVE_BUILD_GUI_TESTS "Build the ImGui GUI test runner" ON)
+
+if(HIVE_BUILD_GUI_TESTS)
+
 find_package(OpenGL REQUIRED)
 
-# FetchContent for GLFW and ImGui
 include(FetchContent)
 
 # GLFW - only fetch if not already provided by Terra
@@ -165,7 +205,10 @@ target_link_libraries(larvae_runner_gui
         Comb
         Wax
         Queen
+        Waggle
+        Antennae
         Nectar
+        Swarm
         imgui
 )
 
@@ -174,6 +217,7 @@ target_include_directories(larvae_runner_gui
         ${CMAKE_SOURCE_DIR}/Comb/include
         ${CMAKE_SOURCE_DIR}/Wax/include
         ${CMAKE_SOURCE_DIR}/Queen/include
+        ${CMAKE_SOURCE_DIR}/Waggle/include
         ${CMAKE_SOURCE_DIR}/Nectar/include
         ${CMAKE_CURRENT_SOURCE_DIR}
 )
@@ -190,3 +234,5 @@ if(WIN32)
             WIN32_EXECUTABLE TRUE
     )
 endif()
+
+endif() # HIVE_BUILD_GUI_TESTS

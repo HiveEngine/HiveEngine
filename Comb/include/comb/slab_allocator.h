@@ -2,6 +2,7 @@
 
 #include <comb/allocator_concepts.h>
 #include <hive/core/assert.h>
+#include <hive/profiling/profiler.h>
 #include <comb/utils.h>
 #include <comb/platform.h>
 #include <cstddef>
@@ -115,18 +116,14 @@ namespace comb
             size_t free_list_offset_{0};  // Track offset for Reset()
             size_t user_size_{0};  // Track user-visible size (without guard bytes)
 
-            void Initialize(size_t size, size_t free_list_offset = 0)
+            void Initialize(size_t size, size_t free_list_offset = 0, size_t user_size = 0)
             {
                 slot_size = size;
                 total_size = ObjectsPerSlab * slot_size;
                 free_list_offset_ = free_list_offset;
 
-                // Calculate user size (slot_size minus guard bytes in debug mode)
-#if COMB_MEM_DEBUG
-                user_size_ = size - debug::TotalGuardSize;
-#else
-                user_size_ = size;
-#endif
+                // user_size: raw size class (without debug overhead)
+                user_size_ = (user_size > 0) ? user_size : size;
 
                 // Allocate memory from OS
                 memory_block = AllocatePages(total_size);
@@ -251,9 +248,13 @@ namespace comb
             for (size_t i = 0; i < NumSlabs; ++i)
             {
 #if COMB_MEM_DEBUG
-                // Debug mode: slots need extra space for guard bytes
-                // Free-list starts after the front guard
-                slabs_[i].Initialize(sizes_[i] + debug::TotalGuardSize, debug::GuardSize);
+                // Front guard padded for max_align_t so user data is properly aligned
+                constexpr size_t min_align = alignof(std::max_align_t);
+                constexpr size_t guard_front_padded =
+                    (debug::GuardSize + min_align - 1) & ~(min_align - 1);
+                size_t raw_slot = sizes_[i] + guard_front_padded + debug::GuardSize;
+                size_t aligned_slot = (raw_slot + min_align - 1) & ~(min_align - 1);
+                slabs_[i].Initialize(aligned_slot, guard_front_padded, sizes_[i]);
 #else
                 slabs_[i].Initialize(sizes_[i]);
 #endif
@@ -381,7 +382,7 @@ namespace comb
         [[nodiscard]] void* Allocate(size_t size, size_t alignment, const char* tag = nullptr)
         {
 #if COMB_MEM_DEBUG
-            return AllocateDebug(size, alignment, tag);
+            void* ptr = AllocateDebug(size, alignment, tag);
 #else
             (void)tag;  // Suppress unused warning
 
@@ -396,8 +397,14 @@ namespace comb
                 return nullptr;
             }
 
-            return slabs_[slab_index].Allocate();
+            void* ptr = slabs_[slab_index].Allocate();
 #endif
+
+            if (ptr)
+            {
+                HIVE_PROFILE_ALLOC(ptr, size, "SlabAllocator");
+            }
+            return ptr;
         }
 
         /**
@@ -410,12 +417,14 @@ namespace comb
          */
         void Deallocate(void* ptr)
         {
-#if COMB_MEM_DEBUG
-            DeallocateDebug(ptr);
-#else
             if (!ptr)
                 return;
 
+            HIVE_PROFILE_FREE(ptr, "SlabAllocator");
+
+#if COMB_MEM_DEBUG
+            DeallocateDebug(ptr);
+#else
             // Find which slab owns this pointer
             for (auto& slab : slabs_)
             {
@@ -577,13 +586,8 @@ namespace comb
         const size_t guardSize = sizeof(uint32_t);
         void* rawPtr = static_cast<std::byte*>(userPtr) - guardSize;
 
-        auto* guardFront = static_cast<uint32_t*>(rawPtr);
-        *guardFront = GuardMagic;
-
-        auto* guardBack = reinterpret_cast<uint32_t*>(
-            static_cast<std::byte*>(userPtr) + size
-        );
-        *guardBack = GuardMagic;
+        WriteGuard(rawPtr);
+        WriteGuard(static_cast<std::byte*>(userPtr) + size);
 
         // 3. Initialize memory with pattern (detect uninitialized reads)
         if constexpr (kMemDebugEnabled)
@@ -638,10 +642,7 @@ namespace comb
         {
             if (!info->CheckGuards())
             {
-                auto* guardFront = info->GetGuardFront();
-                auto* guardBack = info->GetGuardBack();
-
-                if (*guardFront != GuardMagic)
+                if (info->ReadGuardFront() != GuardMagic)
                 {
                     hive::LogError(comb::LogCombRoot,
                                    "[MEM_DEBUG] [{}] Buffer UNDERRUN detected! Address: {}, Size: {}, Tag: {}",
@@ -649,7 +650,7 @@ namespace comb
                     hive::Assert(false, "Buffer underrun detected");
                 }
 
-                if (*guardBack != GuardMagic)
+                if (info->ReadGuardBack() != GuardMagic)
                 {
                     hive::LogError(comb::LogCombRoot,
                                    "[MEM_DEBUG] [{}] Buffer OVERRUN detected! Address: {}, Size: {}, Tag: {}",

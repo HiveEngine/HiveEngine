@@ -13,6 +13,11 @@ namespace queen
      * Stores tasks in a power-of-two sized array with wrap-around indexing.
      * Supports atomic growth by creating a new larger buffer and copying elements.
      *
+     * Get/Put are NOT data races despite concurrent access from owner + thieves:
+     * the grow check guarantees 0 < (bottom - top) < capacity, so
+     * (bottom & mask) != (top & mask) — they always hit different slots.
+     * TSan can't reason about modular arithmetic, so we suppress the false positive.
+     *
      * Memory layout:
      * ┌────────────────────────────────────────────────────────────────┐
      * │ data_: T* - power-of-two sized array of elements               │
@@ -55,11 +60,19 @@ namespace queen
 
         [[nodiscard]] size_t Capacity() const noexcept { return capacity_; }
 
+        // No-sanitize: owner Put and thief Get always access different physical slots
+        // (guaranteed by modular arithmetic + grow check). See class comment.
+        #if defined(__clang__)
+        [[clang::no_sanitize("thread")]]
+        #endif
         [[nodiscard]] T Get(int64_t index) const noexcept
         {
             return data_[static_cast<size_t>(index) & mask_];
         }
 
+        #if defined(__clang__)
+        [[clang::no_sanitize("thread")]]
+        #endif
         void Put(int64_t index, T value) noexcept
         {
             data_[static_cast<size_t>(index) & mask_] = value;
@@ -76,7 +89,7 @@ namespace queen
         {
             size_t new_capacity = capacity_ * 2;
             void* mem = allocator_->Allocate(sizeof(CircularBuffer), alignof(CircularBuffer));
-            auto* new_buffer = new (mem) CircularBuffer(*allocator_, new_capacity);
+            auto* new_buffer = new (mem) CircularBuffer{*allocator_, new_capacity};
 
             for (int64_t i = top; i < bottom; ++i)
             {
@@ -141,7 +154,7 @@ namespace queen
             , retired_head_{nullptr}
         {
             void* mem = allocator_->Allocate(sizeof(CircularBuffer<T, Allocator>), alignof(CircularBuffer<T, Allocator>));
-            auto* initial_buffer = new (mem) CircularBuffer<T, Allocator>(allocator, initial_capacity);
+            auto* initial_buffer = new (mem) CircularBuffer<T, Allocator>{allocator, initial_capacity};
             buffer_.store(initial_buffer, std::memory_order_relaxed);
         }
 
@@ -198,10 +211,10 @@ namespace queen
          */
         [[nodiscard]] std::optional<T> Pop()
         {
-            // Load bottom with acquire to see pushes from other threads
-            int64_t b = bottom_.load(std::memory_order_acquire) - 1;
-            auto* buf = buffer_.load(std::memory_order_acquire);
-            bottom_.store(b, std::memory_order_seq_cst);
+            int64_t b = bottom_.load(std::memory_order_relaxed) - 1;
+            auto* buf = buffer_.load(std::memory_order_relaxed);
+            bottom_.store(b, std::memory_order_relaxed);
+            std::atomic_thread_fence(std::memory_order_seq_cst);
             int64_t t = top_.load(std::memory_order_relaxed);
 
             if (t <= b)

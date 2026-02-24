@@ -324,7 +324,6 @@ namespace queen
                         meta_.destruct(src);
                     }
 
-                    // Copy ticks
                     new_ticks[i] = ticks_[i];
                 }
 

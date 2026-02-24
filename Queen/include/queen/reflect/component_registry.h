@@ -6,6 +6,7 @@
 #include <queen/core/type_id.h>
 #include <hive/core/assert.h>
 #include <cstddef>
+#include <cstring>
 
 namespace queen
 {
@@ -19,6 +20,7 @@ namespace queen
     {
         ComponentMeta meta;
         ComponentReflection reflection;
+        const void* default_value = nullptr;   // Snapshot of T{} for prefab diff
 
         [[nodiscard]] constexpr bool IsValid() const noexcept
         {
@@ -28,6 +30,11 @@ namespace queen
         [[nodiscard]] constexpr bool HasReflection() const noexcept
         {
             return reflection.IsValid();
+        }
+
+        [[nodiscard]] constexpr bool HasDefault() const noexcept
+        {
+            return default_value != nullptr;
         }
     };
 
@@ -98,6 +105,13 @@ namespace queen
             entry.meta = ComponentMeta::Of<T>();
             entry.reflection = GetReflectionData<T>();
 
+            // Capture default-constructed instance for prefab diff
+            if constexpr (std::is_default_constructible_v<T>)
+            {
+                static const T default_instance{};
+                entry.default_value = &default_instance;
+            }
+
             // Insert in sorted order by type_id for binary search
             size_t insert_pos = count_;
             for (size_t i = 0; i < count_; ++i)
@@ -136,6 +150,13 @@ namespace queen
             RegisteredComponent entry;
             entry.meta = ComponentMeta::Of<T>();
             // reflection stays default (invalid)
+
+            // Capture default-constructed instance
+            if constexpr (std::is_default_constructible_v<T>)
+            {
+                static const T default_instance{};
+                entry.default_value = &default_instance;
+            }
 
             // Insert in sorted order
             size_t insert_pos = count_;
@@ -257,6 +278,83 @@ namespace queen
         [[nodiscard]] const RegisteredComponent* end() const noexcept
         {
             return entries_ + count_;
+        }
+
+        /**
+         * Default-construct a component into pre-allocated memory
+         *
+         * @param type_id TypeId of the component to construct
+         * @param dst Pre-allocated memory (must be at least meta.size bytes, properly aligned)
+         * @return true if constructed, false if type not found
+         */
+        [[nodiscard]] bool Construct(TypeId type_id, void* dst) const noexcept
+        {
+            const RegisteredComponent* comp = Find(type_id);
+            if (comp == nullptr || comp->meta.construct == nullptr) return false;
+            comp->meta.construct(dst);
+            return true;
+        }
+
+        /**
+         * Clone a component from src to dst
+         *
+         * @param type_id TypeId of the component
+         * @param dst Destination memory (must be properly allocated)
+         * @param src Source component
+         * @return true if cloned, false if type not found
+         */
+        [[nodiscard]] bool Clone(TypeId type_id, void* dst, const void* src) const noexcept
+        {
+            const RegisteredComponent* comp = Find(type_id);
+            if (comp == nullptr || comp->meta.copy == nullptr) return false;
+            comp->meta.copy(dst, src);
+            return true;
+        }
+
+        /**
+         * Compare a component instance with its registered default value
+         *
+         * Returns a bitmask where bit N is set if field N differs from the default.
+         * Supports up to 64 fields. Returns ~0 if no default is available.
+         *
+         * @param type_id TypeId of the component
+         * @param instance Pointer to the component instance
+         * @return Bitmask of changed fields (0 = all match default)
+         */
+        [[nodiscard]] uint64_t DiffWithDefault(TypeId type_id, const void* instance) const noexcept
+        {
+            const RegisteredComponent* comp = Find(type_id);
+            if (comp == nullptr || comp->default_value == nullptr || !comp->HasReflection())
+            {
+                return ~uint64_t{0};
+            }
+
+            uint64_t mask = 0;
+            const auto& refl = comp->reflection;
+            for (size_t i = 0; i < refl.field_count && i < 64; ++i)
+            {
+                const FieldInfo& field = refl.fields[i];
+                const auto* a = static_cast<const std::byte*>(instance) + field.offset;
+                const auto* b = static_cast<const std::byte*>(comp->default_value) + field.offset;
+
+                if (std::memcmp(a, b, field.size) != 0)
+                {
+                    mask |= (uint64_t{1} << i);
+                }
+            }
+            return mask;
+        }
+
+        /**
+         * Get the default value snapshot for a component type
+         *
+         * @return Pointer to default-constructed instance, or nullptr
+         */
+        [[nodiscard]] const void* GetDefault(TypeId type_id) const noexcept
+        {
+            const RegisteredComponent* comp = Find(type_id);
+            if (comp == nullptr) return nullptr;
+            return comp->default_value;
         }
 
         /**

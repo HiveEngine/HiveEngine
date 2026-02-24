@@ -3,7 +3,7 @@
 #include <hive/HiveConfig.h>
 
 // ============================================================================
-// Compiler Intrinsics (internal to this header)
+// Compiler Intrinsics
 // ============================================================================
 
 #if HIVE_COMPILER_MSVC

@@ -99,12 +99,10 @@ namespace queen
             auto& desc = systems_[systems_.Size() - 1];
             desc.Access() = std::move(access);
 
-            // Allocate storage for the callable
             using FuncType = std::decay_t<F>;
             void* user_data = allocator_->Allocate(sizeof(FuncType), alignof(FuncType));
-            new (user_data) FuncType(std::forward<F>(func));
+            new (user_data) FuncType{std::forward<F>(func)};
 
-            // Set executor
             desc.SetExecutor(
                 [](World& world, void* data) {
                     auto* fn = static_cast<FuncType*>(data);

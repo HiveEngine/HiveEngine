@@ -30,20 +30,20 @@ namespace comb
     {
 #if defined(_WIN32)
         void* ptr = VirtualAlloc(
-            nullptr,                  // Let system choose address
-            size,                     // Size in bytes
-            MEM_RESERVE | MEM_COMMIT, // Reserve and commit pages
-            PAGE_READWRITE            // Read/write access
+            nullptr,
+            size,
+            MEM_RESERVE | MEM_COMMIT,
+            PAGE_READWRITE
         );
         return ptr;
 #elif defined(__unix__) || defined(__APPLE__)
         void* ptr = mmap(
-            nullptr,               // Let kernel choose address
-            size,                  // Size in bytes
-            PROT_READ | PROT_WRITE,// Read/write permissions
-            MAP_PRIVATE | MAP_ANONYMOUS, // Private, not backed by file
-            -1,                    // No file descriptor (anonymous)
-            0                      // No offset (anonymous)
+            nullptr,
+            size,
+            PROT_READ | PROT_WRITE,
+            MAP_PRIVATE | MAP_ANONYMOUS,
+            -1,
+            0
         );
 
         if (ptr == MAP_FAILED)
@@ -64,15 +64,12 @@ namespace comb
 #if defined(_WIN32)
         (void)size; // Windows doesn't need size for VirtualFree with MEM_RELEASE
         VirtualFree(
-            ptr,         // Address to free
-            0,           // Must be 0 with MEM_RELEASE
-            MEM_RELEASE  // Release reserved pages
+            ptr,
+            0,
+            MEM_RELEASE
         );
 #elif defined(__unix__) || defined(__APPLE__)
-        munmap(
-            ptr,  // Address to unmap
-            size  // Size in bytes
-        );
+        munmap(ptr, size);
 #else
         #error "Unsupported platform"
 #endif

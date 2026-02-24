@@ -26,16 +26,16 @@ namespace hive
         Module() = default;
         virtual ~Module() = default;
 
-        virtual const char* GetName() const = 0;
+        [[nodiscard]] virtual const char* GetName() const = 0;
 
-        void Configure(); //TODO: pass a context for it to append it's dependency
+        void Configure();
         void Initialize();
 
         void Shutdown();
 
-        bool CanInitialize(const std::unordered_set<std::string> &initModulesNames) const;
+        [[nodiscard]] bool CanInitialize(const std::unordered_set<std::string> &initModulesNames) const;
 
-        bool IsInitialized() const { return m_IsInitialized; }
+        [[nodiscard]] bool IsInitialized() const { return m_IsInitialized; }
 
     protected:
         virtual void DoConfigure([[maybe_unused]] ModuleContext &context)

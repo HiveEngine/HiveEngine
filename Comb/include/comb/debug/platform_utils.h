@@ -21,6 +21,7 @@
 #if COMB_MEM_DEBUG
 
 #include <hive/core/assert.h>
+#include <cinttypes>
 #include <cstdint>
 #include <cstdio>
 
@@ -242,7 +243,7 @@ inline const char* FormatDuration(uint64_t nanos)
 
     if (nanos < 1000)
     {
-        snprintf(buffer, sizeof(buffer), "%lluns", nanos);
+        snprintf(buffer, sizeof(buffer), "%" PRIu64 "ns", nanos);
     }
     else if (nanos < 1000000)
     {

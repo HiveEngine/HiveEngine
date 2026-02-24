@@ -350,7 +350,6 @@ namespace wax
             T* new_data = static_cast<T*>(allocator_->Allocate(new_capacity * sizeof(T), alignof(T)));
             hive::Check(new_data != nullptr, "Vector allocation failed");
 
-            // Move or copy existing elements
             if (data_)
             {
                 if constexpr (std::is_trivially_copyable_v<T>)
@@ -482,7 +481,6 @@ namespace wax
 
             if (new_size > size_)
             {
-                // Default construct new elements
                 for (size_t i = size_; i < new_size; ++i)
                 {
                     new (&data_[i]) T();
@@ -490,7 +488,6 @@ namespace wax
             }
             else if (new_size < size_)
             {
-                // Destroy excess elements
                 if constexpr (!std::is_trivially_destructible_v<T>)
                 {
                     for (size_t i = new_size; i < size_; ++i)
@@ -512,7 +509,6 @@ namespace wax
 
             if (new_size > size_)
             {
-                // Copy construct new elements
                 for (size_t i = size_; i < new_size; ++i)
                 {
                     new (&data_[i]) T(value);
@@ -520,7 +516,6 @@ namespace wax
             }
             else if (new_size < size_)
             {
-                // Destroy excess elements
                 if constexpr (!std::is_trivially_destructible_v<T>)
                 {
                     for (size_t i = new_size; i < size_; ++i)

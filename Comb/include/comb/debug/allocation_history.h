@@ -53,13 +53,10 @@
 namespace comb::debug
 {
 
-/**
- * History entry type
- */
 enum class HistoryEventType : uint8_t
 {
-    Allocation,    // Memory allocated
-    Deallocation   // Memory deallocated
+    Allocation,
+    Deallocation
 };
 
 /**
@@ -299,9 +296,7 @@ public:
     }
 
 private:
-    /**
-     * Add entry to ring buffer (internal, assumes mutex held)
-     */
+    // Assumes mutex held
     void AddEntry(const HistoryEntry& entry)
     {
         history_[writeIndex_] = entry;
@@ -313,16 +308,9 @@ private:
         }
     }
 
-    // Ring buffer
     std::array<HistoryEntry, COMB_MEM_DEBUG_HISTORY_SIZE> history_{};
-
-    // Current number of entries (0 to COMB_MEM_DEBUG_HISTORY_SIZE)
     size_t count_{0};
-
-    // Next write index (circular)
     size_t writeIndex_{0};
-
-    // Mutex for thread-safety
     mutable std::mutex mutex_;
 };
 

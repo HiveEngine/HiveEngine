@@ -55,33 +55,29 @@ namespace wax
         using Iterator = T*;
         using ConstIterator = const T*;
 
-        // Default constructor (empty span)
         constexpr Span() noexcept
             : data_{nullptr}
             , size_{0}
         {}
 
-        // Constructor from pointer and size
         constexpr Span(T* data, size_t size) noexcept
             : data_{data}
             , size_{size}
         {}
 
-        // Constructor from C array
         template<size_t N>
         constexpr Span(T (&array)[N]) noexcept
             : data_{array}
             , size_{N}
         {}
 
-        // Constructor from wax::Array
         template<size_t N>
         constexpr Span(wax::Array<T, N>& array) noexcept
             : data_{array.Data()}
             , size_{N}
         {}
 
-        // Constructor from const wax::Array (only if T is const)
+        // Only if T is const
         template<size_t N, typename U = T>
         constexpr Span(const wax::Array<typename std::remove_const_t<U>, N>& array) noexcept
             requires std::is_const_v<T>
@@ -89,7 +85,6 @@ namespace wax
             , size_{N}
         {}
 
-        // Constructor from begin/end iterators
         constexpr Span(T* begin, T* end) noexcept
             : data_{begin}
             , size_{static_cast<size_t>(end - begin)}
@@ -97,7 +92,6 @@ namespace wax
             hive::Assert(end >= begin, "Invalid iterator range");
         }
 
-        // Copy constructor (trivial)
         constexpr Span(const Span&) noexcept = default;
         constexpr Span& operator=(const Span&) noexcept = default;
 

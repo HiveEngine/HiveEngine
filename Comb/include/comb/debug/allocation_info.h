@@ -36,8 +36,6 @@ namespace comb::debug
 {
 
 /**
- * Allocation metadata
- *
  * Stores information about a single allocation for debugging.
  * Size: ~48 bytes without callstacks, ~176 bytes with callstacks
  */
@@ -47,20 +45,8 @@ struct AllocationInfo
     // Core Information (Always Present)
     // ========================================================================
 
-    /**
-     * User pointer (after guard bytes)
-     * This is the address returned to the user
-     */
     void* address{nullptr};
-
-    /**
-     * User-requested size (excluding guard bytes)
-     */
     size_t size{0};
-
-    /**
-     * Requested alignment
-     */
     size_t alignment{0};
 
     /**
@@ -79,16 +65,7 @@ struct AllocationInfo
      */
     const char* tag{nullptr};
 
-    /**
-     * Unique allocation ID (monotonically increasing)
-     * Useful for tracking allocation history and correlating leaks
-     */
     uint32_t allocationId{0};
-
-    /**
-     * Thread ID that performed the allocation
-     * Cross-platform: Use comb::debug::GetThreadId()
-     */
     uint32_t threadId{0};
 
     // ========================================================================
@@ -139,23 +116,19 @@ struct AllocationInfo
     }
 
     /**
-     * Get guard front pointer
+     * Read front guard value (memcpy-safe for potentially misaligned addresses)
      */
-    [[nodiscard]] uint32_t* GetGuardFront() const noexcept
+    [[nodiscard]] uint32_t ReadGuardFront() const noexcept
     {
-        return reinterpret_cast<uint32_t*>(
-            static_cast<std::byte*>(address) - GuardSize
-        );
+        return ReadGuard(static_cast<std::byte*>(address) - GuardSize);
     }
 
     /**
-     * Get guard back pointer
+     * Read back guard value (memcpy-safe for potentially misaligned addresses)
      */
-    [[nodiscard]] uint32_t* GetGuardBack() const noexcept
+    [[nodiscard]] uint32_t ReadGuardBack() const noexcept
     {
-        return reinterpret_cast<uint32_t*>(
-            static_cast<std::byte*>(address) + size
-        );
+        return ReadGuard(static_cast<std::byte*>(address) + size);
     }
 
     /**
@@ -164,8 +137,8 @@ struct AllocationInfo
      */
     [[nodiscard]] bool CheckGuards() const noexcept
     {
-        return *GetGuardFront() == GuardMagic &&
-               *GetGuardBack() == GuardMagic;
+        return ReadGuardFront() == GuardMagic &&
+               ReadGuardBack() == GuardMagic;
     }
 
     /**

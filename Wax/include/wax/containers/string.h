@@ -211,7 +211,6 @@ namespace wax
         {
             if (other.IsHeap())
             {
-                // Heap mode: allocate and copy
                 size_t size = other.heap_.size;
                 InitHeap(size);
                 std::memcpy(heap_.data, other.heap_.data, size);
@@ -238,7 +237,6 @@ namespace wax
 
                 if (other.IsHeap())
                 {
-                    // Heap mode: allocate and copy
                     size_t size = other.heap_.size;
                     InitHeap(size);
                     std::memcpy(heap_.data, other.heap_.data, size);
@@ -699,7 +697,6 @@ namespace wax
 
         Allocator* allocator_;
 
-        // Helper functions
         [[nodiscard]] bool IsHeap() const noexcept
         {
             // Test bit 7 of last byte (offset 23)
@@ -826,3 +823,20 @@ namespace wax
         return result;
     }
 }
+
+// Hash specialization for wax::HashMap/HashSet
+template<comb::Allocator Allocator>
+struct std::hash<wax::String<Allocator>>
+{
+    size_t operator()(const wax::String<Allocator>& s) const noexcept
+    {
+        // FNV-1a
+        size_t h = 14695981039346656037ull;
+        for (size_t i = 0; i < s.Size(); ++i)
+        {
+            h ^= static_cast<size_t>(static_cast<unsigned char>(s.Data()[i]));
+            h *= 1099511628211ull;
+        }
+        return h;
+    }
+};

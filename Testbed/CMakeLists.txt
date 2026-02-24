@@ -6,11 +6,11 @@
 # Executable Configuration
 # ============================================================================
 
-add_executable(Testbed
-    src/main.cpp
-    src/systemmodule.cpp
-    src/logtestbed.cpp
-)
+if(WIN32)
+    add_executable(Testbed src/win32_main.cpp)
+elseif(UNIX)
+    add_executable(Testbed src/linux_main.cpp)
+endif()
 
 target_include_directories(Testbed
     PUBLIC
@@ -26,11 +26,11 @@ target_precompile_headers(Testbed
 # Dependencies
 # ============================================================================
 
-add_subdirectory(extern/swarm)
 
 target_link_libraries(Testbed
     PRIVATE
         Hive
-        Terra
+        Comb
         Swarm
+        Terra
 )

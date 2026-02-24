@@ -10,5 +10,3 @@
 #include <memory>
 #include <string>
 #include <utility>
-
-#include <terra/window/windowbackendapi.h>

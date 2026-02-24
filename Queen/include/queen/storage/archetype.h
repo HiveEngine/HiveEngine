@@ -181,6 +181,16 @@ namespace queen
             return column->GetRaw(row);
         }
 
+        [[nodiscard]] const void* GetComponentRaw(uint32_t row, TypeId type_id) const noexcept
+        {
+            const auto* column = table_.GetColumnByTypeId(type_id);
+            if (column == nullptr)
+            {
+                return nullptr;
+            }
+            return column->GetRaw(row);
+        }
+
         [[nodiscard]] Entity GetEntity(uint32_t row) const noexcept
         {
             return table_.GetEntity(row);

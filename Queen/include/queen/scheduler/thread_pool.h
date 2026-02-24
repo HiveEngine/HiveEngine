@@ -4,10 +4,12 @@
 #include <queen/scheduler/worker_context.h>
 #include <comb/allocator_concepts.h>
 #include <comb/thread_safe_allocator.h>
+#include <hive/profiling/profiler.h>
 #include <atomic>
 #include <thread>
 #include <mutex>
 #include <condition_variable>
+#include <cstdio>
 
 namespace queen
 {
@@ -154,32 +156,29 @@ namespace queen
             , running_{false}
             , pending_tasks_{0}
         {
-            // Allocate global submission queue
             // The deque uses safe_allocator_ internally for Grow() which can happen from any thread
             void* global_mem = allocator_->Allocate(
                 sizeof(WorkStealingDeque<Task, SafeAllocator>),
                 alignof(WorkStealingDeque<Task, SafeAllocator>)
             );
-            global_queue_ = new (global_mem) WorkStealingDeque<Task, SafeAllocator>(safe_allocator_, deque_capacity * 4);
+            global_queue_ = new (global_mem) WorkStealingDeque<Task, SafeAllocator>{safe_allocator_, deque_capacity * 4};
 
-            // Allocate worker contexts (single-threaded setup)
+            // Single-threaded setup phase
             void* mem = allocator_->Allocate(sizeof(WorkerContext) * worker_count_, alignof(WorkerContext));
             workers_ = static_cast<WorkerContext*>(mem);
 
-            // Construct worker contexts
             for (size_t i = 0; i < worker_count_; ++i)
             {
-                new (&workers_[i]) WorkerContext();
+                new (&workers_[i]) WorkerContext{};
                 workers_[i].id = i;
                 workers_[i].rng_state = static_cast<uint32_t>(i + 1);
 
-                // Allocate per-worker deque (single-threaded setup)
                 // The deque uses safe_allocator_ internally for Grow() which can happen from workers
                 void* deque_mem = allocator_->Allocate(
                     sizeof(WorkStealingDeque<Task, SafeAllocator>),
                     alignof(WorkStealingDeque<Task, SafeAllocator>)
                 );
-                workers_[i].deque = new (deque_mem) WorkStealingDeque<Task, SafeAllocator>(safe_allocator_, deque_capacity);
+                workers_[i].deque = new (deque_mem) WorkStealingDeque<Task, SafeAllocator>{safe_allocator_, deque_capacity};
             }
         }
 
@@ -187,7 +186,6 @@ namespace queen
         {
             Stop();
 
-            // Destroy worker contexts and deques
             for (size_t i = 0; i < worker_count_; ++i)
             {
                 if (workers_[i].deque != nullptr)
@@ -200,7 +198,6 @@ namespace queen
 
             allocator_->Deallocate(workers_);
 
-            // Destroy global queue
             if (global_queue_ != nullptr)
             {
                 global_queue_->~WorkStealingDeque<Task, SafeAllocator>();
@@ -244,7 +241,6 @@ namespace queen
                 return; // Already stopped
             }
 
-            // Signal all workers to stop
             for (size_t i = 0; i < worker_count_; ++i)
             {
                 workers_[i].should_stop.store(true, std::memory_order_release);
@@ -253,7 +249,6 @@ namespace queen
             // Wake all parked workers so they see should_stop
             park_cv_.notify_all();
 
-            // Wait for all workers to finish
             for (size_t i = 0; i < worker_count_; ++i)
             {
                 if (workers_[i].thread.joinable())
@@ -274,6 +269,8 @@ namespace queen
          */
         void Submit(Task::Func func, void* user_data)
         {
+            HIVE_PROFILE_SCOPE_N("ThreadPool::Submit");
+
             Task task{func, user_data};
 
             // Increment pending count BEFORE pushing (prevents race with workers)
@@ -281,7 +278,7 @@ namespace queen
 
             // Push to global queue - protected by mutex for multi-producer safety
             {
-                std::lock_guard<std::mutex> lock{submit_mutex_};
+                std::lock_guard<HIVE_PROFILE_LOCKABLE_BASE(std::mutex)> lock{submit_mutex_};
                 global_queue_->Push(task);
             }
 
@@ -381,6 +378,11 @@ namespace queen
             constexpr int kSpinAttempts = 64; // Spin before yielding
             int idle_spins = 0;
 
+            // Name this thread for Tracy
+            char thread_name[32];
+            std::snprintf(thread_name, sizeof(thread_name), "Worker %zu", ctx->id);
+            HIVE_PROFILE_THREAD(thread_name);
+
             // Set worker index for this thread (used by World::Query for per-thread allocators)
             queen::WorkerContext::SetCurrentWorkerIndex(ctx->id);
 
@@ -414,7 +416,10 @@ namespace queen
                 if (task.IsValid())
                 {
                     ctx->state.store(WorkerState::Running, std::memory_order_relaxed);
-                    task.Execute();
+                    {
+                        HIVE_PROFILE_SCOPE_N("TaskExecute");
+                        task.Execute();
+                    }
                     pending_tasks_.fetch_sub(1, std::memory_order_release);
                 }
                 else
@@ -455,6 +460,7 @@ namespace queen
 
         Task TrySteal(WorkerContext* ctx)
         {
+            HIVE_PROFILE_SCOPE_N("TrySteal");
             // Random starting point to reduce contention
             uint32_t start = XorShift32(ctx->rng_state) % static_cast<uint32_t>(worker_count_);
 
@@ -504,9 +510,9 @@ namespace queen
         SafeAllocator safe_allocator_;  // Thread-safe wrapper for deque allocations (Grow)
         WorkerContext* workers_;
         WorkStealingDeque<Task, SafeAllocator>* global_queue_;  // Main submission queue
-        mutable std::mutex submit_mutex_;  // Protects global_queue_ Push (multi-producer)
+        mutable HIVE_PROFILE_LOCKABLE_N(std::mutex, submit_mutex_, "SubmitMutex");
         std::condition_variable park_cv_;   // Wakes parked workers
-        std::mutex park_mutex_;             // Protects park_cv_
+        std::mutex park_mutex_;             // Protects park_cv_ (not tracked, used with condition_variable)
         size_t worker_count_;
         IdleStrategy idle_strategy_;
         std::atomic<bool> running_;

@@ -1,5 +1,6 @@
 #include <hive/precomp.h>
 #include <hive/core/moduleregistry.h>
+#include <hive/profiling/profiler.h>
 
 namespace hive
 {
@@ -19,6 +20,8 @@ namespace hive
 
     void ModuleRegistry::ConfigureModules()
     {
+        HIVE_PROFILE_SCOPE_N("ModuleRegistry::Configure");
+
         std::for_each(m_Modules.begin(), m_Modules.end(),
               [](auto &module)
               { module->Configure(); });
@@ -55,6 +58,8 @@ namespace hive
 
     void ModuleRegistry::InitModules()
     {
+        HIVE_PROFILE_SCOPE_N("ModuleRegistry::Init");
+
         const auto moduleInit = [](const auto &module)
         {
             module->Initialize();
@@ -65,6 +70,8 @@ namespace hive
 
     void ModuleRegistry::ShutdownModules()
     {
+        HIVE_PROFILE_SCOPE_N("ModuleRegistry::Shutdown");
+
         const auto moduleShutdown = [](const auto &module)
         {
             module->Shutdown();

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <comb/allocator_concepts.h>
+#include <hive/profiling/profiler.h>
 #include <mutex>
 
 namespace comb
@@ -84,7 +85,7 @@ namespace comb
          */
         [[nodiscard]] void* Allocate(size_t size, size_t alignment, const char* tag = nullptr)
         {
-            std::lock_guard<std::mutex> lock{mutex_};
+            std::lock_guard<HIVE_PROFILE_LOCKABLE_BASE(std::mutex)> lock{mutex_};
             return allocator_->Allocate(size, alignment, tag);
         }
 
@@ -95,8 +96,19 @@ namespace comb
          */
         void Deallocate(void* ptr)
         {
-            std::lock_guard<std::mutex> lock{mutex_};
+            std::lock_guard<HIVE_PROFILE_LOCKABLE_BASE(std::mutex)> lock{mutex_};
             allocator_->Deallocate(ptr);
+        }
+
+        /**
+         * Get the usable size of an allocation's block (lock-free)
+         *
+         * Safe to call without a lock because the block header is
+         * immutable between Allocate and Deallocate.
+         */
+        [[nodiscard]] size_t GetBlockUsableSize(const void* ptr) const
+        {
+            return allocator_->GetBlockUsableSize(ptr);
         }
 
         /**
@@ -119,7 +131,7 @@ namespace comb
         /**
          * Get allocator name
          */
-        [[nodiscard]] const char* GetName() const
+        [[nodiscard]] const char* GetName() const noexcept
         {
             return "ThreadSafeAllocator";
         }
@@ -129,7 +141,7 @@ namespace comb
          */
         [[nodiscard]] size_t GetUsedMemory() const
         {
-            std::lock_guard<std::mutex> lock{mutex_};
+            std::lock_guard<HIVE_PROFILE_LOCKABLE_BASE(std::mutex)> lock{mutex_};
             return allocator_->GetUsedMemory();
         }
 
@@ -138,12 +150,12 @@ namespace comb
          */
         [[nodiscard]] size_t GetTotalMemory() const
         {
-            std::lock_guard<std::mutex> lock{mutex_};
+            std::lock_guard<HIVE_PROFILE_LOCKABLE_BASE(std::mutex)> lock{mutex_};
             return allocator_->GetTotalMemory();
         }
 
     private:
         UnderlyingAllocator* allocator_;
-        mutable std::mutex mutex_;
+        mutable HIVE_PROFILE_LOCKABLE_N(std::mutex, mutex_, "AllocatorMutex");
     };
 }

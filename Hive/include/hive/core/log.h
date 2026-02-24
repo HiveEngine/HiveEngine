@@ -19,8 +19,8 @@ namespace hive
     class LogCategory
     {
     public:
-        constexpr explicit LogCategory(const char *name, const LogCategory *parentCategory = nullptr) : m_Name(name),
-            m_ParentCategory(parentCategory)
+        constexpr explicit LogCategory(const char *name, const LogCategory *parentCategory = nullptr) : m_Name{name},
+            m_ParentCategory{parentCategory}
         {
             if (m_ParentCategory)
                 m_FullPath = std::string(m_ParentCategory->GetFullPath()) + "/" + name;
@@ -32,10 +32,10 @@ namespace hive
         [[nodiscard]] constexpr const LogCategory *GetParentCategory() const { return m_ParentCategory; }
         [[nodiscard]] const std::string &GetFullPath() const { return m_FullPath; }
 
-        LogCategory(const LogCategory &other) = delete; //Copy constructor
-        LogCategory(LogCategory &&other) = delete; //Move constructor
-        LogCategory &operator=(const LogCategory &other) = delete; //Copy assignment
-        LogCategory &operator=(LogCategory &&other) = delete; //Move assignment
+        LogCategory(const LogCategory &other) = delete;
+        LogCategory(LogCategory &&other) = delete;
+        LogCategory &operator=(const LogCategory &other) = delete;
+        LogCategory &operator=(LogCategory &&other) = delete;
     private:
         const char *m_Name;
         std::string m_FullPath;
@@ -94,7 +94,6 @@ namespace hive
     }
 
     // Primary API: Formatted logging (modern {fmt})
-    // Use these by default - type-safe and efficient
     template<typename... Args>
     void LogTrace(const LogCategory &category, fmt::format_string<Args...> format, Args&&... args)
     {
@@ -123,7 +122,6 @@ namespace hive
         LogGeneral(category, LogSeverity::ERROR, msg.c_str());
     }
 
-    // Overloads for simple strings (no formatting needed)
     inline void LogTrace(const LogCategory &category, const char *message)
     {
         LogGeneral(category, LogSeverity::TRACE, message);

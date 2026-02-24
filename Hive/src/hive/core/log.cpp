@@ -33,8 +33,8 @@ namespace hive
         std::for_each(m_Loggers.begin(), m_Loggers.begin() + m_Count, callLoggerFunc);
     }
 
-    ConsoleLogger::ConsoleLogger(LogManager &manager) : m_Manager(manager),
-                                                        m_LoggerId(m_Manager.RegisterLogger(this, &ConsoleLogger::Log))
+    ConsoleLogger::ConsoleLogger(LogManager &manager) : m_Manager{manager},
+                                                        m_LoggerId{m_Manager.RegisterLogger(this, &ConsoleLogger::Log)}
     {
     }
 
@@ -53,13 +53,11 @@ namespace hive
             {LogSeverity::ERROR, "[ERROR] "}
         };
 
-        // Print severity label
         auto it = severityLabels.find(severity);
-        // HIVE_ASSERT(it != severityLabels.end());
+        if (it == severityLabels.end()) return;
 
         std::cout << it->second;
 
-        // Print categories using STL
         std::cout << category.GetFullPath() << " - " << message << std::endl;
     }
 }

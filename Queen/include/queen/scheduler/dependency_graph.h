@@ -5,6 +5,7 @@
 #include <queen/system/access_descriptor.h>
 #include <wax/containers/vector.h>
 #include <comb/allocator_concepts.h>
+#include <hive/profiling/profiler.h>
 
 namespace queen
 {
@@ -64,6 +65,7 @@ namespace queen
          */
         void Build(const SystemStorage<Allocator>& storage)
         {
+            HIVE_PROFILE_SCOPE_N("DependencyGraph::Build");
             Clear();
 
             const size_t system_count = storage.SystemCount();
@@ -73,7 +75,6 @@ namespace queen
                 return;
             }
 
-            // Create nodes for each system
             nodes_.Reserve(system_count);
             adjacency_.Reserve(system_count);
 
@@ -87,7 +88,6 @@ namespace queen
                 }
             }
 
-            // Build edges based on access conflicts
             // System A -> System B means A must run before B
             for (size_t i = 0; i < system_count; ++i)
             {
@@ -114,7 +114,6 @@ namespace queen
                 nodes_[i].SetDependencyCount(dep_count);
             }
 
-            // Add explicit ordering edges (After/Before constraints)
             for (size_t i = 0; i < system_count; ++i)
             {
                 const auto* system = storage.GetSystemByIndex(i);
@@ -145,7 +144,6 @@ namespace queen
                 }
             }
 
-            // Find root systems (no dependencies)
             for (size_t i = 0; i < nodes_.Size(); ++i)
             {
                 if (nodes_[i].DependencyCount() == 0)
@@ -154,7 +152,6 @@ namespace queen
                 }
             }
 
-            // Compute topological order
             ComputeTopologicalOrder();
 
             dirty_ = false;
@@ -259,7 +256,6 @@ namespace queen
             execution_order_.Reserve(nodes_.Size());
 
             // Use Kahn's algorithm
-            // Copy in-degree counts (we'll decrement them)
             wax::Vector<uint16_t, Allocator> in_degree{allocator_};
             in_degree.Reserve(nodes_.Size());
             for (size_t i = 0; i < nodes_.Size(); ++i)
@@ -267,7 +263,6 @@ namespace queen
                 in_degree.PushBack(nodes_[i].DependencyCount());
             }
 
-            // Start with roots (in-degree 0)
             wax::Vector<uint32_t, Allocator> queue{allocator_};
             queue.Reserve(nodes_.Size());
             for (size_t i = 0; i < roots_.Size(); ++i)
@@ -282,7 +277,6 @@ namespace queen
                 uint32_t current = queue[queue_front++];
                 execution_order_.PushBack(current);
 
-                // Reduce in-degree of dependents
                 const auto& dependents = adjacency_[current];
                 for (size_t i = 0; i < dependents.Size(); ++i)
                 {

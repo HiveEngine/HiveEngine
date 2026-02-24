@@ -140,7 +140,6 @@ public:
 
         std::lock_guard<std::mutex> lock(mutex_);
 
-        // Find and remove allocator
         for (auto it = allocators_.begin(); it != allocators_.end(); ++it)
         {
             if (it->second.registry == registry)
@@ -357,10 +356,7 @@ private:
      */
     [[nodiscard]] AllocationStats GetGlobalStatsLocked() const;
 
-    // Map: unique key -> AllocatorInfo
     std::unordered_map<std::string, AllocatorInfo> allocators_;
-
-    // Mutex for thread-safety
     mutable std::mutex mutex_;
 };
 

@@ -16,9 +16,25 @@
           "cmakeVar": "HIVE_FEATURE_VULKAN",
           "macro": "HIVE_FEATURE_VULKAN",
           "type": "bool",
+          "excludes": ["d3d12"],
           "defaults": {
             "Editor": true,
             "Game": true,
+            "Headless": false
+          }
+        },
+        {
+          "id": "d3d12",
+          "name": "D3D12 Renderer",
+          "description": "Enable Direct3D 12 graphics backend (Windows only)",
+          "cmakeVar": "HIVE_FEATURE_D3D12",
+          "macro": "HIVE_FEATURE_D3D12",
+          "type": "bool",
+          "excludes": ["vulkan"],
+          "platforms": ["Windows"],
+          "defaults": {
+            "Editor": false,
+            "Game": false,
             "Headless": false
           }
         },

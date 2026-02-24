@@ -7,24 +7,24 @@
  * It must be included AFTER the World class is fully defined.
  */
 
+#include <hive/profiling/profiler.h>
+
 namespace queen
 {
     template<comb::Allocator Allocator>
     void Scheduler<Allocator>::RunAll(World& world, SystemStorage<Allocator>& storage)
     {
-        // Rebuild graph if needed
+        HIVE_PROFILE_SCOPE_N("Scheduler::RunAll");
+
         if (graph_.IsDirty())
         {
             graph_.Build(storage);
         }
 
-        // Reset node states for new frame
         graph_.Reset();
 
-        // Get current tick for change detection
         Tick current_tick = world.CurrentTick();
 
-        // Execute systems in topological order
         const auto& order = graph_.ExecutionOrder();
         for (size_t i = 0; i < order.Size(); ++i)
         {
@@ -35,10 +35,11 @@ namespace queen
             {
                 node->SetState(SystemState::Running);
 
-                // Execute the system with tick tracking
                 SystemDescriptor<Allocator>* system = storage.GetSystemByIndex(node_index);
                 if (system != nullptr)
                 {
+                    HIVE_PROFILE_SCOPE_N("ExecuteSystem");
+                    HIVE_PROFILE_ZONE_NAME(system->Name(), std::strlen(system->Name()));
                     system->Execute(world, current_tick);
                 }
 
@@ -46,7 +47,7 @@ namespace queen
             }
         }
 
-        // Flush all command buffers at sync point
+        // Sync point
         world.GetCommands().FlushAll(world);
     }
 }
