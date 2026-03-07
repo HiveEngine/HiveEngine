@@ -1,5 +1,6 @@
 #include <larvae/larvae.h>
 #include <hive/core/log.h>
+#include <comb/debug/global_memory_tracker.h>
 #include <iostream>
 
 int main(int argc, char** argv)
@@ -8,5 +9,7 @@ int main(int argc, char** argv)
     hive::ConsoleLogger logger{hive::LogManager::GetInstance()};
 
     std::cout << "Larvae Benchmark Runner\n\n";
-    return larvae::RunAllBenchmarks(argc, argv);
+    int result = larvae::RunAllBenchmarks(argc, argv);
+    comb::debug::ReportLiveAllocatorLeaks();
+    return result;
 }

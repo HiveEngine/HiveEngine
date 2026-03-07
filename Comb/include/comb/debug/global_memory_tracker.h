@@ -46,9 +46,9 @@
 #include <hive/core/log.h>
 #include <comb/combmodule.h>
 
+#include <mutex>
 #include <string>
 #include <unordered_map>
-#include <mutex>
 #include <vector>
 
 namespace comb::debug
@@ -62,6 +62,7 @@ struct AllocatorInfo
     const char* name;                    // Allocator name (e.g., "LinearAllocator")
     AllocationRegistry* registry;        // Pointer to allocator's registry
     uint64_t registrationTime;           // When allocator was registered (nanoseconds)
+    bool includeInLeakReport;            // Include in explicit live leak reporting
 };
 
 /**
@@ -100,10 +101,13 @@ public:
      *
      * @param name Allocator name (string literal)
      * @param registry Pointer to allocator's registry
+     * @param includeInLeakReport Participate in explicit live leak reporting
      *
      * Thread-safe: Yes (mutex protected)
      */
-    void RegisterAllocator(const char* name, AllocationRegistry* registry)
+    void RegisterAllocator(const char* name,
+                           AllocationRegistry* registry,
+                           bool includeInLeakReport = true)
     {
         hive::Assert(name != nullptr, "Allocator name cannot be null");
         hive::Assert(registry != nullptr, "Registry cannot be null");
@@ -117,6 +121,7 @@ public:
         info.name = name;
         info.registry = registry;
         info.registrationTime = comb::debug::GetTimestamp();
+        info.includeInLeakReport = includeInLeakReport;
 
         allocators_[key] = info;
 
@@ -320,6 +325,56 @@ public:
     }
 
     /**
+     * Print leak reports for allocators that are still alive.
+     *
+     * Call this explicitly before shutdown while logging is still alive.
+     */
+    void ReportLiveAllocatorLeaks() const
+    {
+        std::vector<AllocatorInfo> allocators;
+        {
+            std::lock_guard<std::mutex> lock(mutex_);
+            allocators.reserve(allocators_.size());
+            for (const auto& [key, info] : allocators_)
+            {
+                if (info.includeInLeakReport)
+                {
+                    allocators.push_back(info);
+                }
+            }
+        }
+
+        size_t totalLeaks = 0;
+        size_t totalLeakedBytes = 0;
+
+        for (const AllocatorInfo& info : allocators)
+        {
+            const size_t leakCount = info.registry->GetAllocationCount();
+            if (leakCount == 0)
+            {
+                continue;
+            }
+
+            const AllocationStats stats = info.registry->GetStats();
+            totalLeaks += leakCount;
+            totalLeakedBytes += stats.currentBytesUsed;
+            info.registry->ReportLeaks(info.name);
+        }
+
+        if (totalLeaks == 0)
+        {
+            hive::LogInfo(comb::LogCombRoot,
+                          "[MEM_DEBUG] No live allocator leaks detected");
+            return;
+        }
+
+        hive::LogError(comb::LogCombRoot,
+                       "[MEM_DEBUG] Live allocator leaks: {} allocations, {} bytes",
+                       totalLeaks,
+                       totalLeakedBytes);
+    }
+
+    /**
      * Export all allocator stats to JSON string
      *
      * Generates JSON for external visualization tools.
@@ -359,6 +414,11 @@ private:
     std::unordered_map<std::string, AllocatorInfo> allocators_;
     mutable std::mutex mutex_;
 };
+
+inline void ReportLiveAllocatorLeaks()
+{
+    GlobalMemoryTracker::GetInstance().ReportLiveAllocatorLeaks();
+}
 
 } // namespace comb::debug
 

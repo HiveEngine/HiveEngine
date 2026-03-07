@@ -7,6 +7,7 @@
 #include <hive/core/moduleregistry.h>
 #include <hive/core/module.h>
 #include <hive/core/log.h>
+#include <comb/debug/global_memory_tracker.h>
 #include <hive/HiveConfig.h>
 
 #include <comb/default_allocator.h>
@@ -225,7 +226,7 @@ int main(int argc, char* argv[])
         auto result = pf.LoadFromDisk({path_str.c_str(), path_str.size()});
         if (result.success && pf.Name().Size() > 0)
         {
-            window_title += " — ";
+            window_title += " - ";
             window_title.append(pf.Name().Data(), pf.Name().Size());
         }
     }
@@ -364,5 +365,7 @@ int main(int argc, char* argv[])
     };
 
     callbacks.user_data = &state;
-    return waggle::Run(config, callbacks);
+    int result = waggle::Run(config, callbacks);
+    comb::debug::ReportLiveAllocatorLeaks();
+    return result;
 }

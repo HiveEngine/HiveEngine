@@ -1,5 +1,6 @@
 #include <larvae/larvae.h>
 #include <comb/default_allocator.h>
+#include <comb/debug/global_memory_tracker.h>
 #include <comb/new.h>
 
 namespace
@@ -78,6 +79,19 @@ namespace
         larvae::AssertEqual(alloc.GetTotalMemory(), 32_MB);
     });
 
+    auto test6b = larvae::RegisterTest("DefaultAllocator", "GetDefaultAllocatorRegistersWithGlobalTracker", []() {
+#if COMB_MEM_DEBUG
+        const size_t count_before = comb::debug::GlobalMemoryTracker::GetInstance().GetAllocatorCount();
+
+        comb::DefaultAllocator& alloc1 = comb::GetDefaultAllocator();
+        comb::DefaultAllocator& alloc2 = comb::GetDefaultAllocator();
+
+        larvae::AssertEqual(&alloc1, &alloc2);
+        larvae::AssertTrue(comb::debug::GlobalMemoryTracker::GetInstance().GetAllocatorCount() >= 1u);
+        larvae::AssertEqual(comb::debug::GlobalMemoryTracker::GetInstance().GetAllocatorCount(), count_before);
+#endif
+    });
+
     // =============================================================================
     // ModuleAllocator
     // =============================================================================
@@ -117,6 +131,20 @@ namespace
 
         const comb::DefaultAllocator& alloc = module.Get();
         larvae::AssertEqual(alloc.GetTotalMemory(), 1_MB);
+    });
+
+    auto test16 = larvae::RegisterTest("ModuleAllocator", "RegistersWithGlobalTrackerForLifetime", []() {
+#if COMB_MEM_DEBUG
+        const size_t count_before = comb::debug::GlobalMemoryTracker::GetInstance().GetAllocatorCount();
+
+        {
+            comb::ModuleAllocator module{"TrackedModule", 1_MB};
+            larvae::AssertEqual(comb::debug::GlobalMemoryTracker::GetInstance().GetAllocatorCount(),
+                                count_before + 1);
+        }
+
+        larvae::AssertEqual(comb::debug::GlobalMemoryTracker::GetInstance().GetAllocatorCount(), count_before);
+#endif
     });
 
     // =============================================================================

@@ -24,7 +24,7 @@ namespace comb
         release_current_ = base_;  // Initialize virtual release pointer
 
         // Register with global tracker
-        debug::GlobalMemoryTracker::GetInstance().RegisterAllocator(GetName(), registry_.get());
+        debug::GlobalMemoryTracker::GetInstance().RegisterAllocator(GetName(), registry_.get(), false);
 #endif
     }
 
