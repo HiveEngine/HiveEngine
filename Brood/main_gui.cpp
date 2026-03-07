@@ -1,5 +1,6 @@
 #include <larvae/larvae.h>
 #include <hive/core/log.h>
+#include <comb/debug/global_memory_tracker.h>
 
 #include "larvae_runner_config.h"
 
@@ -1427,6 +1428,7 @@ int main(int argc, char** argv)
     glfwDestroyWindow(window);
     glfwTerminate();
 
+    comb::debug::ReportLiveAllocatorLeaks();
     return 0;
 }
 
