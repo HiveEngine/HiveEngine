@@ -4,6 +4,7 @@
 
 #include <cstddef>
 #include <cstring>
+#include <type_traits>
 
 namespace wax
 {
@@ -110,6 +111,14 @@ namespace wax
         [[nodiscard]] constexpr ConstIterator Begin() const noexcept { return m_data; }
 
         [[nodiscard]] constexpr ConstIterator End() const noexcept { return m_data + m_size; }
+
+        [[nodiscard]] constexpr ConstIterator begin() const noexcept { return Begin(); }
+
+        [[nodiscard]] constexpr ConstIterator cbegin() const noexcept { return Begin(); }
+
+        [[nodiscard]] constexpr ConstIterator end() const noexcept { return End(); }
+
+        [[nodiscard]] constexpr ConstIterator cend() const noexcept { return End(); }
 
         [[nodiscard]] constexpr StringView Substr(size_t pos = 0, size_t count = npos) const noexcept {
             hive::Assert(pos <= m_size, "Substr position out of bounds");

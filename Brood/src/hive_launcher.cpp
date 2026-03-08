@@ -1,7 +1,6 @@
 #include <hive/HiveConfig.h>
 #include <hive/core/log.h>
 
-#include <comb/debug/global_memory_tracker.h>
 #include <comb/default_allocator.h>
 #include <comb/new.h>
 
@@ -40,6 +39,7 @@
 #include <filesystem>
 #include <iostream>
 #include <memory>
+#include <brood/process_runtime.h>
 #include <string>
 
 namespace
@@ -136,11 +136,6 @@ namespace
     class LauncherProcessSession
     {
     public:
-        LauncherProcessSession()
-            : m_logger{m_logManager} {}
-
-        ~LauncherProcessSession() { Finalize(); }
-
         int Run(int argc, char* argv[]) {
             LauncherCommandLine commandLine{};
             if (!TryParseCommandLine(argc, argv, &commandLine))
@@ -149,21 +144,6 @@ namespace
             }
 
             return Run(commandLine);
-        }
-
-        void Finalize() {
-            if (m_finalized)
-            {
-                return;
-            }
-
-            comb::debug::ReportLiveAllocatorLeaks();
-            hive::ShutdownProfiler();
-            std::cout.flush();
-            std::cerr.flush();
-            std::fflush(stdout);
-            std::fflush(stderr);
-            m_finalized = true;
         }
 
     private:
@@ -346,10 +326,6 @@ namespace
             callbacks.m_userData = &state;
             return waggle::Run(config, callbacks);
         }
-
-        hive::LogManager m_logManager;
-        hive::ConsoleLogger m_logger;
-        bool m_finalized{false};
     };
 
 #if HIVE_MODE_EDITOR
@@ -464,9 +440,12 @@ namespace
 } // anonymous namespace
 
 int main(int argc, char* argv[]) {
-    LauncherProcessSession session{};
-    const int result = session.Run(argc, argv);
-    session.Finalize();
+    brood::ProcessRuntime runtime{};
+    int result = 1;
+    {
+        LauncherProcessSession session{};
+        result = session.Run(argc, argv);
+    }
     // Runtime teardown is complete here. Avoid lingering during CRT static teardown.
-    std::_Exit(result);
+    runtime.Exit(result);
 }

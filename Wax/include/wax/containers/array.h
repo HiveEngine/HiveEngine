@@ -4,6 +4,7 @@
 
 #include <cstddef>
 #include <cstring>
+#include <type_traits>
 
 namespace wax
 {
@@ -96,6 +97,18 @@ namespace wax
         [[nodiscard]] constexpr Iterator End() noexcept { return m_data + N; }
 
         [[nodiscard]] constexpr ConstIterator End() const noexcept { return m_data + N; }
+
+        [[nodiscard]] constexpr Iterator begin() noexcept { return Begin(); }
+
+        [[nodiscard]] constexpr ConstIterator begin() const noexcept { return Begin(); }
+
+        [[nodiscard]] constexpr ConstIterator cbegin() const noexcept { return Begin(); }
+
+        [[nodiscard]] constexpr Iterator end() noexcept { return End(); }
+
+        [[nodiscard]] constexpr ConstIterator end() const noexcept { return End(); }
+
+        [[nodiscard]] constexpr ConstIterator cend() const noexcept { return End(); }
 
         constexpr void Fill(const T& value) {
             if constexpr (std::is_trivially_copyable_v<T> && sizeof(T) == 1)
