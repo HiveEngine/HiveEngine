@@ -260,6 +260,18 @@ namespace wax
 
         [[nodiscard]] ConstIterator End() const noexcept { return m_data + m_size; }
 
+        [[nodiscard]] Iterator begin() noexcept { return Begin(); }
+
+        [[nodiscard]] ConstIterator begin() const noexcept { return Begin(); }
+
+        [[nodiscard]] ConstIterator cbegin() const noexcept { return Begin(); }
+
+        [[nodiscard]] Iterator end() noexcept { return End(); }
+
+        [[nodiscard]] ConstIterator end() const noexcept { return End(); }
+
+        [[nodiscard]] ConstIterator cend() const noexcept { return End(); }
+
         void Reserve(size_t newCapacity) {
             if (newCapacity <= m_capacity)
             {

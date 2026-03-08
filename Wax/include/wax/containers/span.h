@@ -154,6 +154,18 @@ namespace wax
 
         [[nodiscard]] constexpr ConstIterator End() const noexcept { return m_data + m_size; }
 
+        [[nodiscard]] constexpr Iterator begin() noexcept { return Begin(); }
+
+        [[nodiscard]] constexpr ConstIterator begin() const noexcept { return Begin(); }
+
+        [[nodiscard]] constexpr ConstIterator cbegin() const noexcept { return Begin(); }
+
+        [[nodiscard]] constexpr Iterator end() noexcept { return End(); }
+
+        [[nodiscard]] constexpr ConstIterator end() const noexcept { return End(); }
+
+        [[nodiscard]] constexpr ConstIterator cend() const noexcept { return End(); }
+
         // Subspan operations
         [[nodiscard]] constexpr Span<T> First(size_t count) const noexcept {
             hive::Assert(count <= m_size, "Count exceeds span size");
