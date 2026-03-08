@@ -15,12 +15,14 @@
 namespace
 {
 
-    auto& GetMeshAlloc() {
+    auto& GetMeshAlloc()
+    {
         static comb::ModuleAllocator alloc{"TestMesh", 8 * 1024 * 1024};
         return alloc.Get();
     }
 
-    nectar::AssetId MakeId(uint64_t v) {
+    nectar::AssetId MakeId(uint64_t v)
+    {
         uint8_t bytes[16] = {};
         std::memcpy(bytes, &v, sizeof(v));
         return nectar::AssetId::FromBytes(bytes);
@@ -59,7 +61,8 @@ namespace
                                          "v 0 1 0\n"
                                          "f 1 2 3\n";
 
-    wax::ByteSpan ObjSpan(const char* obj) {
+    wax::ByteSpan ObjSpan(const char* obj)
+    {
         return wax::ByteSpan{reinterpret_cast<const uint8_t*>(obj), std::strlen(obj)};
     }
 

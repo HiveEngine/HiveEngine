@@ -89,17 +89,28 @@ namespace queen
     {
     public:
         constexpr EventId() noexcept
-            : m_value{0} {}
+            : m_value{0}
+        {
+        }
         constexpr explicit EventId(TypeId id) noexcept
-            : m_value{id} {}
+            : m_value{id}
+        {
+        }
 
-        [[nodiscard]] constexpr TypeId Value() const noexcept { return m_value; }
+        [[nodiscard]] constexpr TypeId Value() const noexcept
+        {
+            return m_value;
+        }
 
-        [[nodiscard]] constexpr bool operator==(const EventId& other) const noexcept {
+        [[nodiscard]] constexpr bool operator==(const EventId& other) const noexcept
+        {
             return m_value == other.m_value;
         }
 
-        [[nodiscard]] constexpr bool IsValid() const noexcept { return m_value != 0; }
+        [[nodiscard]] constexpr bool IsValid() const noexcept
+        {
+            return m_value != 0;
+        }
 
     private:
         TypeId m_value;
@@ -111,7 +122,8 @@ namespace queen
      * @tparam T Event type (must satisfy Event concept)
      * @return Unique EventId for the type
      */
-    template <Event T> [[nodiscard]] constexpr EventId EventIdOf() noexcept {
+    template <Event T> [[nodiscard]] constexpr EventId EventIdOf() noexcept
+    {
         return EventId{TypeIdOf<T>()};
     }
 
@@ -134,7 +146,8 @@ namespace queen
         size_t m_size;
         size_t m_alignment;
 
-        template <Event T> [[nodiscard]] static constexpr EventMeta Of() noexcept {
+        template <Event T> [[nodiscard]] static constexpr EventMeta Of() noexcept
+        {
             return EventMeta{EventIdOf<T>(), sizeof(T), alignof(T)};
         }
     };

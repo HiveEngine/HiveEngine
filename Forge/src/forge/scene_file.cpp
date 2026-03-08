@@ -13,7 +13,8 @@ static const hive::LogCategory LOG_FORGE{"Forge"};
 
 namespace forge
 {
-    bool SaveScene(queen::World& world, const queen::ComponentRegistry<256>& registry, const char* path) {
+    bool SaveScene(queen::World& world, const queen::ComponentRegistry<256>& registry, const char* path)
+    {
         queen::WorldSerializer<1024 * 1024> serializer;
         auto result = serializer.Serialize(world, registry);
         if (!result.m_success)
@@ -42,7 +43,8 @@ namespace forge
         return true;
     }
 
-    bool LoadScene(queen::World& world, const queen::ComponentRegistry<256>& registry, const char* path) {
+    bool LoadScene(queen::World& world, const queen::ComponentRegistry<256>& registry, const char* path)
+    {
         FILE* f = nullptr;
 #ifdef _MSC_VER
         fopen_s(&f, path, "r");

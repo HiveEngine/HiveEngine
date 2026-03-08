@@ -60,8 +60,14 @@ namespace nectar
 
         [[nodiscard]] ProjectPaths ResolvePaths(wax::StringView projectRoot) const;
 
-        [[nodiscard]] const HiveDocument& Document() const noexcept { return m_doc; }
-        [[nodiscard]] HiveDocument& Document() noexcept { return m_doc; }
+        [[nodiscard]] const HiveDocument& Document() const noexcept
+        {
+            return m_doc;
+        }
+        [[nodiscard]] HiveDocument& Document() noexcept
+        {
+            return m_doc;
+        }
 
     private:
         comb::DefaultAllocator* m_alloc;

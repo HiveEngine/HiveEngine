@@ -10,7 +10,10 @@ namespace
     {
         float x, y, z;
 
-        bool operator==(const Position& other) const { return x == other.x && y == other.y && z == other.z; }
+        bool operator==(const Position& other) const
+        {
+            return x == other.x && y == other.y && z == other.z;
+        }
     };
 
     auto test1 = larvae::RegisterTest("QueenSparseSet", "InsertAndContains", []() {
@@ -181,13 +184,21 @@ namespace
         int value;
 
         NonTrivial(int v)
-            : value{v} {}
-        ~NonTrivial() { ++destructor_count; }
+            : value{v}
+        {
+        }
+        ~NonTrivial()
+        {
+            ++destructor_count;
+        }
 
         NonTrivial(const NonTrivial& other)
-            : value{other.value} {}
+            : value{other.value}
+        {
+        }
         NonTrivial(NonTrivial&& other) noexcept
-            : value{other.value} {
+            : value{other.value}
+        {
             other.value = 0;
         }
     };

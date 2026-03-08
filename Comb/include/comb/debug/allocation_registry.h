@@ -90,7 +90,8 @@ namespace comb::debug
          *
          * Thread-safe: Yes (mutex protected)
          */
-        void RegisterAllocation(const AllocationInfo& info) {
+        void RegisterAllocation(const AllocationInfo& info)
+        {
             hive::Assert(info.IsValid(), "Invalid AllocationInfo");
 
             std::lock_guard<std::mutex> lock(m_mutex);
@@ -128,7 +129,8 @@ namespace comb::debug
          *
          * Thread-safe: Yes (mutex protected)
          */
-        AllocationInfo* UnregisterAllocation(void* address) {
+        AllocationInfo* UnregisterAllocation(void* address)
+        {
             hive::Assert(address != nullptr, "Cannot unregister nullptr");
 
             std::lock_guard<std::mutex> lock(m_mutex);
@@ -163,7 +165,8 @@ namespace comb::debug
          * NOTE: Returned pointer is only valid while mutex is held.
          * Do not store the pointer, copy the data instead.
          */
-        AllocationInfo* FindAllocation(void* address) {
+        AllocationInfo* FindAllocation(void* address)
+        {
             std::lock_guard<std::mutex> lock(m_mutex);
 
             auto it = m_allocations.find(address);
@@ -178,7 +181,8 @@ namespace comb::debug
         /**
          * Find allocation info by address (const version)
          */
-        const AllocationInfo* FindAllocation(void* address) const {
+        const AllocationInfo* FindAllocation(void* address) const
+        {
             std::lock_guard<std::mutex> lock(m_mutex);
 
             auto it = m_allocations.find(address);
@@ -199,7 +203,8 @@ namespace comb::debug
          *
          * Thread-safe: Yes (mutex protected)
          */
-        [[nodiscard]] AllocationStats GetStats() const {
+        [[nodiscard]] AllocationStats GetStats() const
+        {
             std::lock_guard<std::mutex> lock(m_mutex);
             return m_stats;
         }
@@ -207,7 +212,8 @@ namespace comb::debug
         /**
          * Get number of active allocations
          */
-        [[nodiscard]] size_t GetAllocationCount() const {
+        [[nodiscard]] size_t GetAllocationCount() const
+        {
             std::lock_guard<std::mutex> lock(m_mutex);
             return m_allocations.size();
         }
@@ -215,7 +221,8 @@ namespace comb::debug
         /**
          * Check if registry is empty (no leaks)
          */
-        [[nodiscard]] bool IsEmpty() const {
+        [[nodiscard]] bool IsEmpty() const
+        {
             std::lock_guard<std::mutex> lock(m_mutex);
             return m_allocations.empty();
         }
@@ -223,7 +230,8 @@ namespace comb::debug
         /**
          * Get next unique allocation ID (monotonically increasing)
          */
-        [[nodiscard]] uint32_t GetNextAllocationId() {
+        [[nodiscard]] uint32_t GetNextAllocationId()
+        {
             return m_nextAllocationId.fetch_add(1, std::memory_order_relaxed);
         }
 
@@ -239,7 +247,8 @@ namespace comb::debug
          *
          * @param allocatorName Name of allocator (for logging)
          */
-        void ReportLeaks(const char* allocatorName) const {
+        void ReportLeaks(const char* allocatorName) const
+        {
             std::lock_guard<std::mutex> lock(m_mutex);
 
             if (m_allocations.empty())
@@ -277,7 +286,8 @@ namespace comb::debug
          *
          * @param allocatorName Name of allocator (for logging)
          */
-        void PrintStats(const char* allocatorName) const {
+        void PrintStats(const char* allocatorName) const
+        {
             std::lock_guard<std::mutex> lock(m_mutex);
 
             hive::LogInfo(comb::LOG_COMB_ROOT, "[MEM_DEBUG] [{}] Statistics:", allocatorName);
@@ -297,7 +307,8 @@ namespace comb::debug
          * This does NOT free memory, it just clears the tracking.
          * Use only for tests or when you know all memory is freed externally.
          */
-        void Clear() {
+        void Clear()
+        {
             std::lock_guard<std::mutex> lock(m_mutex);
             m_allocations.clear();
             m_stats = AllocationStats{};
@@ -312,7 +323,8 @@ namespace comb::debug
          *
          * @param startAddress Clear all allocations >= this address
          */
-        void ClearAllocationsFrom(void* startAddress) {
+        void ClearAllocationsFrom(void* startAddress)
+        {
             std::lock_guard<std::mutex> lock(m_mutex);
 
             const uintptr_t start = reinterpret_cast<uintptr_t>(startAddress);
@@ -344,7 +356,8 @@ namespace comb::debug
          * @param endAddress Sum allocations with address < endAddress
          * @return Total user-requested bytes (excluding debug overhead)
          */
-        [[nodiscard]] size_t CalculateBytesUsedUpTo(void* endAddress) const {
+        [[nodiscard]] size_t CalculateBytesUsedUpTo(void* endAddress) const
+        {
             std::lock_guard<std::mutex> lock(m_mutex);
 
             const uintptr_t end = reinterpret_cast<uintptr_t>(endAddress);
@@ -369,7 +382,8 @@ namespace comb::debug
          * @param endAddress Count allocations with address < endAddress
          * @return Number of allocations before the address
          */
-        [[nodiscard]] size_t CountAllocationsUpTo(void* endAddress) const {
+        [[nodiscard]] size_t CountAllocationsUpTo(void* endAddress) const
+        {
             std::lock_guard<std::mutex> lock(m_mutex);
 
             const uintptr_t end = reinterpret_cast<uintptr_t>(endAddress);

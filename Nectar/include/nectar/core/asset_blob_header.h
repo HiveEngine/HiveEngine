@@ -29,7 +29,8 @@ namespace nectar
 
     /// Write header + payload into a single buffer.
     inline wax::ByteBuffer WriteBlob(uint32_t magic, uint16_t format_version, wax::ByteSpan payload,
-                                     comb::DefaultAllocator& alloc) {
+                                     comb::DefaultAllocator& alloc)
+    {
         wax::ByteBuffer buf{alloc, sizeof(AssetBlobHeader) + payload.Size()};
 
         AssetBlobHeader header{};
@@ -45,7 +46,8 @@ namespace nectar
 
     /// Validate header and return payload span.
     /// Returns empty span if blob is too small or magic doesn't match.
-    inline wax::ByteSpan ReadBlob(wax::ByteSpan blob, uint32_t expected_magic) {
+    inline wax::ByteSpan ReadBlob(wax::ByteSpan blob, uint32_t expected_magic)
+    {
         if (blob.Size() < sizeof(AssetBlobHeader))
             return wax::ByteSpan{static_cast<const uint8_t*>(nullptr), size_t{0}};
 

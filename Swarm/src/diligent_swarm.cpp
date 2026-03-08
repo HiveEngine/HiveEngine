@@ -13,7 +13,8 @@ namespace swarm
     const hive::LogCategory LOG_DILIGENT{"Diligent", &LOG_SWARM};
 
     static void DiligentToHiveMessageCallback(Diligent::DEBUG_MESSAGE_SEVERITY severity, const Diligent::Char* message,
-                                              const Diligent::Char* function, const Diligent::Char* file, int line) {
+                                              const Diligent::Char* function, const Diligent::Char* file, int line)
+    {
         switch (severity)
         {
             case Diligent::DEBUG_MESSAGE_SEVERITY_INFO:
@@ -31,14 +32,18 @@ namespace swarm
         }
     }
 
-    bool InitSystem() {
+    bool InitSystem()
+    {
         Diligent::SetDebugMessageCallback(&DiligentToHiveMessageCallback);
         return true;
     }
 
-    void ShutdownSystem() {}
+    void ShutdownSystem()
+    {
+    }
 
-    void ShutdownRenderContext(RenderContext& renderContext) {
+    void ShutdownRenderContext(RenderContext& renderContext)
+    {
         if (renderContext.m_swapchain != nullptr)
         {
             renderContext.m_swapchain->Release();
@@ -55,7 +60,8 @@ namespace swarm
         }
     }
 
-    void BeginFrame(RenderContext* ctx) {
+    void BeginFrame(RenderContext* ctx)
+    {
         using namespace Diligent;
         ITextureView* pRTV = ctx->m_swapchain->GetCurrentBackBufferRTV();
         ITextureView* pDSV = ctx->m_swapchain->GetDepthBufferDSV();
@@ -66,11 +72,13 @@ namespace swarm
         ctx->m_context->ClearDepthStencil(pDSV, CLEAR_DEPTH_FLAG, 1.f, 0, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
     }
 
-    void EndFrame(RenderContext* ctx) {
+    void EndFrame(RenderContext* ctx)
+    {
         ctx->m_swapchain->Present();
     }
 
-    void WaitForIdle(RenderContext* ctx) {
+    void WaitForIdle(RenderContext* ctx)
+    {
         if (ctx == nullptr || ctx->m_context == nullptr)
         {
             return;
@@ -85,12 +93,14 @@ namespace swarm
         }
     }
 
-    void ResizeSwapchain(RenderContext* ctx, uint32_t width, uint32_t height) {
+    void ResizeSwapchain(RenderContext* ctx, uint32_t width, uint32_t height)
+    {
         if (ctx->m_swapchain != nullptr && width > 0 && height > 0)
             ctx->m_swapchain->Resize(width, height);
     }
 
-    void DrawPipeline(RenderContext* ctx) {
+    void DrawPipeline(RenderContext* ctx)
+    {
         using namespace Diligent;
         ctx->m_context->SetPipelineState(ctx->m_pipeline);
         DrawAttribs drawAttrs;
@@ -98,7 +108,8 @@ namespace swarm
         ctx->m_context->Draw(drawAttrs);
     }
 
-    void Render(RenderContext* renderContext) {
+    void Render(RenderContext* renderContext)
+    {
         using namespace Diligent;
 
         // Clear the back buffer
@@ -183,7 +194,8 @@ void main(in  PSInput  PSIn,
         uint32_t m_height{0};
     };
 
-    static void CreateViewportRTTextures(ViewportRT* rt, uint32_t w, uint32_t h, Diligent::TEXTURE_FORMAT fmt) {
+    static void CreateViewportRTTextures(ViewportRT* rt, uint32_t w, uint32_t h, Diligent::TEXTURE_FORMAT fmt)
+    {
         using namespace Diligent;
         rt->m_color.Release();
         rt->m_depth.Release();
@@ -212,7 +224,8 @@ void main(in  PSInput  PSIn,
         rt->m_dsv = rt->m_depth->GetDefaultView(TEXTURE_VIEW_DEPTH_STENCIL);
     }
 
-    ViewportRT* CreateViewportRT(RenderContext* ctx, uint32_t width, uint32_t height) {
+    ViewportRT* CreateViewportRT(RenderContext* ctx, uint32_t width, uint32_t height)
+    {
         auto* rt = new ViewportRT();
         rt->m_device = ctx->m_device;
         auto fmt = ctx->m_swapchain->GetDesc().ColorBufferFormat;
@@ -220,11 +233,13 @@ void main(in  PSInput  PSIn,
         return rt;
     }
 
-    void DestroyViewportRT(ViewportRT* rt) {
+    void DestroyViewportRT(ViewportRT* rt)
+    {
         delete rt;
     }
 
-    void ResizeViewportRT(ViewportRT* rt, uint32_t width, uint32_t height) {
+    void ResizeViewportRT(ViewportRT* rt, uint32_t width, uint32_t height)
+    {
         if (width > 0 && height > 0 && (rt->m_width != width || rt->m_height != height))
         {
             auto fmt = rt->m_color->GetDesc().Format;
@@ -232,17 +247,21 @@ void main(in  PSInput  PSIn,
         }
     }
 
-    uint32_t GetViewportRTWidth(const ViewportRT* rt) {
+    uint32_t GetViewportRTWidth(const ViewportRT* rt)
+    {
         return rt->m_width;
     }
-    uint32_t GetViewportRTHeight(const ViewportRT* rt) {
+    uint32_t GetViewportRTHeight(const ViewportRT* rt)
+    {
         return rt->m_height;
     }
-    void* GetViewportRTSRV(const ViewportRT* rt) {
+    void* GetViewportRTSRV(const ViewportRT* rt)
+    {
         return rt->m_srv;
     }
 
-    void BeginViewportRT(RenderContext* ctx, ViewportRT* rt) {
+    void BeginViewportRT(RenderContext* ctx, ViewportRT* rt)
+    {
         using namespace Diligent;
         ctx->m_context->SetRenderTargets(1, &rt->m_rtv, rt->m_dsv, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
         const float clearColor[] = {0.180f, 0.180f, 0.180f, 1.0f};
@@ -251,7 +270,8 @@ void main(in  PSInput  PSIn,
                                           RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
     }
 
-    void EndViewportRT(RenderContext* ctx, ViewportRT* rt) {
+    void EndViewportRT(RenderContext* ctx, ViewportRT* rt)
+    {
         using namespace Diligent;
 
         // The offscreen color target is sampled by ImGui in the same frame.
@@ -262,7 +282,8 @@ void main(in  PSInput  PSIn,
         ctx->m_context->SetRenderTargets(0, nullptr, nullptr, Diligent::RESOURCE_STATE_TRANSITION_MODE_NONE);
     }
 
-    void SetupGraphicPipeline(RenderContext& renderContext) {
+    void SetupGraphicPipeline(RenderContext& renderContext)
+    {
         using namespace Diligent;
         // Pipeline state object encompasses configuration of all GPU stages
 

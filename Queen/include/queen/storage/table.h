@@ -67,7 +67,8 @@ namespace queen
             : m_allocator{&allocator}
             , m_entities{allocator}
             , m_columns{allocator}
-            , m_typeToColumnIndex{allocator} {
+            , m_typeToColumnIndex{allocator}
+        {
             m_entities.Reserve(initialCapacity);
 
             for (size_t i = 0; i < componentMetas.Size(); ++i)
@@ -85,7 +86,8 @@ namespace queen
         Table(Table&&) = default;
         Table& operator=(Table&&) = default;
 
-        uint32_t AllocateRow(Entity entity, Tick currentTick = Tick{0}) {
+        uint32_t AllocateRow(Entity entity, Tick currentTick = Tick{0})
+        {
             hive::Assert(!entity.IsNull(), "Cannot allocate row for null entity");
 
             uint32_t row = static_cast<uint32_t>(m_entities.Size());
@@ -99,7 +101,8 @@ namespace queen
             return row;
         }
 
-        Entity FreeRow(uint32_t row) {
+        Entity FreeRow(uint32_t row)
+        {
             hive::Assert(row < m_entities.Size(), "Row index out of bounds");
 
             Entity movedEntity{};
@@ -128,7 +131,8 @@ namespace queen
             return movedEntity;
         }
 
-        [[nodiscard]] Column<Allocator>* GetColumnByTypeId(TypeId typeId) noexcept {
+        [[nodiscard]] Column<Allocator>* GetColumnByTypeId(TypeId typeId) noexcept
+        {
             size_t* index = m_typeToColumnIndex.Find(typeId);
             if (index == nullptr)
             {
@@ -137,7 +141,8 @@ namespace queen
             return &m_columns[*index];
         }
 
-        [[nodiscard]] const Column<Allocator>* GetColumnByTypeId(TypeId typeId) const noexcept {
+        [[nodiscard]] const Column<Allocator>* GetColumnByTypeId(TypeId typeId) const noexcept
+        {
             const size_t* index = m_typeToColumnIndex.Find(typeId);
             if (index == nullptr)
             {
@@ -146,28 +151,39 @@ namespace queen
             return &m_columns[*index];
         }
 
-        template <typename T> [[nodiscard]] Column<Allocator>* GetColumn() noexcept {
+        template <typename T> [[nodiscard]] Column<Allocator>* GetColumn() noexcept
+        {
             return GetColumnByTypeId(TypeIdOf<T>());
         }
 
-        template <typename T> [[nodiscard]] const Column<Allocator>* GetColumn() const noexcept {
+        template <typename T> [[nodiscard]] const Column<Allocator>* GetColumn() const noexcept
+        {
             return GetColumnByTypeId(TypeIdOf<T>());
         }
 
-        [[nodiscard]] bool HasComponent(TypeId typeId) const noexcept {
+        [[nodiscard]] bool HasComponent(TypeId typeId) const noexcept
+        {
             return m_typeToColumnIndex.Find(typeId) != nullptr;
         }
 
-        template <typename T> [[nodiscard]] bool HasComponent() const noexcept { return HasComponent(TypeIdOf<T>()); }
+        template <typename T> [[nodiscard]] bool HasComponent() const noexcept
+        {
+            return HasComponent(TypeIdOf<T>());
+        }
 
-        [[nodiscard]] Entity GetEntity(uint32_t row) const noexcept {
+        [[nodiscard]] Entity GetEntity(uint32_t row) const noexcept
+        {
             hive::Assert(row < m_entities.Size(), "Row index out of bounds");
             return m_entities[row];
         }
 
-        [[nodiscard]] const Entity* GetEntities() const noexcept { return m_entities.Data(); }
+        [[nodiscard]] const Entity* GetEntities() const noexcept
+        {
+            return m_entities.Data();
+        }
 
-        void SetComponent(uint32_t row, TypeId typeId, const void* data) {
+        void SetComponent(uint32_t row, TypeId typeId, const void* data)
+        {
             Column<Allocator>* column = GetColumnByTypeId(typeId);
             hive::Assert(column != nullptr, "Component type not in table");
             hive::Assert(row < m_entities.Size(), "Row index out of bounds");
@@ -190,7 +206,8 @@ namespace queen
             }
         }
 
-        template <typename T> void SetComponent(uint32_t row, const T& value) {
+        template <typename T> void SetComponent(uint32_t row, const T& value)
+        {
             SetComponent(row, TypeIdOf<T>(), &value);
         }
 
@@ -201,7 +218,8 @@ namespace queen
             MoveComponent(row, TypeIdOf<std::remove_cvref_t<T>>(), &value);
         }
 
-        void MoveComponent(uint32_t row, TypeId typeId, void* data) {
+        void MoveComponent(uint32_t row, TypeId typeId, void* data)
+        {
             Column<Allocator>* column = GetColumnByTypeId(typeId);
             hive::Assert(column != nullptr, "Component type not in table");
             hive::Assert(row < m_entities.Size(), "Row index out of bounds");
@@ -224,9 +242,18 @@ namespace queen
             }
         }
 
-        [[nodiscard]] size_t RowCount() const noexcept { return m_entities.Size(); }
-        [[nodiscard]] size_t ColumnCount() const noexcept { return m_columns.Size(); }
-        [[nodiscard]] bool IsEmpty() const noexcept { return m_entities.IsEmpty(); }
+        [[nodiscard]] size_t RowCount() const noexcept
+        {
+            return m_entities.Size();
+        }
+        [[nodiscard]] size_t ColumnCount() const noexcept
+        {
+            return m_columns.Size();
+        }
+        [[nodiscard]] bool IsEmpty() const noexcept
+        {
+            return m_entities.IsEmpty();
+        }
 
         /**
          * Move a row to another table
@@ -240,7 +267,8 @@ namespace queen
          * @param dest_row Row index in target table
          * @return Number of components moved
          */
-        size_t MoveRowTo(uint32_t sourceRow, Table& target, uint32_t destRow) {
+        size_t MoveRowTo(uint32_t sourceRow, Table& target, uint32_t destRow)
+        {
             hive::Assert(sourceRow < m_entities.Size(), "Source row out of bounds");
             hive::Assert(destRow < target.m_entities.Size(), "Destination row out of bounds");
 
@@ -283,7 +311,8 @@ namespace queen
         /**
          * Get all TypeIds present in this table
          */
-        [[nodiscard]] wax::Vector<TypeId> GetTypeIds() const {
+        [[nodiscard]] wax::Vector<TypeId> GetTypeIds() const
+        {
             wax::Vector<TypeId> result{*m_allocator};
             result.Reserve(m_columns.Size());
             for (size_t i = 0; i < m_columns.Size(); ++i)

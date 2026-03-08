@@ -16,15 +16,18 @@ namespace nectar
         uint8_t* data{nullptr};
         size_t data_size{0};
 
-        [[nodiscard]] const SubMesh* Submeshes() const {
+        [[nodiscard]] const SubMesh* Submeshes() const
+        {
             return reinterpret_cast<const SubMesh*>(data + sizeof(NmshHeader));
         }
 
-        [[nodiscard]] const MeshVertex* Vertices() const {
+        [[nodiscard]] const MeshVertex* Vertices() const
+        {
             return reinterpret_cast<const MeshVertex*>(data + NmshVertexDataOffset(header));
         }
 
-        [[nodiscard]] const uint32_t* Indices() const {
+        [[nodiscard]] const uint32_t* Indices() const
+        {
             return reinterpret_cast<const uint32_t*>(data + NmshIndexDataOffset(header));
         }
     };
@@ -32,7 +35,8 @@ namespace nectar
     class MeshAssetLoader final : public AssetLoader<MeshAsset>
     {
     public:
-        [[nodiscard]] MeshAsset* Load(wax::ByteSpan data, comb::DefaultAllocator& alloc) override {
+        [[nodiscard]] MeshAsset* Load(wax::ByteSpan data, comb::DefaultAllocator& alloc) override
+        {
             if (data.Size() < sizeof(NmshHeader))
                 return nullptr;
 
@@ -57,7 +61,8 @@ namespace nectar
             return asset;
         }
 
-        void Unload(MeshAsset* asset, comb::DefaultAllocator& alloc) override {
+        void Unload(MeshAsset* asset, comb::DefaultAllocator& alloc) override
+        {
             if (asset)
             {
                 if (asset->data)
@@ -66,7 +71,8 @@ namespace nectar
             }
         }
 
-        [[nodiscard]] size_t SizeOf(const MeshAsset* asset) const override {
+        [[nodiscard]] size_t SizeOf(const MeshAsset* asset) const override
+        {
             return sizeof(MeshAsset) + (asset ? asset->data_size : 0);
         }
     };

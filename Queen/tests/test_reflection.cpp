@@ -19,7 +19,8 @@ namespace
     {
         float x, y, z;
 
-        static void Reflect(queen::ComponentReflector<>& r) {
+        static void Reflect(queen::ComponentReflector<>& r)
+        {
             r.Field("x", &Position::x);
             r.Field("y", &Position::y);
             r.Field("z", &Position::z);
@@ -30,7 +31,8 @@ namespace
     {
         float dx, dy, dz;
 
-        static void Reflect(queen::ComponentReflector<>& r) {
+        static void Reflect(queen::ComponentReflector<>& r)
+        {
             r.Field("dx", &Velocity::dx);
             r.Field("dy", &Velocity::dy);
             r.Field("dz", &Velocity::dz);
@@ -43,7 +45,8 @@ namespace
         int32_t maximum;
         bool is_dead;
 
-        static void Reflect(queen::ComponentReflector<>& r) {
+        static void Reflect(queen::ComponentReflector<>& r)
+        {
             r.Field("current", &Health::current);
             r.Field("maximum", &Health::maximum);
             r.Field("is_dead", &Health::is_dead);
@@ -64,7 +67,8 @@ namespace
         double f64;
         bool flag;
 
-        static void Reflect(queen::ComponentReflector<>& r) {
+        static void Reflect(queen::ComponentReflector<>& r)
+        {
             r.Field("i8", &AllTypes::i8);
             r.Field("i16", &AllTypes::i16);
             r.Field("i32", &AllTypes::i32);
@@ -84,7 +88,8 @@ namespace
         queen::Entity target;
         int32_t data;
 
-        static void Reflect(queen::ComponentReflector<>& r) {
+        static void Reflect(queen::ComponentReflector<>& r)
+        {
             r.Field("target", &WithEntity::target);
             r.Field("data", &WithEntity::data);
         }
@@ -100,7 +105,8 @@ namespace
     {
         float x, y;
 
-        static void Reflect(queen::ComponentReflector<>& r) {
+        static void Reflect(queen::ComponentReflector<>& r)
+        {
             r.Field("x", &Vec2::x);
             r.Field("y", &Vec2::y);
         }
@@ -113,7 +119,8 @@ namespace
         Vec2 scale;
         float rotation;
 
-        static void Reflect(queen::ComponentReflector<>& r) {
+        static void Reflect(queen::ComponentReflector<>& r)
+        {
             r.Field("position", &Transform::position);
             r.Field("scale", &Transform::scale);
             r.Field("rotation", &Transform::rotation);
@@ -126,7 +133,8 @@ namespace
         queen::Entity entity;
         int32_t priority;
 
-        static void Reflect(queen::ComponentReflector<>& r) {
+        static void Reflect(queen::ComponentReflector<>& r)
+        {
             r.Field("entity", &TargetInfo::entity);
             r.Field("priority", &TargetInfo::priority);
         }
@@ -139,7 +147,8 @@ namespace
         TargetInfo secondary_target;
         float aggro_range;
 
-        static void Reflect(queen::ComponentReflector<>& r) {
+        static void Reflect(queen::ComponentReflector<>& r)
+        {
             r.Field("primary_target", &AIComponent::primary_target);
             r.Field("secondary_target", &AIComponent::secondary_target);
             r.Field("aggro_range", &AIComponent::aggro_range);
@@ -158,7 +167,8 @@ namespace
         Color tint;
         float opacity;
 
-        static void Reflect(queen::ComponentReflector<>& r) {
+        static void Reflect(queen::ComponentReflector<>& r)
+        {
             r.Field("tint", &Sprite::tint);
             r.Field("opacity", &Sprite::opacity);
         }

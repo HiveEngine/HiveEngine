@@ -28,7 +28,10 @@ namespace hive::math
     {
         uint32_t m_index{UINT32_MAX};
 
-        [[nodiscard]] bool IsValid() const { return m_index != UINT32_MAX; }
+        [[nodiscard]] bool IsValid() const
+        {
+            return m_index != UINT32_MAX;
+        }
     };
 
     namespace detail
@@ -45,40 +48,47 @@ namespace hive::math
             uint32_t m_count{0};
         };
 
-        [[nodiscard]] inline float SurfaceArea(const AABB& box) {
+        [[nodiscard]] inline float SurfaceArea(const AABB& box)
+        {
             const float dx = box.m_max.m_x - box.m_min.m_x;
             const float dy = box.m_max.m_y - box.m_min.m_y;
             const float dz = box.m_max.m_z - box.m_min.m_z;
             return 2.f * (dx * dy + dy * dz + dz * dx);
         }
 
-        [[nodiscard]] inline AABB Union(const AABB& a, const AABB& b) {
+        [[nodiscard]] inline AABB Union(const AABB& a, const AABB& b)
+        {
             return {{Min(a.m_min.m_x, b.m_min.m_x), Min(a.m_min.m_y, b.m_min.m_y), Min(a.m_min.m_z, b.m_min.m_z)},
                     {Max(a.m_max.m_x, b.m_max.m_x), Max(a.m_max.m_y, b.m_max.m_y), Max(a.m_max.m_z, b.m_max.m_z)}};
         }
 
-        [[nodiscard]] inline AABB FattenAABB(const AABB& box, float margin) {
+        [[nodiscard]] inline AABB FattenAABB(const AABB& box, float margin)
+        {
             return {{box.m_min.m_x - margin, box.m_min.m_y - margin, box.m_min.m_z - margin},
                     {box.m_max.m_x + margin, box.m_max.m_y + margin, box.m_max.m_z + margin}};
         }
 
-        [[nodiscard]] inline bool Contains(const AABB& outer, const AABB& inner) {
+        [[nodiscard]] inline bool Contains(const AABB& outer, const AABB& inner)
+        {
             return inner.m_min.m_x >= outer.m_min.m_x && inner.m_min.m_y >= outer.m_min.m_y &&
                    inner.m_min.m_z >= outer.m_min.m_z && inner.m_max.m_x <= outer.m_max.m_x &&
                    inner.m_max.m_y <= outer.m_max.m_y && inner.m_max.m_z <= outer.m_max.m_z;
         }
 
-        [[nodiscard]] inline Float3 Center(const AABB& box) {
+        [[nodiscard]] inline Float3 Center(const AABB& box)
+        {
             return {(box.m_min.m_x + box.m_max.m_x) * 0.5f, (box.m_min.m_y + box.m_max.m_y) * 0.5f,
                     (box.m_min.m_z + box.m_max.m_z) * 0.5f};
         }
 
-        [[nodiscard]] inline bool AABBOverlaps(const AABB& a, const AABB& b) {
+        [[nodiscard]] inline bool AABBOverlaps(const AABB& a, const AABB& b)
+        {
             return a.m_min.m_x <= b.m_max.m_x && a.m_max.m_x >= b.m_min.m_x && a.m_min.m_y <= b.m_max.m_y &&
                    a.m_max.m_y >= b.m_min.m_y && a.m_min.m_z <= b.m_max.m_z && a.m_max.m_z >= b.m_min.m_z;
         }
 
-        [[nodiscard]] inline bool RayAABB(Float3 origin, Float3 invDir, float maxT, const AABB& box) {
+        [[nodiscard]] inline bool RayAABB(Float3 origin, Float3 invDir, float maxT, const AABB& box)
+        {
             float t1 = (box.m_min.m_x - origin.m_x) * invDir.m_x;
             float t2 = (box.m_max.m_x - origin.m_x) * invDir.m_x;
             float tMin = Min(t1, t2);
@@ -108,9 +118,12 @@ namespace hive::math
             , m_items{alloc}
             , m_itemAabbs{alloc}
             , m_fatAabbs{alloc}
-            , m_freeList{alloc} {}
+            , m_freeList{alloc}
+        {
+        }
 
-        void Build(const AABB* aabbs, uint32_t count) {
+        void Build(const AABB* aabbs, uint32_t count)
+        {
             Clear();
             m_itemCount = count;
 
@@ -142,7 +155,8 @@ namespace hive::math
             Subdivide(m_root);
         }
 
-        [[nodiscard]] BVHProxy Insert(const AABB& aabb) {
+        [[nodiscard]] BVHProxy Insert(const AABB& aabb)
+        {
             const uint32_t itemIndex = m_itemCount++;
             m_items.PushBack(itemIndex);
             m_itemAabbs.PushBack(aabb);
@@ -168,13 +182,15 @@ namespace hive::math
             return BVHProxy{leaf};
         }
 
-        void Remove(BVHProxy proxy) {
+        void Remove(BVHProxy proxy)
+        {
             hive::Assert(proxy.IsValid(), "Invalid BVH proxy");
             RemoveLeaf(proxy.m_index);
             FreeNode(proxy.m_index);
         }
 
-        bool Update(BVHProxy proxy, const AABB& newAabb) {
+        bool Update(BVHProxy proxy, const AABB& newAabb)
+        {
             hive::Assert(proxy.IsValid(), "Invalid BVH proxy");
             BVHNode& leaf = m_nodes[proxy.m_index];
             hive::Assert(leaf.m_count > 0, "Proxy must be a leaf");
@@ -206,7 +222,8 @@ namespace hive::math
             return true;
         }
 
-        template <typename Callback> void QueryFrustum(const Frustum& frustum, Callback&& cb) const {
+        template <typename Callback> void QueryFrustum(const Frustum& frustum, Callback&& cb) const
+        {
             if (m_root == detail::kInvalidNode)
             {
                 return;
@@ -247,7 +264,8 @@ namespace hive::math
             }
         }
 
-        template <typename Callback> void QueryRay(Float3 origin, Float3 direction, float maxT, Callback&& cb) const {
+        template <typename Callback> void QueryRay(Float3 origin, Float3 direction, float maxT, Callback&& cb) const
+        {
             if (m_root == detail::kInvalidNode)
             {
                 return;
@@ -294,7 +312,8 @@ namespace hive::math
             }
         }
 
-        template <typename Callback> void QueryAABB(const AABB& query, Callback&& cb) const {
+        template <typename Callback> void QueryAABB(const AABB& query, Callback&& cb) const
+        {
             if (m_root == detail::kInvalidNode)
             {
                 return;
@@ -335,7 +354,8 @@ namespace hive::math
             }
         }
 
-        void Refit() {
+        void Refit()
+        {
             if (m_root == detail::kInvalidNode)
             {
                 return;
@@ -344,7 +364,8 @@ namespace hive::math
             static_cast<void>(RefitNode(m_root));
         }
 
-        void Clear() {
+        void Clear()
+        {
             m_nodes.Clear();
             m_right.Clear();
             m_parent.Clear();
@@ -356,20 +377,34 @@ namespace hive::math
             m_itemCount = 0;
         }
 
-        [[nodiscard]] uint32_t NodeCount() const {
+        [[nodiscard]] uint32_t NodeCount() const
+        {
             return static_cast<uint32_t>(m_nodes.Size()) - static_cast<uint32_t>(m_freeList.Size());
         }
 
-        [[nodiscard]] uint32_t ItemCount() const { return m_itemCount; }
+        [[nodiscard]] uint32_t ItemCount() const
+        {
+            return m_itemCount;
+        }
 
-        [[nodiscard]] bool IsEmpty() const { return m_root == detail::kInvalidNode; }
+        [[nodiscard]] bool IsEmpty() const
+        {
+            return m_root == detail::kInvalidNode;
+        }
 
-        [[nodiscard]] AABB& ItemAABB(uint32_t idx) { return m_itemAabbs[idx]; }
+        [[nodiscard]] AABB& ItemAABB(uint32_t idx)
+        {
+            return m_itemAabbs[idx];
+        }
 
-        [[nodiscard]] const AABB& ItemAABB(uint32_t idx) const { return m_itemAabbs[idx]; }
+        [[nodiscard]] const AABB& ItemAABB(uint32_t idx) const
+        {
+            return m_itemAabbs[idx];
+        }
 
     private:
-        [[nodiscard]] uint32_t AllocNode() {
+        [[nodiscard]] uint32_t AllocNode()
+        {
             if (!m_freeList.IsEmpty())
             {
                 const uint32_t index = m_freeList.Back();
@@ -387,9 +422,13 @@ namespace hive::math
             return index;
         }
 
-        void FreeNode(uint32_t idx) { m_freeList.PushBack(idx); }
+        void FreeNode(uint32_t idx)
+        {
+            m_freeList.PushBack(idx);
+        }
 
-        void UpdateLeafBounds(uint32_t nodeIndex) {
+        void UpdateLeafBounds(uint32_t nodeIndex)
+        {
             BVHNode& node = m_nodes[nodeIndex];
             hive::Assert(node.m_count > 0, "UpdateLeafBounds called on internal node");
 
@@ -407,7 +446,8 @@ namespace hive::math
             }
         }
 
-        void Subdivide(uint32_t nodeIndex) {
+        void Subdivide(uint32_t nodeIndex)
+        {
             const BVHNode& node = m_nodes[nodeIndex];
             if (node.m_count <= detail::kMaxLeafItems)
             {
@@ -574,7 +614,8 @@ namespace hive::math
             Subdivide(rightChild);
         }
 
-        void InsertLeaf(uint32_t leafIndex) {
+        void InsertLeaf(uint32_t leafIndex)
+        {
             const AABB leafBox{m_nodes[leafIndex].m_aabbMin, m_nodes[leafIndex].m_aabbMax};
 
             uint32_t bestSibling = m_root;
@@ -658,7 +699,8 @@ namespace hive::math
             RefitAncestors(newParent);
         }
 
-        void RemoveLeaf(uint32_t leafIndex) {
+        void RemoveLeaf(uint32_t leafIndex)
+        {
             if (leafIndex == m_root)
             {
                 m_root = detail::kInvalidNode;
@@ -698,7 +740,8 @@ namespace hive::math
             }
         }
 
-        void RefitAncestors(uint32_t nodeIndex) {
+        void RefitAncestors(uint32_t nodeIndex)
+        {
             uint32_t index = nodeIndex;
             while (index != detail::kInvalidNode)
             {
@@ -719,7 +762,8 @@ namespace hive::math
             }
         }
 
-        [[nodiscard]] AABB RefitNode(uint32_t nodeIndex) {
+        [[nodiscard]] AABB RefitNode(uint32_t nodeIndex)
+        {
             BVHNode& node = m_nodes[nodeIndex];
             if (node.m_count > 0)
             {

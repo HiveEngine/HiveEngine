@@ -8,10 +8,12 @@
 
 namespace
 {
-    constexpr size_t operator""_KB(unsigned long long kb) {
+    constexpr size_t operator""_KB(unsigned long long kb)
+    {
         return kb * 1024;
     }
-    constexpr size_t operator""_MB(unsigned long long mb) {
+    constexpr size_t operator""_MB(unsigned long long mb)
+    {
         return mb * 1024 * 1024;
     }
 
@@ -397,7 +399,9 @@ namespace
         {
             int value;
             TestObj(int v)
-                : value{v} {}
+                : value{v}
+            {
+            }
         };
 
         TestObj* obj = comb::New<TestObj>(buddy, 42);
@@ -415,10 +419,14 @@ namespace
         {
             bool* destroyed;
             TestObj(bool* d)
-                : destroyed{d} {
+                : destroyed{d}
+            {
                 *destroyed = false;
             }
-            ~TestObj() { *destroyed = true; }
+            ~TestObj()
+            {
+                *destroyed = true;
+            }
         };
 
         bool destroyed = false;

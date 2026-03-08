@@ -19,7 +19,8 @@
 namespace
 {
 
-    auto& GetPipeAlloc() {
+    auto& GetPipeAlloc()
+    {
         static comb::ModuleAllocator alloc{"TestPipeline", 4 * 1024 * 1024};
         return alloc.Get();
     }
@@ -27,22 +28,26 @@ namespace
     struct TempDir
     {
         std::filesystem::path path;
-        explicit TempDir(const char* name) {
+        explicit TempDir(const char* name)
+        {
             path = std::filesystem::temp_directory_path() / name;
             std::filesystem::create_directories(path);
         }
-        ~TempDir() {
+        ~TempDir()
+        {
             std::error_code ec;
             std::filesystem::remove_all(path, ec);
         }
-        wax::StringView View() const {
+        wax::StringView View() const
+        {
             static thread_local std::string s;
             s = path.string();
             return wax::StringView{s.c_str()};
         }
     };
 
-    nectar::AssetId MakeId(uint64_t v) {
+    nectar::AssetId MakeId(uint64_t v)
+    {
         uint8_t bytes[16] = {};
         std::memcpy(bytes, &v, sizeof(v));
         return nectar::AssetId::FromBytes(bytes);
@@ -56,14 +61,22 @@ namespace
     class PassthroughImporter final : public nectar::AssetImporter<DummyAsset>
     {
     public:
-        wax::Span<const char* const> SourceExtensions() const override {
+        wax::Span<const char* const> SourceExtensions() const override
+        {
             static const char* const exts[] = {".dat"};
             return {exts, 1};
         }
-        uint32_t Version() const override { return version_; }
-        wax::StringView TypeName() const override { return "DummyAsset"; }
+        uint32_t Version() const override
+        {
+            return version_;
+        }
+        wax::StringView TypeName() const override
+        {
+            return "DummyAsset";
+        }
         nectar::ImportResult Import(wax::ByteSpan source_data, const nectar::HiveDocument&,
-                                    nectar::ImportContext&) override {
+                                    nectar::ImportContext&) override
+        {
             nectar::ImportResult r{};
             r.m_success = true;
             r.m_intermediateData = wax::ByteBuffer{GetPipeAlloc()};
@@ -78,13 +91,21 @@ namespace
     class FailingImporter final : public nectar::AssetImporter<DummyAsset>
     {
     public:
-        wax::Span<const char* const> SourceExtensions() const override {
+        wax::Span<const char* const> SourceExtensions() const override
+        {
             static const char* const exts[] = {".fail"};
             return {exts, 1};
         }
-        uint32_t Version() const override { return 1; }
-        wax::StringView TypeName() const override { return "FailAsset"; }
-        nectar::ImportResult Import(wax::ByteSpan, const nectar::HiveDocument&, nectar::ImportContext&) override {
+        uint32_t Version() const override
+        {
+            return 1;
+        }
+        wax::StringView TypeName() const override
+        {
+            return "FailAsset";
+        }
+        nectar::ImportResult Import(wax::ByteSpan, const nectar::HiveDocument&, nectar::ImportContext&) override
+        {
             nectar::ImportResult r{};
             r.m_errorMessage = wax::String{GetPipeAlloc(), "import failed on purpose"};
             return r;
@@ -95,17 +116,25 @@ namespace
     class DepImporter final : public nectar::AssetImporter<DummyAsset>
     {
     public:
-        wax::Span<const char* const> SourceExtensions() const override {
+        wax::Span<const char* const> SourceExtensions() const override
+        {
             static const char* const exts[] = {".dep"};
             return {exts, 1};
         }
-        uint32_t Version() const override { return 1; }
-        wax::StringView TypeName() const override { return "DepAsset"; }
+        uint32_t Version() const override
+        {
+            return 1;
+        }
+        wax::StringView TypeName() const override
+        {
+            return "DepAsset";
+        }
 
         nectar::AssetId dep_target;
 
         nectar::ImportResult Import(wax::ByteSpan source_data, const nectar::HiveDocument&,
-                                    nectar::ImportContext& ctx) override {
+                                    nectar::ImportContext& ctx) override
+        {
             ctx.DeclareHardDep(dep_target);
             nectar::ImportResult r{};
             r.m_success = true;

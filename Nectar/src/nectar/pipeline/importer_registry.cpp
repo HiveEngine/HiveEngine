@@ -5,9 +5,12 @@ namespace nectar
 {
     ImporterRegistry::ImporterRegistry(comb::DefaultAllocator& alloc)
         : m_alloc{&alloc}
-        , m_extensionMap{alloc, 32} {}
+        , m_extensionMap{alloc, 32}
+    {
+    }
 
-    void ImporterRegistry::Register(IAssetImporter* importer) {
+    void ImporterRegistry::Register(IAssetImporter* importer)
+    {
         if (!importer)
             return;
 
@@ -33,7 +36,8 @@ namespace nectar
         }
     }
 
-    IAssetImporter* ImporterRegistry::FindByExtension(wax::StringView extension) const {
+    IAssetImporter* ImporterRegistry::FindByExtension(wax::StringView extension) const
+    {
         wax::String key{*m_alloc};
         for (size_t i = 0; i < extension.Size(); ++i)
         {
@@ -47,7 +51,8 @@ namespace nectar
         return found ? *found : nullptr;
     }
 
-    IAssetImporter* ImporterRegistry::FindByPath(wax::StringView path) const {
+    IAssetImporter* ImporterRegistry::FindByPath(wax::StringView path) const
+    {
         if (path.Size() == 0)
             return nullptr;
         auto ext = PathExtension(path);
@@ -56,7 +61,8 @@ namespace nectar
         return FindByExtension(ext);
     }
 
-    size_t ImporterRegistry::Count() const noexcept {
+    size_t ImporterRegistry::Count() const noexcept
+    {
         return m_extensionMap.Count();
     }
 } // namespace nectar

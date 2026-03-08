@@ -6,7 +6,8 @@ namespace nectar
     static constexpr uint64_t kFnvBasis = 14695981039346656037ULL;
     static constexpr uint64_t kFnvPrime = 1099511628211ULL;
 
-    static uint64_t Fnv1a64(const uint8_t* data, size_t size, uint64_t seed) noexcept {
+    static uint64_t Fnv1a64(const uint8_t* data, size_t size, uint64_t seed) noexcept
+    {
         uint64_t hash = seed;
         for (size_t i = 0; i < size; ++i)
         {
@@ -16,7 +17,8 @@ namespace nectar
         return hash;
     }
 
-    ContentHash ContentHash::FromData(const void* data, size_t size) noexcept {
+    ContentHash ContentHash::FromData(const void* data, size_t size) noexcept
+    {
         if (data == nullptr || size == 0)
         {
             // Deterministic hash for empty data (not Invalid — empty is valid content)

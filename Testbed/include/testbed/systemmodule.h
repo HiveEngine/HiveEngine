@@ -6,7 +6,10 @@ class SystemModule : public hive::Module
 public:
     SystemModule();
     ~SystemModule() override = default;
-    const char* GetName() const override { return "SystemModule"; }
+    const char* GetName() const override
+    {
+        return "SystemModule";
+    }
 
 protected:
     void DoInitialize() override;

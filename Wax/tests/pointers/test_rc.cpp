@@ -15,11 +15,15 @@ namespace
 
         TestStruct(int v = 0, float d = 0.0f)
             : value{v}
-            , data{d} {
+            , data{d}
+        {
             ++construct_count;
         }
 
-        ~TestStruct() { ++destruct_count; }
+        ~TestStruct()
+        {
+            ++destruct_count;
+        }
     };
 
     int TestStruct::construct_count = 0;

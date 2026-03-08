@@ -35,12 +35,16 @@ namespace queen
         ChangeFilterMode m_mode = ChangeFilterMode::CHANGED;
         TermAccess m_access = TermAccess::READ;
 
-        [[nodiscard]] constexpr bool IsValid() const noexcept { return m_typeId != 0; }
+        [[nodiscard]] constexpr bool IsValid() const noexcept
+        {
+            return m_typeId != 0;
+        }
 
         /**
          * Check if component ticks pass this filter
          */
-        [[nodiscard]] constexpr bool Matches(ComponentTicks ticks, Tick lastRun) const noexcept {
+        [[nodiscard]] constexpr bool Matches(ComponentTicks ticks, Tick lastRun) const noexcept
+        {
             switch (m_mode)
             {
                 case ChangeFilterMode::ADDED:
@@ -55,7 +59,8 @@ namespace queen
 
         template <typename T>
         [[nodiscard]] static constexpr ChangeFilterTerm Create(ChangeFilterMode mode,
-                                                               TermAccess access = TermAccess::READ) noexcept {
+                                                               TermAccess access = TermAccess::READ) noexcept
+        {
             return ChangeFilterTerm{TypeIdOf<T>(), mode, access};
         }
     };
@@ -90,11 +95,15 @@ namespace queen
         static constexpr TermAccess access = TermAccess::READ;
         static constexpr TypeId typeId = TypeIdOf<T>();
 
-        [[nodiscard]] static constexpr ChangeFilterTerm ToChangeFilter() noexcept {
+        [[nodiscard]] static constexpr ChangeFilterTerm ToChangeFilter() noexcept
+        {
             return ChangeFilterTerm{typeId, mode, access};
         }
 
-        [[nodiscard]] static constexpr Term ToTerm() noexcept { return Term{typeId, TermOperator::WITH, access}; }
+        [[nodiscard]] static constexpr Term ToTerm() noexcept
+        {
+            return Term{typeId, TermOperator::WITH, access};
+        }
     };
 
     /**
@@ -123,11 +132,15 @@ namespace queen
         static constexpr TermAccess access = TermAccess::READ;
         static constexpr TypeId typeId = TypeIdOf<T>();
 
-        [[nodiscard]] static constexpr ChangeFilterTerm ToChangeFilter() noexcept {
+        [[nodiscard]] static constexpr ChangeFilterTerm ToChangeFilter() noexcept
+        {
             return ChangeFilterTerm{typeId, mode, access};
         }
 
-        [[nodiscard]] static constexpr Term ToTerm() noexcept { return Term{typeId, TermOperator::WITH, access}; }
+        [[nodiscard]] static constexpr Term ToTerm() noexcept
+        {
+            return Term{typeId, TermOperator::WITH, access};
+        }
     };
 
     /**
@@ -149,11 +162,15 @@ namespace queen
         static constexpr TermAccess access = TermAccess::READ;
         static constexpr TypeId typeId = TypeIdOf<T>();
 
-        [[nodiscard]] static constexpr ChangeFilterTerm ToChangeFilter() noexcept {
+        [[nodiscard]] static constexpr ChangeFilterTerm ToChangeFilter() noexcept
+        {
             return ChangeFilterTerm{typeId, mode, access};
         }
 
-        [[nodiscard]] static constexpr Term ToTerm() noexcept { return Term{typeId, TermOperator::WITH, access}; }
+        [[nodiscard]] static constexpr Term ToTerm() noexcept
+        {
+            return Term{typeId, TermOperator::WITH, access};
+        }
     };
 
     // ─────────────────────────────────────────────────────────────

@@ -5,21 +5,24 @@
 
 namespace nectar
 {
-    template <typename T> StrongHandle<T>::~StrongHandle() noexcept {
+    template <typename T> StrongHandle<T>::~StrongHandle() noexcept
+    {
         Release();
     }
 
     template <typename T>
     StrongHandle<T>::StrongHandle(const StrongHandle& other) noexcept
         : m_handle{other.m_handle}
-        , m_server{other.m_server} {
+        , m_server{other.m_server}
+    {
         if (m_server && !m_handle.IsNull())
         {
             m_server->IncrementRef<T>(m_handle);
         }
     }
 
-    template <typename T> StrongHandle<T>& StrongHandle<T>::operator=(const StrongHandle& other) noexcept {
+    template <typename T> StrongHandle<T>& StrongHandle<T>::operator=(const StrongHandle& other) noexcept
+    {
         if (this != &other)
         {
             Release();
@@ -33,7 +36,8 @@ namespace nectar
         return *this;
     }
 
-    template <typename T> void StrongHandle<T>::Release() noexcept {
+    template <typename T> void StrongHandle<T>::Release() noexcept
+    {
         if (m_server && !m_handle.IsNull())
         {
             m_server->DecrementRef<T>(m_handle);

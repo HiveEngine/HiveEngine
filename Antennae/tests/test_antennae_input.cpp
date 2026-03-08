@@ -1,11 +1,11 @@
+#include <queen/world/world.h>
+
+#include <terra/platform/glfw_terra.h>
+
 #include <antennae/actions.h>
 #include <antennae/input.h>
 #include <antennae/keyboard.h>
 #include <antennae/mouse.h>
-
-#include <queen/world/world.h>
-
-#include <terra/platform/glfw_terra.h>
 
 #include <larvae/larvae.h>
 

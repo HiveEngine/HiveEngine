@@ -14,27 +14,32 @@
 namespace
 {
 
-    auto& GetMmapAlloc() {
+    auto& GetMmapAlloc()
+    {
         static comb::ModuleAllocator alloc{"TestMmap", 4 * 1024 * 1024};
         return alloc.Get();
     }
 
-    const char* MmapTestDir() {
+    const char* MmapTestDir()
+    {
         static std::string path = (std::filesystem::temp_directory_path() / "hive_test_mmap_dir").string();
         return path.c_str();
     }
 
-    void SetupMmapDir() {
+    void SetupMmapDir()
+    {
         std::error_code ec;
         std::filesystem::create_directories(MmapTestDir(), ec);
     }
 
-    void CleanupMmapDir() {
+    void CleanupMmapDir()
+    {
         std::error_code ec;
         std::filesystem::remove_all(MmapTestDir(), ec);
     }
 
-    void WriteTestFile(const char* relative, const char* content) {
+    void WriteTestFile(const char* relative, const char* content)
+    {
         std::string path = std::string(MmapTestDir()) + "/" + relative;
 
         // Create parent dirs if needed
@@ -50,7 +55,8 @@ namespace
         }
     }
 
-    std::string FullPath(const char* relative) {
+    std::string FullPath(const char* relative)
+    {
         return std::string(MmapTestDir()) + "/" + relative;
     }
 

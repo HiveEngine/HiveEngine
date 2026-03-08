@@ -12,9 +12,12 @@ namespace nectar
 {
     PakBuilder::PakBuilder(comb::DefaultAllocator& alloc)
         : m_alloc{&alloc}
-        , m_entries{alloc} {}
+        , m_entries{alloc}
+    {
+    }
 
-    void PakBuilder::AddBlob(ContentHash hash, wax::ByteSpan data, CompressionMethod compression) {
+    void PakBuilder::AddBlob(ContentHash hash, wax::ByteSpan data, CompressionMethod compression)
+    {
         BuildEntry entry;
         entry.m_hash = hash;
         entry.m_data = wax::ByteBuffer{*m_alloc};
@@ -23,11 +26,13 @@ namespace nectar
         m_entries.PushBack(static_cast<BuildEntry&&>(entry));
     }
 
-    void PakBuilder::SetManifest(const AssetManifest& manifest) {
+    void PakBuilder::SetManifest(const AssetManifest& manifest)
+    {
         m_manifest = &manifest;
     }
 
-    bool PakBuilder::Build(wax::StringView outputPath) {
+    bool PakBuilder::Build(wax::StringView outputPath)
+    {
         HIVE_PROFILE_SCOPE_N("PakBuilder::Build");
         // Build path string with null terminator
         wax::String path{*m_alloc};

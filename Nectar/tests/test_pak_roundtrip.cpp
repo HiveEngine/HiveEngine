@@ -15,17 +15,20 @@
 namespace
 {
 
-    auto& GetPakRtAlloc() {
+    auto& GetPakRtAlloc()
+    {
         static comb::ModuleAllocator alloc{"TestPakRT", 8 * 1024 * 1024};
         return alloc.Get();
     }
 
-    const char* TempPakPath() {
+    const char* TempPakPath()
+    {
         static std::string path = (std::filesystem::temp_directory_path() / "hive_test_output.npak").string();
         return path.c_str();
     }
 
-    void CleanupTempPak() {
+    void CleanupTempPak()
+    {
         std::remove(TempPakPath());
     }
 

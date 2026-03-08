@@ -75,7 +75,8 @@ namespace queen
         /**
          * Constexpr-safe string comparison (no <cstring> dependency)
          */
-        constexpr bool StringsEqual(const char* a, const char* b) noexcept {
+        constexpr bool StringsEqual(const char* a, const char* b) noexcept
+        {
             if (a == b)
                 return true;
             if (a == nullptr || b == nullptr)
@@ -111,39 +112,57 @@ namespace queen
         FieldType m_elementType = FieldType::INVALID;   // For FixedArray: element type
         const FieldAttributes* m_attributes = nullptr;  // Editor annotations (optional)
 
-        [[nodiscard]] constexpr bool IsValid() const noexcept {
+        [[nodiscard]] constexpr bool IsValid() const noexcept
+        {
             return m_name != nullptr && m_type != FieldType::INVALID;
         }
 
-        [[nodiscard]] constexpr bool IsNumeric() const noexcept {
+        [[nodiscard]] constexpr bool IsNumeric() const noexcept
+        {
             return m_type >= FieldType::INT8 && m_type <= FieldType::FLOAT64;
         }
 
-        [[nodiscard]] constexpr bool IsInteger() const noexcept {
+        [[nodiscard]] constexpr bool IsInteger() const noexcept
+        {
             return m_type >= FieldType::INT8 && m_type <= FieldType::UINT64;
         }
 
-        [[nodiscard]] constexpr bool IsSigned() const noexcept {
+        [[nodiscard]] constexpr bool IsSigned() const noexcept
+        {
             return m_type >= FieldType::INT8 && m_type <= FieldType::INT64;
         }
 
-        [[nodiscard]] constexpr bool IsFloatingPoint() const noexcept {
+        [[nodiscard]] constexpr bool IsFloatingPoint() const noexcept
+        {
             return m_type == FieldType::FLOAT32 || m_type == FieldType::FLOAT64;
         }
 
-        [[nodiscard]] constexpr bool IsStruct() const noexcept { return m_type == FieldType::STRUCT; }
+        [[nodiscard]] constexpr bool IsStruct() const noexcept
+        {
+            return m_type == FieldType::STRUCT;
+        }
 
-        [[nodiscard]] constexpr bool IsEnum() const noexcept { return m_type == FieldType::ENUM; }
+        [[nodiscard]] constexpr bool IsEnum() const noexcept
+        {
+            return m_type == FieldType::ENUM;
+        }
 
-        [[nodiscard]] constexpr bool IsString() const noexcept { return m_type == FieldType::STRING; }
+        [[nodiscard]] constexpr bool IsString() const noexcept
+        {
+            return m_type == FieldType::STRING;
+        }
 
-        [[nodiscard]] constexpr bool IsFixedArray() const noexcept { return m_type == FieldType::FIXED_ARRAY; }
+        [[nodiscard]] constexpr bool IsFixedArray() const noexcept
+        {
+            return m_type == FieldType::FIXED_ARRAY;
+        }
     };
 
     namespace detail
     {
         // Type to FieldType mapping
-        template <typename T> constexpr FieldType GetFieldType() noexcept {
+        template <typename T> constexpr FieldType GetFieldType() noexcept
+        {
             if constexpr (std::is_same_v<T, int8_t>)
                 return FieldType::INT8;
             else if constexpr (std::is_same_v<T, int16_t>)

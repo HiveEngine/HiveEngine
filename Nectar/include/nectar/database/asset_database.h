@@ -49,7 +49,8 @@ namespace nectar
 
         // -- Iteration --
 
-        template <typename F> void ForEach(F&& fn) const {
+        template <typename F> void ForEach(F&& fn) const
+        {
             for (auto it = m_records.Begin(); it != m_records.End(); ++it)
                 fn(it.Key(), it.Value());
         }

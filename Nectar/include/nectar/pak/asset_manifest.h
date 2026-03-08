@@ -26,7 +26,8 @@ namespace nectar
         [[nodiscard]] size_t Count() const noexcept;
 
         /// Iterate all entries: callback(StringView path, ContentHash hash)
-        template <typename F> void ForEach(F&& fn) const {
+        template <typename F> void ForEach(F&& fn) const
+        {
             for (auto it = m_entries.Begin(); it != m_entries.End(); ++it)
                 fn(wax::StringView{it.Key().CStr(), it.Key().Size()}, it.Value());
         }

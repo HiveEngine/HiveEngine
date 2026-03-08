@@ -29,12 +29,20 @@ namespace
         int* data;
 
         NonTrivial()
-            : data{nullptr} {}
-        ~NonTrivial() { data = nullptr; }
+            : data{nullptr}
+        {
+        }
+        ~NonTrivial()
+        {
+            data = nullptr;
+        }
         NonTrivial(const NonTrivial& other)
-            : data{other.data} {}
+            : data{other.data}
+        {
+        }
         NonTrivial(NonTrivial&& other) noexcept
-            : data{other.data} {
+            : data{other.data}
+        {
             other.data = nullptr;
         }
     };

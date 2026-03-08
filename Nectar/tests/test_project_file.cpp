@@ -10,7 +10,8 @@
 namespace
 {
 
-    auto& GetAlloc() {
+    auto& GetAlloc()
+    {
         static comb::ModuleAllocator alloc{"TestProjectFile", 4 * 1024 * 1024};
         return alloc.Get();
     }
@@ -18,13 +19,15 @@ namespace
     struct TempDir
     {
         std::filesystem::path path;
-        explicit TempDir(const char* name) {
+        explicit TempDir(const char* name)
+        {
             path = std::filesystem::temp_directory_path() / name;
             std::error_code ec;
             std::filesystem::remove_all(path, ec);
             std::filesystem::create_directories(path);
         }
-        ~TempDir() {
+        ~TempDir()
+        {
             std::error_code ec;
             std::filesystem::remove_all(path, ec);
         }

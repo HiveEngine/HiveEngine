@@ -12,7 +12,8 @@
 namespace queen
 {
     template <comb::Allocator Allocator>
-    void Scheduler<Allocator>::RunAll(World& world, SystemStorage<Allocator>& storage) {
+    void Scheduler<Allocator>::RunAll(World& world, SystemStorage<Allocator>& storage)
+    {
         HIVE_PROFILE_SCOPE_N("Scheduler::RunAll");
 
         if (m_graph.IsDirty())

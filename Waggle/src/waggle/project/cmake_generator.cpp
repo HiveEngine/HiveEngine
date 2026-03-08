@@ -7,7 +7,8 @@ namespace waggle
 {
     namespace
     {
-        wax::String NormalizePath(wax::StringView path, comb::DefaultAllocator& alloc) {
+        wax::String NormalizePath(wax::StringView path, comb::DefaultAllocator& alloc)
+        {
             wax::String normalized{alloc, path};
             char* data = normalized.Data();
             for (size_t i = 0; i < normalized.Size(); ++i)
@@ -21,7 +22,8 @@ namespace waggle
         }
     } // namespace
 
-    wax::String CMakeGenerator::Generate(const CMakeGenConfig& config, comb::DefaultAllocator& alloc) {
+    wax::String CMakeGenerator::Generate(const CMakeGenConfig& config, comb::DefaultAllocator& alloc)
+    {
         wax::String out{alloc};
         out.Reserve(3072);
         const wax::String enginePath = NormalizePath(config.m_enginePath, alloc);
@@ -103,7 +105,8 @@ namespace waggle
         return out;
     }
 
-    bool CMakeGenerator::WriteToProject(const CMakeGenConfig& config, comb::DefaultAllocator& alloc) {
+    bool CMakeGenerator::WriteToProject(const CMakeGenConfig& config, comb::DefaultAllocator& alloc)
+    {
         auto content = Generate(config, alloc);
 
         std::string path;

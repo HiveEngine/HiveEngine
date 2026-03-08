@@ -13,8 +13,14 @@ namespace larvae
     public:
         static TestRegistry& GetInstance();
         bool Register(TestInfo&& test_info);
-        const std::vector<TestInfo>& GetTests() const { return tests_; }
-        void Clear() { tests_.clear(); }
+        const std::vector<TestInfo>& GetTests() const
+        {
+            return tests_;
+        }
+        void Clear()
+        {
+            tests_.clear();
+        }
 
     private:
         TestRegistry() = default;
@@ -32,7 +38,8 @@ namespace larvae
     // Helper to create and register a simple test
     // Usage: static auto t1 = larvae::RegisterTest("Suite", "Test", []() { /* test code */ });
     inline TestRegistrar RegisterTest(const char* suite_name, const char* test_name, std::function<void()> test_body,
-                                      const std::source_location& loc = std::source_location::current()) {
+                                      const std::source_location& loc = std::source_location::current())
+    {
         return {suite_name, test_name, std::move(test_body), loc.file_name(), loc.line()};
     }
 
@@ -42,7 +49,8 @@ namespace larvae
     template <typename FixtureClass>
     TestRegistrar RegisterTestWithFixture(const char* suite_name, const char* test_name,
                                           std::function<void(FixtureClass&)> test_body,
-                                          const std::source_location& loc = std::source_location::current()) {
+                                          const std::source_location& loc = std::source_location::current())
+    {
         auto wrapped_test = [test_body = std::move(test_body)]() {
             FixtureClass fixture;
             fixture.SetUp();

@@ -35,9 +35,18 @@ namespace forge
         queen::Entity Undo(queen::World& world);
         queen::Entity Redo(queen::World& world);
 
-        [[nodiscard]] bool CanUndo() const noexcept { return m_count > 0; }
-        [[nodiscard]] bool CanRedo() const noexcept { return m_redoCount > 0; }
-        [[nodiscard]] size_t Count() const noexcept { return m_count; }
+        [[nodiscard]] bool CanUndo() const noexcept
+        {
+            return m_count > 0;
+        }
+        [[nodiscard]] bool CanRedo() const noexcept
+        {
+            return m_redoCount > 0;
+        }
+        [[nodiscard]] size_t Count() const noexcept
+        {
+            return m_count;
+        }
 
     private:
         UndoCommand m_commands[kMaxCommands]{};

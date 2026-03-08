@@ -25,7 +25,8 @@
 namespace
 {
 
-    auto& GetHrAlloc() {
+    auto& GetHrAlloc()
+    {
         static comb::ModuleAllocator alloc{"TestHotReload", 8 * 1024 * 1024};
         return alloc.Get();
     }
@@ -33,24 +34,28 @@ namespace
     struct TempDir
     {
         std::filesystem::path path;
-        explicit TempDir(const char* name) {
+        explicit TempDir(const char* name)
+        {
             path = std::filesystem::temp_directory_path() / name;
             std::error_code ec;
             std::filesystem::remove_all(path, ec);
             std::filesystem::create_directories(path);
         }
-        ~TempDir() {
+        ~TempDir()
+        {
             std::error_code ec;
             std::filesystem::remove_all(path, ec);
         }
-        wax::StringView View() const {
+        wax::StringView View() const
+        {
             static thread_local std::string s;
             s = path.string();
             return wax::StringView{s.c_str()};
         }
     };
 
-    nectar::AssetId MakeId(uint64_t v) {
+    nectar::AssetId MakeId(uint64_t v)
+    {
         uint8_t bytes[16] = {};
         std::memcpy(bytes, &v, sizeof(v));
         return nectar::AssetId::FromBytes(bytes);
@@ -62,11 +67,16 @@ namespace
     public:
         explicit MockFileWatcher(comb::DefaultAllocator& alloc)
             : alloc_{&alloc}
-            , pending_{alloc} {}
+            , pending_{alloc}
+        {
+        }
 
-        void Watch(wax::StringView) override {}
+        void Watch(wax::StringView) override
+        {
+        }
 
-        void Poll(wax::Vector<nectar::FileChange>& changes) override {
+        void Poll(wax::Vector<nectar::FileChange>& changes) override
+        {
             for (size_t i = 0; i < pending_.Size(); ++i)
             {
                 nectar::FileChange c;
@@ -78,7 +88,8 @@ namespace
             pending_.Clear();
         }
 
-        void Inject(wax::StringView path, nectar::FileChangeKind kind) {
+        void Inject(wax::StringView path, nectar::FileChangeKind kind)
+        {
             nectar::FileChange c;
             c.m_path = wax::String{*alloc_};
             c.m_path.Append(path.Data(), path.Size());
@@ -99,14 +110,22 @@ namespace
     class TestImporter final : public nectar::AssetImporter<DummyAssetHr>
     {
     public:
-        wax::Span<const char* const> SourceExtensions() const override {
+        wax::Span<const char* const> SourceExtensions() const override
+        {
             static const char* const exts[] = {".dat"};
             return {exts, 1};
         }
-        uint32_t Version() const override { return 1; }
-        wax::StringView TypeName() const override { return "TestAsset"; }
+        uint32_t Version() const override
+        {
+            return 1;
+        }
+        wax::StringView TypeName() const override
+        {
+            return "TestAsset";
+        }
         nectar::ImportResult Import(wax::ByteSpan source_data, const nectar::HiveDocument&,
-                                    nectar::ImportContext&) override {
+                                    nectar::ImportContext&) override
+        {
             nectar::ImportResult r{};
             r.m_success = true;
             r.m_intermediateData = wax::ByteBuffer{GetHrAlloc()};
@@ -119,14 +138,22 @@ namespace
     class SettingsCapturingImporter final : public nectar::AssetImporter<DummyAssetHr>
     {
     public:
-        wax::Span<const char* const> SourceExtensions() const override {
+        wax::Span<const char* const> SourceExtensions() const override
+        {
             static const char* const exts[] = {".mesh"};
             return {exts, 1};
         }
-        uint32_t Version() const override { return 1; }
-        wax::StringView TypeName() const override { return "MeshAsset"; }
+        uint32_t Version() const override
+        {
+            return 1;
+        }
+        wax::StringView TypeName() const override
+        {
+            return "MeshAsset";
+        }
         nectar::ImportResult Import(wax::ByteSpan source_data, const nectar::HiveDocument& settings,
-                                    nectar::ImportContext&) override {
+                                    nectar::ImportContext&) override
+        {
             // Capture base_path setting
             last_base_path = std::string{settings.GetString("import", "base_path").Data(),
                                          settings.GetString("import", "base_path").Size()};
@@ -148,10 +175,19 @@ namespace
     {
     public:
         explicit TestCooker(wax::StringView type_name)
-            : type_{type_name.Data(), type_name.Size()} {}
-        wax::StringView TypeName() const override { return wax::StringView{type_.c_str()}; }
-        uint32_t Version() const override { return 1; }
-        nectar::CookResult Cook(wax::ByteSpan data, const nectar::CookContext& ctx) override {
+            : type_{type_name.Data(), type_name.Size()}
+        {
+        }
+        wax::StringView TypeName() const override
+        {
+            return wax::StringView{type_.c_str()};
+        }
+        uint32_t Version() const override
+        {
+            return 1;
+        }
+        nectar::CookResult Cook(wax::ByteSpan data, const nectar::CookContext& ctx) override
+        {
             nectar::CookResult r;
             r.m_success = true;
             r.m_cookedData = wax::ByteBuffer{*ctx.m_alloc};
@@ -165,7 +201,8 @@ namespace
 
     // Pre-populate an asset record in the DB
     void SetupRecord(nectar::AssetDatabase& db, nectar::CasStore& cas, nectar::AssetId id, const char* path,
-                     const char* type, const void* data, size_t size) {
+                     const char* type, const void* data, size_t size)
+    {
         auto& alloc = GetHrAlloc();
         wax::ByteSpan span{data, size};
         nectar::ContentHash cas_hash = cas.Store(span);
@@ -210,7 +247,8 @@ namespace
             , cook_registry{alloc}
             , cook_cache{alloc}
             , cook_pipeline{alloc, cook_registry, cas, db, cook_cache}
-            , watcher{alloc} {
+            , watcher{alloc}
+        {
             vfs.Mount("", &mem);
         }
     };

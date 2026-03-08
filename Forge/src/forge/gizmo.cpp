@@ -13,7 +13,8 @@ namespace forge
 {
     using namespace hive::math;
 
-    static void EulerToQuat(const float* eulerDeg, float* quat) {
+    static void EulerToQuat(const float* eulerDeg, float* quat)
+    {
         float px = eulerDeg[0] * (kPi / 180.f) * 0.5f;
         float py = eulerDeg[1] * (kPi / 180.f) * 0.5f;
         float pz = eulerDeg[2] * (kPi / 180.f) * 0.5f;
@@ -30,7 +31,8 @@ namespace forge
 
     bool DrawGizmo(GizmoState& state, const Mat4& view, const Mat4& projection, float* worldMatrix, float* outPosition,
                    float* outRotationQuat, float* outScale, float viewportX, float viewportY, float viewportW,
-                   float viewportH) {
+                   float viewportH)
+    {
         ImGuizmo::SetDrawlist();
         ImGuizmo::SetRect(viewportX, viewportY, viewportW, viewportH);
 

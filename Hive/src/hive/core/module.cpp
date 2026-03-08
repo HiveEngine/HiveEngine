@@ -3,19 +3,23 @@
 
 namespace hive
 {
-    void Module::Configure() {
+    void Module::Configure()
+    {
         DoConfigure(m_context);
     }
 
-    void Module::Initialize() {
+    void Module::Initialize()
+    {
         DoInitialize();
     }
 
-    void Module::Shutdown() {
+    void Module::Shutdown()
+    {
         DoShutdown();
     }
 
-    bool Module::CanInitialize(const std::unordered_set<std::string>& initModulesNames) const {
+    bool Module::CanInitialize(const std::unordered_set<std::string>& initModulesNames) const
+    {
         int depCount{0};
         for (auto depName : m_context.GetDependencies())
         {

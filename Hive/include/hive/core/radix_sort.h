@@ -14,7 +14,8 @@ namespace hive
 
     namespace detail
     {
-        template <typename T> void InsertionSort(SortItem<T>* data, uint32_t count) {
+        template <typename T> void InsertionSort(SortItem<T>* data, uint32_t count)
+        {
             for (uint32_t i = 1; i < count; ++i)
             {
                 auto tmp = data[i];
@@ -33,7 +34,8 @@ namespace hive
     // Sorts `data` in-place, using `scratch` as temporary storage.
     // Both arrays must have at least `count` elements.
     // Falls back to insertion sort for count <= 64 (scratch unused).
-    template <typename T> void RadixSort(SortItem<T>* data, SortItem<T>* scratch, uint32_t count) {
+    template <typename T> void RadixSort(SortItem<T>* data, SortItem<T>* scratch, uint32_t count)
+    {
         if (count <= 1)
             return;
 

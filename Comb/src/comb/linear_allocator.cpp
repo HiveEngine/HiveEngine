@@ -14,7 +14,8 @@ namespace comb
     LinearAllocator::LinearAllocator(size_t capacity)
         : m_base{AllocatePages(capacity)}
         , m_current{m_base}
-        , m_capacity{capacity} {
+        , m_capacity{capacity}
+    {
         hive::Assert(m_base != nullptr, "Failed to allocate memory for LinearAllocator");
 
 #if COMB_MEM_DEBUG
@@ -28,7 +29,8 @@ namespace comb
 #endif
     }
 
-    LinearAllocator::~LinearAllocator() {
+    LinearAllocator::~LinearAllocator()
+    {
 #if COMB_MEM_DEBUG
         if (m_registry)
         {
@@ -71,7 +73,8 @@ namespace comb
 #endif
     }
 
-    LinearAllocator& LinearAllocator::operator=(LinearAllocator&& other) noexcept {
+    LinearAllocator& LinearAllocator::operator=(LinearAllocator&& other) noexcept
+    {
         if (this != &other)
         {
 #if COMB_MEM_DEBUG
@@ -116,7 +119,8 @@ namespace comb
         return *this;
     }
 
-    void* LinearAllocator::Allocate(size_t size, size_t alignment, const char* tag) {
+    void* LinearAllocator::Allocate(size_t size, size_t alignment, const char* tag)
+    {
 #if COMB_MEM_DEBUG
         void* result = AllocateDebug(size, alignment, tag);
 #else
@@ -144,7 +148,8 @@ namespace comb
         return result;
     }
 
-    void LinearAllocator::Deallocate(void* ptr) {
+    void LinearAllocator::Deallocate(void* ptr)
+    {
 #if COMB_MEM_DEBUG
         DeallocateDebug(ptr);
 #else
@@ -152,7 +157,8 @@ namespace comb
 #endif
     }
 
-    void LinearAllocator::Reset() {
+    void LinearAllocator::Reset()
+    {
         m_current = m_base;
 
 #if COMB_MEM_DEBUG
@@ -166,11 +172,13 @@ namespace comb
 #endif
     }
 
-    void* LinearAllocator::GetMarker() const {
+    void* LinearAllocator::GetMarker() const
+    {
         return m_current;
     }
 
-    void LinearAllocator::ResetToMarker(void* marker) {
+    void LinearAllocator::ResetToMarker(void* marker)
+    {
         const uintptr_t markerAddr = reinterpret_cast<uintptr_t>(marker);
         const uintptr_t baseAddr = reinterpret_cast<uintptr_t>(m_base);
         const uintptr_t endAddr = baseAddr + m_capacity;
@@ -194,7 +202,8 @@ namespace comb
 #endif
     }
 
-    size_t LinearAllocator::GetUsedMemory() const {
+    size_t LinearAllocator::GetUsedMemory() const
+    {
 #if COMB_MEM_DEBUG
         // In debug mode, return virtual release pointer offset
         // This tracks what m_current would be without guard bytes
@@ -205,11 +214,13 @@ namespace comb
 #endif
     }
 
-    size_t LinearAllocator::GetTotalMemory() const {
+    size_t LinearAllocator::GetTotalMemory() const
+    {
         return m_capacity;
     }
 
-    const char* LinearAllocator::GetName() const {
+    const char* LinearAllocator::GetName() const
+    {
         return "LinearAllocator";
     }
 
@@ -218,7 +229,8 @@ namespace comb
     // Debug Implementation (Only compiled when COMB_MEM_DEBUG=1)
     // ========================================================================
 
-    void* LinearAllocator::AllocateDebug(size_t size, size_t alignment, const char* tag) {
+    void* LinearAllocator::AllocateDebug(size_t size, size_t alignment, const char* tag)
+    {
         using namespace debug;
 
         hive::Assert(IsPowerOfTwo(alignment), "Alignment must be a power of 2");
@@ -292,7 +304,8 @@ namespace comb
         return userPtr;
     }
 
-    void LinearAllocator::DeallocateDebug(void* ptr) {
+    void LinearAllocator::DeallocateDebug(void* ptr)
+    {
         using namespace debug;
 
         // LinearAllocator doesn't support individual deallocation

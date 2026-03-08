@@ -19,7 +19,8 @@ namespace hive
         void Unload();
         [[nodiscard]] void* GetSymbol(const char* name) const;
 
-        template <typename Fn> [[nodiscard]] Fn GetFunction(const char* name) const {
+        template <typename Fn> [[nodiscard]] Fn GetFunction(const char* name) const
+        {
             return reinterpret_cast<Fn>(GetSymbol(name));
         }
 

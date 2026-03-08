@@ -24,11 +24,20 @@ namespace queen
         ComponentReflection m_reflection;
         const void* m_defaultValue = nullptr; // Snapshot of T{} for prefab diff
 
-        [[nodiscard]] constexpr bool IsValid() const noexcept { return m_meta.IsValid(); }
+        [[nodiscard]] constexpr bool IsValid() const noexcept
+        {
+            return m_meta.IsValid();
+        }
 
-        [[nodiscard]] constexpr bool HasReflection() const noexcept { return m_reflection.IsValid(); }
+        [[nodiscard]] constexpr bool HasReflection() const noexcept
+        {
+            return m_reflection.IsValid();
+        }
 
-        [[nodiscard]] constexpr bool HasDefault() const noexcept { return m_defaultValue != nullptr; }
+        [[nodiscard]] constexpr bool HasDefault() const noexcept
+        {
+            return m_defaultValue != nullptr;
+        }
     };
 
     /**
@@ -87,7 +96,8 @@ namespace queen
          *
          * @tparam T Component type (must satisfy Reflectable concept)
          */
-        template <Reflectable T> void Register() noexcept {
+        template <Reflectable T> void Register() noexcept
+        {
             hive::Assert(m_count < MaxComponents, "ComponentRegistry full");
             hive::Assert(Find(TypeIdOf<T>()) == nullptr, "Component already registered");
 
@@ -131,7 +141,8 @@ namespace queen
          *
          * @tparam T Component type
          */
-        template <typename T> void RegisterWithoutReflection() noexcept {
+        template <typename T> void RegisterWithoutReflection() noexcept
+        {
             hive::Assert(m_count < MaxComponents, "ComponentRegistry full");
             hive::Assert(Find(TypeIdOf<T>()) == nullptr, "Component already registered");
 
@@ -171,7 +182,8 @@ namespace queen
          *
          * @return Pointer to RegisteredComponent or nullptr if not found
          */
-        [[nodiscard]] const RegisteredComponent* Find(TypeId typeId) const noexcept {
+        [[nodiscard]] const RegisteredComponent* Find(TypeId typeId) const noexcept
+        {
             if (m_count == 0)
                 return nullptr;
 
@@ -206,7 +218,8 @@ namespace queen
          *
          * @return Pointer to RegisteredComponent or nullptr if not found
          */
-        [[nodiscard]] const RegisteredComponent* FindByName(const char* name) const noexcept {
+        [[nodiscard]] const RegisteredComponent* FindByName(const char* name) const noexcept
+        {
             if (name == nullptr)
                 return nullptr;
 
@@ -224,7 +237,8 @@ namespace queen
         /**
          * Get component by index
          */
-        [[nodiscard]] const RegisteredComponent& operator[](size_t index) const noexcept {
+        [[nodiscard]] const RegisteredComponent& operator[](size_t index) const noexcept
+        {
             hive::Assert(index < m_count, "Index out of bounds");
             return m_entries[index];
         }
@@ -232,24 +246,39 @@ namespace queen
         /**
          * Get number of registered components
          */
-        [[nodiscard]] size_t Count() const noexcept { return m_count; }
+        [[nodiscard]] size_t Count() const noexcept
+        {
+            return m_count;
+        }
 
         /**
          * Check if a component type is registered
          */
-        [[nodiscard]] bool Contains(TypeId typeId) const noexcept { return Find(typeId) != nullptr; }
+        [[nodiscard]] bool Contains(TypeId typeId) const noexcept
+        {
+            return Find(typeId) != nullptr;
+        }
 
         /**
          * Check if a component type is registered
          */
-        template <typename T> [[nodiscard]] bool Contains() const noexcept { return Contains(TypeIdOf<T>()); }
+        template <typename T> [[nodiscard]] bool Contains() const noexcept
+        {
+            return Contains(TypeIdOf<T>());
+        }
 
         /**
          * Iterate over all registered components
          */
-        [[nodiscard]] const RegisteredComponent* Begin() const noexcept { return m_entries; }
+        [[nodiscard]] const RegisteredComponent* Begin() const noexcept
+        {
+            return m_entries;
+        }
 
-        [[nodiscard]] const RegisteredComponent* End() const noexcept { return m_entries + m_count; }
+        [[nodiscard]] const RegisteredComponent* End() const noexcept
+        {
+            return m_entries + m_count;
+        }
 
         /**
          * Default-construct a component into pre-allocated memory
@@ -258,7 +287,8 @@ namespace queen
          * @param dst Pre-allocated memory (must be at least meta.size bytes, properly aligned)
          * @return true if constructed, false if type not found
          */
-        [[nodiscard]] bool Construct(TypeId typeId, void* dst) const noexcept {
+        [[nodiscard]] bool Construct(TypeId typeId, void* dst) const noexcept
+        {
             const RegisteredComponent* comp = Find(typeId);
             if (comp == nullptr || comp->m_meta.m_construct == nullptr)
                 return false;
@@ -274,7 +304,8 @@ namespace queen
          * @param src Source component
          * @return true if cloned, false if type not found
          */
-        [[nodiscard]] bool Clone(TypeId typeId, void* dst, const void* src) const noexcept {
+        [[nodiscard]] bool Clone(TypeId typeId, void* dst, const void* src) const noexcept
+        {
             const RegisteredComponent* comp = Find(typeId);
             if (comp == nullptr || comp->m_meta.m_copy == nullptr)
                 return false;
@@ -292,7 +323,8 @@ namespace queen
          * @param instance Pointer to the component instance
          * @return Bitmask of changed fields (0 = all match default)
          */
-        [[nodiscard]] uint64_t DiffWithDefault(TypeId typeId, const void* instance) const noexcept {
+        [[nodiscard]] uint64_t DiffWithDefault(TypeId typeId, const void* instance) const noexcept
+        {
             const RegisteredComponent* comp = Find(typeId);
             if (comp == nullptr || comp->m_defaultValue == nullptr || !comp->HasReflection())
             {
@@ -320,7 +352,8 @@ namespace queen
          *
          * @return Pointer to default-constructed instance, or nullptr
          */
-        [[nodiscard]] const void* GetDefault(TypeId typeId) const noexcept {
+        [[nodiscard]] const void* GetDefault(TypeId typeId) const noexcept
+        {
             const RegisteredComponent* comp = Find(typeId);
             if (comp == nullptr)
                 return nullptr;
@@ -330,7 +363,10 @@ namespace queen
         /**
          * Clear all registered components
          */
-        void Clear() noexcept { m_count = 0; }
+        void Clear() noexcept
+        {
+            m_count = 0;
+        }
 
     private:
         RegisteredComponent m_entries[MaxComponents]{};

@@ -13,13 +13,15 @@
 namespace
 {
 
-    auto& GetIOAlloc() {
+    auto& GetIOAlloc()
+    {
         static comb::ModuleAllocator alloc{"TestIO", 4 * 1024 * 1024};
         return alloc.Get();
     }
 
     // Poll until condition is true, with timeout
-    template <typename Fn> bool PollUntil(Fn&& fn, int timeout_ms = 2000) {
+    template <typename Fn> bool PollUntil(Fn&& fn, int timeout_ms = 2000)
+    {
         auto start = std::chrono::steady_clock::now();
         while (!fn())
         {

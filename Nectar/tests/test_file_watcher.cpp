@@ -13,7 +13,8 @@
 namespace
 {
 
-    auto& GetFwAlloc() {
+    auto& GetFwAlloc()
+    {
         static comb::ModuleAllocator alloc{"TestFW", 4 * 1024 * 1024};
         return alloc.Get();
     }
@@ -23,18 +24,21 @@ namespace
     {
         std::filesystem::path path;
 
-        TempDir() {
+        TempDir()
+        {
             path = std::filesystem::temp_directory_path() / "hive_fw_test";
             std::filesystem::remove_all(path);
             std::filesystem::create_directories(path);
         }
 
-        ~TempDir() {
+        ~TempDir()
+        {
             std::error_code ec;
             std::filesystem::remove_all(path, ec);
         }
 
-        void WriteFile(const char* name, const char* content) {
+        void WriteFile(const char* name, const char* content)
+        {
             auto file_path = path / name;
             FILE* f = std::fopen(file_path.string().c_str(), "wb");
             if (f)
@@ -44,12 +48,14 @@ namespace
             }
         }
 
-        void DeleteFile(const char* name) {
+        void DeleteFile(const char* name)
+        {
             auto file_path = path / name;
             std::filesystem::remove(file_path);
         }
 
-        std::string PathStr() const {
+        std::string PathStr() const
+        {
             auto s = path.string();
             for (auto& c : s)
                 if (c == '\\')

@@ -12,12 +12,14 @@
 namespace
 {
 
-    auto& GetImportAlloc() {
+    auto& GetImportAlloc()
+    {
         static comb::ModuleAllocator alloc{"TestImport", 4 * 1024 * 1024};
         return alloc.Get();
     }
 
-    nectar::AssetId MakeId(uint64_t v) {
+    nectar::AssetId MakeId(uint64_t v)
+    {
         uint8_t bytes[16] = {};
         std::memcpy(bytes, &v, sizeof(v));
         return nectar::AssetId::FromBytes(bytes);
@@ -112,17 +114,25 @@ namespace
     class TestImporter final : public nectar::AssetImporter<TestImportAsset>
     {
     public:
-        wax::Span<const char* const> SourceExtensions() const override {
+        wax::Span<const char* const> SourceExtensions() const override
+        {
             static const char* const exts[] = {".test"};
             return wax::Span<const char* const>{exts, 1};
         }
 
-        uint32_t Version() const override { return 1; }
+        uint32_t Version() const override
+        {
+            return 1;
+        }
 
-        wax::StringView TypeName() const override { return "TestImportAsset"; }
+        wax::StringView TypeName() const override
+        {
+            return "TestImportAsset";
+        }
 
         nectar::ImportResult Import(wax::ByteSpan source_data, const nectar::HiveDocument&,
-                                    nectar::ImportContext&) override {
+                                    nectar::ImportContext&) override
+        {
             nectar::ImportResult result{};
             if (source_data.Size() < sizeof(int))
             {

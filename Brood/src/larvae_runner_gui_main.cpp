@@ -98,17 +98,20 @@ namespace
 
     RunnerState g_state;
 
-    void AddLogLine(const std::string& line) {
+    void AddLogLine(const std::string& line)
+    {
         std::lock_guard<std::mutex> lock{g_state.m_logMutex};
         g_state.m_logLines.push_back(line);
     }
 
-    void ClearLog() {
+    void ClearLog()
+    {
         std::lock_guard<std::mutex> lock{g_state.m_logMutex};
         g_state.m_logLines.clear();
     }
 
-    void DiscoverTests() {
+    void DiscoverTests()
+    {
         g_state.m_allTests.clear();
         g_state.m_suiteSelection.clear();
         g_state.m_testSelection.clear();
@@ -152,7 +155,8 @@ namespace
         }
     }
 
-    void UpdateTestStatistics(const TestResultEntry& result) {
+    void UpdateTestStatistics(const TestResultEntry& result)
+    {
         std::string fullName = result.m_suiteName + "." + result.m_testName;
         auto& stats = g_state.m_testStatistics[fullName];
 
@@ -182,7 +186,8 @@ namespace
         stats.m_avgDurationMs = stats.m_totalDurationMs / stats.m_totalRuns;
     }
 
-    std::string FormatLocalTime(const char* format) {
+    std::string FormatLocalTime(const char* format)
+    {
         const auto now = std::chrono::system_clock::now();
         const auto time = std::chrono::system_clock::to_time_t(now);
         std::tm localTime{};
@@ -198,7 +203,8 @@ namespace
         return buffer;
     }
 
-    void AddRunToHistory() {
+    void AddRunToHistory()
+    {
         RunHistoryEntry entry;
         entry.m_timestamp = FormatLocalTime("%Y-%m-%d %H:%M:%S");
 
@@ -220,7 +226,8 @@ namespace
         }
     }
 
-    void RunSelectedTests() {
+    void RunSelectedTests()
+    {
         if (g_state.m_isRunning)
             return;
 
@@ -385,7 +392,8 @@ namespace
         g_state.m_runnerThread.detach();
     }
 
-    void RunFailedTestsOnly() {
+    void RunFailedTestsOnly()
+    {
         if (g_state.m_isRunning)
             return;
 
@@ -410,7 +418,8 @@ namespace
         RunSelectedTests();
     }
 
-    void SetupDarkTheme() {
+    void SetupDarkTheme()
+    {
         ImGuiStyle& style = ImGui::GetStyle();
 
         // Window
@@ -529,7 +538,8 @@ namespace
         colors[ImGuiCol_ModalWindowDimBg] = ImVec4(0.00f, 0.00f, 0.00f, 0.60f);
     }
 
-    void RenderSuitesPanel() {
+    void RenderSuitesPanel()
+    {
         float availableHeight = ImGui::GetContentRegionAvail().y;
         ImGui::BeginChild("SuitesPanel", ImVec2(0, availableHeight * 0.65f), true);
 
@@ -685,7 +695,8 @@ namespace
         ImGui::EndChild();
     }
 
-    void RenderPlaylistsPanel() {
+    void RenderPlaylistsPanel()
+    {
         ImGui::BeginChild("PlaylistsPanel", ImVec2(0, 0), true);
 
         ImGui::Text("Playlists");
@@ -784,7 +795,8 @@ namespace
         ImGui::EndChild();
     }
 
-    void RenderControlPanel() {
+    void RenderControlPanel()
+    {
         ImGui::BeginChild("ControlPanel", ImVec2(0, 120), true);
 
         ImGui::Text("Run Configuration");
@@ -899,7 +911,8 @@ namespace
         ImGui::EndChild();
     }
 
-    void RenderResultsPanel() {
+    void RenderResultsPanel()
+    {
         ImGui::BeginChild("ResultsPanel", ImVec2(0, 250), true);
 
         if (ImGui::BeginTabBar("ResultsTabs"))
@@ -1142,7 +1155,8 @@ namespace
         ImGui::EndChild();
     }
 
-    void RenderLogPanel() {
+    void RenderLogPanel()
+    {
         ImGui::BeginChild("LogPanel", ImVec2(0, 0), true);
 
         ImGui::Text("Log Output");
@@ -1209,7 +1223,8 @@ namespace
         ImGui::EndChild();
     }
 
-    void RenderMainWindow() {
+    void RenderMainWindow()
+    {
         ImGuiViewport* viewport = ImGui::GetMainViewport();
         ImGui::SetNextWindowPos(viewport->WorkPos);
         ImGui::SetNextWindowSize(viewport->WorkSize);
@@ -1308,7 +1323,8 @@ namespace
     }
 } // namespace
 
-int main(int argc, char** argv) {
+int main(int argc, char** argv)
+{
     brood::ProcessRuntime runtime{};
 
     // Initialize GLFW
@@ -1414,7 +1430,8 @@ int main(int argc, char** argv) {
 #ifdef _WIN32
 #include <windows.h>
 
-int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
+{
     (void)hInstance;
     (void)hPrevInstance;
     (void)lpCmdLine;

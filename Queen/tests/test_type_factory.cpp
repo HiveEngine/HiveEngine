@@ -15,7 +15,8 @@ namespace
         float y = 2.f;
         float z = 3.f;
 
-        static void Reflect(queen::ComponentReflector<>& r) {
+        static void Reflect(queen::ComponentReflector<>& r)
+        {
             r.Field("x", &Position::x);
             r.Field("y", &Position::y);
             r.Field("z", &Position::z);
@@ -28,7 +29,8 @@ namespace
         float dy = 0.f;
         float dz = 0.f;
 
-        static void Reflect(queen::ComponentReflector<>& r) {
+        static void Reflect(queen::ComponentReflector<>& r)
+        {
             r.Field("dx", &Velocity::dx);
             r.Field("dy", &Velocity::dy);
             r.Field("dz", &Velocity::dz);
@@ -45,7 +47,8 @@ namespace
         float x = 0.f;
         float y = 0.f;
 
-        static void Reflect(queen::ComponentReflector<>& r) {
+        static void Reflect(queen::ComponentReflector<>& r)
+        {
             r.Field("x", &Vec2::x);
             r.Field("y", &Vec2::y);
         }
@@ -56,7 +59,8 @@ namespace
         Vec2 position;
         float rotation = 0.f;
 
-        static void Reflect(queen::ComponentReflector<>& r) {
+        static void Reflect(queen::ComponentReflector<>& r)
+        {
             r.Field("position", &Transform::position);
             r.Field("rotation", &Transform::rotation);
         }

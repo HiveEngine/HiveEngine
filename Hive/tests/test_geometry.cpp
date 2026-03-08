@@ -11,7 +11,8 @@ namespace
 
     constexpr float kTol = 1e-4f;
 
-    bool Near(float a, float b) {
+    bool Near(float a, float b)
+    {
         return std::fabs(a - b) < kTol;
     }
 
@@ -103,7 +104,8 @@ namespace
     // =========================================================================
 
     // Helper: build a known view_proj from LookAt + Perspective
-    Frustum MakeTestFrustum() {
+    Frustum MakeTestFrustum()
+    {
         // Camera at origin looking down -Z
         Mat4 view = LookAt({0.f, 0.f, 0.f}, {0.f, 0.f, -1.f}, {0.f, 1.f, 0.f});
         Mat4 proj = Perspective(Radians(90.f), 1.f, 0.1f, 100.f);

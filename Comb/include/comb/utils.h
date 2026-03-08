@@ -15,7 +15,8 @@ namespace comb
      * @param value Value to check
      * @return True if value is a power of 2, false otherwise
      */
-    [[nodiscard]] constexpr bool IsPowerOfTwo(size_t value) {
+    [[nodiscard]] constexpr bool IsPowerOfTwo(size_t value)
+    {
         return value > 0 && (value & (value - 1)) == 0;
     }
 
@@ -25,7 +26,8 @@ namespace comb
      * @param alignment Alignment requirement (must be power of 2)
      * @return True if address is aligned, false otherwise
      */
-    [[nodiscard]] constexpr bool IsAligned(uintptr_t address, size_t alignment) {
+    [[nodiscard]] constexpr bool IsAligned(uintptr_t address, size_t alignment)
+    {
         hive::Assert(IsPowerOfTwo(alignment), "Alignment must be power of 2");
         return (address & (alignment - 1)) == 0;
     }
@@ -36,7 +38,8 @@ namespace comb
      * @param alignment Alignment requirement (must be power of 2)
      * @return True if pointer is aligned, false otherwise
      */
-    [[nodiscard]] inline bool IsAligned(const void* ptr, size_t alignment) {
+    [[nodiscard]] inline bool IsAligned(const void* ptr, size_t alignment)
+    {
         return IsAligned(reinterpret_cast<uintptr_t>(ptr), alignment);
     }
 
@@ -46,7 +49,8 @@ namespace comb
      * @param alignment Alignment requirement (must be power of 2)
      * @return Aligned value
      */
-    [[nodiscard]] constexpr size_t AlignUp(size_t value, size_t alignment) {
+    [[nodiscard]] constexpr size_t AlignUp(size_t value, size_t alignment)
+    {
         hive::Assert(IsPowerOfTwo(alignment), "Alignment must be power of 2");
         return (value + (alignment - 1)) & ~(alignment - 1);
     }
@@ -57,7 +61,8 @@ namespace comb
      * @param alignment Alignment requirement (must be power of 2)
      * @return Aligned pointer
      */
-    [[nodiscard]] inline void* AlignUp(void* ptr, size_t alignment) {
+    [[nodiscard]] inline void* AlignUp(void* ptr, size_t alignment)
+    {
         const auto addr = reinterpret_cast<uintptr_t>(ptr);
         const auto aligned = AlignUp(addr, alignment);
         return reinterpret_cast<void*>(aligned);
@@ -68,7 +73,8 @@ namespace comb
      * @param value Input value
      * @return Next power of 2
      */
-    [[nodiscard]] constexpr size_t NextPowerOfTwo(size_t value) {
+    [[nodiscard]] constexpr size_t NextPowerOfTwo(size_t value)
+    {
         if (value == 0)
             return 1;
 
@@ -96,7 +102,8 @@ namespace comb
      * @param alignment Alignment requirement (must be power of 2)
      * @return Number of bytes of padding needed
      */
-    [[nodiscard]] constexpr size_t GetAlignmentPadding(uintptr_t address, size_t alignment) {
+    [[nodiscard]] constexpr size_t GetAlignmentPadding(uintptr_t address, size_t alignment)
+    {
         hive::Assert(IsPowerOfTwo(alignment), "Alignment must be power of 2");
         const auto padding = AlignUp(address, alignment) - address;
         return padding;
@@ -108,7 +115,8 @@ namespace comb
      * @param alignment Alignment requirement (must be power of 2)
      * @return Number of bytes of padding needed
      */
-    [[nodiscard]] inline size_t GetAlignmentPadding(const void* ptr, size_t alignment) {
+    [[nodiscard]] inline size_t GetAlignmentPadding(const void* ptr, size_t alignment)
+    {
         return GetAlignmentPadding(reinterpret_cast<uintptr_t>(ptr), alignment);
     }
 
@@ -122,7 +130,8 @@ namespace comb
      * @return constexpr array containing all elements
      */
     template <typename T, std::same_as<T>... Ts>
-    [[nodiscard]] constexpr std::array<T, sizeof...(Ts) + 1> MakeArray(T n, Ts... ns) {
+    [[nodiscard]] constexpr std::array<T, sizeof...(Ts) + 1> MakeArray(T n, Ts... ns)
+    {
         return {n, ns...};
     }
 
@@ -132,7 +141,8 @@ namespace comb
      * @param container Container to check
      * @return True if sorted, false otherwise
      */
-    template <typename T> [[nodiscard]] constexpr bool IsSorted(const T& container) {
+    template <typename T> [[nodiscard]] constexpr bool IsSorted(const T& container)
+    {
         return std::is_sorted(std::begin(container), std::end(container));
     }
 } // namespace comb

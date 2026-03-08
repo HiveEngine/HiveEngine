@@ -47,26 +47,47 @@ namespace queen
             : m_systemId{}
             , m_state{SystemState::PENDING}
             , m_dependencyCount{0}
-            , m_unfinishedDeps{0} {}
+            , m_unfinishedDeps{0}
+        {
+        }
 
         constexpr explicit SystemNode(SystemId id) noexcept
             : m_systemId{id}
             , m_state{SystemState::PENDING}
             , m_dependencyCount{0}
-            , m_unfinishedDeps{0} {}
+            , m_unfinishedDeps{0}
+        {
+        }
 
-        [[nodiscard]] constexpr SystemId Id() const noexcept { return m_systemId; }
-        [[nodiscard]] constexpr SystemState State() const noexcept { return m_state; }
-        [[nodiscard]] constexpr uint16_t DependencyCount() const noexcept { return m_dependencyCount; }
-        [[nodiscard]] constexpr uint16_t UnfinishedDeps() const noexcept { return m_unfinishedDeps; }
+        [[nodiscard]] constexpr SystemId Id() const noexcept
+        {
+            return m_systemId;
+        }
+        [[nodiscard]] constexpr SystemState State() const noexcept
+        {
+            return m_state;
+        }
+        [[nodiscard]] constexpr uint16_t DependencyCount() const noexcept
+        {
+            return m_dependencyCount;
+        }
+        [[nodiscard]] constexpr uint16_t UnfinishedDeps() const noexcept
+        {
+            return m_unfinishedDeps;
+        }
 
-        constexpr void SetState(SystemState state) noexcept { m_state = state; }
-        constexpr void SetDependencyCount(uint16_t count) noexcept {
+        constexpr void SetState(SystemState state) noexcept
+        {
+            m_state = state;
+        }
+        constexpr void SetDependencyCount(uint16_t count) noexcept
+        {
             m_dependencyCount = count;
             m_unfinishedDeps = count;
         }
 
-        constexpr void IncrementDependencyCount() noexcept {
+        constexpr void IncrementDependencyCount() noexcept
+        {
             ++m_dependencyCount;
             ++m_unfinishedDeps;
         }
@@ -74,7 +95,8 @@ namespace queen
         /**
          * Reset to pending state for a new frame
          */
-        constexpr void Reset() noexcept {
+        constexpr void Reset() noexcept
+        {
             m_state = SystemState::PENDING;
             m_unfinishedDeps = m_dependencyCount;
         }
@@ -83,7 +105,8 @@ namespace queen
          * Decrement unfinished dependency count
          * @return true if all dependencies are now satisfied (ready to run)
          */
-        constexpr bool DecrementDeps() noexcept {
+        constexpr bool DecrementDeps() noexcept
+        {
             if (m_unfinishedDeps > 0)
             {
                 --m_unfinishedDeps;
@@ -91,7 +114,8 @@ namespace queen
             return m_unfinishedDeps == 0;
         }
 
-        [[nodiscard]] constexpr bool IsReady() const noexcept {
+        [[nodiscard]] constexpr bool IsReady() const noexcept
+        {
             return m_state == SystemState::PENDING && m_unfinishedDeps == 0;
         }
 

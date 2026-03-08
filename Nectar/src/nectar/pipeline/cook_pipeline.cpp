@@ -22,9 +22,12 @@ namespace nectar
         , m_registry{&registry}
         , m_cas{&cas}
         , m_db{&db}
-        , m_cache{&cache} {}
+        , m_cache{&cache}
+    {
+    }
 
-    CookOutput CookPipeline::CookAll(const CookRequest& request) {
+    CookOutput CookPipeline::CookAll(const CookRequest& request)
+    {
         HIVE_PROFILE_SCOPE_N("CookPipeline::CookAll");
         CookOutput output{};
         output.m_failedAssets = wax::Vector<AssetId>{*m_alloc};
@@ -77,7 +80,8 @@ namespace nectar
         return output;
     }
 
-    CookResult CookPipeline::CookSingle(AssetId id, wax::StringView platform) {
+    CookResult CookPipeline::CookSingle(AssetId id, wax::StringView platform)
+    {
         HIVE_PROFILE_SCOPE_N("CookPipeline::CookSingle");
         CookResult result{};
         result.m_errorMessage = wax::String{*m_alloc};
@@ -139,7 +143,8 @@ namespace nectar
         return result;
     }
 
-    void CookPipeline::InvalidateCascade(AssetId changed) {
+    void CookPipeline::InvalidateCascade(AssetId changed)
+    {
         HIVE_PROFILE_SCOPE_N("CookPipeline::InvalidateCascade");
         auto& graph = m_db->GetDependencyGraph();
         wax::Vector<AssetId> dependents{*m_alloc};
@@ -152,7 +157,8 @@ namespace nectar
     }
 
     void CookPipeline::CookLevel(const wax::Vector<AssetId>& level, wax::StringView platform, size_t workerCount,
-                                 CookOutput& output) {
+                                 CookOutput& output)
+    {
         HIVE_PROFILE_SCOPE_N("CookPipeline::CookLevel");
         if (workerCount <= 1 || level.Size() <= 1)
         {
@@ -205,7 +211,8 @@ namespace nectar
             t.join();
     }
 
-    ContentHash CookPipeline::ComputeCookKey(AssetId id, wax::StringView platform) {
+    ContentHash CookPipeline::ComputeCookKey(AssetId id, wax::StringView platform)
+    {
         auto* record = m_db->FindByUuid(id);
         if (!record)
             return ContentHash::Invalid();
@@ -233,7 +240,8 @@ namespace nectar
         return CookCache::BuildCookKey(record->m_intermediateHash, cooker->Version(), platform, depSpan);
     }
 
-    void CookPipeline::CookAsset(AssetId id, wax::StringView platform, CookOutput& output) {
+    void CookPipeline::CookAsset(AssetId id, wax::StringView platform, CookOutput& output)
+    {
         HIVE_PROFILE_SCOPE_N("CookPipeline::CookAsset");
         auto* record = m_db->FindByUuid(id);
         if (!record || !record->m_intermediateHash.IsValid())

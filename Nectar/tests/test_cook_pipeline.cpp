@@ -17,7 +17,8 @@
 namespace
 {
 
-    auto& GetCookAlloc() {
+    auto& GetCookAlloc()
+    {
         static comb::ModuleAllocator alloc{"TestCookPipe", 8 * 1024 * 1024};
         return alloc.Get();
     }
@@ -25,24 +26,28 @@ namespace
     struct TempDir
     {
         std::filesystem::path path;
-        explicit TempDir(const char* name) {
+        explicit TempDir(const char* name)
+        {
             path = std::filesystem::temp_directory_path() / name;
             std::error_code ec;
             std::filesystem::remove_all(path, ec);
             std::filesystem::create_directories(path);
         }
-        ~TempDir() {
+        ~TempDir()
+        {
             std::error_code ec;
             std::filesystem::remove_all(path, ec);
         }
-        wax::StringView View() const {
+        wax::StringView View() const
+        {
             static thread_local std::string s;
             s = path.string();
             return wax::StringView{s.c_str()};
         }
     };
 
-    nectar::AssetId MakeId(uint64_t v) {
+    nectar::AssetId MakeId(uint64_t v)
+    {
         uint8_t bytes[16] = {};
         std::memcpy(bytes, &v, sizeof(v));
         return nectar::AssetId::FromBytes(bytes);
@@ -56,9 +61,16 @@ namespace
     class PassthroughCooker final : public nectar::AssetCooker<DummyCooked>
     {
     public:
-        wax::StringView TypeName() const override { return "TestType"; }
-        uint32_t Version() const override { return version_; }
-        nectar::CookResult Cook(wax::ByteSpan data, const nectar::CookContext& ctx) override {
+        wax::StringView TypeName() const override
+        {
+            return "TestType";
+        }
+        uint32_t Version() const override
+        {
+            return version_;
+        }
+        nectar::CookResult Cook(wax::ByteSpan data, const nectar::CookContext& ctx) override
+        {
             nectar::CookResult r;
             r.m_success = true;
             r.m_cookedData = wax::ByteBuffer{*ctx.m_alloc};
@@ -71,9 +83,16 @@ namespace
     class FailCooker final : public nectar::AssetCooker<DummyCooked>
     {
     public:
-        wax::StringView TypeName() const override { return "FailType"; }
-        uint32_t Version() const override { return 1; }
-        nectar::CookResult Cook(wax::ByteSpan, const nectar::CookContext& ctx) override {
+        wax::StringView TypeName() const override
+        {
+            return "FailType";
+        }
+        uint32_t Version() const override
+        {
+            return 1;
+        }
+        nectar::CookResult Cook(wax::ByteSpan, const nectar::CookContext& ctx) override
+        {
             nectar::CookResult r;
             r.m_errorMessage = wax::String{*ctx.m_alloc, "cook failed"};
             return r;
@@ -82,7 +101,8 @@ namespace
 
     // Helper: insert an asset record and store intermediate in CAS
     nectar::ContentHash SetupAsset(nectar::AssetDatabase& db, nectar::CasStore& cas, nectar::AssetId id,
-                                   const char* path, const char* type, const void* data, size_t size) {
+                                   const char* path, const char* type, const void* data, size_t size)
+    {
         auto& alloc = GetCookAlloc();
         wax::ByteSpan span{data, size};
         nectar::ContentHash cas_hash = cas.Store(span);

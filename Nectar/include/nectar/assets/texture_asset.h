@@ -16,15 +16,18 @@ namespace nectar
         uint8_t* data{nullptr};
         size_t data_size{0};
 
-        [[nodiscard]] const TextureMipLevel* MipLevels() const {
+        [[nodiscard]] const TextureMipLevel* MipLevels() const
+        {
             return reinterpret_cast<const TextureMipLevel*>(data + sizeof(NtexHeader));
         }
 
-        [[nodiscard]] const uint8_t* PixelData() const {
+        [[nodiscard]] const uint8_t* PixelData() const
+        {
             return data + sizeof(NtexHeader) + sizeof(TextureMipLevel) * header.mip_count;
         }
 
-        [[nodiscard]] const uint8_t* MipData(uint8_t level) const {
+        [[nodiscard]] const uint8_t* MipData(uint8_t level) const
+        {
             auto* mips = MipLevels();
             return PixelData() + mips[level].offset;
         }
@@ -33,7 +36,8 @@ namespace nectar
     class TextureAssetLoader final : public AssetLoader<TextureAsset>
     {
     public:
-        [[nodiscard]] TextureAsset* Load(wax::ByteSpan data, comb::DefaultAllocator& alloc) override {
+        [[nodiscard]] TextureAsset* Load(wax::ByteSpan data, comb::DefaultAllocator& alloc) override
+        {
             if (data.Size() < sizeof(NtexHeader))
                 return nullptr;
 
@@ -54,7 +58,8 @@ namespace nectar
             return asset;
         }
 
-        void Unload(TextureAsset* asset, comb::DefaultAllocator& alloc) override {
+        void Unload(TextureAsset* asset, comb::DefaultAllocator& alloc) override
+        {
             if (asset)
             {
                 if (asset->data)
@@ -63,7 +68,8 @@ namespace nectar
             }
         }
 
-        [[nodiscard]] size_t SizeOf(const TextureAsset* asset) const override {
+        [[nodiscard]] size_t SizeOf(const TextureAsset* asset) const override
+        {
             return sizeof(TextureAsset) + (asset ? asset->data_size : 0);
         }
     };

@@ -20,16 +20,20 @@ namespace nectar
 
         explicit HiveDocument(comb::DefaultAllocator& alloc)
             : m_alloc{&alloc}
-            , m_sections{alloc, 16} {}
+            , m_sections{alloc, 16}
+        {
+        }
 
         // -- Section management --
 
-        [[nodiscard]] bool HasSection(wax::StringView name) const {
+        [[nodiscard]] bool HasSection(wax::StringView name) const
+        {
             wax::String key{*m_alloc, name};
             return m_sections.Contains(key);
         }
 
-        void AddSection(wax::StringView name) {
+        void AddSection(wax::StringView name)
+        {
             wax::String key{*m_alloc, name};
             if (!m_sections.Contains(key))
             {
@@ -39,7 +43,8 @@ namespace nectar
 
         // -- Value access --
 
-        void SetValue(wax::StringView section, wax::StringView key, HiveValue value) {
+        void SetValue(wax::StringView section, wax::StringView key, HiveValue value)
+        {
             wax::String secKey{*m_alloc, section};
             auto* sec = m_sections.Find(secKey);
             if (!sec)
@@ -59,7 +64,8 @@ namespace nectar
             }
         }
 
-        [[nodiscard]] const HiveValue* GetValue(wax::StringView section, wax::StringView key) const {
+        [[nodiscard]] const HiveValue* GetValue(wax::StringView section, wax::StringView key) const
+        {
             wax::String secKey{*m_alloc, section};
             auto* sec = m_sections.Find(secKey);
             if (!sec)
@@ -68,7 +74,8 @@ namespace nectar
             return sec->Find(valKey);
         }
 
-        [[nodiscard]] HiveValue* GetValue(wax::StringView section, wax::StringView key) {
+        [[nodiscard]] HiveValue* GetValue(wax::StringView section, wax::StringView key)
+        {
             wax::String secKey{*m_alloc, section};
             auto* sec = m_sections.Find(secKey);
             if (!sec)
@@ -80,28 +87,32 @@ namespace nectar
         // -- Convenience getters with defaults --
 
         [[nodiscard]] wax::StringView GetString(wax::StringView section, wax::StringView key,
-                                                wax::StringView fallback = {}) const {
+                                                wax::StringView fallback = {}) const
+        {
             auto* v = GetValue(section, key);
             if (!v || v->m_type != HiveValue::Type::STRING)
                 return fallback;
             return v->AsString();
         }
 
-        [[nodiscard]] bool GetBool(wax::StringView section, wax::StringView key, bool fallback = false) const {
+        [[nodiscard]] bool GetBool(wax::StringView section, wax::StringView key, bool fallback = false) const
+        {
             auto* v = GetValue(section, key);
             if (!v || v->m_type != HiveValue::Type::BOOL)
                 return fallback;
             return v->AsBool();
         }
 
-        [[nodiscard]] int64_t GetInt(wax::StringView section, wax::StringView key, int64_t fallback = 0) const {
+        [[nodiscard]] int64_t GetInt(wax::StringView section, wax::StringView key, int64_t fallback = 0) const
+        {
             auto* v = GetValue(section, key);
             if (!v || v->m_type != HiveValue::Type::INT)
                 return fallback;
             return v->AsInt();
         }
 
-        [[nodiscard]] double GetFloat(wax::StringView section, wax::StringView key, double fallback = 0.0) const {
+        [[nodiscard]] double GetFloat(wax::StringView section, wax::StringView key, double fallback = 0.0) const
+        {
             auto* v = GetValue(section, key);
             if (!v || v->m_type != HiveValue::Type::FLOAT)
                 return fallback;
@@ -112,10 +123,19 @@ namespace nectar
 
         using DocumentMap = wax::HashMap<wax::String, SectionMap>;
 
-        [[nodiscard]] const DocumentMap& Sections() const noexcept { return m_sections; }
-        [[nodiscard]] DocumentMap& Sections() noexcept { return m_sections; }
+        [[nodiscard]] const DocumentMap& Sections() const noexcept
+        {
+            return m_sections;
+        }
+        [[nodiscard]] DocumentMap& Sections() noexcept
+        {
+            return m_sections;
+        }
 
-        [[nodiscard]] comb::DefaultAllocator& GetAllocator() const noexcept { return *m_alloc; }
+        [[nodiscard]] comb::DefaultAllocator& GetAllocator() const noexcept
+        {
+            return *m_alloc;
+        }
 
     private:
         comb::DefaultAllocator* m_alloc;

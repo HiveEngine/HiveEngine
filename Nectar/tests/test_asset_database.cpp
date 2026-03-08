@@ -11,18 +11,21 @@
 namespace
 {
 
-    auto& GetDbAlloc() {
+    auto& GetDbAlloc()
+    {
         static comb::ModuleAllocator alloc{"TestAssetDB", 4 * 1024 * 1024};
         return alloc.Get();
     }
 
-    nectar::AssetId MakeId(uint64_t v) {
+    nectar::AssetId MakeId(uint64_t v)
+    {
         uint8_t bytes[16] = {};
         std::memcpy(bytes, &v, sizeof(v));
         return nectar::AssetId::FromBytes(bytes);
     }
 
-    nectar::AssetRecord MakeRecord(uint64_t id, const char* path, const char* type, const char* name) {
+    nectar::AssetRecord MakeRecord(uint64_t id, const char* path, const char* type, const char* name)
+    {
         auto& alloc = GetDbAlloc();
         nectar::AssetRecord r{};
         r.m_uuid = MakeId(id);

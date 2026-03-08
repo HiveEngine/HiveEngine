@@ -25,14 +25,16 @@ namespace larvae
                                        const std::string& expected_str = "", const std::string& actual_str = "",
                                        const std::string& custom_message = "");
 
-    inline void AssertTrue(bool condition, const std::source_location& loc = std::source_location::current()) {
+    inline void AssertTrue(bool condition, const std::source_location& loc = std::source_location::current())
+    {
         if (!condition)
         {
             HandleAssertionFailure(FormatAssertionMessage(loc.file_name(), loc.line(), "condition failed"));
         }
     }
 
-    inline void AssertFalse(bool condition, const std::source_location& loc = std::source_location::current()) {
+    inline void AssertFalse(bool condition, const std::source_location& loc = std::source_location::current())
+    {
         if (condition)
         {
             HandleAssertionFailure(FormatAssertionMessage(loc.file_name(), loc.line(), "condition should be false"));
@@ -40,8 +42,8 @@ namespace larvae
     }
 
     template <typename T1, typename T2>
-    void AssertEqual(const T1& val1, const T2& val2,
-                     const std::source_location& loc = std::source_location::current()) {
+    void AssertEqual(const T1& val1, const T2& val2, const std::source_location& loc = std::source_location::current())
+    {
         if (!(val1 == val2))
         {
             std::ostringstream actual_ss, expected_ss;
@@ -54,7 +56,8 @@ namespace larvae
 
     template <typename T1, typename T2>
     void AssertNotEqual(const T1& val1, const T2& val2,
-                        const std::source_location& loc = std::source_location::current()) {
+                        const std::source_location& loc = std::source_location::current())
+    {
         if (!(val1 != val2))
         {
             std::ostringstream ss;
@@ -66,7 +69,8 @@ namespace larvae
 
     template <typename T1, typename T2>
     void AssertLessThan(const T1& val1, const T2& val2,
-                        const std::source_location& loc = std::source_location::current()) {
+                        const std::source_location& loc = std::source_location::current())
+    {
         if (!(val1 < val2))
         {
             std::ostringstream actual_ss, expected_ss;
@@ -79,7 +83,8 @@ namespace larvae
 
     template <typename T1, typename T2>
     void AssertLessEqual(const T1& val1, const T2& val2,
-                         const std::source_location& loc = std::source_location::current()) {
+                         const std::source_location& loc = std::source_location::current())
+    {
         if (!(val1 <= val2))
         {
             std::ostringstream actual_ss, expected_ss;
@@ -92,7 +97,8 @@ namespace larvae
 
     template <typename T1, typename T2>
     void AssertGreaterThan(const T1& val1, const T2& val2,
-                           const std::source_location& loc = std::source_location::current()) {
+                           const std::source_location& loc = std::source_location::current())
+    {
         if (!(val1 > val2))
         {
             std::ostringstream actual_ss, expected_ss;
@@ -105,7 +111,8 @@ namespace larvae
 
     template <typename T1, typename T2>
     void AssertGreaterEqual(const T1& val1, const T2& val2,
-                            const std::source_location& loc = std::source_location::current()) {
+                            const std::source_location& loc = std::source_location::current())
+    {
         if (!(val1 >= val2))
         {
             std::ostringstream actual_ss, expected_ss;
@@ -116,7 +123,8 @@ namespace larvae
         }
     }
 
-    template <typename T> void AssertNull(T* ptr, const std::source_location& loc = std::source_location::current()) {
+    template <typename T> void AssertNull(T* ptr, const std::source_location& loc = std::source_location::current())
+    {
         if (ptr != nullptr)
         {
             HandleAssertionFailure(
@@ -124,8 +132,8 @@ namespace larvae
         }
     }
 
-    template <typename T>
-    void AssertNotNull(T* ptr, const std::source_location& loc = std::source_location::current()) {
+    template <typename T> void AssertNotNull(T* ptr, const std::source_location& loc = std::source_location::current())
+    {
         if (ptr == nullptr)
         {
             HandleAssertionFailure(
@@ -135,7 +143,8 @@ namespace larvae
 
     template <typename T1, typename T2, typename Epsilon>
     void AssertNear(const T1& val1, const T2& val2, const Epsilon& epsilon,
-                    const std::source_location& loc = std::source_location::current()) {
+                    const std::source_location& loc = std::source_location::current())
+    {
         if (std::abs(val1 - val2) > epsilon)
         {
             std::ostringstream ss;
@@ -147,17 +156,20 @@ namespace larvae
     }
 
     inline void AssertFloatEqual(float val1, float val2,
-                                 const std::source_location& loc = std::source_location::current()) {
+                                 const std::source_location& loc = std::source_location::current())
+    {
         AssertNear(val1, val2, 1e-5f, loc);
     }
 
     inline void AssertDoubleEqual(double val1, double val2,
-                                  const std::source_location& loc = std::source_location::current()) {
+                                  const std::source_location& loc = std::source_location::current())
+    {
         AssertNear(val1, val2, 1e-9, loc);
     }
 
     inline void AssertStringEqual(std::string_view str1, std::string_view str2,
-                                  const std::source_location& loc = std::source_location::current()) {
+                                  const std::source_location& loc = std::source_location::current())
+    {
         if (str1 != str2)
         {
             HandleAssertionFailure(FormatAssertionMessage(loc.file_name(), loc.line(), "string equality",
@@ -166,7 +178,8 @@ namespace larvae
     }
 
     inline void AssertStringNotEqual(std::string_view str1, std::string_view str2,
-                                     const std::source_location& loc = std::source_location::current()) {
+                                     const std::source_location& loc = std::source_location::current())
+    {
         if (str1 == str2)
         {
             HandleAssertionFailure(FormatAssertionMessage(loc.file_name(), loc.line(), "string inequality",

@@ -19,18 +19,21 @@
 namespace
 {
 
-    auto& GetVScanAlloc() {
+    auto& GetVScanAlloc()
+    {
         static comb::ModuleAllocator alloc{"TestVersionScan", 8 * 1024 * 1024};
         return alloc.Get();
     }
 
-    nectar::AssetId MakeId(uint64_t v) {
+    nectar::AssetId MakeId(uint64_t v)
+    {
         uint8_t bytes[16] = {};
         std::memcpy(bytes, &v, sizeof(v));
         return nectar::AssetId::FromBytes(bytes);
     }
 
-    const char* CasRoot() {
+    const char* CasRoot()
+    {
 #ifdef _WIN32
         return "test_vscan_cas";
 #else
@@ -38,7 +41,8 @@ namespace
 #endif
     }
 
-    void CleanupCas() {
+    void CleanupCas()
+    {
         std::error_code ec;
         std::filesystem::remove_all(CasRoot(), ec);
     }
@@ -49,16 +53,23 @@ namespace
     public:
         uint32_t ver{1};
 
-        wax::Span<const char* const> SourceExtensions() const override {
+        wax::Span<const char* const> SourceExtensions() const override
+        {
             static const char* const exts[] = {".test"};
             return wax::Span<const char* const>{exts, 1};
         }
 
-        uint32_t Version() const override { return ver; }
-        wax::StringView TypeName() const override { return "TestAsset"; }
+        uint32_t Version() const override
+        {
+            return ver;
+        }
+        wax::StringView TypeName() const override
+        {
+            return "TestAsset";
+        }
 
-        nectar::ImportResult Import(wax::ByteSpan source, const nectar::HiveDocument&,
-                                    nectar::ImportContext&) override {
+        nectar::ImportResult Import(wax::ByteSpan source, const nectar::HiveDocument&, nectar::ImportContext&) override
+        {
             nectar::ImportResult r{};
             r.m_success = true;
             r.m_intermediateData.Append(source.Data(), source.Size());
@@ -86,19 +97,25 @@ namespace
             , db{a}
             , importer{}
             , registry{a}
-            , pipeline{a, registry, cas, vfs, db} {
+            , pipeline{a, registry, cas, vfs, db}
+        {
             CleanupCas();
             registry.Register(&importer);
             vfs.Mount("", &mem);
         }
 
-        ~PipelineFixture() { CleanupCas(); }
+        ~PipelineFixture()
+        {
+            CleanupCas();
+        }
 
-        void AddFile(const char* path, const char* data) {
+        void AddFile(const char* path, const char* data)
+        {
             mem.AddFile(path, wax::ByteSpan{reinterpret_cast<const uint8_t*>(data), std::strlen(data)});
         }
 
-        bool Import(uint64_t id, const char* path) {
+        bool Import(uint64_t id, const char* path)
+        {
             nectar::ImportRequest req;
             req.m_sourcePath = path;
             req.m_assetId = MakeId(id);

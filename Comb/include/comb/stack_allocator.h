@@ -110,7 +110,8 @@ namespace comb
          */
         explicit StackAllocator(size_t capacity)
             : capacity_{capacity}
-            , current_{0} {
+            , current_{0}
+        {
             hive::Assert(capacity > 0, "Stack capacity must be > 0");
 
             memory_block_ = AllocatePages(capacity);
@@ -124,7 +125,8 @@ namespace comb
 #endif
         }
 
-        ~StackAllocator() {
+        ~StackAllocator()
+        {
 #if COMB_MEM_DEBUG
             if (registry_)
             {
@@ -163,7 +165,8 @@ namespace comb
 #endif
         }
 
-        StackAllocator& operator=(StackAllocator&& other) noexcept {
+        StackAllocator& operator=(StackAllocator&& other) noexcept
+        {
             if (this != &other)
             {
 #if COMB_MEM_DEBUG
@@ -216,7 +219,8 @@ namespace comb
          * IMPORTANT: Does NOT support individual deallocation.
          * Use GetMarker() + FreeToMarker() for scoped cleanup.
          */
-        [[nodiscard]] void* Allocate(size_t size, size_t alignment, const char* tag = nullptr) {
+        [[nodiscard]] void* Allocate(size_t size, size_t alignment, const char* tag = nullptr)
+        {
 #if COMB_MEM_DEBUG
             void* result = AllocateDebug(size, alignment, tag);
 #else
@@ -261,7 +265,8 @@ namespace comb
          * Use GetMarker() + FreeToMarker() for scoped cleanup,
          * or Reset() to free all memory.
          */
-        void Deallocate(void* ptr) {
+        void Deallocate(void* ptr)
+        {
 #if COMB_MEM_DEBUG
             DeallocateDebug(ptr);
 #else
@@ -275,7 +280,10 @@ namespace comb
          *
          * @return Marker representing current allocation position
          */
-        [[nodiscard]] Marker GetMarker() const { return current_; }
+        [[nodiscard]] Marker GetMarker() const
+        {
+            return current_;
+        }
 
         /**
          * Free all allocations back to a saved marker
@@ -287,7 +295,8 @@ namespace comb
          * Passing invalid marker is undefined behavior.
          * Markers must be freed in LIFO order (stack discipline).
          */
-        void FreeToMarker(Marker marker) {
+        void FreeToMarker(Marker marker)
+        {
             hive::Assert(marker <= current_, "Invalid marker (beyond current position)");
             hive::Assert(marker <= capacity_, "Invalid marker (beyond capacity)");
 
@@ -307,7 +316,8 @@ namespace comb
          * Reset allocator - frees all allocations
          * Equivalent to FreeToMarker(0)
          */
-        void Reset() {
+        void Reset()
+        {
             current_ = 0;
 
 #if COMB_MEM_DEBUG
@@ -323,7 +333,8 @@ namespace comb
          * Get number of bytes currently allocated
          * @return Bytes used
          */
-        [[nodiscard]] size_t GetUsedMemory() const {
+        [[nodiscard]] size_t GetUsedMemory() const
+        {
 #if COMB_MEM_DEBUG
             return release_current_;
 #else
@@ -335,19 +346,26 @@ namespace comb
          * Get total capacity of allocator
          * @return Total bytes available
          */
-        [[nodiscard]] size_t GetTotalMemory() const { return capacity_; }
+        [[nodiscard]] size_t GetTotalMemory() const
+        {
+            return capacity_;
+        }
 
         /**
          * Get allocator name for debugging
          * @return "StackAllocator"
          */
-        [[nodiscard]] const char* GetName() const { return "StackAllocator"; }
+        [[nodiscard]] const char* GetName() const
+        {
+            return "StackAllocator";
+        }
 
         /**
          * Get number of free bytes remaining
          * @return Bytes available for allocation
          */
-        [[nodiscard]] size_t GetFreeMemory() const {
+        [[nodiscard]] size_t GetFreeMemory() const
+        {
 #if COMB_MEM_DEBUG
             return capacity_ - release_current_;
 #else
@@ -381,7 +399,8 @@ namespace comb
     // Debug Implementation (Inline methods - must be in header)
     // ========================================================================
 
-    inline void* StackAllocator::AllocateDebug(size_t size, size_t alignment, const char* tag) {
+    inline void* StackAllocator::AllocateDebug(size_t size, size_t alignment, const char* tag)
+    {
         using namespace debug;
 
         hive::Assert(IsPowerOfTwo(alignment), "Alignment must be power of 2");
@@ -454,7 +473,8 @@ namespace comb
         return userPtr;
     }
 
-    inline void StackAllocator::DeallocateDebug(void* ptr) {
+    inline void StackAllocator::DeallocateDebug(void* ptr)
+    {
         using namespace debug;
 
         // StackAllocator doesn't support individual deallocation

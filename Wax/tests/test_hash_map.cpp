@@ -202,19 +202,29 @@ namespace
         int value;
 
         NonTrivialValue(int v = 0)
-            : value{v} {}
-        ~NonTrivialValue() { ++destructor_count; }
+            : value{v}
+        {
+        }
+        ~NonTrivialValue()
+        {
+            ++destructor_count;
+        }
         NonTrivialValue(const NonTrivialValue& other)
-            : value{other.value} {}
+            : value{other.value}
+        {
+        }
         NonTrivialValue(NonTrivialValue&& other) noexcept
-            : value{other.value} {
+            : value{other.value}
+        {
             other.value = 0;
         }
-        NonTrivialValue& operator=(const NonTrivialValue& other) {
+        NonTrivialValue& operator=(const NonTrivialValue& other)
+        {
             value = other.value;
             return *this;
         }
-        NonTrivialValue& operator=(NonTrivialValue&& other) noexcept {
+        NonTrivialValue& operator=(NonTrivialValue&& other) noexcept
+        {
             value = other.value;
             other.value = 0;
             return *this;

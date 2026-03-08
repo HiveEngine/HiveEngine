@@ -108,7 +108,8 @@ namespace comb::debug
          *
          * Thread-safe: Yes (mutex protected)
          */
-        void RecordAllocation(const AllocationInfo& info) {
+        void RecordAllocation(const AllocationInfo& info)
+        {
             std::lock_guard<std::mutex> lock(m_mutex);
 
             HistoryEntry entry{};
@@ -131,7 +132,8 @@ namespace comb::debug
          *
          * Thread-safe: Yes (mutex protected)
          */
-        void RecordDeallocation(void* address, size_t size) {
+        void RecordDeallocation(void* address, size_t size)
+        {
             std::lock_guard<std::mutex> lock(m_mutex);
 
             HistoryEntry entry{};
@@ -151,7 +153,8 @@ namespace comb::debug
         /**
          * Get number of entries in history (0 to COMB_MEM_DEBUG_HISTORY_SIZE)
          */
-        [[nodiscard]] size_t GetEntryCount() const {
+        [[nodiscard]] size_t GetEntryCount() const
+        {
             std::lock_guard<std::mutex> lock(m_mutex);
             return m_count;
         }
@@ -159,7 +162,8 @@ namespace comb::debug
         /**
          * Check if history is empty
          */
-        [[nodiscard]] bool IsEmpty() const {
+        [[nodiscard]] bool IsEmpty() const
+        {
             std::lock_guard<std::mutex> lock(m_mutex);
             return m_count == 0;
         }
@@ -167,7 +171,8 @@ namespace comb::debug
         /**
          * Check if history is full (reached capacity)
          */
-        [[nodiscard]] bool IsFull() const {
+        [[nodiscard]] bool IsFull() const
+        {
             std::lock_guard<std::mutex> lock(m_mutex);
             return m_count >= COMB_MEM_DEBUG_HISTORY_SIZE;
         }
@@ -175,7 +180,8 @@ namespace comb::debug
         /**
          * Clear all history
          */
-        void Clear() {
+        void Clear()
+        {
             std::lock_guard<std::mutex> lock(m_mutex);
             m_count = 0;
             m_writeIndex = 0;
@@ -193,7 +199,8 @@ namespace comb::debug
          * @param allocatorName Name of allocator (for logging)
          * @param maxEntries Max entries to print (0 = all)
          */
-        void DumpToLog(const char* allocatorName, size_t maxEntries = 100) const {
+        void DumpToLog(const char* allocatorName, size_t maxEntries = 100) const
+        {
             std::lock_guard<std::mutex> lock(m_mutex);
 
             if (m_count == 0)
@@ -235,7 +242,8 @@ namespace comb::debug
          * @param filename Output file path
          * @return true if successful, false otherwise
          */
-        bool DumpToFile(const char* filename) const {
+        bool DumpToFile(const char* filename) const
+        {
             std::lock_guard<std::mutex> lock(m_mutex);
 
             std::ofstream file(filename);
@@ -285,7 +293,8 @@ namespace comb::debug
 
     private:
         // Assumes mutex held
-        void AddEntry(const HistoryEntry& entry) {
+        void AddEntry(const HistoryEntry& entry)
+        {
             m_history[m_writeIndex] = entry;
             m_writeIndex = (m_writeIndex + 1) % COMB_MEM_DEBUG_HISTORY_SIZE;
 

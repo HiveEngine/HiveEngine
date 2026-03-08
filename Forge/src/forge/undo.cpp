@@ -7,7 +7,8 @@
 namespace forge
 {
     void UndoStack::PushSetField(queen::Entity entity, queen::TypeId typeId, uint16_t offset, uint16_t size,
-                                 const void* before, const void* after) {
+                                 const void* before, const void* after)
+    {
         m_redoCount = 0;
 
         uint32_t dataOff = static_cast<uint32_t>(m_dataHead);
@@ -29,7 +30,8 @@ namespace forge
             ++m_count;
     }
 
-    queen::Entity UndoStack::Undo(queen::World& world) {
+    queen::Entity UndoStack::Undo(queen::World& world)
+    {
         if (m_count == 0)
             return {};
 
@@ -47,7 +49,8 @@ namespace forge
         return cmd.m_entity;
     }
 
-    queen::Entity UndoStack::Redo(queen::World& world) {
+    queen::Entity UndoStack::Redo(queen::World& world)
+    {
         if (m_redoCount == 0)
             return {};
 

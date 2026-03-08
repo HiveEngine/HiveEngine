@@ -129,7 +129,9 @@ namespace queen
          * Create World with default allocator configuration
          */
         World()
-            : World(WorldAllocatorConfig{}) {}
+            : World(WorldAllocatorConfig{})
+        {
+        }
 
         /**
          * Create World with custom allocator configuration
@@ -147,11 +149,13 @@ namespace queen
             , m_scheduler{m_allocators.Persistent()}
             , m_commands{m_allocators.Persistent()}
             , m_events{m_allocators.Persistent()}
-            , m_observers{m_allocators.Persistent()} {
+            , m_observers{m_allocators.Persistent()}
+        {
             m_componentIndex.RegisterArchetype(m_archetypeGraph.GetEmptyArchetype());
         }
 
-        ~World() {
+        ~World()
+        {
             if (m_parallelScheduler != nullptr)
             {
                 m_parallelScheduler->~ParallelScheduler<PersistentAllocator>();
@@ -189,7 +193,8 @@ namespace queen
 
         template <typename... Components> [[nodiscard]] Entity Spawn(Components&&... components);
 
-        void Despawn(Entity entity) {
+        void Despawn(Entity entity)
+        {
             HIVE_PROFILE_SCOPE_N("World::Despawn");
             if (!IsAlive(entity))
             {
@@ -220,9 +225,13 @@ namespace queen
             m_entityAllocator.Deallocate(entity);
         }
 
-        [[nodiscard]] bool IsAlive(Entity entity) const noexcept { return m_entityAllocator.IsAlive(entity); }
+        [[nodiscard]] bool IsAlive(Entity entity) const noexcept
+        {
+            return m_entityAllocator.IsAlive(entity);
+        }
 
-        template <typename T> [[nodiscard]] T* Get(Entity entity) noexcept {
+        template <typename T> [[nodiscard]] T* Get(Entity entity) noexcept
+        {
             if (!IsAlive(entity))
             {
                 return nullptr;
@@ -237,7 +246,8 @@ namespace queen
             return record->m_archetype->template GetComponent<T>(record->m_row);
         }
 
-        template <typename T> [[nodiscard]] const T* Get(Entity entity) const noexcept {
+        template <typename T> [[nodiscard]] const T* Get(Entity entity) const noexcept
+        {
             if (!IsAlive(entity))
             {
                 return nullptr;
@@ -252,7 +262,8 @@ namespace queen
             return record->m_archetype->template GetComponent<T>(record->m_row);
         }
 
-        template <typename T> [[nodiscard]] bool Has(Entity entity) const noexcept {
+        template <typename T> [[nodiscard]] bool Has(Entity entity) const noexcept
+        {
             if (!IsAlive(entity))
             {
                 return false;
@@ -267,7 +278,8 @@ namespace queen
             return record->m_archetype->template HasComponent<T>();
         }
 
-        [[nodiscard]] bool HasComponent(Entity entity, TypeId typeId) const noexcept {
+        [[nodiscard]] bool HasComponent(Entity entity, TypeId typeId) const noexcept
+        {
             if (!IsAlive(entity))
             {
                 return false;
@@ -282,7 +294,8 @@ namespace queen
             return record->m_archetype->HasComponent(typeId);
         }
 
-        template <typename T> void Add(Entity entity, T&& component) {
+        template <typename T> void Add(Entity entity, T&& component)
+        {
             HIVE_PROFILE_SCOPE_N("World::Add");
             if (!IsAlive(entity))
             {
@@ -320,7 +333,8 @@ namespace queen
             m_observers.template Trigger<OnAdd<T>>(*this, entity, comp);
         }
 
-        template <typename T> void Remove(Entity entity) {
+        template <typename T> void Remove(Entity entity)
+        {
             HIVE_PROFILE_SCOPE_N("World::Remove");
             if (!IsAlive(entity))
             {
@@ -354,18 +368,28 @@ namespace queen
             MoveEntity(entity, *record, oldArch, newArch);
         }
 
-        template <typename T> void Set(Entity entity, T&& component) { Add<T>(entity, std::forward<T>(component)); }
+        template <typename T> void Set(Entity entity, T&& component)
+        {
+            Add<T>(entity, std::forward<T>(component));
+        }
 
-        [[nodiscard]] size_t EntityCount() const noexcept { return m_entityAllocator.AliveCount(); }
+        [[nodiscard]] size_t EntityCount() const noexcept
+        {
+            return m_entityAllocator.AliveCount();
+        }
 
-        [[nodiscard]] size_t ArchetypeCount() const noexcept { return m_archetypeGraph.ArchetypeCount(); }
+        [[nodiscard]] size_t ArchetypeCount() const noexcept
+        {
+            return m_archetypeGraph.ArchetypeCount();
+        }
 
         /**
          * Iterate over all non-empty archetypes
          *
          * @param callback Called for each archetype that contains at least one entity
          */
-        template <typename F> void ForEachArchetype(F&& callback) const {
+        template <typename F> void ForEachArchetype(F&& callback) const
+        {
             const auto& archetypes = m_archetypeGraph.GetArchetypes();
             for (size_t i = 0; i < archetypes.Size(); ++i)
             {
@@ -381,7 +405,8 @@ namespace queen
          *
          * @return Pointer to component data, or nullptr if entity doesn't have that component
          */
-        [[nodiscard]] void* GetComponentRaw(Entity entity, TypeId typeId) noexcept {
+        [[nodiscard]] void* GetComponentRaw(Entity entity, TypeId typeId) noexcept
+        {
             if (!IsAlive(entity))
                 return nullptr;
 
@@ -398,7 +423,8 @@ namespace queen
          * Callback receives each TypeId in the entity's archetype.
          * Useful for generic inspection (editor, serialization).
          */
-        template <typename F> void ForEachComponentType(Entity entity, F&& callback) const {
+        template <typename F> void ForEachComponentType(Entity entity, F&& callback) const
+        {
             if (!IsAlive(entity))
                 return;
             const EntityRecord* record = m_entityLocations.Get(entity);
@@ -413,7 +439,8 @@ namespace queen
         // Resources (global singletons)
         // ─────────────────────────────────────────────────────────────
 
-        template <typename T> void InsertResource(T&& resource) {
+        template <typename T> void InsertResource(T&& resource)
+        {
             using DecayedT = std::decay_t<T>;
             TypeId typeId = TypeIdOf<DecayedT>();
 
@@ -434,7 +461,8 @@ namespace queen
             m_resourceMetas.PushBack(ComponentMeta::Of<DecayedT>());
         }
 
-        template <typename T> [[nodiscard]] T* Resource() noexcept {
+        template <typename T> [[nodiscard]] T* Resource() noexcept
+        {
             TypeId typeId = TypeIdOf<T>();
 
             void** found = m_resources.Find(typeId);
@@ -446,7 +474,8 @@ namespace queen
             return static_cast<T*>(*found);
         }
 
-        template <typename T> [[nodiscard]] const T* Resource() const noexcept {
+        template <typename T> [[nodiscard]] const T* Resource() const noexcept
+        {
             TypeId typeId = TypeIdOf<T>();
 
             void* const* found = m_resources.Find(typeId);
@@ -458,12 +487,14 @@ namespace queen
             return static_cast<const T*>(*found);
         }
 
-        template <typename T> [[nodiscard]] bool HasResource() const noexcept {
+        template <typename T> [[nodiscard]] bool HasResource() const noexcept
+        {
             TypeId typeId = TypeIdOf<T>();
             return m_resources.Contains(typeId);
         }
 
-        template <typename T> void RemoveResource() {
+        template <typename T> void RemoveResource()
+        {
             TypeId typeId = TypeIdOf<T>();
 
             void** found = m_resources.Find(typeId);
@@ -496,41 +527,66 @@ namespace queen
             m_resources.Remove(typeId);
         }
 
-        [[nodiscard]] size_t ResourceCount() const noexcept { return m_resources.Count(); }
+        [[nodiscard]] size_t ResourceCount() const noexcept
+        {
+            return m_resources.Count();
+        }
 
         // ─────────────────────────────────────────────────────────────
         // Allocator Access
         // ─────────────────────────────────────────────────────────────
 
-        [[nodiscard]] WorldAllocators& GetAllocators() noexcept { return m_allocators; }
+        [[nodiscard]] WorldAllocators& GetAllocators() noexcept
+        {
+            return m_allocators;
+        }
 
-        [[nodiscard]] const WorldAllocators& GetAllocators() const noexcept { return m_allocators; }
+        [[nodiscard]] const WorldAllocators& GetAllocators() const noexcept
+        {
+            return m_allocators;
+        }
 
         /**
          * Get the persistent allocator (for long-lived metadata)
          */
-        [[nodiscard]] PersistentAllocator& GetPersistentAllocator() noexcept { return m_allocators.Persistent(); }
+        [[nodiscard]] PersistentAllocator& GetPersistentAllocator() noexcept
+        {
+            return m_allocators.Persistent();
+        }
 
         /**
          * Get the component allocator (for entity data)
          */
-        [[nodiscard]] ComponentAllocator& GetComponentAllocator() noexcept { return m_allocators.Components(); }
+        [[nodiscard]] ComponentAllocator& GetComponentAllocator() noexcept
+        {
+            return m_allocators.Components();
+        }
 
         /**
          * Get the frame allocator (for per-frame temporary data)
          */
-        [[nodiscard]] FrameAllocator& GetFrameAllocator() noexcept { return m_allocators.Frame(); }
+        [[nodiscard]] FrameAllocator& GetFrameAllocator() noexcept
+        {
+            return m_allocators.Frame();
+        }
 
         /**
          * Get a thread-local allocator for parallel execution
          */
-        [[nodiscard]] FrameAllocator& GetThreadAllocator(size_t threadIndex) noexcept {
+        [[nodiscard]] FrameAllocator& GetThreadAllocator(size_t threadIndex) noexcept
+        {
             return m_allocators.ThreadFrame(threadIndex);
         }
 
-        [[nodiscard]] ArchetypeGraph<ComponentAllocator>& GetArchetypeGraph() noexcept { return m_archetypeGraph; }
+        [[nodiscard]] ArchetypeGraph<ComponentAllocator>& GetArchetypeGraph() noexcept
+        {
+            return m_archetypeGraph;
+        }
 
-        [[nodiscard]] ComponentIndex<PersistentAllocator>& GetComponentIndex() noexcept { return m_componentIndex; }
+        [[nodiscard]] ComponentIndex<PersistentAllocator>& GetComponentIndex() noexcept
+        {
+            return m_componentIndex;
+        }
 
         // ─────────────────────────────────────────────────────────────
         // Queries
@@ -550,7 +606,8 @@ namespace queen
          *       });
          * @endcode
          */
-        template <typename... Terms> [[nodiscard]] queen::Query<PersistentAllocator, Terms...> Query() {
+        template <typename... Terms> [[nodiscard]] queen::Query<PersistentAllocator, Terms...> Query()
+        {
             std::lock_guard<HIVE_PROFILE_LOCKABLE_BASE(std::mutex)> lock{m_allocators.PersistentMutex()};
             return queen::Query<PersistentAllocator, Terms...>{m_allocators.Persistent(), m_componentIndex};
         }
@@ -563,7 +620,8 @@ namespace queen
          *
          * @param callback Function to call with the query (e.g., query.Each(...))
          */
-        template <typename... Terms, typename Callback> void QueryEach(Callback&& callback) {
+        template <typename... Terms, typename Callback> void QueryEach(Callback&& callback)
+        {
             std::lock_guard<HIVE_PROFILE_LOCKABLE_BASE(std::mutex)> lock{m_allocators.PersistentMutex()};
             queen::Query<PersistentAllocator, Terms...> query{m_allocators.Persistent(), m_componentIndex};
             callback(query);
@@ -575,7 +633,8 @@ namespace queen
          *
          * Thread-safe version for parallel execution.
          */
-        template <typename... Terms, typename F> void QueryEachLocked(F&& func) {
+        template <typename... Terms, typename F> void QueryEachLocked(F&& func)
+        {
             std::lock_guard<HIVE_PROFILE_LOCKABLE_BASE(std::mutex)> lock{m_allocators.PersistentMutex()};
             queen::Query<PersistentAllocator, Terms...> query{m_allocators.Persistent(), m_componentIndex};
             query.Each(std::forward<F>(func));
@@ -586,7 +645,8 @@ namespace queen
          *
          * Thread-safe version for parallel execution.
          */
-        template <typename... Terms, typename F> void QueryEachWithEntityLocked(F&& func) {
+        template <typename... Terms, typename F> void QueryEachWithEntityLocked(F&& func)
+        {
             std::lock_guard<HIVE_PROFILE_LOCKABLE_BASE(std::mutex)> lock{m_allocators.PersistentMutex()};
             queen::Query<PersistentAllocator, Terms...> query{m_allocators.Persistent(), m_componentIndex};
             query.EachWithEntity(std::forward<F>(func));
@@ -607,22 +667,40 @@ namespace queen
          *       });
          * @endcode
          */
-        template <typename... Terms>
-        [[nodiscard]] SystemBuilder<PersistentAllocator, Terms...> System(const char* name) {
+        template <typename... Terms> [[nodiscard]] SystemBuilder<PersistentAllocator, Terms...> System(const char* name)
+        {
             return m_systems.template Register<Terms...>(*this, name);
         }
 
-        void RunSystem(SystemId id) { m_systems.RunSystem(*this, id, m_currentTick); }
+        void RunSystem(SystemId id)
+        {
+            m_systems.RunSystem(*this, id, m_currentTick);
+        }
 
-        void RunAllSystems() { m_systems.RunAll(*this, m_currentTick); }
+        void RunAllSystems()
+        {
+            m_systems.RunAll(*this, m_currentTick);
+        }
 
-        [[nodiscard]] size_t SystemCount() const noexcept { return m_systems.SystemCount(); }
+        [[nodiscard]] size_t SystemCount() const noexcept
+        {
+            return m_systems.SystemCount();
+        }
 
-        void SetSystemEnabled(SystemId id, bool enabled) { m_systems.SetSystemEnabled(id, enabled); }
+        void SetSystemEnabled(SystemId id, bool enabled)
+        {
+            m_systems.SetSystemEnabled(id, enabled);
+        }
 
-        [[nodiscard]] bool IsSystemEnabled(SystemId id) const noexcept { return m_systems.IsSystemEnabled(id); }
+        [[nodiscard]] bool IsSystemEnabled(SystemId id) const noexcept
+        {
+            return m_systems.IsSystemEnabled(id);
+        }
 
-        [[nodiscard]] SystemStorage<PersistentAllocator>& GetSystemStorage() noexcept { return m_systems; }
+        [[nodiscard]] SystemStorage<PersistentAllocator>& GetSystemStorage() noexcept
+        {
+            return m_systems;
+        }
 
         /**
          * Advance the world by one tick (run all systems, no frame marker)
@@ -631,7 +709,8 @@ namespace queen
          * fixed-timestep loops where multiple advances happen per rendered frame.
          * The caller is responsible for emitting HIVE_PROFILE_FRAME once per frame.
          */
-        void Advance() {
+        void Advance()
+        {
             HIVE_PROFILE_SCOPE_N("World::Advance");
             IncrementTick();
             m_events.SwapBuffers();
@@ -648,7 +727,8 @@ namespace queen
          *
          * @param worker_count Number of worker threads (0 = auto-detect)
          */
-        void AdvanceParallel(size_t workerCount = 0) {
+        void AdvanceParallel(size_t workerCount = 0)
+        {
             HIVE_PROFILE_SCOPE_N("World::AdvanceParallel");
             IncrementTick();
             m_events.SwapBuffers();
@@ -676,7 +756,8 @@ namespace queen
          * The world tick is incremented at the start of each Update().
          * The frame allocator is reset at the end.
          */
-        void Update() {
+        void Update()
+        {
             Advance();
             HIVE_PROFILE_FRAME;
         }
@@ -691,24 +772,36 @@ namespace queen
          *
          * @param worker_count Number of worker threads (0 = auto-detect)
          */
-        void UpdateParallel(size_t workerCount = 0) {
+        void UpdateParallel(size_t workerCount = 0)
+        {
             AdvanceParallel(workerCount);
             HIVE_PROFILE_FRAME;
         }
 
-        [[nodiscard]] Scheduler<PersistentAllocator>& GetScheduler() noexcept { return m_scheduler; }
+        [[nodiscard]] Scheduler<PersistentAllocator>& GetScheduler() noexcept
+        {
+            return m_scheduler;
+        }
 
-        [[nodiscard]] const Scheduler<PersistentAllocator>& GetScheduler() const noexcept { return m_scheduler; }
+        [[nodiscard]] const Scheduler<PersistentAllocator>& GetScheduler() const noexcept
+        {
+            return m_scheduler;
+        }
 
-        [[nodiscard]] ParallelScheduler<PersistentAllocator>* GetParallelScheduler() noexcept {
+        [[nodiscard]] ParallelScheduler<PersistentAllocator>* GetParallelScheduler() noexcept
+        {
             return m_parallelScheduler;
         }
 
-        [[nodiscard]] const ParallelScheduler<PersistentAllocator>* GetParallelScheduler() const noexcept {
+        [[nodiscard]] const ParallelScheduler<PersistentAllocator>* GetParallelScheduler() const noexcept
+        {
             return m_parallelScheduler;
         }
 
-        [[nodiscard]] bool HasParallelScheduler() const noexcept { return m_parallelScheduler != nullptr; }
+        [[nodiscard]] bool HasParallelScheduler() const noexcept
+        {
+            return m_parallelScheduler != nullptr;
+        }
 
         /**
          * Invalidate the scheduler's dependency graph
@@ -716,7 +809,8 @@ namespace queen
          * Call this when systems are added or modified to force rebuild.
          * Invalidates both sequential and parallel schedulers.
          */
-        void InvalidateScheduler() noexcept {
+        void InvalidateScheduler() noexcept
+        {
             m_scheduler.Invalidate();
             if (m_parallelScheduler != nullptr)
             {
@@ -730,17 +824,29 @@ namespace queen
          * Use this to get a CommandBuffer for the current thread.
          * Commands are automatically flushed at the end of Update().
          */
-        [[nodiscard]] Commands<PersistentAllocator>& GetCommands() noexcept { return m_commands; }
+        [[nodiscard]] Commands<PersistentAllocator>& GetCommands() noexcept
+        {
+            return m_commands;
+        }
 
-        [[nodiscard]] const Commands<PersistentAllocator>& GetCommands() const noexcept { return m_commands; }
+        [[nodiscard]] const Commands<PersistentAllocator>& GetCommands() const noexcept
+        {
+            return m_commands;
+        }
 
         // ─────────────────────────────────────────────────────────────
         // Events
         // ─────────────────────────────────────────────────────────────
 
-        [[nodiscard]] Events<PersistentAllocator>& GetEvents() noexcept { return m_events; }
+        [[nodiscard]] Events<PersistentAllocator>& GetEvents() noexcept
+        {
+            return m_events;
+        }
 
-        [[nodiscard]] const Events<PersistentAllocator>& GetEvents() const noexcept { return m_events; }
+        [[nodiscard]] const Events<PersistentAllocator>& GetEvents() const noexcept
+        {
+            return m_events;
+        }
 
         /**
          * Send an event (adds to current frame's queue)
@@ -748,7 +854,8 @@ namespace queen
          * @tparam E Event type
          * @param event The event to send
          */
-        template <typename E> void SendEvent(E&& event) {
+        template <typename E> void SendEvent(E&& event)
+        {
             m_events.template Send<std::decay_t<E>>(std::forward<E>(event));
         }
 
@@ -758,7 +865,8 @@ namespace queen
          * @tparam E Event type
          * @return EventWriter for sending events
          */
-        template <typename E> [[nodiscard]] EventWriter<E, PersistentAllocator> EventWriter() {
+        template <typename E> [[nodiscard]] EventWriter<E, PersistentAllocator> EventWriter()
+        {
             return m_events.template Writer<E>();
         }
 
@@ -768,7 +876,8 @@ namespace queen
          * @tparam E Event type
          * @return EventReader for reading events
          */
-        template <typename E> [[nodiscard]] queen::EventReader<E, PersistentAllocator> EventReader() {
+        template <typename E> [[nodiscard]] queen::EventReader<E, PersistentAllocator> EventReader()
+        {
             return m_events.template Reader<E>();
         }
 
@@ -792,21 +901,35 @@ namespace queen
          * @endcode
          */
         template <ObserverTrigger TriggerEvent>
-        [[nodiscard]] ObserverBuilder<TriggerEvent, PersistentAllocator> Observer(const char* name) {
+        [[nodiscard]] ObserverBuilder<TriggerEvent, PersistentAllocator> Observer(const char* name)
+        {
             return m_observers.template Register<TriggerEvent>(*this, name);
         }
 
-        [[nodiscard]] ObserverStorage<PersistentAllocator>& GetObserverStorage() noexcept { return m_observers; }
-
-        [[nodiscard]] const ObserverStorage<PersistentAllocator>& GetObserverStorage() const noexcept {
+        [[nodiscard]] ObserverStorage<PersistentAllocator>& GetObserverStorage() noexcept
+        {
             return m_observers;
         }
 
-        void SetObserverEnabled(ObserverId id, bool enabled) { m_observers.SetEnabled(id, enabled); }
+        [[nodiscard]] const ObserverStorage<PersistentAllocator>& GetObserverStorage() const noexcept
+        {
+            return m_observers;
+        }
 
-        [[nodiscard]] bool IsObserverEnabled(ObserverId id) const noexcept { return m_observers.IsEnabled(id); }
+        void SetObserverEnabled(ObserverId id, bool enabled)
+        {
+            m_observers.SetEnabled(id, enabled);
+        }
 
-        [[nodiscard]] size_t ObserverCount() const noexcept { return m_observers.ObserverCount(); }
+        [[nodiscard]] bool IsObserverEnabled(ObserverId id) const noexcept
+        {
+            return m_observers.IsEnabled(id);
+        }
+
+        [[nodiscard]] size_t ObserverCount() const noexcept
+        {
+            return m_observers.ObserverCount();
+        }
 
         // ─────────────────────────────────────────────────────────────
         // Hierarchy
@@ -821,7 +944,8 @@ namespace queen
          * @param child Entity to set parent for
          * @param parent Parent entity (must be alive)
          */
-        void SetParent(Entity child, Entity parent) {
+        void SetParent(Entity child, Entity parent)
+        {
             hive::Assert(IsAlive(child), "Child entity must be alive");
             hive::Assert(IsAlive(parent), "Parent entity must be alive");
             hive::Assert(!(child == parent), "Entity cannot be its own parent");
@@ -870,7 +994,8 @@ namespace queen
          *
          * @param child Entity to remove parent from
          */
-        void RemoveParent(Entity child) {
+        void RemoveParent(Entity child)
+        {
             if (!IsAlive(child))
             {
                 return;
@@ -906,7 +1031,8 @@ namespace queen
          * @param child Entity to get parent of
          * @return Parent entity, or Entity::Invalid() if no parent
          */
-        [[nodiscard]] Entity GetParent(Entity child) const noexcept {
+        [[nodiscard]] Entity GetParent(Entity child) const noexcept
+        {
             const Parent* parentComp = Get<Parent>(child);
             if (parentComp == nullptr)
             {
@@ -915,7 +1041,10 @@ namespace queen
             return parentComp->m_entity;
         }
 
-        [[nodiscard]] bool HasParent(Entity child) const noexcept { return Has<Parent>(child); }
+        [[nodiscard]] bool HasParent(Entity child) const noexcept
+        {
+            return Has<Parent>(child);
+        }
 
         /**
          * Get children component of an entity
@@ -923,11 +1052,18 @@ namespace queen
          * @param parent Entity to get children of
          * @return Pointer to Children component, or nullptr if no children
          */
-        [[nodiscard]] Children* GetChildren(Entity parent) noexcept { return Get<Children>(parent); }
+        [[nodiscard]] Children* GetChildren(Entity parent) noexcept
+        {
+            return Get<Children>(parent);
+        }
 
-        [[nodiscard]] const Children* GetChildren(Entity parent) const noexcept { return Get<Children>(parent); }
+        [[nodiscard]] const Children* GetChildren(Entity parent) const noexcept
+        {
+            return Get<Children>(parent);
+        }
 
-        [[nodiscard]] size_t ChildCount(Entity parent) const noexcept {
+        [[nodiscard]] size_t ChildCount(Entity parent) const noexcept
+        {
             const Children* children = Get<Children>(parent);
             if (children == nullptr)
             {
@@ -942,7 +1078,8 @@ namespace queen
          * @param parent Parent entity
          * @param callback Called for each child
          */
-        template <typename F> void ForEachChild(Entity parent, F&& callback) {
+        template <typename F> void ForEachChild(Entity parent, F&& callback)
+        {
             const Children* children = Get<Children>(parent);
             if (children == nullptr)
             {
@@ -961,7 +1098,8 @@ namespace queen
          * @param root Root entity
          * @param callback Called for each descendant (not including root)
          */
-        template <typename F> void ForEachDescendant(Entity root, F&& callback) {
+        template <typename F> void ForEachDescendant(Entity root, F&& callback)
+        {
             // Depth-first traversal using frame allocator stack
             wax::Vector<Entity> stack{GetFrameAllocator()};
 
@@ -995,7 +1133,8 @@ namespace queen
         /**
          * Check if an entity is a descendant of another
          */
-        [[nodiscard]] bool IsDescendantOf(Entity entity, Entity ancestor) const noexcept {
+        [[nodiscard]] bool IsDescendantOf(Entity entity, Entity ancestor) const noexcept
+        {
             static constexpr uint32_t kMaxHierarchyDepth = 1024;
             Entity current = entity;
             for (uint32_t i = 0; i < kMaxHierarchyDepth; ++i)
@@ -1017,7 +1156,8 @@ namespace queen
             return false;
         }
 
-        [[nodiscard]] Entity GetRoot(Entity entity) const noexcept {
+        [[nodiscard]] Entity GetRoot(Entity entity) const noexcept
+        {
             static constexpr uint32_t kMaxHierarchyDepth = 1024;
             Entity current = entity;
             for (uint32_t i = 0; i < kMaxHierarchyDepth; ++i)
@@ -1033,7 +1173,8 @@ namespace queen
             return entity;
         }
 
-        [[nodiscard]] uint32_t GetDepth(Entity entity) const noexcept {
+        [[nodiscard]] uint32_t GetDepth(Entity entity) const noexcept
+        {
             static constexpr uint32_t kMaxHierarchyDepth = 1024;
             uint32_t depth = 0;
             Entity current = entity;
@@ -1056,7 +1197,8 @@ namespace queen
          *
          * Children are despawned first (depth-first), then the entity itself.
          */
-        void DespawnRecursive(Entity entity) {
+        void DespawnRecursive(Entity entity)
+        {
             HIVE_PROFILE_SCOPE_N("World::DespawnRecursive");
             if (!IsAlive(entity))
             {
@@ -1087,7 +1229,10 @@ namespace queen
         /**
          * Get the current world tick
          */
-        [[nodiscard]] Tick CurrentTick() const noexcept { return m_currentTick; }
+        [[nodiscard]] Tick CurrentTick() const noexcept
+        {
+            return m_currentTick;
+        }
 
         /**
          * Increment the world tick
@@ -1095,21 +1240,29 @@ namespace queen
          * Called automatically at the start of Update(). Can also be called
          * manually to advance the tick without running systems.
          */
-        void IncrementTick() noexcept { ++m_currentTick; }
+        void IncrementTick() noexcept
+        {
+            ++m_currentTick;
+        }
 
     private:
         friend class EntityBuilder;
 
         template <comb::Allocator OtherAlloc> friend class CommandBuffer;
 
-        Entity AllocateEntity() { return m_entityAllocator.Allocate(); }
+        Entity AllocateEntity()
+        {
+            return m_entityAllocator.Allocate();
+        }
 
-        void PlaceEntity(Entity entity, Archetype<ComponentAllocator>* archetype) {
+        void PlaceEntity(Entity entity, Archetype<ComponentAllocator>* archetype)
+        {
             uint32_t row = archetype->AllocateRow(entity, m_currentTick);
             m_entityLocations.Set(entity, EntityRecord{archetype, row});
         }
 
-        void RegisterNewArchetype(Archetype<ComponentAllocator>* archetype) {
+        void RegisterNewArchetype(Archetype<ComponentAllocator>* archetype)
+        {
             if (archetype->ComponentCount() > 0)
             {
                 bool alreadyRegistered = false;
@@ -1134,7 +1287,8 @@ namespace queen
         }
 
         void MoveEntity(Entity entity, EntityRecord& record, Archetype<ComponentAllocator>* oldArch,
-                        Archetype<ComponentAllocator>* newArch) {
+                        Archetype<ComponentAllocator>* newArch)
+        {
             HIVE_PROFILE_SCOPE_N("World::MoveEntity");
             uint32_t oldRow = record.m_row;
 
@@ -1206,9 +1360,12 @@ namespace queen
         explicit EntityBuilder(World& world)
             : m_world{&world}
             , m_pendingMetas{world.GetFrameAllocator()}
-            , m_pendingData{world.GetFrameAllocator()} {}
+            , m_pendingData{world.GetFrameAllocator()}
+        {
+        }
 
-        template <typename T> EntityBuilder& With(T&& component) {
+        template <typename T> EntityBuilder& With(T&& component)
+        {
             TypeId typeId = TypeIdOf<T>();
 
             for (size_t i = 0; i < m_pendingMetas.Size(); ++i)
@@ -1230,7 +1387,8 @@ namespace queen
             return *this;
         }
 
-        EntityBuilder& WithRaw(const ComponentMeta& meta, void* sourceData) {
+        EntityBuilder& WithRaw(const ComponentMeta& meta, void* sourceData)
+        {
             TypeId typeId = meta.m_typeId;
 
             for (size_t i = 0; i < m_pendingMetas.Size(); ++i)
@@ -1265,7 +1423,8 @@ namespace queen
             return *this;
         }
 
-        Entity Build() {
+        Entity Build()
+        {
             HIVE_PROFILE_SCOPE_N("World::Spawn");
             Entity entity = m_world->AllocateEntity();
 
@@ -1304,11 +1463,13 @@ namespace queen
         wax::Vector<void*> m_pendingData;
     };
 
-    inline EntityBuilder World::Spawn() {
+    inline EntityBuilder World::Spawn()
+    {
         return EntityBuilder{*this};
     }
 
-    template <typename... Components> Entity World::Spawn(Components&&... components) {
+    template <typename... Components> Entity World::Spawn(Components&&... components)
+    {
         EntityBuilder builder{*this};
         (builder.With(std::forward<Components>(components)), ...);
         return builder.Build();
@@ -1318,7 +1479,8 @@ namespace queen
     // CommandBuffer::Flush implementation (here to avoid circular dependency)
     // ─────────────────────────────────────────────────────────────
 
-    template <comb::Allocator Allocator> void CommandBuffer<Allocator>::Flush(World& world) {
+    template <comb::Allocator Allocator> void CommandBuffer<Allocator>::Flush(World& world)
+    {
         HIVE_PROFILE_SCOPE_N("CommandBuffer::Flush");
         m_spawnedEntities.Clear();
         m_spawnedEntities.Reserve(m_spawnCount);

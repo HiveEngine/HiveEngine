@@ -7,18 +7,21 @@
 namespace hive
 {
 
-    DynamicLibrary::~DynamicLibrary() {
+    DynamicLibrary::~DynamicLibrary()
+    {
         Unload();
     }
 
     DynamicLibrary::DynamicLibrary(DynamicLibrary&& other) noexcept
-        : m_handle{other.m_handle} {
+        : m_handle{other.m_handle}
+    {
         std::memcpy(m_errorBuf, other.m_errorBuf, kErrorBufSize);
         other.m_handle = nullptr;
         other.m_errorBuf[0] = '\0';
     }
 
-    DynamicLibrary& DynamicLibrary::operator=(DynamicLibrary&& other) noexcept {
+    DynamicLibrary& DynamicLibrary::operator=(DynamicLibrary&& other) noexcept
+    {
         if (this != &other)
         {
             Unload();
@@ -30,7 +33,8 @@ namespace hive
         return *this;
     }
 
-    bool DynamicLibrary::Load(const char* path) {
+    bool DynamicLibrary::Load(const char* path)
+    {
         Unload();
         m_handle = static_cast<void*>(LoadLibraryA(path));
         if (!m_handle)
@@ -47,7 +51,8 @@ namespace hive
         return true;
     }
 
-    void DynamicLibrary::Unload() {
+    void DynamicLibrary::Unload()
+    {
         if (m_handle)
         {
             FreeLibrary(static_cast<HMODULE>(m_handle));
@@ -55,7 +60,8 @@ namespace hive
         }
     }
 
-    void* DynamicLibrary::GetSymbol(const char* name) const {
+    void* DynamicLibrary::GetSymbol(const char* name) const
+    {
         if (!m_handle)
             return nullptr;
         void* sym = reinterpret_cast<void*>(GetProcAddress(static_cast<HMODULE>(m_handle), name));
@@ -71,11 +77,13 @@ namespace hive
         return sym;
     }
 
-    bool DynamicLibrary::IsLoaded() const noexcept {
+    bool DynamicLibrary::IsLoaded() const noexcept
+    {
         return m_handle != nullptr;
     }
 
-    const char* DynamicLibrary::GetError() const noexcept {
+    const char* DynamicLibrary::GetError() const noexcept
+    {
         return m_errorBuf;
     }
 

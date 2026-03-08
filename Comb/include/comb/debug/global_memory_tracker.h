@@ -78,7 +78,8 @@ namespace comb::debug
         /**
          * Get singleton instance (Meyer's singleton, thread-safe since C++11)
          */
-        static GlobalMemoryTracker& GetInstance() {
+        static GlobalMemoryTracker& GetInstance()
+        {
             static GlobalMemoryTracker s_instance;
             return s_instance;
         }
@@ -105,7 +106,8 @@ namespace comb::debug
          *
          * Thread-safe: Yes (mutex protected)
          */
-        void RegisterAllocator(const char* name, AllocationRegistry* registry, bool includeInLeakReport = true) {
+        void RegisterAllocator(const char* name, AllocationRegistry* registry, bool includeInLeakReport = true)
+        {
             hive::Assert(name != nullptr, "Allocator name cannot be null");
             hive::Assert(registry != nullptr, "Registry cannot be null");
 
@@ -135,7 +137,8 @@ namespace comb::debug
          *
          * Thread-safe: Yes (mutex protected)
          */
-        void UnregisterAllocator(AllocationRegistry* registry) {
+        void UnregisterAllocator(AllocationRegistry* registry)
+        {
             hive::Assert(registry != nullptr, "Registry cannot be null");
 
             std::lock_guard<std::mutex> lock(m_mutex);
@@ -165,7 +168,8 @@ namespace comb::debug
          *
          * Thread-safe: Yes (mutex protected)
          */
-        [[nodiscard]] AllocationStats GetGlobalStats() const {
+        [[nodiscard]] AllocationStats GetGlobalStats() const
+        {
             std::lock_guard<std::mutex> lock(m_mutex);
 
             AllocationStats globalStats{};
@@ -191,7 +195,8 @@ namespace comb::debug
         /**
          * Get number of registered allocators
          */
-        [[nodiscard]] size_t GetAllocatorCount() const {
+        [[nodiscard]] size_t GetAllocatorCount() const
+        {
             std::lock_guard<std::mutex> lock(m_mutex);
             return m_allocators.size();
         }
@@ -203,7 +208,8 @@ namespace comb::debug
         /**
          * Print all registered allocators and their statistics
          */
-        void PrintAllAllocators() const {
+        void PrintAllAllocators() const
+        {
             std::lock_guard<std::mutex> lock(m_mutex);
 
             if (m_allocators.empty())
@@ -247,7 +253,8 @@ namespace comb::debug
          *
          * Checks all allocators for leaks and prints summary.
          */
-        void PrintLeakReport() const {
+        void PrintLeakReport() const
+        {
             std::lock_guard<std::mutex> lock(m_mutex);
 
             size_t totalLeaks = 0;
@@ -295,7 +302,8 @@ namespace comb::debug
          *
          * Call this explicitly before shutdown while logging is still alive.
          */
-        void ReportLiveAllocatorLeaks() const {
+        void ReportLiveAllocatorLeaks() const
+        {
             std::vector<AllocatorInfo> allocators;
             {
                 std::lock_guard<std::mutex> lock(m_mutex);
@@ -377,7 +385,8 @@ namespace comb::debug
         mutable std::mutex m_mutex;
     };
 
-    inline void ReportLiveAllocatorLeaks() {
+    inline void ReportLiveAllocatorLeaks()
+    {
         GlobalMemoryTracker::GetInstance().ReportLiveAllocatorLeaks();
     }
 

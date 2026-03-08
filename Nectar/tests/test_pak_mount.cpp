@@ -17,23 +17,27 @@
 namespace
 {
 
-    auto& GetPakMountAlloc() {
+    auto& GetPakMountAlloc()
+    {
         static comb::ModuleAllocator alloc{"TestPakMount", 8 * 1024 * 1024};
         return alloc.Get();
     }
 
-    const char* TempMountPakPath() {
+    const char* TempMountPakPath()
+    {
         static std::string path = (std::filesystem::temp_directory_path() / "hive_test_mount.npak").string();
         return path.c_str();
     }
 
-    void CleanupMountPak() {
+    void CleanupMountPak()
+    {
         std::remove(TempMountPakPath());
     }
 
     // Helper: build a .npak with manifest from data pairs
     nectar::PakReader* BuildTestPak(comb::DefaultAllocator& alloc, const char* paths[], const char* datas[],
-                                    size_t count) {
+                                    size_t count)
+    {
         CleanupMountPak();
 
         nectar::PakBuilder builder{alloc};

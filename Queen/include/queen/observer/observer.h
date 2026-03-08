@@ -22,14 +22,27 @@ namespace queen
     {
     public:
         constexpr ObserverId() noexcept
-            : m_value{0} {}
+            : m_value{0}
+        {
+        }
         constexpr explicit ObserverId(uint32_t id) noexcept
-            : m_value{id} {}
+            : m_value{id}
+        {
+        }
 
-        [[nodiscard]] constexpr uint32_t Value() const noexcept { return m_value; }
-        [[nodiscard]] constexpr bool IsValid() const noexcept { return m_value != 0; }
+        [[nodiscard]] constexpr uint32_t Value() const noexcept
+        {
+            return m_value;
+        }
+        [[nodiscard]] constexpr bool IsValid() const noexcept
+        {
+            return m_value != 0;
+        }
 
-        [[nodiscard]] constexpr bool operator==(ObserverId other) const noexcept { return m_value == other.m_value; }
+        [[nodiscard]] constexpr bool operator==(ObserverId other) const noexcept
+        {
+            return m_value == other.m_value;
+        }
 
     private:
         uint32_t m_value;
@@ -117,7 +130,8 @@ namespace queen
             , m_callbackFn{nullptr}
             , m_userData{nullptr}
             , m_destructorFn{nullptr}
-            , m_allocator{&allocator} {
+            , m_allocator{&allocator}
+        {
             if (name != nullptr)
             {
                 size_t len = std::strlen(name);
@@ -132,7 +146,8 @@ namespace queen
             }
         }
 
-        ~Observer() {
+        ~Observer()
+        {
             if (m_userData != nullptr)
             {
                 if (m_destructorFn != nullptr)
@@ -155,14 +170,16 @@ namespace queen
             , m_callbackFn{other.m_callbackFn}
             , m_userData{other.m_userData}
             , m_destructorFn{other.m_destructorFn}
-            , m_allocator{other.m_allocator} {
+            , m_allocator{other.m_allocator}
+        {
             std::memcpy(m_name, other.m_name, sizeof(m_name));
             std::memcpy(m_filterIds, other.m_filterIds, sizeof(TypeId) * m_filterCount);
             other.m_userData = nullptr;
             other.m_destructorFn = nullptr;
         }
 
-        Observer& operator=(Observer&& other) noexcept {
+        Observer& operator=(Observer&& other) noexcept
+        {
             if (this != &other)
             {
                 if (m_userData != nullptr)
@@ -196,32 +213,64 @@ namespace queen
         // Accessors
         // ─────────────────────────────────────────────────────────────────
 
-        [[nodiscard]] ObserverId Id() const noexcept { return m_id; }
-        [[nodiscard]] const char* Name() const noexcept { return m_name; }
-        [[nodiscard]] TriggerType Trigger() const noexcept { return m_trigger; }
-        [[nodiscard]] TypeId ComponentId() const noexcept { return m_componentId; }
-        [[nodiscard]] bool IsEnabled() const noexcept { return m_enabled; }
+        [[nodiscard]] ObserverId Id() const noexcept
+        {
+            return m_id;
+        }
+        [[nodiscard]] const char* Name() const noexcept
+        {
+            return m_name;
+        }
+        [[nodiscard]] TriggerType Trigger() const noexcept
+        {
+            return m_trigger;
+        }
+        [[nodiscard]] TypeId ComponentId() const noexcept
+        {
+            return m_componentId;
+        }
+        [[nodiscard]] bool IsEnabled() const noexcept
+        {
+            return m_enabled;
+        }
 
-        [[nodiscard]] ObserverKey Key() const noexcept { return ObserverKey{m_trigger, m_componentId}; }
+        [[nodiscard]] ObserverKey Key() const noexcept
+        {
+            return ObserverKey{m_trigger, m_componentId};
+        }
 
         // ─────────────────────────────────────────────────────────────────
         // Mutators
         // ─────────────────────────────────────────────────────────────────
 
-        void SetEnabled(bool enabled) noexcept { m_enabled = enabled; }
+        void SetEnabled(bool enabled) noexcept
+        {
+            m_enabled = enabled;
+        }
 
-        void AddFilter(TypeId typeId) noexcept {
+        void AddFilter(TypeId typeId) noexcept
+        {
             if (m_filterCount < kMaxFilters)
             {
                 m_filterIds[m_filterCount++] = typeId;
             }
         }
 
-        [[nodiscard]] bool HasFilters() const noexcept { return m_filterCount > 0; }
-        [[nodiscard]] uint8_t FilterCount() const noexcept { return m_filterCount; }
-        [[nodiscard]] TypeId FilterId(uint8_t index) const noexcept { return m_filterIds[index]; }
+        [[nodiscard]] bool HasFilters() const noexcept
+        {
+            return m_filterCount > 0;
+        }
+        [[nodiscard]] uint8_t FilterCount() const noexcept
+        {
+            return m_filterCount;
+        }
+        [[nodiscard]] TypeId FilterId(uint8_t index) const noexcept
+        {
+            return m_filterIds[index];
+        }
 
-        void SetCallback(ObserverCallbackFn fn, void* userData, void (*destructor)(void*)) {
+        void SetCallback(ObserverCallbackFn fn, void* userData, void (*destructor)(void*))
+        {
             if (m_userData != nullptr)
             {
                 if (m_destructorFn != nullptr)
@@ -246,14 +295,18 @@ namespace queen
          * @param entity The entity being observed
          * @param component Pointer to component data (may be nullptr)
          */
-        void Invoke(World& world, Entity entity, const void* component) const {
+        void Invoke(World& world, Entity entity, const void* component) const
+        {
             if (m_callbackFn != nullptr && m_enabled)
             {
                 m_callbackFn(world, entity, component, m_userData);
             }
         }
 
-        [[nodiscard]] bool HasCallback() const noexcept { return m_callbackFn != nullptr; }
+        [[nodiscard]] bool HasCallback() const noexcept
+        {
+            return m_callbackFn != nullptr;
+        }
 
     private:
         ObserverId m_id;

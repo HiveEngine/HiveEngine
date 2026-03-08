@@ -49,7 +49,9 @@ namespace queen
             , m_roots{allocator}
             , m_executionOrder{allocator}
             , m_allocator{allocator}
-            , m_dirty{true} {}
+            , m_dirty{true}
+        {
+        }
 
         DependencyGraph(const DependencyGraph&) = delete;
         DependencyGraph& operator=(const DependencyGraph&) = delete;
@@ -63,7 +65,8 @@ namespace queen
          * edges where systems conflict. Systems registered earlier take
          * precedence (run first) when conflicts occur.
          */
-        void Build(const SystemStorage<Allocator>& storage) {
+        void Build(const SystemStorage<Allocator>& storage)
+        {
             HIVE_PROFILE_SCOPE_N("DependencyGraph::Build");
             Clear();
 
@@ -162,7 +165,8 @@ namespace queen
         /**
          * Reset all nodes to pending state for a new frame
          */
-        void Reset() {
+        void Reset()
+        {
             for (size_t i = 0; i < m_nodes.Size(); ++i)
             {
                 m_nodes[i].Reset();
@@ -172,27 +176,40 @@ namespace queen
         /**
          * Mark graph as needing rebuild
          */
-        void MarkDirty() noexcept { m_dirty = true; }
+        void MarkDirty() noexcept
+        {
+            m_dirty = true;
+        }
 
         /**
          * Check if graph needs rebuild
          */
-        [[nodiscard]] bool IsDirty() const noexcept { return m_dirty; }
+        [[nodiscard]] bool IsDirty() const noexcept
+        {
+            return m_dirty;
+        }
 
         /**
          * Get the topologically sorted execution order
          */
-        [[nodiscard]] const wax::Vector<uint32_t>& ExecutionOrder() const noexcept { return m_executionOrder; }
+        [[nodiscard]] const wax::Vector<uint32_t>& ExecutionOrder() const noexcept
+        {
+            return m_executionOrder;
+        }
 
         /**
          * Get root systems (no dependencies)
          */
-        [[nodiscard]] const wax::Vector<uint32_t>& Roots() const noexcept { return m_roots; }
+        [[nodiscard]] const wax::Vector<uint32_t>& Roots() const noexcept
+        {
+            return m_roots;
+        }
 
         /**
          * Get node by index
          */
-        [[nodiscard]] SystemNode* GetNode(uint32_t index) {
+        [[nodiscard]] SystemNode* GetNode(uint32_t index)
+        {
             if (index < m_nodes.Size())
             {
                 return &m_nodes[index];
@@ -200,7 +217,8 @@ namespace queen
             return nullptr;
         }
 
-        [[nodiscard]] const SystemNode* GetNode(uint32_t index) const {
+        [[nodiscard]] const SystemNode* GetNode(uint32_t index) const
+        {
             if (index < m_nodes.Size())
             {
                 return &m_nodes[index];
@@ -211,7 +229,8 @@ namespace queen
         /**
          * Get dependents of a node (systems that depend on this one)
          */
-        [[nodiscard]] const wax::Vector<uint32_t>* GetDependents(uint32_t index) const {
+        [[nodiscard]] const wax::Vector<uint32_t>* GetDependents(uint32_t index) const
+        {
             if (index < m_adjacency.Size())
             {
                 return &m_adjacency[index];
@@ -222,25 +241,31 @@ namespace queen
         /**
          * Get number of nodes
          */
-        [[nodiscard]] size_t NodeCount() const noexcept { return m_nodes.Size(); }
+        [[nodiscard]] size_t NodeCount() const noexcept
+        {
+            return m_nodes.Size();
+        }
 
         /**
          * Check if graph has cycles (should never happen with proper construction)
          */
-        [[nodiscard]] bool HasCycle() const noexcept {
+        [[nodiscard]] bool HasCycle() const noexcept
+        {
             // If topological sort succeeded, we have all nodes in order
             return m_executionOrder.Size() != m_nodes.Size();
         }
 
     private:
-        void Clear() {
+        void Clear()
+        {
             m_nodes.Clear();
             m_adjacency.Clear();
             m_roots.Clear();
             m_executionOrder.Clear();
         }
 
-        void ComputeTopologicalOrder() {
+        void ComputeTopologicalOrder()
+        {
             m_executionOrder.Clear();
             m_executionOrder.Reserve(m_nodes.Size());
 

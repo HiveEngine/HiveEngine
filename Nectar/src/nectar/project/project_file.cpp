@@ -6,9 +6,12 @@ namespace nectar
 {
     ProjectFile::ProjectFile(comb::DefaultAllocator& alloc)
         : m_alloc{&alloc}
-        , m_doc{alloc} {}
+        , m_doc{alloc}
+    {
+    }
 
-    ProjectFile::LoadResult ProjectFile::Load(wax::StringView content) {
+    ProjectFile::LoadResult ProjectFile::Load(wax::StringView content)
+    {
         auto parseResult = HiveParser::Parse(content, *m_alloc);
 
         LoadResult result{};
@@ -30,7 +33,8 @@ namespace nectar
         return result;
     }
 
-    ProjectFile::LoadResult ProjectFile::LoadFromDisk(wax::StringView filePath) {
+    ProjectFile::LoadResult ProjectFile::LoadFromDisk(wax::StringView filePath)
+    {
         LoadResult result{};
 
         wax::String path{*m_alloc, filePath};
@@ -79,7 +83,8 @@ namespace nectar
         return Load(content.View());
     }
 
-    void ProjectFile::Create(const ProjectDesc& desc) {
+    void ProjectFile::Create(const ProjectDesc& desc)
+    {
         m_doc = HiveDocument{*m_alloc};
 
         m_doc.SetValue("project", "name", HiveValue::MakeString(*m_alloc, desc.m_name));
@@ -100,11 +105,13 @@ namespace nectar
         }
     }
 
-    wax::String ProjectFile::Serialize() const {
+    wax::String ProjectFile::Serialize() const
+    {
         return HiveWriter::Write(m_doc, *m_alloc);
     }
 
-    bool ProjectFile::SaveToDisk(wax::StringView filePath) const {
+    bool ProjectFile::SaveToDisk(wax::StringView filePath) const
+    {
         wax::String content = Serialize();
         wax::String path{*m_alloc, filePath};
 
@@ -123,35 +130,43 @@ namespace nectar
         return true;
     }
 
-    wax::StringView ProjectFile::Name() const {
+    wax::StringView ProjectFile::Name() const
+    {
         return m_doc.GetString("project", "name");
     }
 
-    wax::StringView ProjectFile::Version() const {
+    wax::StringView ProjectFile::Version() const
+    {
         return m_doc.GetString("project", "version");
     }
 
-    wax::StringView ProjectFile::EnginePath() const {
+    wax::StringView ProjectFile::EnginePath() const
+    {
         return m_doc.GetString("engine", "path");
     }
 
-    wax::StringView ProjectFile::Backend() const {
+    wax::StringView ProjectFile::Backend() const
+    {
         return m_doc.GetString("render", "backend");
     }
 
-    wax::StringView ProjectFile::AssetsRelative() const {
+    wax::StringView ProjectFile::AssetsRelative() const
+    {
         return m_doc.GetString("paths", "assets", "assets");
     }
 
-    wax::StringView ProjectFile::CacheRelative() const {
+    wax::StringView ProjectFile::CacheRelative() const
+    {
         return m_doc.GetString("paths", "cache", ".hive-cache");
     }
 
-    wax::StringView ProjectFile::SourceRelative() const {
+    wax::StringView ProjectFile::SourceRelative() const
+    {
         return m_doc.GetString("paths", "source", "src");
     }
 
-    static void NormalizeSeparators(wax::String& path) {
+    static void NormalizeSeparators(wax::String& path)
+    {
         char* data = path.Data();
         for (size_t i = 0; i < path.Size(); ++i)
         {
@@ -162,7 +177,8 @@ namespace nectar
         }
     }
 
-    static wax::String JoinPath(comb::DefaultAllocator& alloc, wax::StringView root, wax::StringView relative) {
+    static wax::String JoinPath(comb::DefaultAllocator& alloc, wax::StringView root, wax::StringView relative)
+    {
         wax::String result{alloc, root};
 
         if (!root.IsEmpty() && root.Data()[root.Size() - 1] != '/' && root.Data()[root.Size() - 1] != '\\')
@@ -175,7 +191,8 @@ namespace nectar
         return result;
     }
 
-    ProjectPaths ProjectFile::ResolvePaths(wax::StringView projectRoot) const {
+    ProjectPaths ProjectFile::ResolvePaths(wax::StringView projectRoot) const
+    {
         ProjectPaths paths{};
 
         paths.m_root = wax::String{*m_alloc, projectRoot};
@@ -191,7 +208,8 @@ namespace nectar
         return paths;
     }
 
-    bool ProjectFile::Validate(wax::Vector<HiveParseError>& errors) const {
+    bool ProjectFile::Validate(wax::Vector<HiveParseError>& errors) const
+    {
         wax::StringView name = m_doc.GetString("project", "name");
         if (name.IsEmpty())
         {

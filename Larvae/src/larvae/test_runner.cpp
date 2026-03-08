@@ -11,9 +11,12 @@
 namespace larvae
 {
     TestRunner::TestRunner(const TestRunnerConfig& config)
-        : config_{config} {}
+        : config_{config}
+    {
+    }
 
-    int TestRunner::Run() {
+    int TestRunner::Run()
+    {
         std::vector<TestInfo> tests = TestRegistry::GetInstance().GetTests();
 
         if (tests.empty())
@@ -85,7 +88,8 @@ namespace larvae
         return GetFailedTests() > 0 ? 1 : 0;
     }
 
-    TestResult TestRunner::RunTest(const TestInfo& test_info) const {
+    TestResult TestRunner::RunTest(const TestInfo& test_info) const
+    {
         TestResult result;
         result.suite_name = test_info.suite_name;
         result.test_name = test_info.test_name;
@@ -151,7 +155,8 @@ namespace larvae
         return result;
     }
 
-    bool TestRunner::MatchesFilter(const TestInfo& test_info) const {
+    bool TestRunner::MatchesFilter(const TestInfo& test_info) const
+    {
         if (!config_.suite_filter.empty())
         {
             if (test_info.suite_name != config_.suite_filter)
@@ -192,7 +197,8 @@ namespace larvae
         return true;
     }
 
-    void TestRunner::PrintSummary() const {
+    void TestRunner::PrintSummary() const
+    {
         std::cout << "[==========] " << GetTotalTests() << " test(s) ran (" << GetTotalTime() << " ms total)\n";
         std::cout << "[  PASSED  ] " << GetPassedTests() << " test(s)\n";
 
@@ -226,11 +232,13 @@ namespace larvae
         }
     }
 
-    int TestRunner::GetTotalTests() const {
+    int TestRunner::GetTotalTests() const
+    {
         return static_cast<int>(results_.size());
     }
 
-    int TestRunner::GetPassedTests() const {
+    int TestRunner::GetPassedTests() const
+    {
         int count = 0;
         for (const auto& result : results_)
         {
@@ -240,7 +248,8 @@ namespace larvae
         return count;
     }
 
-    int TestRunner::GetFailedTests() const {
+    int TestRunner::GetFailedTests() const
+    {
         int count = 0;
         for (const auto& result : results_)
         {
@@ -250,7 +259,8 @@ namespace larvae
         return count;
     }
 
-    int TestRunner::GetSkippedTests() const {
+    int TestRunner::GetSkippedTests() const
+    {
         int count = 0;
         for (const auto& result : results_)
         {
@@ -260,7 +270,8 @@ namespace larvae
         return count;
     }
 
-    double TestRunner::GetTotalTime() const {
+    double TestRunner::GetTotalTime() const
+    {
         double total = 0.0;
         for (const auto& result : results_)
         {
@@ -269,7 +280,8 @@ namespace larvae
         return total;
     }
 
-    TestRunnerConfig ParseCommandLine(int argc, char** argv) {
+    TestRunnerConfig ParseCommandLine(int argc, char** argv)
+    {
         TestRunnerConfig config;
 
         for (int i = 1; i < argc; ++i)

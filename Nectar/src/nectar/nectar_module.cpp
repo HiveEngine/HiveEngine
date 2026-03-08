@@ -4,7 +4,8 @@
 
 namespace nectar
 {
-    comb::DefaultAllocator& GetAllocator() {
+    comb::DefaultAllocator& GetAllocator()
+    {
         static comb::ModuleAllocator s_alloc{"Nectar", 64 * 1024 * 1024};
         return s_alloc.Get();
     }

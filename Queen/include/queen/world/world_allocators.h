@@ -27,29 +27,38 @@ namespace queen
 
         ThreadSafeBuddyAllocator(comb::BuddyAllocator& allocator, MutexType& mutex)
             : m_allocator{&allocator}
-            , m_mutex{&mutex} {}
+            , m_mutex{&mutex}
+        {
+        }
 
-        [[nodiscard]] void* Allocate(size_t size, size_t alignment, const char* tag = nullptr) {
+        [[nodiscard]] void* Allocate(size_t size, size_t alignment, const char* tag = nullptr)
+        {
             std::lock_guard<MutexType> lock{*m_mutex};
             return m_allocator->Allocate(size, alignment, tag);
         }
 
-        void Deallocate(void* ptr) {
+        void Deallocate(void* ptr)
+        {
             std::lock_guard<MutexType> lock{*m_mutex};
             m_allocator->Deallocate(ptr);
         }
 
-        [[nodiscard]] size_t GetUsedMemory() const {
+        [[nodiscard]] size_t GetUsedMemory() const
+        {
             std::lock_guard<MutexType> lock{*m_mutex};
             return m_allocator->GetUsedMemory();
         }
 
-        [[nodiscard]] size_t GetTotalMemory() const {
+        [[nodiscard]] size_t GetTotalMemory() const
+        {
             std::lock_guard<MutexType> lock{*m_mutex};
             return m_allocator->GetTotalMemory();
         }
 
-        [[nodiscard]] const char* GetName() const { return "ThreadSafeBuddyAllocator"; }
+        [[nodiscard]] const char* GetName() const
+        {
+            return "ThreadSafeBuddyAllocator";
+        }
 
     private:
         comb::BuddyAllocator* m_allocator;
@@ -167,12 +176,16 @@ namespace queen
         /**
          * Create WorldAllocators with default configuration
          */
-        static WorldAllocators Create() { return Create(WorldAllocatorConfig{}); }
+        static WorldAllocators Create()
+        {
+            return Create(WorldAllocatorConfig{});
+        }
 
         /**
          * Create WorldAllocators with custom configuration
          */
-        static WorldAllocators Create(const WorldAllocatorConfig& config) {
+        static WorldAllocators Create(const WorldAllocatorConfig& config)
+        {
             return WorldAllocators{config.m_persistentSize, config.m_componentSize, config.m_frameSize,
                                    config.m_threadFrameSize, config.m_threadCount};
         }
@@ -189,9 +202,15 @@ namespace queen
          * Use for: Archetypes, Systems, ArchetypeGraph, ComponentIndex,
          *          Resources, DependencyGraph
          */
-        [[nodiscard]] comb::BuddyAllocator& Persistent() noexcept { return m_persistent; }
+        [[nodiscard]] comb::BuddyAllocator& Persistent() noexcept
+        {
+            return m_persistent;
+        }
 
-        [[nodiscard]] const comb::BuddyAllocator& Persistent() const noexcept { return m_persistent; }
+        [[nodiscard]] const comb::BuddyAllocator& Persistent() const noexcept
+        {
+            return m_persistent;
+        }
 
         /**
          * Thread-safe wrapper around the persistent allocator
@@ -199,7 +218,8 @@ namespace queen
          * Use this for allocations during parallel system execution.
          * Returns a lightweight wrapper that locks the internal mutex.
          */
-        [[nodiscard]] ThreadSafeBuddyAllocator PersistentThreadSafe() noexcept {
+        [[nodiscard]] ThreadSafeBuddyAllocator PersistentThreadSafe() noexcept
+        {
             return ThreadSafeBuddyAllocator{m_persistent, m_persistentMutex};
         }
 
@@ -209,16 +229,25 @@ namespace queen
          * Use this when you need to protect a sequence of operations
          * on the persistent allocator (e.g., Query construction).
          */
-        [[nodiscard]] ThreadSafeBuddyAllocator::MutexType& PersistentMutex() noexcept { return m_persistentMutex; }
+        [[nodiscard]] ThreadSafeBuddyAllocator::MutexType& PersistentMutex() noexcept
+        {
+            return m_persistentMutex;
+        }
 
         /**
          * Component allocator for entity data
          *
          * Use for: Table columns, EntityAllocator, EntityLocationMap
          */
-        [[nodiscard]] comb::BuddyAllocator& Components() noexcept { return m_components; }
+        [[nodiscard]] comb::BuddyAllocator& Components() noexcept
+        {
+            return m_components;
+        }
 
-        [[nodiscard]] const comb::BuddyAllocator& Components() const noexcept { return m_components; }
+        [[nodiscard]] const comb::BuddyAllocator& Components() const noexcept
+        {
+            return m_components;
+        }
 
         /**
          * Frame allocator for per-frame temporary data
@@ -226,9 +255,15 @@ namespace queen
          * Use for: CommandBuffers, temporary query results
          * Reset at end of each Update()
          */
-        [[nodiscard]] comb::LinearAllocator& Frame() noexcept { return m_frame; }
+        [[nodiscard]] comb::LinearAllocator& Frame() noexcept
+        {
+            return m_frame;
+        }
 
-        [[nodiscard]] const comb::LinearAllocator& Frame() const noexcept { return m_frame; }
+        [[nodiscard]] const comb::LinearAllocator& Frame() const noexcept
+        {
+            return m_frame;
+        }
 
         /**
          * Get per-thread frame allocator
@@ -238,12 +273,14 @@ namespace queen
          *
          * @param thread_index Index of the worker thread (0 to ThreadCount()-1)
          */
-        [[nodiscard]] comb::LinearAllocator& ThreadFrame(size_t threadIndex) noexcept {
+        [[nodiscard]] comb::LinearAllocator& ThreadFrame(size_t threadIndex) noexcept
+        {
             hive::Assert(threadIndex < m_threadFrames.Size(), "Thread index out of bounds");
             return m_threadFrames[threadIndex];
         }
 
-        [[nodiscard]] const comb::LinearAllocator& ThreadFrame(size_t threadIndex) const noexcept {
+        [[nodiscard]] const comb::LinearAllocator& ThreadFrame(size_t threadIndex) const noexcept
+        {
             hive::Assert(threadIndex < m_threadFrames.Size(), "Thread index out of bounds");
             return m_threadFrames[threadIndex];
         }
@@ -251,7 +288,10 @@ namespace queen
         /**
          * Number of thread-local allocators available
          */
-        [[nodiscard]] size_t ThreadCount() const noexcept { return m_threadFrames.Size(); }
+        [[nodiscard]] size_t ThreadCount() const noexcept
+        {
+            return m_threadFrames.Size();
+        }
 
         // ─────────────────────────────────────────────────────────────
         // Reset Operations
@@ -262,14 +302,18 @@ namespace queen
          *
          * Called automatically at the end of World::Update()
          */
-        void ResetFrame() noexcept { m_frame.Reset(); }
+        void ResetFrame() noexcept
+        {
+            m_frame.Reset();
+        }
 
         /**
          * Reset all thread-local frame allocators
          *
          * Called automatically after parallel system execution
          */
-        void ResetThreadFrames() noexcept {
+        void ResetThreadFrames() noexcept
+        {
             for (size_t i = 0; i < m_threadFrames.Size(); ++i)
             {
                 m_threadFrames[i].Reset();
@@ -279,7 +323,8 @@ namespace queen
         /**
          * Reset a specific thread-local allocator
          */
-        void ResetThreadFrame(size_t threadIndex) noexcept {
+        void ResetThreadFrame(size_t threadIndex) noexcept
+        {
             hive::Assert(threadIndex < m_threadFrames.Size(), "Thread index out of bounds");
             m_threadFrames[threadIndex].Reset();
         }
@@ -291,22 +336,32 @@ namespace queen
         /**
          * Get total memory used by persistent allocator
          */
-        [[nodiscard]] size_t PersistentUsed() const noexcept { return m_persistent.GetUsedMemory(); }
+        [[nodiscard]] size_t PersistentUsed() const noexcept
+        {
+            return m_persistent.GetUsedMemory();
+        }
 
         /**
          * Get total memory used by component allocator
          */
-        [[nodiscard]] size_t ComponentsUsed() const noexcept { return m_components.GetUsedMemory(); }
+        [[nodiscard]] size_t ComponentsUsed() const noexcept
+        {
+            return m_components.GetUsedMemory();
+        }
 
         /**
          * Get current frame allocator usage
          */
-        [[nodiscard]] size_t FrameUsed() const noexcept { return m_frame.GetUsedMemory(); }
+        [[nodiscard]] size_t FrameUsed() const noexcept
+        {
+            return m_frame.GetUsedMemory();
+        }
 
         /**
          * Get total capacity across all allocators
          */
-        [[nodiscard]] size_t TotalCapacity() const noexcept {
+        [[nodiscard]] size_t TotalCapacity() const noexcept
+        {
             size_t total = m_persistent.GetTotalMemory() + m_components.GetTotalMemory() + m_frame.GetTotalMemory();
 
             for (size_t i = 0; i < m_threadFrames.Size(); ++i)
@@ -326,7 +381,8 @@ namespace queen
          *
          * Use this when allocating from worker threads during parallel execution.
          */
-        [[nodiscard]] void* PersistentAllocateThreadSafe(size_t size, size_t alignment, const char* tag = nullptr) {
+        [[nodiscard]] void* PersistentAllocateThreadSafe(size_t size, size_t alignment, const char* tag = nullptr)
+        {
             std::lock_guard<ThreadSafeBuddyAllocator::MutexType> lock{m_persistentMutex};
             return m_persistent.Allocate(size, alignment, tag);
         }
@@ -334,7 +390,8 @@ namespace queen
         /**
          * Thread-safe deallocation from the persistent allocator
          */
-        void PersistentDeallocateThreadSafe(void* ptr) {
+        void PersistentDeallocateThreadSafe(void* ptr)
+        {
             std::lock_guard<ThreadSafeBuddyAllocator::MutexType> lock{m_persistentMutex};
             m_persistent.Deallocate(ptr);
         }

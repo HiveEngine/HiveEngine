@@ -2,10 +2,10 @@
 
 #include <comb/default_allocator.h>
 
-#include <waggle/project/cmake_generator.h>
-
 #include <wax/containers/string.h>
 #include <wax/containers/string_view.h>
+
+#include <waggle/project/cmake_generator.h>
 
 namespace waggle
 {

@@ -1,10 +1,10 @@
 #include <comb/default_allocator.h>
 
+#include <nectar/project/project_file.h>
+
 #include <waggle/project/project_scaffolder.h>
 
 #include <larvae/larvae.h>
-
-#include <nectar/project/project_file.h>
 
 #include <cstdlib>
 #include <filesystem>
@@ -14,7 +14,8 @@
 
 namespace
 {
-    bool ShouldKeepTempDirs() {
+    bool ShouldKeepTempDirs()
+    {
 #if defined(_WIN32)
         char* value = nullptr;
         size_t size = 0;
@@ -27,7 +28,8 @@ namespace
 #endif
     }
 
-    auto& GetAlloc() {
+    auto& GetAlloc()
+    {
         static comb::ModuleAllocator alloc{"TestProjectScaffolder", 4 * 1024 * 1024};
         return alloc.Get();
     }
@@ -36,14 +38,16 @@ namespace
     {
         std::filesystem::path m_path;
 
-        explicit TempDir(const char* name) {
+        explicit TempDir(const char* name)
+        {
             m_path = std::filesystem::temp_directory_path() / name;
             std::error_code ec;
             std::filesystem::remove_all(m_path, ec);
             std::filesystem::create_directories(m_path, ec);
         }
 
-        ~TempDir() {
+        ~TempDir()
+        {
             if (ShouldKeepTempDirs())
             {
                 return;
@@ -59,7 +63,8 @@ namespace
         std::filesystem::path m_previous;
         bool m_active{false};
 
-        explicit WorkingDirScope(const std::filesystem::path& path) {
+        explicit WorkingDirScope(const std::filesystem::path& path)
+        {
             std::error_code ec;
             m_previous = std::filesystem::current_path(ec);
             if (ec)
@@ -71,7 +76,8 @@ namespace
             m_active = !ec;
         }
 
-        ~WorkingDirScope() {
+        ~WorkingDirScope()
+        {
             if (!m_active)
             {
                 return;
@@ -82,17 +88,20 @@ namespace
         }
     };
 
-    std::string ReadTextFile(const std::filesystem::path& path) {
+    std::string ReadTextFile(const std::filesystem::path& path)
+    {
         std::ifstream file{path, std::ios::binary};
         return std::string{std::istreambuf_iterator<char>{file}, std::istreambuf_iterator<char>{}};
     }
 
-    std::filesystem::path GetEngineRoot() {
+    std::filesystem::path GetEngineRoot()
+    {
         return std::filesystem::path{__FILE__}.parent_path().parent_path().parent_path();
     }
 
     bool RunCommandWithLog(const std::filesystem::path& workingDir, const char* command, const char* logName,
-                           std::string& output) {
+                           std::string& output)
+    {
         WorkingDirScope scope{workingDir};
         if (!scope.m_active)
         {
@@ -113,7 +122,8 @@ namespace
         return exitCode == 0;
     }
 
-    const char* GetGameplayModuleName() {
+    const char* GetGameplayModuleName()
+    {
 #if defined(_WIN32)
         return "gameplay.dll";
 #else
@@ -121,7 +131,8 @@ namespace
 #endif
     }
 
-    bool ContainsFileRecursive(const std::filesystem::path& root, const char* fileName) {
+    bool ContainsFileRecursive(const std::filesystem::path& root, const char* fileName)
+    {
         std::error_code ec;
         std::filesystem::recursive_directory_iterator it{root, ec};
         std::filesystem::recursive_directory_iterator end{};
@@ -220,8 +231,7 @@ namespace
 
         nectar::ProjectFile projectFile{alloc};
         const std::string projectPath = (dir.m_path / "project.hive").generic_string();
-        const auto loadResult =
-            projectFile.LoadFromDisk(wax::StringView{projectPath.c_str(), projectPath.size()});
+        const auto loadResult = projectFile.LoadFromDisk(wax::StringView{projectPath.c_str(), projectPath.size()});
 
         larvae::AssertTrue(loadResult.m_success);
         larvae::AssertTrue(projectFile.Name() == wax::StringView{"WriteProject"});
@@ -258,9 +268,9 @@ namespace
         larvae::AssertTrue(std::filesystem::exists(dir.m_path / "out" / "build" / "hive-headless" / "build.ninja"));
 
         std::string buildLog;
-        larvae::AssertTrue(RunCommandWithLog(dir.m_path,
-                                             "cmake --build \"out/build/hive-headless\" --config Debug --target gameplay",
-                                             "build.log", buildLog));
+        larvae::AssertTrue(
+            RunCommandWithLog(dir.m_path, "cmake --build \"out/build/hive-headless\" --config Debug --target gameplay",
+                              "build.log", buildLog));
 
         larvae::AssertTrue(ContainsFileRecursive(dir.m_path, GetGameplayModuleName()));
     });

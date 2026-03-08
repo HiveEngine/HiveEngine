@@ -1,16 +1,19 @@
 #include <forge/toolbar.h>
 
 #include <imgui.h>
+
 #include <imgui_internal.h>
 
 #include <cmath>
 
 namespace forge
 {
-    static float StoL(float s) {
+    static float StoL(float s)
+    {
         return s <= 0.04045f ? s / 12.92f : std::pow((s + 0.055f) / 1.055f, 2.4f);
     }
-    static ImVec4 L(float r, float g, float b, float a) {
+    static ImVec4 L(float r, float g, float b, float a)
+    {
         return {StoL(r), StoL(g), StoL(b), a};
     }
 
@@ -19,7 +22,8 @@ namespace forge
     static const ImVec4 K_RED = L(0.820f, 0.200f, 0.200f, 1.f);
     static const ImVec4 K_AMBER = L(0.900f, 0.680f, 0.050f, 1.f);
 
-    static bool ColoredButton(const char* label, const ImVec4& color) {
+    static bool ColoredButton(const char* label, const ImVec4& color)
+    {
         ImGui::PushStyleColor(ImGuiCol_Button, color);
         ImGui::PushStyleColor(ImGuiCol_ButtonHovered, {color.x * 1.2f, color.y * 1.2f, color.z * 1.2f, 1.f});
         ImGui::PushStyleColor(ImGuiCol_ButtonActive, {color.x * 0.8f, color.y * 0.8f, color.z * 0.8f, 1.f});
@@ -29,7 +33,8 @@ namespace forge
         return pressed;
     }
 
-    static bool ToggleButton(const char* label, bool active) {
+    static bool ToggleButton(const char* label, bool active)
+    {
         if (active)
         {
             ImGui::PushStyleColor(ImGuiCol_Button, K_ACCENT);
@@ -50,7 +55,8 @@ namespace forge
         return pressed;
     }
 
-    ToolbarAction DrawToolbarButtons(PlayState playState, GizmoState& gizmo) {
+    ToolbarAction DrawToolbarButtons(PlayState playState, GizmoState& gizmo)
+    {
         ToolbarAction action{};
 
         // Play / Pause / Stop

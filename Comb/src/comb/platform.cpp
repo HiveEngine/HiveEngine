@@ -13,7 +13,8 @@
 
 namespace comb
 {
-    size_t GetPageSize() {
+    size_t GetPageSize()
+    {
 #if defined(_WIN32)
         SYSTEM_INFO info{};
         GetSystemInfo(&info);
@@ -25,7 +26,8 @@ namespace comb
 #endif
     }
 
-    void* AllocatePages(size_t size) {
+    void* AllocatePages(size_t size)
+    {
 #if defined(_WIN32)
         void* ptr = VirtualAlloc(nullptr, size, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
         return ptr;
@@ -43,7 +45,8 @@ namespace comb
 #endif
     }
 
-    void FreePages(void* ptr, size_t size) {
+    void FreePages(void* ptr, size_t size)
+    {
         if (!ptr)
             return;
 

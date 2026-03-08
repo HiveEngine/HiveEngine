@@ -1,6 +1,6 @@
-#include <waggle/project/project_scaffolder.h>
-
 #include <nectar/project/project_file.h>
+
+#include <waggle/project/project_scaffolder.h>
 
 #include <filesystem>
 #include <fstream>
@@ -8,37 +8,39 @@
 
 namespace
 {
-    void AppendJsonEscaped(wax::String& out, wax::StringView value) {
+    void AppendJsonEscaped(wax::String& out, wax::StringView value)
+    {
         out.Append('"');
         for (size_t i = 0; i < value.Size(); ++i)
         {
             const char c = value.Data()[i];
             switch (c)
             {
-            case '\\':
-                out.Append("\\\\");
-                break;
-            case '"':
-                out.Append("\\\"");
-                break;
-            case '\n':
-                out.Append("\\n");
-                break;
-            case '\r':
-                out.Append("\\r");
-                break;
-            case '\t':
-                out.Append("\\t");
-                break;
-            default:
-                out.Append(&c, 1);
-                break;
+                case '\\':
+                    out.Append("\\\\");
+                    break;
+                case '"':
+                    out.Append("\\\"");
+                    break;
+                case '\n':
+                    out.Append("\\n");
+                    break;
+                case '\r':
+                    out.Append("\\r");
+                    break;
+                case '\t':
+                    out.Append("\\t");
+                    break;
+                default:
+                    out.Append(&c, 1);
+                    break;
             }
         }
         out.Append('"');
     }
 
-    wax::String NormalizePath(wax::StringView path, comb::DefaultAllocator& alloc) {
+    wax::String NormalizePath(wax::StringView path, comb::DefaultAllocator& alloc)
+    {
         wax::String normalized{alloc, path};
         char* data = normalized.Data();
         for (size_t i = 0; i < normalized.Size(); ++i)
@@ -51,7 +53,8 @@ namespace
         return normalized;
     }
 
-    const char* DetectDefaultPresetBase() {
+    const char* DetectDefaultPresetBase()
+    {
 #if defined(_WIN32)
 #if defined(__clang__)
         return "llvm-windows-base";
@@ -67,7 +70,8 @@ namespace
 #endif
     }
 
-    bool WriteTextFile(const std::filesystem::path& path, wax::StringView content) {
+    bool WriteTextFile(const std::filesystem::path& path, wax::StringView content)
+    {
         std::ofstream file{path, std::ios::binary};
         if (!file)
         {
@@ -78,7 +82,8 @@ namespace
         return file.good();
     }
 
-    bool SupportsMode(const waggle::ProjectScaffoldConfig& config, wax::StringView mode) {
+    bool SupportsMode(const waggle::ProjectScaffoldConfig& config, wax::StringView mode)
+    {
         if (mode == wax::StringView{"Editor"})
         {
             return config.m_supportEditor;
@@ -94,7 +99,8 @@ namespace
         return false;
     }
 
-    void AppendModeEntry(wax::String& out, bool& firstMode, wax::StringView mode) {
+    void AppendModeEntry(wax::String& out, bool& firstMode, wax::StringView mode)
+    {
         if (!firstMode)
         {
             out.Append(", ");
@@ -104,7 +110,8 @@ namespace
     }
 
     void AppendPresetHeader(wax::String& out, wax::StringView presetBase, wax::StringView enginePath,
-                            comb::DefaultAllocator& alloc) {
+                            comb::DefaultAllocator& alloc)
+    {
         out.Append("      \"generator\": \"Ninja\",\n");
 
         if (presetBase == wax::StringView{"llvm-windows-base"})
@@ -117,7 +124,8 @@ namespace
         }
     }
 
-    void AppendPresetBaseCacheVariables(wax::String& out, wax::StringView presetBase) {
+    void AppendPresetBaseCacheVariables(wax::String& out, wax::StringView presetBase)
+    {
         out.Append("        \"CMAKE_EXPORT_COMPILE_COMMANDS\": \"ON\",\n");
 
         if (presetBase == wax::StringView{"msvc-windows-base"})
@@ -141,7 +149,8 @@ namespace
 namespace waggle
 {
     wax::String ProjectScaffolder::GenerateProjectManifest(const ProjectScaffoldConfig& config,
-                                                           comb::DefaultAllocator& alloc) {
+                                                           comb::DefaultAllocator& alloc)
+    {
         wax::String out{alloc};
         out.Reserve(1024);
 
@@ -189,14 +198,14 @@ namespace waggle
     }
 
     wax::String ProjectScaffolder::GenerateUserPresets(const ProjectScaffoldConfig& config,
-                                                       comb::DefaultAllocator& alloc) {
+                                                       comb::DefaultAllocator& alloc)
+    {
         wax::String out{alloc};
         out.Reserve(4096);
 
         wax::String enginePath = NormalizePath(config.m_cmake.m_enginePath, alloc);
-        wax::String presetBase{
-            alloc,
-            config.m_presetBase.IsEmpty() ? wax::StringView{DetectDefaultPresetBase()} : config.m_presetBase};
+        wax::String presetBase{alloc, config.m_presetBase.IsEmpty() ? wax::StringView{DetectDefaultPresetBase()}
+                                                                    : config.m_presetBase};
 
         out.Append("{\n");
         out.Append("  \"version\": 6,\n");
@@ -299,7 +308,8 @@ namespace waggle
     }
 
     wax::String ProjectScaffolder::GenerateGameplayStub(const ProjectScaffoldConfig& config,
-                                                        comb::DefaultAllocator& alloc) {
+                                                        comb::DefaultAllocator& alloc)
+    {
         wax::String out{alloc};
         out.Reserve(512);
 
@@ -319,7 +329,8 @@ namespace waggle
         return out;
     }
 
-    bool ProjectScaffolder::WriteToProject(const ProjectScaffoldConfig& config, comb::DefaultAllocator& alloc) {
+    bool ProjectScaffolder::WriteToProject(const ProjectScaffoldConfig& config, comb::DefaultAllocator& alloc)
+    {
         if (!config.m_supportEditor && !config.m_supportGame && !config.m_supportHeadless)
         {
             return false;
@@ -375,9 +386,9 @@ namespace waggle
         {
             nectar::ProjectFile projectFile{alloc};
             const bool hasRenderBackend = config.m_cmake.m_linkSwarm;
-            const wax::StringView backend =
-                !config.m_runtimeBackend.IsEmpty() ? config.m_runtimeBackend
-                                                   : (hasRenderBackend ? wax::StringView{"vulkan"} : wax::StringView{});
+            const wax::StringView backend = !config.m_runtimeBackend.IsEmpty()
+                                                ? config.m_runtimeBackend
+                                                : (hasRenderBackend ? wax::StringView{"vulkan"} : wax::StringView{});
             projectFile.Create(nectar::ProjectDesc{
                 .m_name = config.m_cmake.m_projectName,
                 .m_version = config.m_projectVersion,

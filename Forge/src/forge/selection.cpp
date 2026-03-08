@@ -4,14 +4,16 @@
 
 namespace forge
 {
-    void EditorSelection::Select(queen::Entity entity) {
+    void EditorSelection::Select(queen::Entity entity)
+    {
         m_selected.clear();
         if (!entity.IsNull())
             m_selected.push_back(entity);
         m_primary = entity;
     }
 
-    void EditorSelection::Toggle(queen::Entity entity) {
+    void EditorSelection::Toggle(queen::Entity entity)
+    {
         if (entity.IsNull())
             return;
 
@@ -30,12 +32,14 @@ namespace forge
         }
     }
 
-    void EditorSelection::Clear() {
+    void EditorSelection::Clear()
+    {
         m_selected.clear();
         m_primary = {};
     }
 
-    bool EditorSelection::IsSelected(queen::Entity entity) const noexcept {
+    bool EditorSelection::IsSelected(queen::Entity entity) const noexcept
+    {
         return std::find(m_selected.begin(), m_selected.end(), entity) != m_selected.end();
     }
 } // namespace forge

@@ -69,7 +69,9 @@ namespace queen
             , m_ownsPool{false}
             , m_remaining{nullptr}
             , m_remainingCount{0}
-            , m_allocator{&allocator} {}
+            , m_allocator{&allocator}
+        {
+        }
 
         /**
          * Create a ParallelScheduler with a new internal thread pool
@@ -80,13 +82,15 @@ namespace queen
             , m_ownsPool{true}
             , m_remaining{nullptr}
             , m_remainingCount{0}
-            , m_allocator{&allocator} {
+            , m_allocator{&allocator}
+        {
             void* poolMem = m_allocator->Allocate(sizeof(ThreadPool<Allocator>), alignof(ThreadPool<Allocator>));
             m_pool = new (poolMem) ThreadPool<Allocator>{allocator, workerCount};
             m_pool->Start();
         }
 
-        ~ParallelScheduler() {
+        ~ParallelScheduler()
+        {
             if (m_remaining != nullptr)
             {
                 for (size_t i = 0; i < m_remainingCount; ++i)
@@ -112,7 +116,8 @@ namespace queen
         /**
          * Build/rebuild the dependency graph from system storage
          */
-        void Build(const SystemStorage<Allocator>& storage) {
+        void Build(const SystemStorage<Allocator>& storage)
+        {
             m_graph.Build(storage);
             ReallocateRemaining(m_graph.NodeCount());
         }
@@ -120,12 +125,18 @@ namespace queen
         /**
          * Mark the graph as needing rebuild
          */
-        void Invalidate() noexcept { m_graph.MarkDirty(); }
+        void Invalidate() noexcept
+        {
+            m_graph.MarkDirty();
+        }
 
         /**
          * Check if the graph needs rebuild
          */
-        [[nodiscard]] bool NeedsRebuild() const noexcept { return m_graph.IsDirty(); }
+        [[nodiscard]] bool NeedsRebuild() const noexcept
+        {
+            return m_graph.IsDirty();
+        }
 
         /**
          * Run all systems in parallel where possible
@@ -138,27 +149,43 @@ namespace queen
         /**
          * Get the dependency graph
          */
-        [[nodiscard]] const DependencyGraph<Allocator>& Graph() const noexcept { return m_graph; }
+        [[nodiscard]] const DependencyGraph<Allocator>& Graph() const noexcept
+        {
+            return m_graph;
+        }
 
-        [[nodiscard]] DependencyGraph<Allocator>& Graph() noexcept { return m_graph; }
+        [[nodiscard]] DependencyGraph<Allocator>& Graph() noexcept
+        {
+            return m_graph;
+        }
 
         /**
          * Get the thread pool
          */
-        [[nodiscard]] ThreadPool<Allocator>* Pool() noexcept { return m_pool; }
+        [[nodiscard]] ThreadPool<Allocator>* Pool() noexcept
+        {
+            return m_pool;
+        }
 
         /**
          * Get the execution order (for debugging/visualization)
          */
-        [[nodiscard]] const wax::Vector<uint32_t>& ExecutionOrder() const noexcept { return m_graph.ExecutionOrder(); }
+        [[nodiscard]] const wax::Vector<uint32_t>& ExecutionOrder() const noexcept
+        {
+            return m_graph.ExecutionOrder();
+        }
 
         /**
          * Check if the dependency graph has cycles
          */
-        [[nodiscard]] bool HasCycle() const noexcept { return m_graph.HasCycle(); }
+        [[nodiscard]] bool HasCycle() const noexcept
+        {
+            return m_graph.HasCycle();
+        }
 
     private:
-        void ReallocateRemaining(size_t count) {
+        void ReallocateRemaining(size_t count)
+        {
             // Clean up old array
             if (m_remaining != nullptr)
             {
@@ -185,7 +212,8 @@ namespace queen
             }
         }
 
-        void ResetRemainingCounts() {
+        void ResetRemainingCounts()
+        {
             for (size_t i = 0; i < m_remainingCount; ++i)
             {
                 const SystemNode* node = m_graph.GetNode(static_cast<uint32_t>(i));
@@ -197,7 +225,8 @@ namespace queen
         }
 
         void SubmitSystemTask(uint32_t nodeIndex, World& world, SystemStorage<Allocator>& storage, Tick tick,
-                              WaitGroup& wg) {
+                              WaitGroup& wg)
+        {
             // Pack context into task data
             struct TaskData
             {
@@ -234,7 +263,8 @@ namespace queen
         }
 
         void ExecuteSystem(uint32_t nodeIndex, World& world, SystemStorage<Allocator>& storage, Tick tick,
-                           WaitGroup& wg) {
+                           WaitGroup& wg)
+        {
             SystemNode* node = m_graph.GetNode(nodeIndex);
             if (node == nullptr)
             {

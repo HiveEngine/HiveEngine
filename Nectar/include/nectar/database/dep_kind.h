@@ -14,15 +14,18 @@ namespace nectar
         ALL = 7
     };
 
-    [[nodiscard]] constexpr DepKind operator|(DepKind a, DepKind b) noexcept {
+    [[nodiscard]] constexpr DepKind operator|(DepKind a, DepKind b) noexcept
+    {
         return static_cast<DepKind>(static_cast<uint8_t>(a) | static_cast<uint8_t>(b));
     }
 
-    [[nodiscard]] constexpr DepKind operator&(DepKind a, DepKind b) noexcept {
+    [[nodiscard]] constexpr DepKind operator&(DepKind a, DepKind b) noexcept
+    {
         return static_cast<DepKind>(static_cast<uint8_t>(a) & static_cast<uint8_t>(b));
     }
 
-    [[nodiscard]] constexpr bool HasFlag(DepKind mask, DepKind flag) noexcept {
+    [[nodiscard]] constexpr bool HasFlag(DepKind mask, DepKind flag) noexcept
+    {
         return (static_cast<uint8_t>(mask) & static_cast<uint8_t>(flag)) != 0;
     }
 } // namespace nectar

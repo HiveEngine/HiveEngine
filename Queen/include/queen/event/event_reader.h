@@ -70,17 +70,25 @@ namespace queen
 
         explicit EventReader(EventQueue<T, Allocator>& queue) noexcept
             : m_queue{&queue}
-            , m_cursor{0} {}
+            , m_cursor{0}
+        {
+        }
 
         /**
          * Get iterator to first unread event
          */
-        [[nodiscard]] Iterator Begin() const { return Iterator{m_queue, m_cursor}; }
+        [[nodiscard]] Iterator Begin() const
+        {
+            return Iterator{m_queue, m_cursor};
+        }
 
         /**
          * Get iterator past last event
          */
-        [[nodiscard]] Iterator End() const { return Iterator{m_queue, m_queue->TotalCount()}; }
+        [[nodiscard]] Iterator End() const
+        {
+            return Iterator{m_queue, m_queue->TotalCount()};
+        }
 
         /**
          * Iterate over unread events and advance cursor
@@ -91,7 +99,8 @@ namespace queen
          * @tparam Func Callable with signature void(const T&)
          * @param func Function to call for each event
          */
-        template <typename Func> void Read(Func&& func) {
+        template <typename Func> void Read(Func&& func)
+        {
             size_t total = m_queue->TotalCount();
             size_t prevSize = m_queue->PreviousCount();
 
@@ -113,7 +122,8 @@ namespace queen
         /**
          * Get number of unread events
          */
-        [[nodiscard]] size_t Count() const noexcept {
+        [[nodiscard]] size_t Count() const noexcept
+        {
             size_t total = m_queue->TotalCount();
             return total > m_cursor ? total - m_cursor : 0;
         }
@@ -121,31 +131,46 @@ namespace queen
         /**
          * Get total number of events (read + unread)
          */
-        [[nodiscard]] size_t TotalCount() const noexcept { return m_queue->TotalCount(); }
+        [[nodiscard]] size_t TotalCount() const noexcept
+        {
+            return m_queue->TotalCount();
+        }
 
         /**
          * Check if there are no unread events
          */
-        [[nodiscard]] bool IsEmpty() const noexcept { return m_cursor >= m_queue->TotalCount(); }
+        [[nodiscard]] bool IsEmpty() const noexcept
+        {
+            return m_cursor >= m_queue->TotalCount();
+        }
 
         /**
          * Mark all current events as read
          *
          * After calling this, IsEmpty() returns true until new events arrive.
          */
-        void MarkRead() noexcept { m_cursor = m_queue->TotalCount(); }
+        void MarkRead() noexcept
+        {
+            m_cursor = m_queue->TotalCount();
+        }
 
         /**
          * Reset cursor to re-read all events
          *
          * Allows re-processing all events from both buffers.
          */
-        void Reset() noexcept { m_cursor = 0; }
+        void Reset() noexcept
+        {
+            m_cursor = 0;
+        }
 
         /**
          * Clear cursor (alias for MarkRead for Bevy-like API)
          */
-        void Clear() noexcept { MarkRead(); }
+        void Clear() noexcept
+        {
+            MarkRead();
+        }
 
     private:
         EventQueue<T, Allocator>* m_queue;

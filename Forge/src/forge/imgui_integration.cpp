@@ -29,7 +29,8 @@ namespace forge
     static VkFramebuffer g_sFramebuffers[kMaxFramesInFlight] = {};
     static uint32_t g_sFrameIdx = 0;
 
-    static VkFormat DiligentToVkFormat(Diligent::TEXTURE_FORMAT fmt) {
+    static VkFormat DiligentToVkFormat(Diligent::TEXTURE_FORMAT fmt)
+    {
         using namespace Diligent;
         switch (fmt)
         {
@@ -50,7 +51,8 @@ namespace forge
         }
     }
 
-    static bool CreateImGuiRenderPass(VkDevice device, VkFormat colorFormat) {
+    static bool CreateImGuiRenderPass(VkDevice device, VkFormat colorFormat)
+    {
         VkAttachmentDescription att{};
         att.format = colorFormat;
         att.samples = VK_SAMPLE_COUNT_1_BIT;
@@ -80,7 +82,8 @@ namespace forge
         return vkCreateRenderPass(device, &ci, nullptr, &g_sRenderPass) == VK_SUCCESS;
     }
 
-    bool ForgeImGuiInit(swarm::RenderContext* ctx, GLFWwindow* window) {
+    bool ForgeImGuiInit(swarm::RenderContext* ctx, GLFWwindow* window)
+    {
         auto* deviceVk = static_cast<Diligent::IRenderDeviceVk*>(ctx->m_device);
 
         VkInstance vkInstance = deviceVk->GetVkInstance();
@@ -142,7 +145,8 @@ namespace forge
         return true;
     }
 
-    void ForgeImGuiShutdown(swarm::RenderContext* ctx) {
+    void ForgeImGuiShutdown(swarm::RenderContext* ctx)
+    {
         vkDeviceWaitIdle(g_sDevice);
 
         ImGui_ImplVulkan_Shutdown();
@@ -173,14 +177,16 @@ namespace forge
         g_sDevice = VK_NULL_HANDLE;
     }
 
-    void ForgeImGuiNewFrame() {
+    void ForgeImGuiNewFrame()
+    {
         ImGui_ImplVulkan_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
         ImGuizmo::BeginFrame();
     }
 
-    void ForgeImGuiRender(swarm::RenderContext* ctx) {
+    void ForgeImGuiRender(swarm::RenderContext* ctx)
+    {
         ImGui::Render();
 
         auto& scDesc = ctx->m_swapchain->GetDesc();
@@ -225,7 +231,8 @@ namespace forge
         g_sFrameIdx = (g_sFrameIdx + 1) % kMaxFramesInFlight;
     }
 
-    void* ForgeRegisterViewportRT(swarm::RenderContext* ctx, swarm::ViewportRT* rt) {
+    void* ForgeRegisterViewportRT(swarm::RenderContext* ctx, swarm::ViewportRT* rt)
+    {
         auto* srv = static_cast<Diligent::ITextureView*>(swarm::GetViewportRTSRV(rt));
         auto* srvVk = static_cast<Diligent::ITextureViewVk*>(srv);
         VkImageView imageView = srvVk->GetVulkanImageView();
@@ -241,7 +248,8 @@ namespace forge
         return ImGui_ImplVulkan_AddTexture(sampler, imageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
     }
 
-    void ForgeUnregisterViewportRT(void* textureId) {
+    void ForgeUnregisterViewportRT(void* textureId)
+    {
         ImGui_ImplVulkan_RemoveTexture(static_cast<VkDescriptorSet>(textureId));
     }
 

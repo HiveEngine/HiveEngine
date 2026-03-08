@@ -58,13 +58,15 @@ namespace wax
 
         // Constructor from reference (never null)
         constexpr Ref(T& value) noexcept
-            : ptr_{&value} {
+            : ptr_{&value}
+        {
             hive::Assert(ptr_ != nullptr, "Ref cannot be null");
         }
 
         // Constructor from pointer (checked in debug)
         constexpr explicit Ref(T* ptr) noexcept
-            : ptr_{ptr} {
+            : ptr_{ptr}
+        {
             hive::Assert(ptr_ != nullptr, "Ref cannot be constructed from nullptr");
         }
 
@@ -72,37 +74,69 @@ namespace wax
         constexpr Ref& operator=(const Ref&) noexcept = default;
 
         // Dereference operators
-        [[nodiscard]] constexpr T& operator*() const noexcept { return *ptr_; }
+        [[nodiscard]] constexpr T& operator*() const noexcept
+        {
+            return *ptr_;
+        }
 
-        [[nodiscard]] constexpr T* operator->() const noexcept { return ptr_; }
+        [[nodiscard]] constexpr T* operator->() const noexcept
+        {
+            return ptr_;
+        }
 
-        [[nodiscard]] constexpr T* Get() const noexcept { return ptr_; }
+        [[nodiscard]] constexpr T* Get() const noexcept
+        {
+            return ptr_;
+        }
 
         // Conversion to reference
-        [[nodiscard]] constexpr operator T&() const noexcept { return *ptr_; }
+        [[nodiscard]] constexpr operator T&() const noexcept
+        {
+            return *ptr_;
+        }
 
-        constexpr void Rebind(T& value) noexcept {
+        constexpr void Rebind(T& value) noexcept
+        {
             ptr_ = &value;
             hive::Assert(ptr_ != nullptr, "Ref cannot be rebound to null");
         }
 
-        constexpr void Rebind(T* ptr) noexcept {
+        constexpr void Rebind(T* ptr) noexcept
+        {
             hive::Assert(ptr != nullptr, "Ref cannot be rebound to nullptr");
             ptr_ = ptr;
         }
 
         // Comparison operators (compare pointers)
-        [[nodiscard]] constexpr bool operator==(const Ref& other) const noexcept { return ptr_ == other.ptr_; }
+        [[nodiscard]] constexpr bool operator==(const Ref& other) const noexcept
+        {
+            return ptr_ == other.ptr_;
+        }
 
-        [[nodiscard]] constexpr bool operator!=(const Ref& other) const noexcept { return ptr_ != other.ptr_; }
+        [[nodiscard]] constexpr bool operator!=(const Ref& other) const noexcept
+        {
+            return ptr_ != other.ptr_;
+        }
 
-        [[nodiscard]] constexpr bool operator<(const Ref& other) const noexcept { return ptr_ < other.ptr_; }
+        [[nodiscard]] constexpr bool operator<(const Ref& other) const noexcept
+        {
+            return ptr_ < other.ptr_;
+        }
 
-        [[nodiscard]] constexpr bool operator<=(const Ref& other) const noexcept { return ptr_ <= other.ptr_; }
+        [[nodiscard]] constexpr bool operator<=(const Ref& other) const noexcept
+        {
+            return ptr_ <= other.ptr_;
+        }
 
-        [[nodiscard]] constexpr bool operator>(const Ref& other) const noexcept { return ptr_ > other.ptr_; }
+        [[nodiscard]] constexpr bool operator>(const Ref& other) const noexcept
+        {
+            return ptr_ > other.ptr_;
+        }
 
-        [[nodiscard]] constexpr bool operator>=(const Ref& other) const noexcept { return ptr_ >= other.ptr_; }
+        [[nodiscard]] constexpr bool operator>=(const Ref& other) const noexcept
+        {
+            return ptr_ >= other.ptr_;
+        }
 
     private:
         T* ptr_;

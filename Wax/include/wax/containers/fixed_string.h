@@ -80,14 +80,16 @@ namespace wax
 
         constexpr FixedString() noexcept
             : buffer_{}
-            , size_{0} {
+            , size_{0}
+        {
             buffer_[0] = '\0';
         }
 
         // Constructor from C string (truncates if exceeds MaxCapacity)
         constexpr FixedString(const char* str) noexcept
             : buffer_{}
-            , size_{0} {
+            , size_{0}
+        {
             if (str)
             {
                 size_t len = StrLen(str);
@@ -110,7 +112,8 @@ namespace wax
         // Constructor from StringView (truncates if exceeds MaxCapacity)
         constexpr FixedString(StringView sv) noexcept
             : buffer_{}
-            , size_{0} {
+            , size_{0}
+        {
             size_t len = sv.Size();
             // Silently truncate to MaxCapacity (consistent with Append behavior)
             len = len <= MaxCapacity ? len : MaxCapacity;
@@ -126,7 +129,8 @@ namespace wax
         // Constructor from pointer and size (truncates if exceeds MaxCapacity)
         constexpr FixedString(const char* data, size_t size) noexcept
             : buffer_{}
-            , size_{0} {
+            , size_{0}
+        {
             // Silently truncate to MaxCapacity (consistent with Append behavior)
             size = size <= MaxCapacity ? size : MaxCapacity;
 
@@ -145,87 +149,139 @@ namespace wax
         constexpr FixedString& operator=(FixedString&&) noexcept = default;
 
         // Element access (bounds-checked in debug)
-        [[nodiscard]] constexpr char& operator[](size_t index) noexcept {
+        [[nodiscard]] constexpr char& operator[](size_t index) noexcept
+        {
             hive::Assert(index < size_, "FixedString index out of bounds");
             return buffer_[index];
         }
 
-        [[nodiscard]] constexpr const char& operator[](size_t index) const noexcept {
+        [[nodiscard]] constexpr const char& operator[](size_t index) const noexcept
+        {
             hive::Assert(index < size_, "FixedString index out of bounds");
             return buffer_[index];
         }
 
         // Element access (always bounds-checked)
-        [[nodiscard]] constexpr char& At(size_t index) {
+        [[nodiscard]] constexpr char& At(size_t index)
+        {
             hive::Check(index < size_, "FixedString index out of bounds");
             return buffer_[index];
         }
 
-        [[nodiscard]] constexpr const char& At(size_t index) const {
+        [[nodiscard]] constexpr const char& At(size_t index) const
+        {
             hive::Check(index < size_, "FixedString index out of bounds");
             return buffer_[index];
         }
 
         // First and last character access
-        [[nodiscard]] constexpr char& Front() noexcept {
+        [[nodiscard]] constexpr char& Front() noexcept
+        {
             hive::Assert(size_ > 0, "FixedString is empty");
             return buffer_[0];
         }
 
-        [[nodiscard]] constexpr const char& Front() const noexcept {
+        [[nodiscard]] constexpr const char& Front() const noexcept
+        {
             hive::Assert(size_ > 0, "FixedString is empty");
             return buffer_[0];
         }
 
-        [[nodiscard]] constexpr char& Back() noexcept {
+        [[nodiscard]] constexpr char& Back() noexcept
+        {
             hive::Assert(size_ > 0, "FixedString is empty");
             return buffer_[size_ - 1];
         }
 
-        [[nodiscard]] constexpr const char& Back() const noexcept {
+        [[nodiscard]] constexpr const char& Back() const noexcept
+        {
             hive::Assert(size_ > 0, "FixedString is empty");
             return buffer_[size_ - 1];
         }
 
         // Raw data access (mutable)
-        [[nodiscard]] constexpr char* Data() noexcept { return buffer_; }
+        [[nodiscard]] constexpr char* Data() noexcept
+        {
+            return buffer_;
+        }
 
-        [[nodiscard]] constexpr const char* Data() const noexcept { return buffer_; }
+        [[nodiscard]] constexpr const char* Data() const noexcept
+        {
+            return buffer_;
+        }
 
-        [[nodiscard]] constexpr const char* CStr() const noexcept { return buffer_; }
+        [[nodiscard]] constexpr const char* CStr() const noexcept
+        {
+            return buffer_;
+        }
 
         // Size information
-        [[nodiscard]] constexpr size_t Size() const noexcept { return size_; }
+        [[nodiscard]] constexpr size_t Size() const noexcept
+        {
+            return size_;
+        }
 
-        [[nodiscard]] constexpr size_t Length() const noexcept { return size_; }
+        [[nodiscard]] constexpr size_t Length() const noexcept
+        {
+            return size_;
+        }
 
-        [[nodiscard]] constexpr size_t Capacity() const noexcept { return MaxCapacity; }
+        [[nodiscard]] constexpr size_t Capacity() const noexcept
+        {
+            return MaxCapacity;
+        }
 
-        [[nodiscard]] constexpr bool IsEmpty() const noexcept { return size_ == 0; }
+        [[nodiscard]] constexpr bool IsEmpty() const noexcept
+        {
+            return size_ == 0;
+        }
 
-        [[nodiscard]] constexpr bool IsFull() const noexcept { return size_ == MaxCapacity; }
+        [[nodiscard]] constexpr bool IsFull() const noexcept
+        {
+            return size_ == MaxCapacity;
+        }
 
         // Iterator support
-        [[nodiscard]] constexpr Iterator begin() noexcept { return buffer_; }
+        [[nodiscard]] constexpr Iterator begin() noexcept
+        {
+            return buffer_;
+        }
 
-        [[nodiscard]] constexpr ConstIterator begin() const noexcept { return buffer_; }
+        [[nodiscard]] constexpr ConstIterator begin() const noexcept
+        {
+            return buffer_;
+        }
 
-        [[nodiscard]] constexpr Iterator end() noexcept { return buffer_ + size_; }
+        [[nodiscard]] constexpr Iterator end() noexcept
+        {
+            return buffer_ + size_;
+        }
 
-        [[nodiscard]] constexpr ConstIterator end() const noexcept { return buffer_ + size_; }
+        [[nodiscard]] constexpr ConstIterator end() const noexcept
+        {
+            return buffer_ + size_;
+        }
 
         // View conversion
-        [[nodiscard]] constexpr StringView View() const noexcept { return StringView{buffer_, size_}; }
+        [[nodiscard]] constexpr StringView View() const noexcept
+        {
+            return StringView{buffer_, size_};
+        }
 
-        [[nodiscard]] constexpr operator StringView() const noexcept { return View(); }
+        [[nodiscard]] constexpr operator StringView() const noexcept
+        {
+            return View();
+        }
 
         // Modifiers
-        constexpr void Clear() noexcept {
+        constexpr void Clear() noexcept
+        {
             size_ = 0;
             buffer_[0] = '\0';
         }
 
-        constexpr void Append(char ch) noexcept {
+        constexpr void Append(char ch) noexcept
+        {
             // Silently ignore if at capacity (consistent with truncation behavior)
             if (size_ < MaxCapacity)
             {
@@ -235,7 +291,8 @@ namespace wax
             }
         }
 
-        constexpr void Append(const char* str) noexcept {
+        constexpr void Append(const char* str) noexcept
+        {
             if (str == nullptr)
             {
                 return;
@@ -245,7 +302,8 @@ namespace wax
             Append(str, str_len);
         }
 
-        constexpr void Append(const char* str, size_t count) noexcept {
+        constexpr void Append(const char* str, size_t count) noexcept
+        {
             if (str == nullptr || count == 0)
             {
                 return;
@@ -263,9 +321,13 @@ namespace wax
             buffer_[size_] = '\0';
         }
 
-        constexpr void Append(StringView sv) noexcept { Append(sv.Data(), sv.Size()); }
+        constexpr void Append(StringView sv) noexcept
+        {
+            Append(sv.Data(), sv.Size());
+        }
 
-        constexpr void PopBack() noexcept {
+        constexpr void PopBack() noexcept
+        {
             hive::Assert(size_ > 0, "FixedString is empty");
             if (size_ > 0)
             {
@@ -274,7 +336,8 @@ namespace wax
             }
         }
 
-        constexpr void Resize(size_t new_size, char ch = '\0') noexcept {
+        constexpr void Resize(size_t new_size, char ch = '\0') noexcept
+        {
             // Silently truncate to MaxCapacity (consistent with constructors and Append)
             new_size = (new_size <= MaxCapacity) ? new_size : MaxCapacity;
 
@@ -291,44 +354,76 @@ namespace wax
         }
 
         // Search operations (delegate to StringView)
-        [[nodiscard]] constexpr size_t Find(char ch, size_t pos = 0) const noexcept { return View().Find(ch, pos); }
+        [[nodiscard]] constexpr size_t Find(char ch, size_t pos = 0) const noexcept
+        {
+            return View().Find(ch, pos);
+        }
 
-        [[nodiscard]] constexpr size_t Find(StringView sv, size_t pos = 0) const noexcept {
+        [[nodiscard]] constexpr size_t Find(StringView sv, size_t pos = 0) const noexcept
+        {
             return View().Find(sv, pos);
         }
 
-        [[nodiscard]] constexpr size_t RFind(char ch, size_t pos = npos) const noexcept {
+        [[nodiscard]] constexpr size_t RFind(char ch, size_t pos = npos) const noexcept
+        {
             return View().RFind(ch, pos);
         }
 
-        [[nodiscard]] constexpr bool Contains(char ch) const noexcept { return View().Contains(ch); }
+        [[nodiscard]] constexpr bool Contains(char ch) const noexcept
+        {
+            return View().Contains(ch);
+        }
 
-        [[nodiscard]] constexpr bool Contains(StringView sv) const noexcept { return View().Contains(sv); }
+        [[nodiscard]] constexpr bool Contains(StringView sv) const noexcept
+        {
+            return View().Contains(sv);
+        }
 
-        [[nodiscard]] constexpr bool StartsWith(char ch) const noexcept { return View().StartsWith(ch); }
+        [[nodiscard]] constexpr bool StartsWith(char ch) const noexcept
+        {
+            return View().StartsWith(ch);
+        }
 
-        [[nodiscard]] constexpr bool StartsWith(StringView sv) const noexcept { return View().StartsWith(sv); }
+        [[nodiscard]] constexpr bool StartsWith(StringView sv) const noexcept
+        {
+            return View().StartsWith(sv);
+        }
 
-        [[nodiscard]] constexpr bool EndsWith(char ch) const noexcept { return View().EndsWith(ch); }
+        [[nodiscard]] constexpr bool EndsWith(char ch) const noexcept
+        {
+            return View().EndsWith(ch);
+        }
 
-        [[nodiscard]] constexpr bool EndsWith(StringView sv) const noexcept { return View().EndsWith(sv); }
+        [[nodiscard]] constexpr bool EndsWith(StringView sv) const noexcept
+        {
+            return View().EndsWith(sv);
+        }
 
         // Comparison operations
-        [[nodiscard]] constexpr int Compare(const FixedString& other) const noexcept {
+        [[nodiscard]] constexpr int Compare(const FixedString& other) const noexcept
+        {
             return View().Compare(other.View());
         }
 
-        [[nodiscard]] constexpr int Compare(StringView sv) const noexcept { return View().Compare(sv); }
+        [[nodiscard]] constexpr int Compare(StringView sv) const noexcept
+        {
+            return View().Compare(sv);
+        }
 
-        [[nodiscard]] constexpr bool Equals(const FixedString& other) const noexcept {
+        [[nodiscard]] constexpr bool Equals(const FixedString& other) const noexcept
+        {
             return View().Equals(other.View());
         }
 
-        [[nodiscard]] constexpr bool Equals(StringView sv) const noexcept { return View().Equals(sv); }
+        [[nodiscard]] constexpr bool Equals(StringView sv) const noexcept
+        {
+            return View().Equals(sv);
+        }
 
     private:
         // constexpr strlen implementation
-        static constexpr size_t StrLen(const char* str) noexcept {
+        static constexpr size_t StrLen(const char* str) noexcept
+        {
             if (str == nullptr)
             {
                 return 0;
@@ -347,59 +442,73 @@ namespace wax
     };
 
     // Comparison operators
-    [[nodiscard]] constexpr bool operator==(const FixedString& lhs, const FixedString& rhs) noexcept {
+    [[nodiscard]] constexpr bool operator==(const FixedString& lhs, const FixedString& rhs) noexcept
+    {
         return lhs.Equals(rhs);
     }
 
-    [[nodiscard]] constexpr bool operator==(const FixedString& lhs, StringView rhs) noexcept {
+    [[nodiscard]] constexpr bool operator==(const FixedString& lhs, StringView rhs) noexcept
+    {
         return lhs.Equals(rhs);
     }
 
-    [[nodiscard]] constexpr bool operator==(StringView lhs, const FixedString& rhs) noexcept {
+    [[nodiscard]] constexpr bool operator==(StringView lhs, const FixedString& rhs) noexcept
+    {
         return rhs.Equals(lhs);
     }
 
-    [[nodiscard]] constexpr bool operator==(const FixedString& lhs, const char* rhs) noexcept {
+    [[nodiscard]] constexpr bool operator==(const FixedString& lhs, const char* rhs) noexcept
+    {
         return lhs.Equals(StringView{rhs});
     }
 
-    [[nodiscard]] constexpr bool operator==(const char* lhs, const FixedString& rhs) noexcept {
+    [[nodiscard]] constexpr bool operator==(const char* lhs, const FixedString& rhs) noexcept
+    {
         return rhs.Equals(StringView{lhs});
     }
 
-    [[nodiscard]] constexpr bool operator!=(const FixedString& lhs, const FixedString& rhs) noexcept {
+    [[nodiscard]] constexpr bool operator!=(const FixedString& lhs, const FixedString& rhs) noexcept
+    {
         return !lhs.Equals(rhs);
     }
 
-    [[nodiscard]] constexpr bool operator!=(const FixedString& lhs, StringView rhs) noexcept {
+    [[nodiscard]] constexpr bool operator!=(const FixedString& lhs, StringView rhs) noexcept
+    {
         return !lhs.Equals(rhs);
     }
 
-    [[nodiscard]] constexpr bool operator!=(StringView lhs, const FixedString& rhs) noexcept {
+    [[nodiscard]] constexpr bool operator!=(StringView lhs, const FixedString& rhs) noexcept
+    {
         return !rhs.Equals(lhs);
     }
 
-    [[nodiscard]] constexpr bool operator<(const FixedString& lhs, const FixedString& rhs) noexcept {
+    [[nodiscard]] constexpr bool operator<(const FixedString& lhs, const FixedString& rhs) noexcept
+    {
         return lhs.Compare(rhs) < 0;
     }
 
-    [[nodiscard]] constexpr bool operator<(const FixedString& lhs, StringView rhs) noexcept {
+    [[nodiscard]] constexpr bool operator<(const FixedString& lhs, StringView rhs) noexcept
+    {
         return lhs.Compare(rhs) < 0;
     }
 
-    [[nodiscard]] constexpr bool operator<(StringView lhs, const FixedString& rhs) noexcept {
+    [[nodiscard]] constexpr bool operator<(StringView lhs, const FixedString& rhs) noexcept
+    {
         return rhs.Compare(lhs) > 0;
     }
 
-    [[nodiscard]] constexpr bool operator<=(const FixedString& lhs, const FixedString& rhs) noexcept {
+    [[nodiscard]] constexpr bool operator<=(const FixedString& lhs, const FixedString& rhs) noexcept
+    {
         return lhs.Compare(rhs) <= 0;
     }
 
-    [[nodiscard]] constexpr bool operator>(const FixedString& lhs, const FixedString& rhs) noexcept {
+    [[nodiscard]] constexpr bool operator>(const FixedString& lhs, const FixedString& rhs) noexcept
+    {
         return lhs.Compare(rhs) > 0;
     }
 
-    [[nodiscard]] constexpr bool operator>=(const FixedString& lhs, const FixedString& rhs) noexcept {
+    [[nodiscard]] constexpr bool operator>=(const FixedString& lhs, const FixedString& rhs) noexcept
+    {
         return lhs.Compare(rhs) >= 0;
     }
 } // namespace wax

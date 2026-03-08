@@ -49,17 +49,34 @@ namespace queen
         static constexpr bool isMutable = false;
 
         explicit constexpr Res(const T* ptr) noexcept
-            : m_ptr{ptr} {}
+            : m_ptr{ptr}
+        {
+        }
 
-        [[nodiscard]] constexpr const T& operator*() const noexcept { return *m_ptr; }
+        [[nodiscard]] constexpr const T& operator*() const noexcept
+        {
+            return *m_ptr;
+        }
 
-        [[nodiscard]] constexpr const T* operator->() const noexcept { return m_ptr; }
+        [[nodiscard]] constexpr const T* operator->() const noexcept
+        {
+            return m_ptr;
+        }
 
-        [[nodiscard]] constexpr const T* Get() const noexcept { return m_ptr; }
+        [[nodiscard]] constexpr const T* Get() const noexcept
+        {
+            return m_ptr;
+        }
 
-        [[nodiscard]] constexpr bool IsValid() const noexcept { return m_ptr != nullptr; }
+        [[nodiscard]] constexpr bool IsValid() const noexcept
+        {
+            return m_ptr != nullptr;
+        }
 
-        [[nodiscard]] explicit constexpr operator bool() const noexcept { return m_ptr != nullptr; }
+        [[nodiscard]] explicit constexpr operator bool() const noexcept
+        {
+            return m_ptr != nullptr;
+        }
 
     private:
         const T* m_ptr;
@@ -110,17 +127,34 @@ namespace queen
         static constexpr bool isMutable = true;
 
         explicit constexpr ResMut(T* ptr) noexcept
-            : m_ptr{ptr} {}
+            : m_ptr{ptr}
+        {
+        }
 
-        [[nodiscard]] constexpr T& operator*() const noexcept { return *m_ptr; }
+        [[nodiscard]] constexpr T& operator*() const noexcept
+        {
+            return *m_ptr;
+        }
 
-        [[nodiscard]] constexpr T* operator->() const noexcept { return m_ptr; }
+        [[nodiscard]] constexpr T* operator->() const noexcept
+        {
+            return m_ptr;
+        }
 
-        [[nodiscard]] constexpr T* Get() const noexcept { return m_ptr; }
+        [[nodiscard]] constexpr T* Get() const noexcept
+        {
+            return m_ptr;
+        }
 
-        [[nodiscard]] constexpr bool IsValid() const noexcept { return m_ptr != nullptr; }
+        [[nodiscard]] constexpr bool IsValid() const noexcept
+        {
+            return m_ptr != nullptr;
+        }
 
-        [[nodiscard]] explicit constexpr operator bool() const noexcept { return m_ptr != nullptr; }
+        [[nodiscard]] explicit constexpr operator bool() const noexcept
+        {
+            return m_ptr != nullptr;
+        }
 
     private:
         T* m_ptr;

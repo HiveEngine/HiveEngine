@@ -49,7 +49,8 @@ namespace queen
      * @tparam MaxFields Maximum number of fields (default 32)
      * @return ComponentReflector with registered fields
      */
-    template <Reflectable T, size_t MaxFields = 32> constexpr ComponentReflector<MaxFields> GetReflection() noexcept {
+    template <Reflectable T, size_t MaxFields = 32> constexpr ComponentReflector<MaxFields> GetReflection() noexcept
+    {
         ComponentReflector<MaxFields> reflector;
         T::Reflect(reflector);
         return reflector;
@@ -67,7 +68,8 @@ namespace queen
      * @tparam T The component type (must satisfy Reflectable)
      * @return ComponentReflection with type-erased field data
      */
-    template <Reflectable T> ComponentReflection GetReflectionData() noexcept {
+    template <Reflectable T> ComponentReflection GetReflectionData() noexcept
+    {
         // Holder struct ensures the reflector is constructed in-place (no copy).
         // A copy would leave FieldInfo::attributes pointers dangling because
         // they point into the reflector's internal attributes_ array.
@@ -78,7 +80,8 @@ namespace queen
         {
             ComponentReflector<32> m_reflector;
             char m_name[128]{};
-            Holder() {
+            Holder()
+            {
                 T::Reflect(m_reflector);
                 auto sv = TypeNameOf<T>();
                 auto len = sv.size() < 127 ? sv.size() : size_t{127};

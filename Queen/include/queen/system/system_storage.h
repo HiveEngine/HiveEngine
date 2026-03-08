@@ -50,7 +50,9 @@ namespace queen
     public:
         explicit SystemStorage(Allocator& allocator)
             : m_allocator{&allocator}
-            , m_systems{allocator} {}
+            , m_systems{allocator}
+        {
+        }
 
         ~SystemStorage() = default;
 
@@ -67,7 +69,8 @@ namespace queen
          * @param name System name (for debugging)
          * @return SystemBuilder for further configuration
          */
-        template <typename... Terms> SystemBuilder<Allocator, Terms...> Register(World& world, const char* name) {
+        template <typename... Terms> SystemBuilder<Allocator, Terms...> Register(World& world, const char* name)
+        {
             SystemId id{static_cast<uint32_t>(m_systems.Size())};
 
             m_systems.EmplaceBack(*m_allocator, id, name);
@@ -86,7 +89,8 @@ namespace queen
          * @param access Access descriptor for dependency resolution (moved)
          * @return System ID
          */
-        template <typename F> SystemId Register(const char* name, F&& func, AccessDescriptor<Allocator>&& access) {
+        template <typename F> SystemId Register(const char* name, F&& func, AccessDescriptor<Allocator>&& access)
+        {
             SystemId id{static_cast<uint32_t>(m_systems.Size())};
 
             m_systems.EmplaceBack(*m_allocator, id, name);
@@ -114,7 +118,8 @@ namespace queen
          * @param id System identifier
          * @return Pointer to system descriptor, or nullptr if invalid
          */
-        [[nodiscard]] SystemDescriptor<Allocator>* GetSystem(SystemId id) {
+        [[nodiscard]] SystemDescriptor<Allocator>* GetSystem(SystemId id)
+        {
             if (!id.IsValid() || id.Index() >= m_systems.Size())
             {
                 return nullptr;
@@ -122,7 +127,8 @@ namespace queen
             return &m_systems[id.Index()];
         }
 
-        [[nodiscard]] const SystemDescriptor<Allocator>* GetSystem(SystemId id) const {
+        [[nodiscard]] const SystemDescriptor<Allocator>* GetSystem(SystemId id) const
+        {
             if (!id.IsValid() || id.Index() >= m_systems.Size())
             {
                 return nullptr;
@@ -136,7 +142,8 @@ namespace queen
          * @param index Index in storage
          * @return Pointer to system descriptor, or nullptr if invalid
          */
-        [[nodiscard]] SystemDescriptor<Allocator>* GetSystemByIndex(size_t index) {
+        [[nodiscard]] SystemDescriptor<Allocator>* GetSystemByIndex(size_t index)
+        {
             if (index >= m_systems.Size())
             {
                 return nullptr;
@@ -144,7 +151,8 @@ namespace queen
             return &m_systems[index];
         }
 
-        [[nodiscard]] const SystemDescriptor<Allocator>* GetSystemByIndex(size_t index) const {
+        [[nodiscard]] const SystemDescriptor<Allocator>* GetSystemByIndex(size_t index) const
+        {
             if (index >= m_systems.Size())
             {
                 return nullptr;
@@ -158,7 +166,8 @@ namespace queen
          * @param name System name
          * @return Pointer to system descriptor, or nullptr if not found
          */
-        [[nodiscard]] SystemDescriptor<Allocator>* GetSystemByName(const char* name) {
+        [[nodiscard]] SystemDescriptor<Allocator>* GetSystemByName(const char* name)
+        {
             for (size_t i = 0; i < m_systems.Size(); ++i)
             {
                 if (std::strcmp(m_systems[i].Name(), name) == 0)
@@ -175,7 +184,8 @@ namespace queen
          * @param world The world to run the system on
          * @param id System to run
          */
-        void RunSystem(World& world, SystemId id, Tick currentTick) {
+        void RunSystem(World& world, SystemId id, Tick currentTick)
+        {
             SystemDescriptor<Allocator>* system = GetSystem(id);
             if (system != nullptr)
             {
@@ -183,7 +193,8 @@ namespace queen
             }
         }
 
-        void RunAll(World& world, Tick currentTick) {
+        void RunAll(World& world, Tick currentTick)
+        {
             for (size_t i = 0; i < m_systems.Size(); ++i)
             {
                 m_systems[i].Execute(world, currentTick);
@@ -193,17 +204,24 @@ namespace queen
         /**
          * Get the number of registered systems
          */
-        [[nodiscard]] size_t SystemCount() const noexcept { return m_systems.Size(); }
+        [[nodiscard]] size_t SystemCount() const noexcept
+        {
+            return m_systems.Size();
+        }
 
         /**
          * Check if any systems are registered
          */
-        [[nodiscard]] bool IsEmpty() const noexcept { return m_systems.IsEmpty(); }
+        [[nodiscard]] bool IsEmpty() const noexcept
+        {
+            return m_systems.IsEmpty();
+        }
 
         /**
          * Enable or disable a system
          */
-        void SetSystemEnabled(SystemId id, bool enabled) {
+        void SetSystemEnabled(SystemId id, bool enabled)
+        {
             SystemDescriptor<Allocator>* system = GetSystem(id);
             if (system != nullptr)
             {
@@ -214,7 +232,8 @@ namespace queen
         /**
          * Check if a system is enabled
          */
-        [[nodiscard]] bool IsSystemEnabled(SystemId id) const {
+        [[nodiscard]] bool IsSystemEnabled(SystemId id) const
+        {
             const SystemDescriptor<Allocator>* system = GetSystem(id);
             if (system != nullptr)
             {

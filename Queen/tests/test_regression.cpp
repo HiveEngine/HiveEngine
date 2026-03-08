@@ -37,7 +37,10 @@ namespace
     {
         static inline int destruct_count = 0;
         int value{0};
-        ~Tracked() { ++destruct_count; }
+        ~Tracked()
+        {
+            ++destruct_count;
+        }
     };
 
     // ============================================================================

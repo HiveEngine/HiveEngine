@@ -6,9 +6,12 @@ namespace nectar
         : m_alloc{&alloc}
         , m_records{alloc, 256}
         , m_pathIndex{alloc, 256}
-        , m_depGraph{alloc} {}
+        , m_depGraph{alloc}
+    {
+    }
 
-    bool AssetDatabase::Insert(AssetRecord record) {
+    bool AssetDatabase::Insert(AssetRecord record)
+    {
         if (m_records.Contains(record.m_uuid))
             return false;
 
@@ -27,7 +30,8 @@ namespace nectar
         return true;
     }
 
-    bool AssetDatabase::Remove(AssetId uuid) {
+    bool AssetDatabase::Remove(AssetId uuid)
+    {
         auto* record = m_records.Find(uuid);
         if (!record)
             return false;
@@ -46,7 +50,8 @@ namespace nectar
         return true;
     }
 
-    bool AssetDatabase::Update(AssetId uuid, AssetRecord record) {
+    bool AssetDatabase::Update(AssetId uuid, AssetRecord record)
+    {
         auto* existing = m_records.Find(uuid);
         if (!existing)
             return false;
@@ -72,15 +77,18 @@ namespace nectar
         return true;
     }
 
-    AssetRecord* AssetDatabase::FindByUuid(AssetId uuid) {
+    AssetRecord* AssetDatabase::FindByUuid(AssetId uuid)
+    {
         return m_records.Find(uuid);
     }
 
-    const AssetRecord* AssetDatabase::FindByUuid(AssetId uuid) const {
+    const AssetRecord* AssetDatabase::FindByUuid(AssetId uuid) const
+    {
         return m_records.Find(uuid);
     }
 
-    AssetRecord* AssetDatabase::FindByPath(wax::StringView path) {
+    AssetRecord* AssetDatabase::FindByPath(wax::StringView path)
+    {
         wax::String key{*m_alloc, path};
         auto* uuid = m_pathIndex.Find(key);
         if (!uuid)
@@ -89,7 +97,8 @@ namespace nectar
         return m_records.Find(*uuid);
     }
 
-    const AssetRecord* AssetDatabase::FindByPath(wax::StringView path) const {
+    const AssetRecord* AssetDatabase::FindByPath(wax::StringView path) const
+    {
         wax::String key{*m_alloc, path};
         auto* uuid = m_pathIndex.Find(key);
         if (!uuid)
@@ -98,7 +107,8 @@ namespace nectar
         return m_records.Find(*uuid);
     }
 
-    void AssetDatabase::FindByType(wax::StringView type, wax::Vector<AssetRecord*>& out) {
+    void AssetDatabase::FindByType(wax::StringView type, wax::Vector<AssetRecord*>& out)
+    {
         for (auto it = m_records.Begin(); it != m_records.End(); ++it)
         {
             if (it.Value().m_type.View().Equals(type))
@@ -106,7 +116,8 @@ namespace nectar
         }
     }
 
-    void AssetDatabase::FindByLabel(wax::StringView label, wax::Vector<AssetRecord*>& out) {
+    void AssetDatabase::FindByLabel(wax::StringView label, wax::Vector<AssetRecord*>& out)
+    {
         for (auto it = m_records.Begin(); it != m_records.End(); ++it)
         {
             auto& labels = it.Value().m_labels;
@@ -121,22 +132,27 @@ namespace nectar
         }
     }
 
-    DependencyGraph& AssetDatabase::GetDependencyGraph() noexcept {
+    DependencyGraph& AssetDatabase::GetDependencyGraph() noexcept
+    {
         return m_depGraph;
     }
-    const DependencyGraph& AssetDatabase::GetDependencyGraph() const noexcept {
+    const DependencyGraph& AssetDatabase::GetDependencyGraph() const noexcept
+    {
         return m_depGraph;
     }
 
-    size_t AssetDatabase::Count() const noexcept {
+    size_t AssetDatabase::Count() const noexcept
+    {
         return m_records.Count();
     }
 
-    bool AssetDatabase::Contains(AssetId uuid) const {
+    bool AssetDatabase::Contains(AssetId uuid) const
+    {
         return m_records.Contains(uuid);
     }
 
-    bool AssetDatabase::ContainsPath(wax::StringView path) const {
+    bool AssetDatabase::ContainsPath(wax::StringView path) const
+    {
         wax::String key{*m_alloc, path};
         return m_pathIndex.Contains(key);
     }

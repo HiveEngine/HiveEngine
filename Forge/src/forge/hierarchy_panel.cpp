@@ -13,12 +13,14 @@
 
 namespace forge
 {
-    static void DefaultEntityLabel(queen::World& /*world*/, queen::Entity entity, char* buf, size_t bufSize) {
+    static void DefaultEntityLabel(queen::World& /*world*/, queen::Entity entity, char* buf, size_t bufSize)
+    {
         snprintf(buf, bufSize, "Entity %u", entity.Index());
     }
 
     static void DrawEntityNode(queen::World& world, EditorSelection& selection, queen::Entity entity,
-                               EntityLabelFn labelFn) {
+                               EntityLabelFn labelFn)
+    {
         char label[64];
         labelFn(world, entity, label, sizeof(label));
 
@@ -64,7 +66,8 @@ namespace forge
         ImGui::PopID();
     }
 
-    void DrawHierarchyPanel(queen::World& world, EditorSelection& selection, EntityLabelFn labelFn) {
+    void DrawHierarchyPanel(queen::World& world, EditorSelection& selection, EntityLabelFn labelFn)
+    {
         if (!labelFn)
             labelFn = DefaultEntityLabel;
 

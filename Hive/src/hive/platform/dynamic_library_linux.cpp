@@ -6,18 +6,21 @@
 namespace hive
 {
 
-    DynamicLibrary::~DynamicLibrary() {
+    DynamicLibrary::~DynamicLibrary()
+    {
         Unload();
     }
 
     DynamicLibrary::DynamicLibrary(DynamicLibrary&& other) noexcept
-        : handle_{other.handle_} {
+        : handle_{other.handle_}
+    {
         std::memcpy(error_buf_, other.error_buf_, kErrorBufSize);
         other.handle_ = nullptr;
         other.error_buf_[0] = '\0';
     }
 
-    DynamicLibrary& DynamicLibrary::operator=(DynamicLibrary&& other) noexcept {
+    DynamicLibrary& DynamicLibrary::operator=(DynamicLibrary&& other) noexcept
+    {
         if (this != &other)
         {
             Unload();
@@ -29,7 +32,8 @@ namespace hive
         return *this;
     }
 
-    bool DynamicLibrary::Load(const char* path) {
+    bool DynamicLibrary::Load(const char* path)
+    {
         Unload();
         dlerror();
         handle_ = dlopen(path, RTLD_NOW | RTLD_LOCAL);
@@ -45,7 +49,8 @@ namespace hive
         return true;
     }
 
-    void DynamicLibrary::Unload() {
+    void DynamicLibrary::Unload()
+    {
         if (handle_)
         {
             dlclose(handle_);
@@ -53,7 +58,8 @@ namespace hive
         }
     }
 
-    void* DynamicLibrary::GetSymbol(const char* name) const {
+    void* DynamicLibrary::GetSymbol(const char* name) const
+    {
         if (!handle_)
             return nullptr;
         dlerror();
@@ -68,11 +74,13 @@ namespace hive
         return sym;
     }
 
-    bool DynamicLibrary::IsLoaded() const noexcept {
+    bool DynamicLibrary::IsLoaded() const noexcept
+    {
         return handle_ != nullptr;
     }
 
-    const char* DynamicLibrary::GetError() const noexcept {
+    const char* DynamicLibrary::GetError() const noexcept
+    {
         return error_buf_;
     }
 

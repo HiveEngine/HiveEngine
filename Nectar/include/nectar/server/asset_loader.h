@@ -20,6 +20,9 @@ namespace nectar
         virtual void Unload(T* asset, comb::DefaultAllocator& alloc) = 0;
 
         /// Approximate memory footprint of a loaded asset. Default: 0 (untracked).
-        virtual size_t SizeOf([[maybe_unused]] const T* asset) const { return 0; }
+        virtual size_t SizeOf([[maybe_unused]] const T* asset) const
+        {
+            return 0;
+        }
     };
 } // namespace nectar

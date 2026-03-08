@@ -248,7 +248,8 @@ namespace tinyobj
 
 #ifdef TINY_OBJ_LOADER_PYTHON_BINDING
         // For pybind11
-        std::array<double, 3> GetDiffuse() {
+        std::array<double, 3> GetDiffuse()
+        {
             std::array<double, 3> values;
             values[0] = double(diffuse[0]);
             values[1] = double(diffuse[1]);
@@ -257,7 +258,8 @@ namespace tinyobj
             return values;
         }
 
-        std::array<double, 3> GetSpecular() {
+        std::array<double, 3> GetSpecular()
+        {
             std::array<double, 3> values;
             values[0] = double(specular[0]);
             values[1] = double(specular[1]);
@@ -266,7 +268,8 @@ namespace tinyobj
             return values;
         }
 
-        std::array<double, 3> GetTransmittance() {
+        std::array<double, 3> GetTransmittance()
+        {
             std::array<double, 3> values;
             values[0] = double(transmittance[0]);
             values[1] = double(transmittance[1]);
@@ -275,7 +278,8 @@ namespace tinyobj
             return values;
         }
 
-        std::array<double, 3> GetEmission() {
+        std::array<double, 3> GetEmission()
+        {
             std::array<double, 3> values;
             values[0] = double(emission[0]);
             values[1] = double(emission[1]);
@@ -284,7 +288,8 @@ namespace tinyobj
             return values;
         }
 
-        std::array<double, 3> GetAmbient() {
+        std::array<double, 3> GetAmbient()
+        {
             std::array<double, 3> values;
             values[0] = double(ambient[0]);
             values[1] = double(ambient[1]);
@@ -293,31 +298,36 @@ namespace tinyobj
             return values;
         }
 
-        void SetDiffuse(std::array<double, 3>& a) {
+        void SetDiffuse(std::array<double, 3>& a)
+        {
             diffuse[0] = real_t(a[0]);
             diffuse[1] = real_t(a[1]);
             diffuse[2] = real_t(a[2]);
         }
 
-        void SetAmbient(std::array<double, 3>& a) {
+        void SetAmbient(std::array<double, 3>& a)
+        {
             ambient[0] = real_t(a[0]);
             ambient[1] = real_t(a[1]);
             ambient[2] = real_t(a[2]);
         }
 
-        void SetSpecular(std::array<double, 3>& a) {
+        void SetSpecular(std::array<double, 3>& a)
+        {
             specular[0] = real_t(a[0]);
             specular[1] = real_t(a[1]);
             specular[2] = real_t(a[2]);
         }
 
-        void SetTransmittance(std::array<double, 3>& a) {
+        void SetTransmittance(std::array<double, 3>& a)
+        {
             transmittance[0] = real_t(a[0]);
             transmittance[1] = real_t(a[1]);
             transmittance[2] = real_t(a[2]);
         }
 
-        std::string GetCustomParameter(const std::string& key) {
+        std::string GetCustomParameter(const std::string& key)
+        {
             std::map<std::string, std::string>::const_iterator it = unknown_parameter.find(key);
 
             if (it != unknown_parameter.end())
@@ -423,14 +433,22 @@ namespace tinyobj
         // (e.g. using std::map, std::unordered_map)
         std::vector<skin_weight_t> skin_weights;
 
-        attrib_t() {}
+        attrib_t()
+        {
+        }
 
         //
         // For pybind11
         //
-        const std::vector<real_t>& GetVertices() const { return vertices; }
+        const std::vector<real_t>& GetVertices() const
+        {
+            return vertices;
+        }
 
-        const std::vector<real_t>& GetVertexWeights() const { return vertex_weights; }
+        const std::vector<real_t>& GetVertexWeights() const
+        {
+            return vertex_weights;
+        }
     };
 
     struct callback_t
@@ -468,13 +486,17 @@ namespace tinyobj
             , usemtl_cb(NULL)
             , mtllib_cb(NULL)
             , group_cb(NULL)
-            , object_cb(NULL) {}
+            , object_cb(NULL)
+        {
+        }
     };
 
     class MaterialReader
     {
     public:
-        MaterialReader() {}
+        MaterialReader()
+        {
+        }
         virtual ~MaterialReader();
 
         virtual bool operator()(const std::string& matId, std::vector<material_t>* materials,
@@ -489,8 +511,12 @@ namespace tinyobj
     public:
         // Path could contain separator(';' in Windows, ':' in Posix)
         explicit MaterialFileReader(const std::string& mtl_basedir)
-            : m_mtlBaseDir(mtl_basedir) {}
-        virtual ~MaterialFileReader() TINYOBJ_OVERRIDE {}
+            : m_mtlBaseDir(mtl_basedir)
+        {
+        }
+        virtual ~MaterialFileReader() TINYOBJ_OVERRIDE
+        {
+        }
         virtual bool operator()(const std::string& matId, std::vector<material_t>* materials,
                                 std::map<std::string, int>* matMap, std::string* warn,
                                 std::string* err) TINYOBJ_OVERRIDE;
@@ -506,8 +532,12 @@ namespace tinyobj
     {
     public:
         explicit MaterialStreamReader(std::istream& inStream)
-            : m_inStream(inStream) {}
-        virtual ~MaterialStreamReader() TINYOBJ_OVERRIDE {}
+            : m_inStream(inStream)
+        {
+        }
+        virtual ~MaterialStreamReader() TINYOBJ_OVERRIDE
+        {
+        }
         virtual bool operator()(const std::string& matId, std::vector<material_t>* materials,
                                 std::map<std::string, int>* matMap, std::string* warn,
                                 std::string* err) TINYOBJ_OVERRIDE;
@@ -542,7 +572,9 @@ namespace tinyobj
         ObjReaderConfig()
             : triangulate(true)
             , triangulation_method("simple")
-            , vertex_color(true) {}
+            , vertex_color(true)
+        {
+        }
     };
 
     ///
@@ -552,7 +584,9 @@ namespace tinyobj
     {
     public:
         ObjReader()
-            : valid_(false) {}
+            : valid_(false)
+        {
+        }
 
         ///
         /// Load .obj and .mtl from a file.
@@ -577,23 +611,41 @@ namespace tinyobj
         ///
         /// .obj was loaded or parsed correctly.
         ///
-        bool Valid() const { return valid_; }
+        bool Valid() const
+        {
+            return valid_;
+        }
 
-        const attrib_t& GetAttrib() const { return attrib_; }
+        const attrib_t& GetAttrib() const
+        {
+            return attrib_;
+        }
 
-        const std::vector<shape_t>& GetShapes() const { return shapes_; }
+        const std::vector<shape_t>& GetShapes() const
+        {
+            return shapes_;
+        }
 
-        const std::vector<material_t>& GetMaterials() const { return materials_; }
+        const std::vector<material_t>& GetMaterials() const
+        {
+            return materials_;
+        }
 
         ///
         /// Warning message(may be filled after `Load` or `Parse`)
         ///
-        const std::string& Warning() const { return warning_; }
+        const std::string& Warning() const
+        {
+            return warning_;
+        }
 
         ///
         /// Error message(filled when `Load` or `Parse` failed)
         ///
-        const std::string& Error() const { return error_; }
+        const std::string& Error() const
+        {
+            return error_;
+        }
 
     private:
         bool valid_;
@@ -700,7 +752,9 @@ namespace tinyobj
 namespace tinyobj
 {
 
-    MaterialReader::~MaterialReader() {}
+    MaterialReader::~MaterialReader()
+    {
+    }
 
     struct vertex_index_t
     {
@@ -708,15 +762,21 @@ namespace tinyobj
         vertex_index_t()
             : v_idx(-1)
             , vt_idx(-1)
-            , vn_idx(-1) {}
+            , vn_idx(-1)
+        {
+        }
         explicit vertex_index_t(int idx)
             : v_idx(idx)
             , vt_idx(idx)
-            , vn_idx(idx) {}
+            , vn_idx(idx)
+        {
+        }
         vertex_index_t(int vidx, int vtidx, int vnidx)
             : v_idx(vidx)
             , vt_idx(vtidx)
-            , vn_idx(vnidx) {}
+            , vn_idx(vnidx)
+        {
+        }
     };
 
     // Internal data structure for face representation
@@ -729,7 +789,9 @@ namespace tinyobj
 
         face_t()
             : smoothing_group_id(0)
-            , pad_(0) {}
+            , pad_(0)
+        {
+        }
     };
 
     // Internal data structure for line representation
@@ -755,7 +817,9 @@ namespace tinyobj
         tag_sizes()
             : num_ints(0)
             , num_reals(0)
-            , num_strings(0) {}
+            , num_strings(0)
+        {
+        }
         int num_ints;
         int num_reals;
         int num_strings;
@@ -776,20 +840,25 @@ namespace tinyobj
         std::vector<__line_t> lineGroup;
         std::vector<__points_t> pointsGroup;
 
-        void clear() {
+        void clear()
+        {
             faceGroup.clear();
             lineGroup.clear();
             pointsGroup.clear();
         }
 
-        bool IsEmpty() const { return faceGroup.empty() && lineGroup.empty() && pointsGroup.empty(); }
+        bool IsEmpty() const
+        {
+            return faceGroup.empty() && lineGroup.empty() && pointsGroup.empty();
+        }
 
         // TODO(syoyo): bspline, surface, ...
     };
 
     // See
     // http://stackoverflow.com/questions/6089231/getting-std-ifstream-to-handle-lf-cr-and-crlf
-    static std::istream& safeGetline(std::istream& is, std::string& t) {
+    static std::istream& safeGetline(std::istream& is, std::string& t)
+    {
         t.clear();
 
         // The characters in the stream are read one-by-one using a std::streambuf.
@@ -832,13 +901,15 @@ namespace tinyobj
 #define IS_DIGIT(x) (static_cast<unsigned int>((x) - '0') < static_cast<unsigned int>(10))
 #define IS_NEW_LINE(x) (((x) == '\r') || ((x) == '\n') || ((x) == '\0'))
 
-    template <typename T> static inline std::string toString(const T& t) {
+    template <typename T> static inline std::string toString(const T& t)
+    {
         std::stringstream ss;
         ss << t;
         return ss.str();
     }
 
-    static inline std::string removeUtf8Bom(const std::string& input) {
+    static inline std::string removeUtf8Bom(const std::string& input)
+    {
         // UTF-8 BOM = 0xEF,0xBB,0xBF
         if (input.size() >= 3 && static_cast<unsigned char>(input[0]) == 0xEF &&
             static_cast<unsigned char>(input[1]) == 0xBB && static_cast<unsigned char>(input[2]) == 0xBF)
@@ -855,7 +926,8 @@ namespace tinyobj
     };
 
     // Make index zero-base, and also support relative index.
-    static inline bool fixIndex(int idx, int n, int* ret, bool allow_zero, const warning_context& context) {
+    static inline bool fixIndex(int idx, int n, int* ret, bool allow_zero, const warning_context& context)
+    {
         if (!ret)
         {
             return false;
@@ -894,7 +966,8 @@ namespace tinyobj
         return false; // never reach here.
     }
 
-    static inline std::string parseString(const char** token) {
+    static inline std::string parseString(const char** token)
+    {
         std::string s;
         (*token) += strspn((*token), " \t");
         size_t e = strcspn((*token), " \t\r");
@@ -903,7 +976,8 @@ namespace tinyobj
         return s;
     }
 
-    static inline int parseInt(const char** token) {
+    static inline int parseInt(const char** token)
+    {
         (*token) += strspn((*token), " \t");
         int i = atoi((*token));
         (*token) += strcspn((*token), " \t\r");
@@ -937,7 +1011,8 @@ namespace tinyobj
     //  - s >= s_end.
     //  - parse failure.
     //
-    static bool tryParseDouble(const char* s, const char* s_end, double* result) {
+    static bool tryParseDouble(const char* s, const char* s_end, double* result)
+    {
         if (s >= s_end)
         {
             return false;
@@ -1097,7 +1172,8 @@ namespace tinyobj
         return false;
     }
 
-    static inline real_t parseReal(const char** token, double default_value = 0.0) {
+    static inline real_t parseReal(const char** token, double default_value = 0.0)
+    {
         (*token) += strspn((*token), " \t");
         const char* end = (*token) + strcspn((*token), " \t\r");
         double val = default_value;
@@ -1107,7 +1183,8 @@ namespace tinyobj
         return f;
     }
 
-    static inline bool parseReal(const char** token, real_t* out) {
+    static inline bool parseReal(const char** token, real_t* out)
+    {
         (*token) += strspn((*token), " \t");
         const char* end = (*token) + strcspn((*token), " \t\r");
         double val;
@@ -1122,13 +1199,15 @@ namespace tinyobj
     }
 
     static inline void parseReal2(real_t* x, real_t* y, const char** token, const double default_x = 0.0,
-                                  const double default_y = 0.0) {
+                                  const double default_y = 0.0)
+    {
         (*x) = parseReal(token, default_x);
         (*y) = parseReal(token, default_y);
     }
 
     static inline void parseReal3(real_t* x, real_t* y, real_t* z, const char** token, const double default_x = 0.0,
-                                  const double default_y = 0.0, const double default_z = 0.0) {
+                                  const double default_y = 0.0, const double default_z = 0.0)
+    {
         (*x) = parseReal(token, default_x);
         (*y) = parseReal(token, default_y);
         (*z) = parseReal(token, default_z);
@@ -1152,7 +1231,8 @@ static inline void parseV(real_t *x, real_t *y, real_t *z, real_t *w,
     // `r`: red(case 6) or [w](case 4)
     static inline int parseVertexWithColor(real_t* x, real_t* y, real_t* z, real_t* r, real_t* g, real_t* b,
                                            const char** token, const double default_x = 0.0,
-                                           const double default_y = 0.0, const double default_z = 0.0) {
+                                           const double default_y = 0.0, const double default_z = 0.0)
+    {
         // TODO: Check error
         (*x) = parseReal(token, default_x);
         (*y) = parseReal(token, default_y);
@@ -1186,7 +1266,8 @@ static inline void parseV(real_t *x, real_t *y, real_t *z, real_t *w,
         return 6;
     }
 
-    static inline bool parseOnOff(const char** token, bool default_value = true) {
+    static inline bool parseOnOff(const char** token, bool default_value = true)
+    {
         (*token) += strspn((*token), " \t");
         const char* end = (*token) + strcspn((*token), " \t\r");
 
@@ -1204,8 +1285,8 @@ static inline void parseV(real_t *x, real_t *y, real_t *z, real_t *w,
         return ret;
     }
 
-    static inline texture_type_t parseTextureType(const char** token,
-                                                  texture_type_t default_value = TEXTURE_TYPE_NONE) {
+    static inline texture_type_t parseTextureType(const char** token, texture_type_t default_value = TEXTURE_TYPE_NONE)
+    {
         (*token) += strspn((*token), " \t");
         const char* end = (*token) + strcspn((*token), " \t\r");
         texture_type_t ty = default_value;
@@ -1243,7 +1324,8 @@ static inline void parseV(real_t *x, real_t *y, real_t *z, real_t *w,
         return ty;
     }
 
-    static tag_sizes parseTagTriple(const char** token) {
+    static tag_sizes parseTagTriple(const char** token)
+    {
         tag_sizes ts;
 
         (*token) += strspn((*token), " \t");
@@ -1272,7 +1354,8 @@ static inline void parseV(real_t *x, real_t *y, real_t *z, real_t *w,
 
     // Parse triples with index offsets: i, i/j/k, i//k, i/j
     static bool parseTriple(const char** token, int vsize, int vnsize, int vtsize, vertex_index_t* ret,
-                            const warning_context& context) {
+                            const warning_context& context)
+    {
         if (!ret)
         {
             return false;
@@ -1333,7 +1416,8 @@ static inline void parseV(real_t *x, real_t *y, real_t *z, real_t *w,
     }
 
     // Parse raw triples: i, i/j/k, i//k, i/j
-    static vertex_index_t parseRawTriple(const char** token) {
+    static vertex_index_t parseRawTriple(const char** token)
+    {
         vertex_index_t vi(static_cast<int>(0)); // 0 is an invalid index in OBJ
 
         vi.v_idx = atoi((*token));
@@ -1368,7 +1452,8 @@ static inline void parseV(real_t *x, real_t *y, real_t *z, real_t *w,
         return vi;
     }
 
-    bool ParseTextureNameAndOption(std::string* texname, texture_option_t* texopt, const char* linebuf) {
+    bool ParseTextureNameAndOption(std::string* texname, texture_option_t* texopt, const char* linebuf)
+    {
         // @todo { write more robust lexer and parser. }
         bool found_texname = false;
         std::string texture_name;
@@ -1482,7 +1567,8 @@ static inline void parseV(real_t *x, real_t *y, real_t *z, real_t *w,
         }
     }
 
-    static void InitTexOpt(texture_option_t* texopt, const bool is_bump) {
+    static void InitTexOpt(texture_option_t* texopt, const bool is_bump)
+    {
         if (is_bump)
         {
             texopt->imfchan = 'l';
@@ -1511,7 +1597,8 @@ static inline void parseV(real_t *x, real_t *y, real_t *z, real_t *w,
         texopt->type = TEXTURE_TYPE_NONE;
     }
 
-    static void InitMaterial(material_t* material) {
+    static void InitMaterial(material_t* material)
+    {
         InitTexOpt(&material->ambient_texopt, /* is_bump */ false);
         InitTexOpt(&material->diffuse_texopt, /* is_bump */ false);
         InitTexOpt(&material->specular_texopt, /* is_bump */ false);
@@ -1565,7 +1652,8 @@ static inline void parseV(real_t *x, real_t *y, real_t *z, real_t *w,
     }
 
     // code from https://wrf.ecse.rpi.edu//Research/Short_Notes/pnpoly.html
-    template <typename T> static int pnpoly(int nvert, T* vertx, T* verty, T testx, T testy) {
+    template <typename T> static int pnpoly(int nvert, T* vertx, T* verty, T testx, T testy)
+    {
         int i, j, c = 0;
         for (i = 0, j = nvert - 1; i < nvert; j = i++)
         {
@@ -1582,39 +1670,49 @@ static inline void parseV(real_t *x, real_t *y, real_t *z, real_t *w,
         TinyObjPoint()
             : x(0)
             , y(0)
-            , z(0) {}
+            , z(0)
+        {
+        }
         TinyObjPoint(real_t x_, real_t y_, real_t z_)
             : x(x_)
             , y(y_)
-            , z(z_) {}
+            , z(z_)
+        {
+        }
     };
 
-    inline TinyObjPoint cross(const TinyObjPoint& v1, const TinyObjPoint& v2) {
+    inline TinyObjPoint cross(const TinyObjPoint& v1, const TinyObjPoint& v2)
+    {
         return TinyObjPoint(v1.y * v2.z - v1.z * v2.y, v1.z * v2.x - v1.x * v2.z, v1.x * v2.y - v1.y * v2.x);
     }
 
-    inline real_t dot(const TinyObjPoint& v1, const TinyObjPoint& v2) {
+    inline real_t dot(const TinyObjPoint& v1, const TinyObjPoint& v2)
+    {
         return (v1.x * v2.x + v1.y * v2.y + v1.z * v2.z);
     }
 
-    inline real_t GetLength(TinyObjPoint& e) {
+    inline real_t GetLength(TinyObjPoint& e)
+    {
         return std::sqrt(e.x * e.x + e.y * e.y + e.z * e.z);
     }
 
-    inline TinyObjPoint Normalize(TinyObjPoint e) {
+    inline TinyObjPoint Normalize(TinyObjPoint e)
+    {
         real_t inv_length = real_t(1) / GetLength(e);
         return TinyObjPoint(e.x * inv_length, e.y * inv_length, e.z * inv_length);
     }
 
     inline TinyObjPoint WorldToLocal(const TinyObjPoint& a, const TinyObjPoint& u, const TinyObjPoint& v,
-                                     const TinyObjPoint& w) {
+                                     const TinyObjPoint& w)
+    {
         return TinyObjPoint(dot(a, u), dot(a, v), dot(a, w));
     }
 
     // TODO(syoyo): refactor function.
     static bool exportGroupsToShape(shape_t* shape, const PrimGroup& prim_group, const std::vector<tag_t>& tags,
                                     const int material_id, const std::string& name, bool triangulate,
-                                    const std::vector<real_t>& v, std::string* warn) {
+                                    const std::vector<real_t>& v, std::string* warn)
+    {
         if (prim_group.IsEmpty())
         {
             return false;
@@ -2189,7 +2287,8 @@ static inline void parseV(real_t *x, real_t *y, real_t *z, real_t *w,
 
     // Split a string with specified delimiter character and escape character.
     // https://rosettacode.org/wiki/Tokenize_a_string_with_escaping#C.2B.2B
-    static void SplitString(const std::string& s, char delim, char escape, std::vector<std::string>& elems) {
+    static void SplitString(const std::string& s, char delim, char escape, std::vector<std::string>& elems)
+    {
         std::string token;
 
         bool escaping = false;
@@ -2220,7 +2319,8 @@ static inline void parseV(real_t *x, real_t *y, real_t *z, real_t *w,
         elems.push_back(token);
     }
 
-    static std::string JoinPath(const std::string& dir, const std::string& filename) {
+    static std::string JoinPath(const std::string& dir, const std::string& filename)
+    {
         if (dir.empty())
         {
             return filename;
@@ -2241,7 +2341,8 @@ static inline void parseV(real_t *x, real_t *y, real_t *z, real_t *w,
     }
 
     void LoadMtl(std::map<std::string, int>* material_map, std::vector<material_t>* materials, std::istream* inStream,
-                 std::string* warning, std::string* err) {
+                 std::string* warning, std::string* err)
+    {
         (void)err;
 
         // Create a default material anyway.
@@ -2672,7 +2773,8 @@ static inline void parseV(real_t *x, real_t *y, real_t *z, real_t *w,
     }
 
     bool MaterialFileReader::operator()(const std::string& matId, std::vector<material_t>* materials,
-                                        std::map<std::string, int>* matMap, std::string* warn, std::string* err) {
+                                        std::map<std::string, int>* matMap, std::string* warn, std::string* err)
+    {
         if (!m_mtlBaseDir.empty())
         {
 #ifdef _WIN32
@@ -2735,7 +2837,8 @@ static inline void parseV(real_t *x, real_t *y, real_t *z, real_t *w,
     }
 
     bool MaterialStreamReader::operator()(const std::string& matId, std::vector<material_t>* materials,
-                                          std::map<std::string, int>* matMap, std::string* warn, std::string* err) {
+                                          std::map<std::string, int>* matMap, std::string* warn, std::string* err)
+    {
         (void)err;
         (void)matId;
         if (!m_inStream)
@@ -2756,7 +2859,8 @@ static inline void parseV(real_t *x, real_t *y, real_t *z, real_t *w,
 
     bool LoadObj(attrib_t* attrib, std::vector<shape_t>* shapes, std::vector<material_t>* materials, std::string* warn,
                  std::string* err, const char* filename, const char* mtl_basedir, bool triangulate,
-                 bool default_vcols_fallback) {
+                 bool default_vcols_fallback)
+    {
         attrib->vertices.clear();
         attrib->normals.clear();
         attrib->texcoords.clear();
@@ -2794,7 +2898,8 @@ static inline void parseV(real_t *x, real_t *y, real_t *z, real_t *w,
 
     bool LoadObj(attrib_t* attrib, std::vector<shape_t>* shapes, std::vector<material_t>* materials, std::string* warn,
                  std::string* err, std::istream* inStream, MaterialReader* readMatFn /*= NULL*/, bool triangulate,
-                 bool default_vcols_fallback) {
+                 bool default_vcols_fallback)
+    {
         std::stringstream errss;
 
         std::vector<real_t> v;
@@ -3430,7 +3535,8 @@ static inline void parseV(real_t *x, real_t *y, real_t *z, real_t *w,
 
     bool LoadObjWithCallback(std::istream& inStream, const callback_t& callback, void* user_data /*= NULL*/,
                              MaterialReader* readMatFn /*= NULL*/, std::string* warn, /* = NULL*/
-                             std::string* err /*= NULL*/) {
+                             std::string* err /*= NULL*/)
+    {
         std::stringstream errss;
 
         // material
@@ -3764,7 +3870,8 @@ static inline void parseV(real_t *x, real_t *y, real_t *z, real_t *w,
         return true;
     }
 
-    bool ObjReader::ParseFromFile(const std::string& filename, const ObjReaderConfig& config) {
+    bool ObjReader::ParseFromFile(const std::string& filename, const ObjReaderConfig& config)
+    {
         std::string mtl_search_path;
 
         if (config.mtl_search_path.empty())
@@ -3791,7 +3898,8 @@ static inline void parseV(real_t *x, real_t *y, real_t *z, real_t *w,
     }
 
     bool ObjReader::ParseFromString(const std::string& obj_text, const std::string& mtl_text,
-                                    const ObjReaderConfig& config) {
+                                    const ObjReaderConfig& config)
+    {
         std::stringbuf obj_buf(obj_text);
         std::stringbuf mtl_buf(mtl_text);
 

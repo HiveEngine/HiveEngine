@@ -15,7 +15,8 @@ namespace waggle
         hive::math::Quat m_rotation{};
         hive::math::Float3 m_scale{1.f, 1.f, 1.f};
 
-        static void Reflect(queen::ComponentReflector<>& r) {
+        static void Reflect(queen::ComponentReflector<>& r)
+        {
             r.Field("position", &Transform::m_position);
             r.Field("rotation", &Transform::m_rotation);
             r.Field("scale", &Transform::m_scale);

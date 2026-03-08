@@ -38,7 +38,8 @@ namespace hive::math
     {
         float m_m[4][4]{};
 
-        [[nodiscard]] static Mat4 Identity() noexcept {
+        [[nodiscard]] static Mat4 Identity() noexcept
+        {
             Mat4 r{};
             r.m_m[0][0] = 1.f;
             r.m_m[1][1] = 1.f;
@@ -53,10 +54,12 @@ namespace hive::math
     inline constexpr float kHalfPi = 1.57079632679489661923f;
     inline constexpr float kEpsilon = 1.0e-6f;
 
-    [[nodiscard]] inline constexpr float Radians(float degrees) {
+    [[nodiscard]] inline constexpr float Radians(float degrees)
+    {
         return degrees * (kPi / 180.f);
     }
-    [[nodiscard]] inline constexpr float Degrees(float radians) {
+    [[nodiscard]] inline constexpr float Degrees(float radians)
+    {
         return radians * (180.f / kPi);
     }
 } // namespace hive::math

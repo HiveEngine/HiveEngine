@@ -18,18 +18,36 @@ namespace larvae
 
         bool KeepRunning();
 
-        size_t iterations() const { return iterations_; }
+        size_t iterations() const
+        {
+            return iterations_;
+        }
 
-        void SetBytesProcessed(size_t bytes) { bytes_processed_ = bytes; }
-        void SetItemsProcessed(size_t items) { items_processed_ = items; }
+        void SetBytesProcessed(size_t bytes)
+        {
+            bytes_processed_ = bytes;
+        }
+        void SetItemsProcessed(size_t items)
+        {
+            items_processed_ = items;
+        }
 
-        size_t GetBytesProcessed() const { return bytes_processed_; }
-        size_t GetItemsProcessed() const { return items_processed_; }
+        size_t GetBytesProcessed() const
+        {
+            return bytes_processed_;
+        }
+        size_t GetItemsProcessed() const
+        {
+            return items_processed_;
+        }
 
         void StartTiming();
         void StopTiming();
 
-        std::chrono::nanoseconds GetElapsed() const { return elapsed_; }
+        std::chrono::nanoseconds GetElapsed() const
+        {
+            return elapsed_;
+        }
 
     private:
         size_t iterations_;
@@ -54,7 +72,8 @@ namespace larvae
         double items_per_second{0.0};
     };
 
-    template <typename T> inline void DoNotOptimize(T const& value) {
+    template <typename T> inline void DoNotOptimize(T const& value)
+    {
 #if defined(_MSC_VER)
         const volatile void* volatile unused = &value;
         (void)unused;
@@ -66,7 +85,8 @@ namespace larvae
 #endif
     }
 
-    template <typename T> inline void DoNotOptimize(T& value) {
+    template <typename T> inline void DoNotOptimize(T& value)
+    {
 #if defined(_MSC_VER)
         volatile void* volatile unused = &value;
         (void)unused;
@@ -80,7 +100,8 @@ namespace larvae
 #endif
     }
 
-    inline void ClobberMemory() {
+    inline void ClobberMemory()
+    {
 #if defined(_MSC_VER)
         _ReadWriteBarrier();
 #elif defined(__GNUC__) || defined(__clang__)

@@ -52,7 +52,8 @@ namespace queen
             , capacity_{RoundUpPowerOf2(capacity)}
             , mask_{capacity_ - 1}
             , head_{0}
-            , tail_{0} {
+            , tail_{0}
+        {
             void* mem = allocator_->Allocate(sizeof(Cell) * capacity_, alignof(Cell));
             buffer_ = static_cast<Cell*>(mem);
 
@@ -62,7 +63,8 @@ namespace queen
             }
         }
 
-        ~MPMCQueue() {
+        ~MPMCQueue()
+        {
             if (buffer_ != nullptr)
             {
                 size_t head = head_.load(std::memory_order_relaxed);
@@ -92,7 +94,8 @@ namespace queen
          * @param item Item to push
          * @return true if successful, false if queue is full
          */
-        bool Push(const T& item) {
+        bool Push(const T& item)
+        {
             Cell* cell;
             size_t pos = tail_.load(std::memory_order_relaxed);
 
@@ -135,7 +138,8 @@ namespace queen
          *
          * @return The popped item, or std::nullopt if queue is empty
          */
-        [[nodiscard]] std::optional<T> Pop() {
+        [[nodiscard]] std::optional<T> Pop()
+        {
             Cell* cell;
             size_t pos = head_.load(std::memory_order_relaxed);
 
@@ -177,7 +181,8 @@ namespace queen
          *
          * This is a snapshot and may not be accurate in concurrent context.
          */
-        [[nodiscard]] bool IsEmpty() const noexcept {
+        [[nodiscard]] bool IsEmpty() const noexcept
+        {
             size_t head = head_.load(std::memory_order_acquire);
             size_t tail = tail_.load(std::memory_order_acquire);
             return head == tail;
@@ -188,13 +193,17 @@ namespace queen
          *
          * This is a snapshot and may not be accurate in concurrent context.
          */
-        [[nodiscard]] size_t Size() const noexcept {
+        [[nodiscard]] size_t Size() const noexcept
+        {
             size_t head = head_.load(std::memory_order_acquire);
             size_t tail = tail_.load(std::memory_order_acquire);
             return tail >= head ? tail - head : 0;
         }
 
-        [[nodiscard]] size_t Capacity() const noexcept { return capacity_; }
+        [[nodiscard]] size_t Capacity() const noexcept
+        {
+            return capacity_;
+        }
 
     private:
         struct Cell
@@ -203,7 +212,8 @@ namespace queen
             T data;
         };
 
-        static size_t RoundUpPowerOf2(size_t n) {
+        static size_t RoundUpPowerOf2(size_t n)
+        {
             if (n == 0)
                 return 1;
             --n;

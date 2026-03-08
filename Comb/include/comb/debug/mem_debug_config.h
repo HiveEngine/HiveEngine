@@ -13,7 +13,8 @@
  * @code
  *   // CMake
  *   option(HIVE_FEATURE_MEM_DEBUG "Enable memory debugging" OFF)
- *   option(COMB_ENABLE_CALLSTACKS "Enable callstack capture" OFF)
+ *
+ * option(COMB_ENABLE_CALLSTACKS "Enable callstack capture" OFF)
  *
  *   // Code
  *   #if COMB_MEM_DEBUG_LEAK_DETECTION
@@ -156,12 +157,14 @@ namespace comb::debug
     constexpr uint32_t maxCallstackDepth = 16;
 
     // Safe guard read/write (handles potentially misaligned back guards)
-    inline void WriteGuard(void* addr) noexcept {
+    inline void WriteGuard(void* addr) noexcept
+    {
         uint32_t magic = guardMagic;
         std::memcpy(addr, &magic, sizeof(uint32_t));
     }
 
-    inline uint32_t ReadGuard(const void* addr) noexcept {
+    inline uint32_t ReadGuard(const void* addr) noexcept
+    {
         uint32_t value;
         std::memcpy(&value, addr, sizeof(uint32_t));
         return value;

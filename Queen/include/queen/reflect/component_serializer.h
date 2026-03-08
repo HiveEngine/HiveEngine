@@ -57,7 +57,8 @@ namespace queen
     /**
      * Serialize a single field to binary
      */
-    inline void SerializeField(const void* component, const FieldInfo& field, wax::BinaryWriter& writer) noexcept {
+    inline void SerializeField(const void* component, const FieldInfo& field, wax::BinaryWriter& writer) noexcept
+    {
         const auto* fieldPtr = static_cast<const std::byte*>(component) + field.m_offset;
 
         switch (field.m_type)
@@ -168,7 +169,8 @@ namespace queen
     /**
      * Deserialize a single field from binary
      */
-    inline void DeserializeField(void* component, const FieldInfo& field, wax::BinaryReader& reader) noexcept {
+    inline void DeserializeField(void* component, const FieldInfo& field, wax::BinaryReader& reader) noexcept
+    {
         auto* fieldPtr = static_cast<std::byte*>(component) + field.m_offset;
 
         switch (field.m_type)
@@ -284,7 +286,8 @@ namespace queen
      * @param writer BinaryWriter to write to
      */
     inline void SerializeComponent(const void* component, const ComponentReflection& reflection,
-                                   wax::BinaryWriter& writer) noexcept {
+                                   wax::BinaryWriter& writer) noexcept
+    {
         for (size_t i = 0; i < reflection.m_fieldCount; ++i)
         {
             SerializeField(component, reflection.m_fields[i], writer);
@@ -299,7 +302,8 @@ namespace queen
      * @param reader BinaryReader to read from
      */
     inline void DeserializeComponent(void* component, const ComponentReflection& reflection,
-                                     wax::BinaryReader& reader) noexcept {
+                                     wax::BinaryReader& reader) noexcept
+    {
         for (size_t i = 0; i < reflection.m_fieldCount; ++i)
         {
             DeserializeField(component, reflection.m_fields[i], reader);
@@ -309,7 +313,8 @@ namespace queen
     /**
      * Serialize a reflectable component (type-safe version)
      */
-    template <Reflectable T> void Serialize(const T& component, wax::BinaryWriter& writer) noexcept {
+    template <Reflectable T> void Serialize(const T& component, wax::BinaryWriter& writer) noexcept
+    {
         auto reflection = GetReflectionData<T>();
         SerializeComponent(&component, reflection, writer);
     }
@@ -317,7 +322,8 @@ namespace queen
     /**
      * Deserialize a reflectable component (type-safe version)
      */
-    template <Reflectable T> void Deserialize(T& component, wax::BinaryReader& reader) noexcept {
+    template <Reflectable T> void Deserialize(T& component, wax::BinaryReader& reader) noexcept
+    {
         auto reflection = GetReflectionData<T>();
         DeserializeComponent(&component, reflection, reader);
     }

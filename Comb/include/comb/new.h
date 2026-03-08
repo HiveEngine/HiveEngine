@@ -51,7 +51,8 @@ namespace comb
      * @param args Constructor arguments
      * @return Pointer to constructed object, or nullptr if allocation failed
      */
-    template <typename T, Allocator Alloc, typename... Args> [[nodiscard]] T* New(Alloc& allocator, Args&&... args) {
+    template <typename T, Allocator Alloc, typename... Args> [[nodiscard]] T* New(Alloc& allocator, Args&&... args)
+    {
         void* memory = allocator.Allocate(sizeof(T), alignof(T));
 
         if (memory == nullptr)
@@ -70,7 +71,8 @@ namespace comb
      * @param allocator Allocator to use (must be same as used for New)
      * @param ptr Pointer to object (nullptr is a no-op)
      */
-    template <typename T, Allocator Alloc> void Delete(Alloc& allocator, T* ptr) {
+    template <typename T, Allocator Alloc> void Delete(Alloc& allocator, T* ptr)
+    {
         if (ptr == nullptr)
         {
             return;
@@ -93,7 +95,8 @@ namespace comb
      * @param count Number of elements to allocate
      * @return Pointer to first element, or nullptr if allocation failed
      */
-    template <typename T, Allocator Alloc> [[nodiscard]] T* NewArray(Alloc& allocator, size_t count) {
+    template <typename T, Allocator Alloc> [[nodiscard]] T* NewArray(Alloc& allocator, size_t count)
+    {
         if (count == 0)
         {
             return nullptr;
@@ -124,7 +127,8 @@ namespace comb
      * @param ptr Pointer to first element (nullptr is a no-op)
      * @param count Number of elements in array
      */
-    template <typename T, Allocator Alloc> void DeleteArray(Alloc& allocator, T* ptr, size_t count) {
+    template <typename T, Allocator Alloc> void DeleteArray(Alloc& allocator, T* ptr, size_t count)
+    {
         if (ptr == nullptr)
         {
             return;

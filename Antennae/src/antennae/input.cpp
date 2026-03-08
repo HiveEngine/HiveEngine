@@ -108,7 +108,8 @@ namespace antennae
         terra::MouseButton::MIDDLE,
     };
 
-    void UpdateKeyboard(Keyboard& keyboard, const terra::InputState* input) {
+    void UpdateKeyboard(Keyboard& keyboard, const terra::InputState* input)
+    {
         std::memcpy(keyboard.previous, keyboard.current, sizeof(keyboard.current));
         for (terra::Key key : kPolledKeys)
         {
@@ -116,7 +117,8 @@ namespace antennae
         }
     }
 
-    void UpdateMouse(Mouse& mouse, const terra::InputState* input) {
+    void UpdateMouse(Mouse& mouse, const terra::InputState* input)
+    {
         std::memcpy(mouse.prev_buttons, mouse.buttons, sizeof(mouse.buttons));
 
         const float newX = terra::GetMouseX(input);
@@ -145,7 +147,8 @@ namespace antennae
         mouse.scroll_y = 0.0f;
     }
 
-    void UpdateInput(queen::World& world, terra::WindowContext* window) {
+    void UpdateInput(queen::World& world, terra::WindowContext* window)
+    {
         if (!world.HasResource<Keyboard>())
             world.InsertResource(Keyboard{});
         if (!world.HasResource<Mouse>())

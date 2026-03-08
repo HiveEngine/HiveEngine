@@ -17,7 +17,8 @@
 
 namespace nectar
 {
-    wax::Vector<GltfMaterialInfo> ParseGltfMaterials(wax::ByteSpan gltfData, comb::DefaultAllocator& alloc) {
+    wax::Vector<GltfMaterialInfo> ParseGltfMaterials(wax::ByteSpan gltfData, comb::DefaultAllocator& alloc)
+    {
         wax::Vector<GltfMaterialInfo> materials{alloc};
 
         cgltf_options options{};

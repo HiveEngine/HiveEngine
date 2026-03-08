@@ -10,7 +10,8 @@
 namespace
 {
 
-    auto& GetVfsAlloc() {
+    auto& GetVfsAlloc()
+    {
         static comb::ModuleAllocator alloc{"TestVFS", 4 * 1024 * 1024};
         return alloc.Get();
     }

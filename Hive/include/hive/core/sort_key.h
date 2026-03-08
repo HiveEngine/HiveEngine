@@ -25,7 +25,8 @@ namespace hive::sort_key
     constexpr uint32_t kDepthMax = (1u << kDepthBits) - 1;
 
     // Quantize a distance to 24-bit unsigned integer.
-    [[nodiscard]] inline uint32_t QuantizeDepth(float distance, float z_near, float z_far) {
+    [[nodiscard]] inline uint32_t QuantizeDepth(float distance, float z_near, float z_far)
+    {
         float t = (distance - z_near) / (z_far - z_near);
         t = math::Clamp(0.f, t, 1.f);
         return static_cast<uint32_t>(t * static_cast<float>(kDepthMax));
@@ -33,7 +34,8 @@ namespace hive::sort_key
 
     // Opaque sort key: front-to-back (ascending depth for early-Z)
     [[nodiscard]] inline uint64_t EncodeOpaque(uint8_t layer, uint8_t pass, uint16_t pipeline_id, uint16_t material_id,
-                                               uint32_t depth_24) {
+                                               uint32_t depth_24)
+    {
         uint64_t key = 0;
         key |= static_cast<uint64_t>(layer & 0xF) << kLayerShift;
         key |= static_cast<uint64_t>(pass & 0xF) << kPassShift;
@@ -45,7 +47,8 @@ namespace hive::sort_key
 
     // Transparent sort key: back-to-front (inverted depth for correct blending)
     [[nodiscard]] inline uint64_t EncodeTransparent(uint8_t layer, uint8_t pass, uint16_t pipeline_id,
-                                                    uint16_t material_id, uint32_t depth_24) {
+                                                    uint16_t material_id, uint32_t depth_24)
+    {
         uint64_t key = 0;
         key |= static_cast<uint64_t>(layer & 0xF) << kLayerShift;
         key |= static_cast<uint64_t>(pass & 0xF) << kPassShift;
@@ -57,22 +60,28 @@ namespace hive::sort_key
     }
 
     // Extract fields (for debug / tests)
-    [[nodiscard]] inline uint8_t ExtractLayer(uint64_t key) {
+    [[nodiscard]] inline uint8_t ExtractLayer(uint64_t key)
+    {
         return static_cast<uint8_t>((key >> kLayerShift) & 0xF);
     }
-    [[nodiscard]] inline uint8_t ExtractPass(uint64_t key) {
+    [[nodiscard]] inline uint8_t ExtractPass(uint64_t key)
+    {
         return static_cast<uint8_t>((key >> kPassShift) & 0xF);
     }
-    [[nodiscard]] inline bool ExtractTranslucent(uint64_t key) {
+    [[nodiscard]] inline bool ExtractTranslucent(uint64_t key)
+    {
         return ((key >> kTranslucentBit) & 1) != 0;
     }
-    [[nodiscard]] inline uint16_t ExtractPipeline(uint64_t key) {
+    [[nodiscard]] inline uint16_t ExtractPipeline(uint64_t key)
+    {
         return static_cast<uint16_t>((key >> 40) & 0x7FFF);
     }
-    [[nodiscard]] inline uint16_t ExtractMaterial(uint64_t key) {
+    [[nodiscard]] inline uint16_t ExtractMaterial(uint64_t key)
+    {
         return static_cast<uint16_t>((key >> kDepthBits) & 0xFFFF);
     }
-    [[nodiscard]] inline uint32_t ExtractDepth(uint64_t key) {
+    [[nodiscard]] inline uint32_t ExtractDepth(uint64_t key)
+    {
         return static_cast<uint32_t>(key & kDepthMax);
     }
 

@@ -4,11 +4,13 @@
 
 namespace hive
 {
-    void ModuleRegistry::RegisterModule(ModuleFactoryFn fn) {
+    void ModuleRegistry::RegisterModule(ModuleFactoryFn fn)
+    {
         m_moduleFactories.push_back(fn);
     }
 
-    void ModuleRegistry::CreateModules() {
+    void ModuleRegistry::CreateModules()
+    {
         const auto createModuleFromFactory = [this](const auto& fn) {
             m_modules.push_back(fn());
         };
@@ -16,7 +18,8 @@ namespace hive
         std::for_each(m_moduleFactories.begin(), m_moduleFactories.end(), createModuleFromFactory);
     }
 
-    void ModuleRegistry::ConfigureModules() {
+    void ModuleRegistry::ConfigureModules()
+    {
         HIVE_PROFILE_SCOPE_N("ModuleRegistry::Configure");
 
         std::for_each(m_modules.begin(), m_modules.end(), [](auto& module) { module->Configure(); });
@@ -47,7 +50,8 @@ namespace hive
         m_modules = std::move(orderedModules);
     }
 
-    void ModuleRegistry::InitModules() {
+    void ModuleRegistry::InitModules()
+    {
         HIVE_PROFILE_SCOPE_N("ModuleRegistry::Init");
 
         const auto moduleInit = [](const auto& module) {
@@ -57,7 +61,8 @@ namespace hive
         std::for_each(m_modules.begin(), m_modules.end(), moduleInit);
     }
 
-    void ModuleRegistry::ShutdownModules() {
+    void ModuleRegistry::ShutdownModules()
+    {
         HIVE_PROFILE_SCOPE_N("ModuleRegistry::Shutdown");
 
         const auto moduleShutdown = [](const auto& module) {

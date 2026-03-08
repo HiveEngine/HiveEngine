@@ -134,7 +134,8 @@ namespace comb
         explicit BuddyAllocator(size_t capacity, const char* debugName = "BuddyAllocator")
             : m_capacity{NextPowerOfTwo(capacity)}
             , m_usedMemory{0}
-            , m_debugName{debugName} {
+            , m_debugName{debugName}
+        {
             hive::Assert(capacity > 0, "Capacity must be > 0");
 
             m_memoryBlock = AllocatePages(m_capacity);
@@ -157,7 +158,8 @@ namespace comb
 #endif
         }
 
-        ~BuddyAllocator() {
+        ~BuddyAllocator()
+        {
 #if COMB_MEM_DEBUG
             if (m_registry)
             {
@@ -195,7 +197,8 @@ namespace comb
             }
         }
 
-        BuddyAllocator& operator=(BuddyAllocator&& other) noexcept {
+        BuddyAllocator& operator=(BuddyAllocator&& other) noexcept
+        {
             if (this != &other)
             {
 #if COMB_MEM_DEBUG
@@ -253,7 +256,8 @@ namespace comb
          *
          * IMPORTANT: Does NOT fallback to operator new. Returns nullptr when out of memory.
          */
-        [[nodiscard]] void* Allocate(size_t size, size_t alignment, const char* tag = nullptr) {
+        [[nodiscard]] void* Allocate(size_t size, size_t alignment, const char* tag = nullptr)
+        {
 #if COMB_MEM_DEBUG
             void* ptr = AllocateDebug(size, alignment, tag);
 #else
@@ -320,7 +324,8 @@ namespace comb
          *
          * IMPORTANT: Pointer must have been allocated from THIS allocator.
          */
-        void Deallocate(void* ptr) {
+        void Deallocate(void* ptr)
+        {
             if (!ptr)
                 return;
 
@@ -344,17 +349,26 @@ namespace comb
         /**
          * Get total bytes currently allocated
          */
-        [[nodiscard]] size_t GetUsedMemory() const { return m_usedMemory; }
+        [[nodiscard]] size_t GetUsedMemory() const
+        {
+            return m_usedMemory;
+        }
 
         /**
          * Get total capacity
          */
-        [[nodiscard]] size_t GetTotalMemory() const { return m_capacity; }
+        [[nodiscard]] size_t GetTotalMemory() const
+        {
+            return m_capacity;
+        }
 
         /**
          * Get allocator name for debugging
          */
-        [[nodiscard]] const char* GetName() const { return m_debugName; }
+        [[nodiscard]] const char* GetName() const
+        {
+            return m_debugName;
+        }
 
         /**
          * Get the usable size of an allocation's block
@@ -366,7 +380,8 @@ namespace comb
          * @param ptr User pointer previously returned by Allocate
          * @return Usable byte count, or 0 if ptr is null
          */
-        [[nodiscard]] size_t GetBlockUsableSize(const void* ptr) const {
+        [[nodiscard]] size_t GetBlockUsableSize(const void* ptr) const
+        {
             if (!ptr)
                 return 0;
 #if COMB_MEM_DEBUG
@@ -385,7 +400,8 @@ namespace comb
          * All existing allocations become invalid.
          * Rebuilds the free list as a single top-level block.
          */
-        void Reset() {
+        void Reset()
+        {
             for (size_t i = 0; i < maxLevels; ++i)
             {
                 m_freeLists[i] = nullptr;
@@ -408,7 +424,8 @@ namespace comb
 
     private:
         // Convert size to level (0 = 64B, 1 = 128B, 2 = 256B, etc.)
-        [[nodiscard]] constexpr size_t GetLevel(size_t size) const noexcept {
+        [[nodiscard]] constexpr size_t GetLevel(size_t size) const noexcept
+        {
             size_t blockSize = minBlockSize;
             size_t level = 0;
 
@@ -422,15 +439,20 @@ namespace comb
         }
 
         // Convert level to block size
-        [[nodiscard]] constexpr size_t GetBlockSize(size_t level) const noexcept { return minBlockSize << level; }
+        [[nodiscard]] constexpr size_t GetBlockSize(size_t level) const noexcept
+        {
+            return minBlockSize << level;
+        }
 
         // Calculate buddy offset using XOR
-        [[nodiscard]] size_t GetBuddyOffset(size_t offset, size_t blockSize) const noexcept {
+        [[nodiscard]] size_t GetBuddyOffset(size_t offset, size_t blockSize) const noexcept
+        {
             return offset ^ blockSize;
         }
 
         // Coalesce and insert block into free list
-        void CoalesceAndInsert(void* blockPtr, size_t blockSize, size_t level) {
+        void CoalesceAndInsert(void* blockPtr, size_t blockSize, size_t level)
+        {
             // Calculate offset
             size_t offset =
                 static_cast<size_t>(static_cast<std::byte*>(blockPtr) - static_cast<std::byte*>(m_memoryBlock));
@@ -521,7 +543,8 @@ namespace comb
     // Debug Implementation (Inline methods - must be in header)
     // ========================================================================
 
-    inline void* BuddyAllocator::AllocateDebug(size_t size, size_t alignment, const char* tag) {
+    inline void* BuddyAllocator::AllocateDebug(size_t size, size_t alignment, const char* tag)
+    {
         using namespace debug;
 
         hive::Assert(alignment <= alignof(std::max_align_t), "BuddyAllocator alignment limited to max_align_t");
@@ -622,7 +645,8 @@ namespace comb
         return userPtr;
     }
 
-    inline void BuddyAllocator::DeallocateDebug(void* ptr) {
+    inline void BuddyAllocator::DeallocateDebug(void* ptr)
+    {
         using namespace debug;
 
         if (!ptr)

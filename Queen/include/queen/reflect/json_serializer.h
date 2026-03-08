@@ -17,7 +17,8 @@ namespace queen
     public:
         JsonSerializer() noexcept = default;
 
-        void SerializeComponent(const void* component, const ComponentReflection& reflection) noexcept {
+        void SerializeComponent(const void* component, const ComponentReflection& reflection) noexcept
+        {
             m_pos = 0;
             Put('{');
             for (size_t i = 0; i < reflection.m_fieldCount; ++i)
@@ -38,16 +39,24 @@ namespace queen
             m_buf[m_pos < BufSize ? m_pos : BufSize - 1] = '\0';
         }
 
-        void SerializeField(const void* base, const FieldInfo& field) noexcept {
+        void SerializeField(const void* base, const FieldInfo& field) noexcept
+        {
             const auto* ptr = static_cast<const std::byte*>(base) + field.m_offset;
             SerializeValue(ptr, field);
         }
 
-        [[nodiscard]] const char* CStr() const noexcept { return m_buf; }
-        [[nodiscard]] size_t Size() const noexcept { return m_pos; }
+        [[nodiscard]] const char* CStr() const noexcept
+        {
+            return m_buf;
+        }
+        [[nodiscard]] size_t Size() const noexcept
+        {
+            return m_pos;
+        }
 
     private:
-        void SerializeValue(const void* ptr, const FieldInfo& field) noexcept {
+        void SerializeValue(const void* ptr, const FieldInfo& field) noexcept
+        {
             switch (field.m_type)
             {
                 case FieldType::INT8:
@@ -104,7 +113,8 @@ namespace queen
             }
         }
 
-        void SerializeStruct(const void* ptr, const FieldInfo& field) noexcept {
+        void SerializeStruct(const void* ptr, const FieldInfo& field) noexcept
+        {
             if (field.m_nestedFields == nullptr)
             {
                 WriteRaw("null");
@@ -131,7 +141,8 @@ namespace queen
             Put('}');
         }
 
-        void SerializeEnum(const void* ptr, const FieldInfo& field) noexcept {
+        void SerializeEnum(const void* ptr, const FieldInfo& field) noexcept
+        {
             const int64_t value = ReadEnumValue(ptr, field);
             const char* name = field.m_enumInfo != nullptr ? field.m_enumInfo->NameOf(value) : nullptr;
             if (name != nullptr)
@@ -146,7 +157,8 @@ namespace queen
             }
         }
 
-        void SerializeString(const void* ptr, const FieldInfo& field) noexcept {
+        void SerializeString(const void* ptr, const FieldInfo& field) noexcept
+        {
             const uint8_t len =
                 *reinterpret_cast<const uint8_t*>(static_cast<const std::byte*>(ptr) + (field.m_size - 1));
             const char* str = static_cast<const char*>(ptr);
@@ -155,7 +167,8 @@ namespace queen
             Put('"');
         }
 
-        void SerializeFixedArray(const void* ptr, const FieldInfo& field) noexcept {
+        void SerializeFixedArray(const void* ptr, const FieldInfo& field) noexcept
+        {
             const size_t elemSize = field.m_elementCount > 0 ? field.m_size / field.m_elementCount : 0;
             Put('[');
             for (size_t i = 0; i < field.m_elementCount; ++i)
@@ -174,7 +187,8 @@ namespace queen
             Put(']');
         }
 
-        static int64_t ReadEnumValue(const void* ptr, const FieldInfo& field) noexcept {
+        static int64_t ReadEnumValue(const void* ptr, const FieldInfo& field) noexcept
+        {
             const size_t size = field.m_enumInfo != nullptr ? field.m_enumInfo->m_underlyingSize : field.m_size;
             switch (size)
             {
@@ -191,14 +205,16 @@ namespace queen
             }
         }
 
-        void Put(char c) noexcept {
+        void Put(char c) noexcept
+        {
             if (m_pos < BufSize - 1)
             {
                 m_buf[m_pos++] = c;
             }
         }
 
-        void WriteRaw(const char* s) noexcept {
+        void WriteRaw(const char* s) noexcept
+        {
             if (s == nullptr)
             {
                 return;
@@ -210,7 +226,8 @@ namespace queen
             }
         }
 
-        void WriteEscaped(const char* s, size_t len) noexcept {
+        void WriteEscaped(const char* s, size_t len) noexcept
+        {
             for (size_t i = 0; i < len && m_pos < BufSize - 2; ++i)
             {
                 const char c = s[i];
@@ -236,7 +253,8 @@ namespace queen
             }
         }
 
-        void WriteInt(int32_t v) noexcept {
+        void WriteInt(int32_t v) noexcept
+        {
             char tmp[16];
             const int count = std::snprintf(tmp, sizeof(tmp), "%d", v);
             for (int i = 0; i < count; ++i)
@@ -245,7 +263,8 @@ namespace queen
             }
         }
 
-        void WriteInt64(int64_t v) noexcept {
+        void WriteInt64(int64_t v) noexcept
+        {
             char tmp[24];
             const int count = std::snprintf(tmp, sizeof(tmp), "%lld", static_cast<long long>(v));
             for (int i = 0; i < count; ++i)
@@ -254,7 +273,8 @@ namespace queen
             }
         }
 
-        void WriteUint(uint32_t v) noexcept {
+        void WriteUint(uint32_t v) noexcept
+        {
             char tmp[16];
             const int count = std::snprintf(tmp, sizeof(tmp), "%u", v);
             for (int i = 0; i < count; ++i)
@@ -263,7 +283,8 @@ namespace queen
             }
         }
 
-        void WriteUint64(uint64_t v) noexcept {
+        void WriteUint64(uint64_t v) noexcept
+        {
             char tmp[24];
             const int count = std::snprintf(tmp, sizeof(tmp), "%llu", static_cast<unsigned long long>(v));
             for (int i = 0; i < count; ++i)
@@ -272,7 +293,8 @@ namespace queen
             }
         }
 
-        void WriteFloat(float v) noexcept {
+        void WriteFloat(float v) noexcept
+        {
             char tmp[32];
             const int count = std::snprintf(tmp, sizeof(tmp), "%.9g", static_cast<double>(v));
             for (int i = 0; i < count; ++i)
@@ -281,7 +303,8 @@ namespace queen
             }
         }
 
-        void WriteDouble(double v) noexcept {
+        void WriteDouble(double v) noexcept
+        {
             char tmp[32];
             const int count = std::snprintf(tmp, sizeof(tmp), "%.17g", v);
             for (int i = 0; i < count; ++i)

@@ -15,7 +15,9 @@ namespace
 
         TestObject(int v = 0, float d = 0.0f)
             : value{v}
-            , data{d} {}
+            , data{d}
+        {
+        }
     };
 
     struct LargeObject

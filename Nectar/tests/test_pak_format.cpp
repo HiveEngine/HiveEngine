@@ -12,7 +12,8 @@
 namespace
 {
 
-    auto& GetPakAlloc() {
+    auto& GetPakAlloc()
+    {
         static comb::ModuleAllocator alloc{"TestPakFmt", 4 * 1024 * 1024};
         return alloc.Get();
     }

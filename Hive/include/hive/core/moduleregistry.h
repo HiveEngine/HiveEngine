@@ -29,7 +29,8 @@ namespace hive
     template <typename ModuleClass> class ModuleRegistrar
     {
     public:
-        ModuleRegistrar() {
+        ModuleRegistrar()
+        {
             ModuleRegistry::GetInstance().RegisterModule(
                 []() -> std::unique_ptr<Module> { return std::make_unique<ModuleClass>(); });
         }
@@ -37,7 +38,8 @@ namespace hive
 } // namespace hive
 
 #define REGISTER_MODULE(ModuleClass)                                                                                   \
-    void Register##ModuleClass() {                                                                                     \
+    void Register##ModuleClass()                                                                                       \
+    {                                                                                                                  \
         hive::ModuleRegistry::GetInstance().RegisterModule(                                                            \
             []() -> std::unique_ptr<hive::Module> { return std::make_unique<ModuleClass>(); });                        \
     }

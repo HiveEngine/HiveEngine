@@ -35,22 +35,31 @@ namespace queen
     {
     public:
         WaitGroup()
-            : m_counter{0} {}
+            : m_counter{0}
+        {
+        }
 
         /**
          * Add to the counter (call before submitting tasks)
          */
-        void Add(int64_t delta = 1) noexcept { m_counter.fetch_add(delta, std::memory_order_release); }
+        void Add(int64_t delta = 1) noexcept
+        {
+            m_counter.fetch_add(delta, std::memory_order_release);
+        }
 
         /**
          * Decrement the counter (call when task completes)
          */
-        void Done() noexcept { m_counter.fetch_sub(1, std::memory_order_release); }
+        void Done() noexcept
+        {
+            m_counter.fetch_sub(1, std::memory_order_release);
+        }
 
         /**
          * Wait for counter to reach zero
          */
-        void Wait() const noexcept {
+        void Wait() const noexcept
+        {
             while (m_counter.load(std::memory_order_acquire) > 0)
             {
                 std::this_thread::yield();
@@ -60,12 +69,18 @@ namespace queen
         /**
          * Check if all tasks are done without blocking
          */
-        [[nodiscard]] bool IsDone() const noexcept { return m_counter.load(std::memory_order_acquire) <= 0; }
+        [[nodiscard]] bool IsDone() const noexcept
+        {
+            return m_counter.load(std::memory_order_acquire) <= 0;
+        }
 
         /**
          * Get the current count
          */
-        [[nodiscard]] int64_t Count() const noexcept { return m_counter.load(std::memory_order_acquire); }
+        [[nodiscard]] int64_t Count() const noexcept
+        {
+            return m_counter.load(std::memory_order_acquire);
+        }
 
     private:
         std::atomic<int64_t> m_counter;
@@ -112,7 +127,8 @@ namespace queen
      */
     template <comb::Allocator Allocator>
     void ParallelFor(ThreadPool<Allocator>& pool, size_t begin, size_t end, void (*func)(size_t index, void* userData),
-                     void* userData, size_t chunkSize = 0) {
+                     void* userData, size_t chunkSize = 0)
+    {
         if (begin >= end)
         {
             return;
@@ -195,7 +211,8 @@ namespace queen
      */
     template <comb::Allocator Allocator>
     void ParallelForEach(ThreadPool<Allocator>& pool, size_t begin, size_t end,
-                         void (*func)(size_t index, void* userData), void* userData) {
+                         void (*func)(size_t index, void* userData), void* userData)
+    {
         ParallelFor(pool, begin, end, func, userData, 1);
     }
 
@@ -223,7 +240,8 @@ namespace queen
         /**
          * Submit a task to the batch
          */
-        template <comb::Allocator Allocator> void Submit(ThreadPool<Allocator>& pool, Task::Func func, void* userData) {
+        template <comb::Allocator Allocator> void Submit(ThreadPool<Allocator>& pool, Task::Func func, void* userData)
+        {
             m_wg.Add(1);
 
             // Wrap the task to call Done() on completion
@@ -257,17 +275,26 @@ namespace queen
         /**
          * Wait for all submitted tasks to complete
          */
-        void Wait() { m_wg.Wait(); }
+        void Wait()
+        {
+            m_wg.Wait();
+        }
 
         /**
          * Check if all tasks are done
          */
-        [[nodiscard]] bool IsDone() const noexcept { return m_wg.IsDone(); }
+        [[nodiscard]] bool IsDone() const noexcept
+        {
+            return m_wg.IsDone();
+        }
 
         /**
          * Get the number of pending tasks
          */
-        [[nodiscard]] int64_t PendingCount() const noexcept { return m_wg.Count(); }
+        [[nodiscard]] int64_t PendingCount() const noexcept
+        {
+            return m_wg.Count();
+        }
 
     private:
         WaitGroup m_wg;

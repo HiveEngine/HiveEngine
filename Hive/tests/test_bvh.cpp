@@ -12,11 +12,13 @@ namespace
 
     constexpr size_t kAllocSize = 1024 * 1024;
 
-    AABB MakeBox(float cx, float cy, float cz, float h = 0.5f) {
+    AABB MakeBox(float cx, float cy, float cz, float h = 0.5f)
+    {
         return {{cx - h, cy - h, cz - h}, {cx + h, cy + h, cz + h}};
     }
 
-    Frustum MakeLookAtFrustum(Float3 eye, Float3 target, float fov, float aspect, float z_near, float z_far) {
+    Frustum MakeLookAtFrustum(Float3 eye, Float3 target, float fov, float aspect, float z_near, float z_far)
+    {
         Mat4 view = LookAt(eye, target, {0.f, 1.f, 0.f});
         Mat4 proj = Perspective(fov, aspect, z_near, z_far);
         return ExtractFrustum(proj * view);

@@ -58,79 +58,138 @@ namespace wax
         using ValueType = T;
 
         constexpr Ptr() noexcept
-            : ptr_{nullptr} {}
+            : ptr_{nullptr}
+        {
+        }
 
         constexpr Ptr(std::nullptr_t) noexcept
-            : ptr_{nullptr} {}
+            : ptr_{nullptr}
+        {
+        }
 
         constexpr Ptr(T* ptr) noexcept
-            : ptr_{ptr} {}
+            : ptr_{ptr}
+        {
+        }
 
         constexpr Ptr(T& value) noexcept
-            : ptr_{&value} {}
+            : ptr_{&value}
+        {
+        }
 
         constexpr Ptr(const Ptr&) noexcept = default;
         constexpr Ptr& operator=(const Ptr&) noexcept = default;
 
-        constexpr Ptr& operator=(std::nullptr_t) noexcept {
+        constexpr Ptr& operator=(std::nullptr_t) noexcept
+        {
             ptr_ = nullptr;
             return *this;
         }
 
-        constexpr Ptr& operator=(T* ptr) noexcept {
+        constexpr Ptr& operator=(T* ptr) noexcept
+        {
             ptr_ = ptr;
             return *this;
         }
 
-        [[nodiscard]] constexpr T& operator*() const noexcept {
+        [[nodiscard]] constexpr T& operator*() const noexcept
+        {
             hive::Assert(ptr_ != nullptr, "Dereferencing null Ptr");
             return *ptr_;
         }
 
-        [[nodiscard]] constexpr T* operator->() const noexcept {
+        [[nodiscard]] constexpr T* operator->() const noexcept
+        {
             hive::Assert(ptr_ != nullptr, "Dereferencing null Ptr");
             return ptr_;
         }
 
-        [[nodiscard]] constexpr T* Get() const noexcept { return ptr_; }
+        [[nodiscard]] constexpr T* Get() const noexcept
+        {
+            return ptr_;
+        }
 
-        [[nodiscard]] constexpr explicit operator bool() const noexcept { return ptr_ != nullptr; }
+        [[nodiscard]] constexpr explicit operator bool() const noexcept
+        {
+            return ptr_ != nullptr;
+        }
 
-        [[nodiscard]] constexpr bool IsNull() const noexcept { return ptr_ == nullptr; }
+        [[nodiscard]] constexpr bool IsNull() const noexcept
+        {
+            return ptr_ == nullptr;
+        }
 
-        [[nodiscard]] constexpr bool IsValid() const noexcept { return ptr_ != nullptr; }
+        [[nodiscard]] constexpr bool IsValid() const noexcept
+        {
+            return ptr_ != nullptr;
+        }
 
-        constexpr void Reset() noexcept { ptr_ = nullptr; }
+        constexpr void Reset() noexcept
+        {
+            ptr_ = nullptr;
+        }
 
-        constexpr void Rebind(T* ptr) noexcept { ptr_ = ptr; }
+        constexpr void Rebind(T* ptr) noexcept
+        {
+            ptr_ = ptr;
+        }
 
-        constexpr void Rebind(T& value) noexcept { ptr_ = &value; }
+        constexpr void Rebind(T& value) noexcept
+        {
+            ptr_ = &value;
+        }
 
-        [[nodiscard]] constexpr bool operator==(const Ptr& other) const noexcept { return ptr_ == other.ptr_; }
+        [[nodiscard]] constexpr bool operator==(const Ptr& other) const noexcept
+        {
+            return ptr_ == other.ptr_;
+        }
 
-        [[nodiscard]] constexpr bool operator!=(const Ptr& other) const noexcept { return ptr_ != other.ptr_; }
+        [[nodiscard]] constexpr bool operator!=(const Ptr& other) const noexcept
+        {
+            return ptr_ != other.ptr_;
+        }
 
-        [[nodiscard]] constexpr bool operator==(std::nullptr_t) const noexcept { return ptr_ == nullptr; }
+        [[nodiscard]] constexpr bool operator==(std::nullptr_t) const noexcept
+        {
+            return ptr_ == nullptr;
+        }
 
-        [[nodiscard]] constexpr bool operator!=(std::nullptr_t) const noexcept { return ptr_ != nullptr; }
+        [[nodiscard]] constexpr bool operator!=(std::nullptr_t) const noexcept
+        {
+            return ptr_ != nullptr;
+        }
 
-        [[nodiscard]] constexpr bool operator<(const Ptr& other) const noexcept { return ptr_ < other.ptr_; }
+        [[nodiscard]] constexpr bool operator<(const Ptr& other) const noexcept
+        {
+            return ptr_ < other.ptr_;
+        }
 
-        [[nodiscard]] constexpr bool operator<=(const Ptr& other) const noexcept { return ptr_ <= other.ptr_; }
+        [[nodiscard]] constexpr bool operator<=(const Ptr& other) const noexcept
+        {
+            return ptr_ <= other.ptr_;
+        }
 
-        [[nodiscard]] constexpr bool operator>(const Ptr& other) const noexcept { return ptr_ > other.ptr_; }
+        [[nodiscard]] constexpr bool operator>(const Ptr& other) const noexcept
+        {
+            return ptr_ > other.ptr_;
+        }
 
-        [[nodiscard]] constexpr bool operator>=(const Ptr& other) const noexcept { return ptr_ >= other.ptr_; }
+        [[nodiscard]] constexpr bool operator>=(const Ptr& other) const noexcept
+        {
+            return ptr_ >= other.ptr_;
+        }
 
     private:
         T* ptr_;
     };
 
-    template <typename T> [[nodiscard]] constexpr bool operator==(std::nullptr_t, const Ptr<T>& ptr) noexcept {
+    template <typename T> [[nodiscard]] constexpr bool operator==(std::nullptr_t, const Ptr<T>& ptr) noexcept
+    {
         return ptr == nullptr;
     }
 
-    template <typename T> [[nodiscard]] constexpr bool operator!=(std::nullptr_t, const Ptr<T>& ptr) noexcept {
+    template <typename T> [[nodiscard]] constexpr bool operator!=(std::nullptr_t, const Ptr<T>& ptr) noexcept
+    {
         return ptr != nullptr;
     }
 

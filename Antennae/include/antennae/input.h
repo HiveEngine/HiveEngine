@@ -12,7 +12,7 @@ namespace terra
 {
     struct InputState;
     struct WindowContext;
-}
+} // namespace terra
 
 namespace antennae
 {

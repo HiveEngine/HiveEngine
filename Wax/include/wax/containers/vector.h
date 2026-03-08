@@ -24,13 +24,16 @@ namespace wax
             : m_data{nullptr}
             , m_size{0}
             , m_capacity{0}
-            , m_allocator{comb::GetDefaultMemoryResource()} {}
+            , m_allocator{comb::GetDefaultMemoryResource()}
+        {
+        }
 
         explicit Vector(size_t initialCapacity)
             : m_data{nullptr}
             , m_size{0}
             , m_capacity{0}
-            , m_allocator{comb::GetDefaultMemoryResource()} {
+            , m_allocator{comb::GetDefaultMemoryResource()}
+        {
             Reserve(initialCapacity);
         }
 
@@ -38,20 +41,25 @@ namespace wax
             : m_data{nullptr}
             , m_size{0}
             , m_capacity{0}
-            , m_allocator{allocator} {}
+            , m_allocator{allocator}
+        {
+        }
 
         template <comb::Allocator Allocator>
         explicit Vector(Allocator& allocator) noexcept
             : m_data{nullptr}
             , m_size{0}
             , m_capacity{0}
-            , m_allocator{comb::MemoryResource{allocator}} {}
+            , m_allocator{comb::MemoryResource{allocator}}
+        {
+        }
 
         Vector(comb::MemoryResource allocator, size_t initialCapacity)
             : m_data{nullptr}
             , m_size{0}
             , m_capacity{0}
-            , m_allocator{allocator} {
+            , m_allocator{allocator}
+        {
             Reserve(initialCapacity);
         }
 
@@ -60,7 +68,8 @@ namespace wax
             : m_data{nullptr}
             , m_size{0}
             , m_capacity{0}
-            , m_allocator{comb::MemoryResource{allocator}} {
+            , m_allocator{comb::MemoryResource{allocator}}
+        {
             Reserve(initialCapacity);
         }
 
@@ -68,7 +77,8 @@ namespace wax
             : m_data{nullptr}
             , m_size{0}
             , m_capacity{0}
-            , m_allocator{comb::GetDefaultMemoryResource()} {
+            , m_allocator{comb::GetDefaultMemoryResource()}
+        {
             Reserve(init.size());
             for (const auto& value : init)
             {
@@ -81,7 +91,8 @@ namespace wax
             : m_data{nullptr}
             , m_size{0}
             , m_capacity{0}
-            , m_allocator{allocator} {
+            , m_allocator{allocator}
+        {
             Reserve(init.size());
             for (const auto& value : init)
             {
@@ -95,7 +106,8 @@ namespace wax
             : m_data{nullptr}
             , m_size{0}
             , m_capacity{0}
-            , m_allocator{comb::MemoryResource{allocator}} {
+            , m_allocator{comb::MemoryResource{allocator}}
+        {
             Reserve(init.size());
             for (const auto& value : init)
             {
@@ -104,7 +116,8 @@ namespace wax
             }
         }
 
-        ~Vector() noexcept {
+        ~Vector() noexcept
+        {
             Clear();
             if (m_data)
             {
@@ -118,7 +131,8 @@ namespace wax
             : m_data{nullptr}
             , m_size{0}
             , m_capacity{0}
-            , m_allocator{other.m_allocator} {
+            , m_allocator{other.m_allocator}
+        {
             if (other.m_size > 0)
             {
                 Reserve(other.m_size);
@@ -137,7 +151,8 @@ namespace wax
             }
         }
 
-        Vector& operator=(const Vector& other) {
+        Vector& operator=(const Vector& other)
+        {
             if (this != &other)
             {
                 Clear();
@@ -173,13 +188,15 @@ namespace wax
             : m_data{other.m_data}
             , m_size{other.m_size}
             , m_capacity{other.m_capacity}
-            , m_allocator{other.m_allocator} {
+            , m_allocator{other.m_allocator}
+        {
             other.m_data = nullptr;
             other.m_size = 0;
             other.m_capacity = 0;
         }
 
-        Vector& operator=(Vector&& other) noexcept {
+        Vector& operator=(Vector&& other) noexcept
+        {
             if (this != &other)
             {
                 Clear();
@@ -200,79 +217,136 @@ namespace wax
             return *this;
         }
 
-        [[nodiscard]] T& operator[](size_t index) noexcept {
+        [[nodiscard]] T& operator[](size_t index) noexcept
+        {
             hive::Assert(index < m_size, "Vector index out of bounds");
             return m_data[index];
         }
 
-        [[nodiscard]] const T& operator[](size_t index) const noexcept {
+        [[nodiscard]] const T& operator[](size_t index) const noexcept
+        {
             hive::Assert(index < m_size, "Vector index out of bounds");
             return m_data[index];
         }
 
-        [[nodiscard]] T& At(size_t index) {
+        [[nodiscard]] T& At(size_t index)
+        {
             hive::Check(index < m_size, "Vector index out of bounds");
             return m_data[index];
         }
 
-        [[nodiscard]] const T& At(size_t index) const {
+        [[nodiscard]] const T& At(size_t index) const
+        {
             hive::Check(index < m_size, "Vector index out of bounds");
             return m_data[index];
         }
 
-        [[nodiscard]] T& Front() noexcept {
+        [[nodiscard]] T& Front() noexcept
+        {
             hive::Assert(m_size > 0, "Vector is empty");
             return m_data[0];
         }
 
-        [[nodiscard]] const T& Front() const noexcept {
+        [[nodiscard]] const T& Front() const noexcept
+        {
             hive::Assert(m_size > 0, "Vector is empty");
             return m_data[0];
         }
 
-        [[nodiscard]] T& Back() noexcept {
+        [[nodiscard]] T& Back() noexcept
+        {
             hive::Assert(m_size > 0, "Vector is empty");
             return m_data[m_size - 1];
         }
 
-        [[nodiscard]] const T& Back() const noexcept {
+        [[nodiscard]] const T& Back() const noexcept
+        {
             hive::Assert(m_size > 0, "Vector is empty");
             return m_data[m_size - 1];
         }
 
-        [[nodiscard]] T* Data() noexcept { return m_data; }
+        [[nodiscard]] T* Data() noexcept
+        {
+            return m_data;
+        }
 
-        [[nodiscard]] const T* Data() const noexcept { return m_data; }
+        [[nodiscard]] const T* Data() const noexcept
+        {
+            return m_data;
+        }
 
-        [[nodiscard]] size_t Size() const noexcept { return m_size; }
+        [[nodiscard]] size_t Size() const noexcept
+        {
+            return m_size;
+        }
 
-        [[nodiscard]] size_t Capacity() const noexcept { return m_capacity; }
+        [[nodiscard]] size_t Capacity() const noexcept
+        {
+            return m_capacity;
+        }
 
-        [[nodiscard]] bool IsEmpty() const noexcept { return m_size == 0; }
+        [[nodiscard]] bool IsEmpty() const noexcept
+        {
+            return m_size == 0;
+        }
 
-        [[nodiscard]] comb::MemoryResource GetAllocator() const noexcept { return m_allocator; }
+        [[nodiscard]] comb::MemoryResource GetAllocator() const noexcept
+        {
+            return m_allocator;
+        }
 
-        [[nodiscard]] Iterator Begin() noexcept { return m_data; }
+        [[nodiscard]] Iterator Begin() noexcept
+        {
+            return m_data;
+        }
 
-        [[nodiscard]] ConstIterator Begin() const noexcept { return m_data; }
+        [[nodiscard]] ConstIterator Begin() const noexcept
+        {
+            return m_data;
+        }
 
-        [[nodiscard]] Iterator End() noexcept { return m_data + m_size; }
+        [[nodiscard]] Iterator End() noexcept
+        {
+            return m_data + m_size;
+        }
 
-        [[nodiscard]] ConstIterator End() const noexcept { return m_data + m_size; }
+        [[nodiscard]] ConstIterator End() const noexcept
+        {
+            return m_data + m_size;
+        }
 
-        [[nodiscard]] Iterator begin() noexcept { return Begin(); }
+        [[nodiscard]] Iterator begin() noexcept
+        {
+            return Begin();
+        }
 
-        [[nodiscard]] ConstIterator begin() const noexcept { return Begin(); }
+        [[nodiscard]] ConstIterator begin() const noexcept
+        {
+            return Begin();
+        }
 
-        [[nodiscard]] ConstIterator cbegin() const noexcept { return Begin(); }
+        [[nodiscard]] ConstIterator cbegin() const noexcept
+        {
+            return Begin();
+        }
 
-        [[nodiscard]] Iterator end() noexcept { return End(); }
+        [[nodiscard]] Iterator end() noexcept
+        {
+            return End();
+        }
 
-        [[nodiscard]] ConstIterator end() const noexcept { return End(); }
+        [[nodiscard]] ConstIterator end() const noexcept
+        {
+            return End();
+        }
 
-        [[nodiscard]] ConstIterator cend() const noexcept { return End(); }
+        [[nodiscard]] ConstIterator cend() const noexcept
+        {
+            return End();
+        }
 
-        void Reserve(size_t newCapacity) {
+        void Reserve(size_t newCapacity)
+        {
             if (newCapacity <= m_capacity)
             {
                 return;
@@ -305,7 +379,8 @@ namespace wax
             m_capacity = newCapacity;
         }
 
-        void ShrinkToFit() {
+        void ShrinkToFit()
+        {
             if (m_size == m_capacity)
             {
                 return;
@@ -343,7 +418,8 @@ namespace wax
             m_capacity = m_size;
         }
 
-        void Clear() noexcept {
+        void Clear() noexcept
+        {
             if constexpr (!std::is_trivially_destructible_v<T>)
             {
                 for (size_t i = 0; i < m_size; ++i)
@@ -354,7 +430,8 @@ namespace wax
             m_size = 0;
         }
 
-        void PushBack(const T& value) {
+        void PushBack(const T& value)
+        {
             if (m_size == m_capacity)
             {
                 const size_t newCapacity = m_capacity == 0 ? 8 : m_capacity * 2;
@@ -365,7 +442,8 @@ namespace wax
             ++m_size;
         }
 
-        void PushBack(T&& value) {
+        void PushBack(T&& value)
+        {
             if (m_size == m_capacity)
             {
                 const size_t newCapacity = m_capacity == 0 ? 8 : m_capacity * 2;
@@ -376,7 +454,8 @@ namespace wax
             ++m_size;
         }
 
-        template <typename... Args> T& EmplaceBack(Args&&... args) {
+        template <typename... Args> T& EmplaceBack(Args&&... args)
+        {
             if (m_size == m_capacity)
             {
                 const size_t newCapacity = m_capacity == 0 ? 8 : m_capacity * 2;
@@ -388,7 +467,8 @@ namespace wax
             return m_data[m_size - 1];
         }
 
-        void PopBack() noexcept {
+        void PopBack() noexcept
+        {
             hive::Assert(m_size > 0, "Vector is empty");
             --m_size;
             if constexpr (!std::is_trivially_destructible_v<T>)
@@ -397,7 +477,8 @@ namespace wax
             }
         }
 
-        void Resize(size_t newSize) {
+        void Resize(size_t newSize)
+        {
             if (newSize > m_capacity)
             {
                 Reserve(newSize);
@@ -424,7 +505,8 @@ namespace wax
             m_size = newSize;
         }
 
-        void Resize(size_t newSize, const T& value) {
+        void Resize(size_t newSize, const T& value)
+        {
             if (newSize > m_capacity)
             {
                 Reserve(newSize);

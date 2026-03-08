@@ -6,9 +6,12 @@ namespace nectar
 {
     MemoryMountSource::MemoryMountSource(comb::DefaultAllocator& alloc)
         : m_alloc{&alloc}
-        , m_files{alloc, 64} {}
+        , m_files{alloc, 64}
+    {
+    }
 
-    void MemoryMountSource::AddFile(wax::StringView path, wax::ByteSpan data) {
+    void MemoryMountSource::AddFile(wax::StringView path, wax::ByteSpan data)
+    {
         wax::String key{*m_alloc};
         key.Append(path.Data(), path.Size());
 
@@ -30,15 +33,18 @@ namespace nectar
         m_files.Insert(static_cast<wax::String&&>(key), static_cast<wax::Vector<uint8_t>&&>(bytes));
     }
 
-    bool MemoryMountSource::RemoveFile(wax::StringView path) {
+    bool MemoryMountSource::RemoveFile(wax::StringView path)
+    {
         return m_files.Remove(path);
     }
 
-    size_t MemoryMountSource::FileCount() const noexcept {
+    size_t MemoryMountSource::FileCount() const noexcept
+    {
         return m_files.Count();
     }
 
-    wax::ByteBuffer MemoryMountSource::ReadFile(wax::StringView path, comb::DefaultAllocator& alloc) {
+    wax::ByteBuffer MemoryMountSource::ReadFile(wax::StringView path, comb::DefaultAllocator& alloc)
+    {
         wax::ByteBuffer buffer{alloc};
         auto* data = m_files.Find(path);
         if (data == nullptr)
@@ -58,11 +64,13 @@ namespace nectar
         return buffer;
     }
 
-    bool MemoryMountSource::Exists(wax::StringView path) const {
+    bool MemoryMountSource::Exists(wax::StringView path) const
+    {
         return m_files.Contains(path);
     }
 
-    FileInfo MemoryMountSource::Stat(wax::StringView path) const {
+    FileInfo MemoryMountSource::Stat(wax::StringView path) const
+    {
         auto* data = m_files.Find(path);
         if (data == nullptr)
         {
@@ -73,7 +81,8 @@ namespace nectar
     }
 
     void MemoryMountSource::ListDirectory(wax::StringView path, wax::Vector<DirectoryEntry>& out,
-                                          comb::DefaultAllocator& alloc) const {
+                                          comb::DefaultAllocator& alloc) const
+    {
         wax::String prefix{alloc};
         if (path.Size() > 0)
         {

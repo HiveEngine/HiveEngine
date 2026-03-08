@@ -46,15 +46,18 @@ namespace nectar
     static_assert(sizeof(MeshVertex) == 36, "MeshVertex must be 36 bytes");
     static_assert(sizeof(SubMesh) == 36, "SubMesh must be 36 bytes");
 
-    [[nodiscard]] constexpr size_t NmshVertexDataOffset(const NmshHeader& h) noexcept {
+    [[nodiscard]] constexpr size_t NmshVertexDataOffset(const NmshHeader& h) noexcept
+    {
         return sizeof(NmshHeader) + sizeof(SubMesh) * h.m_submeshCount;
     }
 
-    [[nodiscard]] constexpr size_t NmshIndexDataOffset(const NmshHeader& h) noexcept {
+    [[nodiscard]] constexpr size_t NmshIndexDataOffset(const NmshHeader& h) noexcept
+    {
         return NmshVertexDataOffset(h) + sizeof(MeshVertex) * h.m_vertexCount;
     }
 
-    [[nodiscard]] constexpr size_t NmshTotalSize(const NmshHeader& h) noexcept {
+    [[nodiscard]] constexpr size_t NmshTotalSize(const NmshHeader& h) noexcept
+    {
         return NmshIndexDataOffset(h) + sizeof(uint32_t) * h.m_indexCount;
     }
 } // namespace nectar

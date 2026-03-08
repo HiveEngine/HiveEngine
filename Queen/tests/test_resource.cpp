@@ -29,11 +29,16 @@ namespace
         int* counter;
 
         ResourceWithDestructor()
-            : counter{nullptr} {}
+            : counter{nullptr}
+        {
+        }
         ResourceWithDestructor(int* c)
-            : counter{c} {}
+            : counter{c}
+        {
+        }
 
-        ~ResourceWithDestructor() {
+        ~ResourceWithDestructor()
+        {
             if (counter != nullptr)
             {
                 ++(*counter);
@@ -41,17 +46,22 @@ namespace
         }
 
         ResourceWithDestructor(const ResourceWithDestructor& other)
-            : counter{other.counter} {}
-        ResourceWithDestructor& operator=(const ResourceWithDestructor& other) {
+            : counter{other.counter}
+        {
+        }
+        ResourceWithDestructor& operator=(const ResourceWithDestructor& other)
+        {
             counter = other.counter;
             return *this;
         }
 
         ResourceWithDestructor(ResourceWithDestructor&& other) noexcept
-            : counter{other.counter} {
+            : counter{other.counter}
+        {
             other.counter = nullptr;
         }
-        ResourceWithDestructor& operator=(ResourceWithDestructor&& other) noexcept {
+        ResourceWithDestructor& operator=(ResourceWithDestructor&& other) noexcept
+        {
             counter = other.counter;
             other.counter = nullptr;
             return *this;

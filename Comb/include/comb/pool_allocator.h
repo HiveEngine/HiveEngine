@@ -102,7 +102,8 @@ namespace comb
          */
         explicit PoolAllocator(size_t capacity)
             : capacity_{capacity}
-            , used_count_{0} {
+            , used_count_{0}
+        {
             hive::Assert(capacity > 0, "Pool capacity must be > 0");
 
             constexpr size_t base_slot_size = (sizeof(T) > sizeof(void*)) ? sizeof(T) : sizeof(void*);
@@ -131,7 +132,8 @@ namespace comb
 #endif
         }
 
-        ~PoolAllocator() {
+        ~PoolAllocator()
+        {
 #if COMB_MEM_DEBUG
             if (registry_)
             {
@@ -170,7 +172,8 @@ namespace comb
             other.total_size_ = 0;
         }
 
-        PoolAllocator& operator=(PoolAllocator&& other) noexcept {
+        PoolAllocator& operator=(PoolAllocator&& other) noexcept
+        {
             if (this != &other)
             {
 #if COMB_MEM_DEBUG
@@ -222,7 +225,8 @@ namespace comb
          * but ignored since pool only handles T-sized objects.
          * tag parameter is zero-cost when COMB_MEM_DEBUG=0.
          */
-        [[nodiscard]] void* Allocate(size_t size, size_t alignment, const char* tag = nullptr) {
+        [[nodiscard]] void* Allocate(size_t size, size_t alignment, const char* tag = nullptr)
+        {
 #if COMB_MEM_DEBUG
             void* ptr = AllocateDebug(size, alignment, tag);
 #else
@@ -257,7 +261,8 @@ namespace comb
          * IMPORTANT: Pointer must have been allocated from THIS pool.
          * No validation is performed - deallocating wrong pointer is undefined behavior.
          */
-        void Deallocate(void* ptr) {
+        void Deallocate(void* ptr)
+        {
             if (!ptr)
                 return;
 
@@ -279,7 +284,8 @@ namespace comb
          * Rebuilds free-list to initial state
          * Does NOT call destructors on objects!
          */
-        void Reset() {
+        void Reset()
+        {
             constexpr size_t base_slot_size = (sizeof(T) > sizeof(void*)) ? sizeof(T) : sizeof(void*);
 
 #if COMB_MEM_DEBUG
@@ -319,37 +325,55 @@ namespace comb
          * Get number of objects currently allocated
          * @return Number of objects in use
          */
-        [[nodiscard]] size_t GetUsedMemory() const { return used_count_ * sizeof(T); }
+        [[nodiscard]] size_t GetUsedMemory() const
+        {
+            return used_count_ * sizeof(T);
+        }
 
         /**
          * Get total capacity of pool
          * @return Total bytes for all objects
          */
-        [[nodiscard]] size_t GetTotalMemory() const { return capacity_ * sizeof(T); }
+        [[nodiscard]] size_t GetTotalMemory() const
+        {
+            return capacity_ * sizeof(T);
+        }
 
         /**
          * Get allocator name for debugging
          * @return "PoolAllocator"
          */
-        [[nodiscard]] const char* GetName() const { return "PoolAllocator"; }
+        [[nodiscard]] const char* GetName() const
+        {
+            return "PoolAllocator";
+        }
 
         /**
          * Get pool capacity
          * @return Maximum number of objects
          */
-        [[nodiscard]] size_t GetCapacity() const { return capacity_; }
+        [[nodiscard]] size_t GetCapacity() const
+        {
+            return capacity_;
+        }
 
         /**
          * Get number of objects currently in use
          * @return Number of allocated objects
          */
-        [[nodiscard]] size_t GetUsedCount() const { return used_count_; }
+        [[nodiscard]] size_t GetUsedCount() const
+        {
+            return used_count_;
+        }
 
         /**
          * Get number of free slots available
          * @return Number of objects that can still be allocated
          */
-        [[nodiscard]] size_t GetFreeCount() const { return capacity_ - used_count_; }
+        [[nodiscard]] size_t GetFreeCount() const
+        {
+            return capacity_ - used_count_;
+        }
 
     private:
         void* memory_block_{nullptr};
@@ -377,7 +401,8 @@ namespace comb
     // Debug Implementation (Template methods - must be in header)
     // ========================================================================
 
-    template <typename T> void* PoolAllocator<T>::AllocateDebug(size_t size, size_t alignment, const char* tag) {
+    template <typename T> void* PoolAllocator<T>::AllocateDebug(size_t size, size_t alignment, const char* tag)
+    {
         using namespace debug;
 
         hive::Assert(size <= sizeof(T), "PoolAllocator can only allocate sizeof(T) bytes");
@@ -437,7 +462,8 @@ namespace comb
         return userPtr;
     }
 
-    template <typename T> void PoolAllocator<T>::DeallocateDebug(void* ptr) {
+    template <typename T> void PoolAllocator<T>::DeallocateDebug(void* ptr)
+    {
         using namespace debug;
 
         if (!ptr)

@@ -20,7 +20,8 @@ namespace comb::debug
      *
      * Generates JSON for external visualization tools.
      */
-    std::string GlobalMemoryTracker::ExportToJSON() const {
+    std::string GlobalMemoryTracker::ExportToJSON() const
+    {
         std::lock_guard<std::mutex> lock(m_mutex);
 
         std::ostringstream json;
@@ -94,7 +95,8 @@ namespace comb::debug
      * Get global stats (without locking - internal use only)
      * Assumes mutex is already held by caller
      */
-    AllocationStats GlobalMemoryTracker::GetGlobalStatsLocked() const {
+    AllocationStats GlobalMemoryTracker::GetGlobalStatsLocked() const
+    {
         AllocationStats globalStats{};
 
         for (const auto& [key, info] : m_allocators)

@@ -47,23 +47,34 @@ namespace queen
             size_t m_pos = 0;
 
             explicit Parser(const char* json) noexcept
-                : m_data{json} {}
+                : m_data{json}
+            {
+            }
 
-            [[nodiscard]] bool HasMore() const noexcept { return m_data[m_pos] != '\0'; }
-            [[nodiscard]] char Peek() const noexcept { return m_data[m_pos]; }
-            void Advance() noexcept {
+            [[nodiscard]] bool HasMore() const noexcept
+            {
+                return m_data[m_pos] != '\0';
+            }
+            [[nodiscard]] char Peek() const noexcept
+            {
+                return m_data[m_pos];
+            }
+            void Advance() noexcept
+            {
                 if (m_data[m_pos])
                     ++m_pos;
             }
 
-            void SkipWhitespace() noexcept {
+            void SkipWhitespace() noexcept
+            {
                 while (m_data[m_pos] == ' ' || m_data[m_pos] == '\t' || m_data[m_pos] == '\n' || m_data[m_pos] == '\r')
                 {
                     ++m_pos;
                 }
             }
 
-            bool Expect(char c) noexcept {
+            bool Expect(char c) noexcept
+            {
                 SkipWhitespace();
                 if (m_data[m_pos] == c)
                 {
@@ -73,7 +84,8 @@ namespace queen
                 return false;
             }
 
-            bool ReadString(char* out, size_t outSize) noexcept {
+            bool ReadString(char* out, size_t outSize) noexcept
+            {
                 if (m_data[m_pos] != '"')
                     return false;
                 ++m_pos;
@@ -121,7 +133,8 @@ namespace queen
                 return false;
             }
 
-            bool ReadNumber(double& out) noexcept {
+            bool ReadNumber(double& out) noexcept
+            {
                 const char* start = m_data + m_pos;
                 char* end = nullptr;
                 out = std::strtod(start, &end);
@@ -131,7 +144,8 @@ namespace queen
                 return true;
             }
 
-            bool SkipValue() noexcept {
+            bool SkipValue() noexcept
+            {
                 SkipWhitespace();
                 char c = Peek();
                 if (c == '"')
@@ -157,7 +171,8 @@ namespace queen
                 return ReadNumber(tmp);
             }
 
-            bool ReadBool(bool& out) noexcept {
+            bool ReadBool(bool& out) noexcept
+            {
                 if (std::strncmp(m_data + m_pos, "true", 4) == 0)
                 {
                     out = true;
@@ -173,7 +188,8 @@ namespace queen
                 return false;
             }
 
-            bool SkipObject() noexcept {
+            bool SkipObject() noexcept
+            {
                 if (m_data[m_pos] != '{')
                     return false;
                 ++m_pos;
@@ -201,7 +217,8 @@ namespace queen
                 return depth == 0;
             }
 
-            bool SkipArray() noexcept {
+            bool SkipArray() noexcept
+            {
                 if (m_data[m_pos] != '[')
                     return false;
                 ++m_pos;
@@ -242,7 +259,8 @@ namespace queen
             uint64_t m_parentId = 0;
         };
 
-        static Entity FindRemapped(const RemapEntry* table, size_t count, uint64_t serializedId) noexcept {
+        static Entity FindRemapped(const RemapEntry* table, size_t count, uint64_t serializedId) noexcept
+        {
             for (size_t i = 0; i < count; ++i)
             {
                 if (table[i].m_serializedId == serializedId)
@@ -254,7 +272,8 @@ namespace queen
         }
 
         static void RemapFieldsRecursive(void* base, const FieldInfo* fields, size_t fieldCount,
-                                         const RemapEntry* remapTable, size_t remapCount) noexcept {
+                                         const RemapEntry* remapTable, size_t remapCount) noexcept
+        {
             for (size_t i = 0; i < fieldCount; ++i)
             {
                 const FieldInfo& field = fields[i];
@@ -298,7 +317,8 @@ namespace queen
 
         template <size_t MaxComponents>
         static void RemapEntityFields(World& world, const ComponentRegistry<MaxComponents>& registry,
-                                      const RemapEntry* remapTable, size_t remapCount) noexcept {
+                                      const RemapEntry* remapTable, size_t remapCount) noexcept
+        {
             for (size_t e = 0; e < remapCount; ++e)
             {
                 Entity live = remapTable[e].m_liveEntity;
@@ -319,7 +339,8 @@ namespace queen
             }
         }
 
-        static WorldDeserializeResult Fail(WorldDeserializeResult& result, const char* error) noexcept {
+        static WorldDeserializeResult Fail(WorldDeserializeResult& result, const char* error) noexcept
+        {
             result.m_error = error;
             return result;
         }
@@ -330,7 +351,8 @@ namespace queen
 
         template <size_t MaxComponents>
         static WorldDeserializeResult Deserialize(World& world, const ComponentRegistry<MaxComponents>& registry,
-                                                  const char* json) noexcept {
+                                                  const char* json) noexcept
+        {
             WorldDeserializeResult result{};
             Parser p{json};
 

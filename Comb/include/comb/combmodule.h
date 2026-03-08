@@ -13,8 +13,14 @@ namespace comb
         CombModule() = default;
         ~CombModule() override = default;
 
-        const char* GetName() const override { return GetStaticName(); }
-        static const char* GetStaticName() { return "Comb"; }
+        const char* GetName() const override
+        {
+            return GetStaticName();
+        }
+        static const char* GetStaticName()
+        {
+            return "Comb";
+        }
 
     protected:
         void DoConfigure(hive::ModuleContext& context) override;

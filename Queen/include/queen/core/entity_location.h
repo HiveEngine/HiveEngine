@@ -24,9 +24,13 @@ namespace queen
         ArchetypeType* m_archetype = nullptr;
         uint32_t m_row = kInvalidRow;
 
-        [[nodiscard]] constexpr bool IsValid() const noexcept { return m_archetype != nullptr && m_row != kInvalidRow; }
+        [[nodiscard]] constexpr bool IsValid() const noexcept
+        {
+            return m_archetype != nullptr && m_row != kInvalidRow;
+        }
 
-        void Invalidate() noexcept {
+        void Invalidate() noexcept
+        {
             m_archetype = nullptr;
             m_row = kInvalidRow;
         }
@@ -53,11 +57,13 @@ namespace queen
         using Record = EntityRecordT<ArchetypeType>;
 
         explicit EntityLocationMap(Allocator& allocator, size_t initialCapacity = 1000)
-            : m_records{allocator} {
+            : m_records{allocator}
+        {
             m_records.Reserve(initialCapacity);
         }
 
-        void Set(Entity entity, const Record& record) {
+        void Set(Entity entity, const Record& record)
+        {
             hive::Assert(!entity.IsNull(), "Cannot set location for null entity");
 
             uint32_t index = entity.Index();
@@ -66,7 +72,8 @@ namespace queen
             m_records[index] = record;
         }
 
-        void Remove(Entity entity) {
+        void Remove(Entity entity)
+        {
             if (entity.IsNull())
             {
                 return;
@@ -79,7 +86,8 @@ namespace queen
             }
         }
 
-        [[nodiscard]] Record* Get(Entity entity) noexcept {
+        [[nodiscard]] Record* Get(Entity entity) noexcept
+        {
             if (entity.IsNull())
             {
                 return nullptr;
@@ -94,7 +102,8 @@ namespace queen
             return &m_records[index];
         }
 
-        [[nodiscard]] const Record* Get(Entity entity) const noexcept {
+        [[nodiscard]] const Record* Get(Entity entity) const noexcept
+        {
             if (entity.IsNull())
             {
                 return nullptr;
@@ -109,19 +118,30 @@ namespace queen
             return &m_records[index];
         }
 
-        [[nodiscard]] bool HasValidLocation(Entity entity) const noexcept {
+        [[nodiscard]] bool HasValidLocation(Entity entity) const noexcept
+        {
             const Record* record = Get(entity);
             return record && record->IsValid();
         }
 
-        void Clear() { m_records.Clear(); }
+        void Clear()
+        {
+            m_records.Clear();
+        }
 
-        [[nodiscard]] size_t Size() const noexcept { return m_records.Size(); }
+        [[nodiscard]] size_t Size() const noexcept
+        {
+            return m_records.Size();
+        }
 
-        [[nodiscard]] size_t Capacity() const noexcept { return m_records.Capacity(); }
+        [[nodiscard]] size_t Capacity() const noexcept
+        {
+            return m_records.Capacity();
+        }
 
     private:
-        void EnsureCapacity(size_t required) {
+        void EnsureCapacity(size_t required)
+        {
             while (m_records.Size() < required)
             {
                 m_records.PushBack(Record{});

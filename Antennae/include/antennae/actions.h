@@ -34,23 +34,29 @@ namespace antennae
         terra::Key m_key{terra::Key::SPACE};
         terra::MouseButton m_mouseButton{terra::MouseButton::LEFT};
 
-        [[nodiscard]] static DigitalInputBinding FromKey(terra::Key key) {
+        [[nodiscard]] static DigitalInputBinding FromKey(terra::Key key)
+        {
             DigitalInputBinding binding{};
             binding.m_type = DigitalInputType::KEY;
             binding.m_key = key;
             return binding;
         }
 
-        [[nodiscard]] static DigitalInputBinding FromMouseButton(terra::MouseButton button) {
+        [[nodiscard]] static DigitalInputBinding FromMouseButton(terra::MouseButton button)
+        {
             DigitalInputBinding binding{};
             binding.m_type = DigitalInputType::MOUSE_BUTTON;
             binding.m_mouseButton = button;
             return binding;
         }
 
-        [[nodiscard]] bool IsBound() const { return m_type != DigitalInputType::NONE; }
+        [[nodiscard]] bool IsBound() const
+        {
+            return m_type != DigitalInputType::NONE;
+        }
 
-        [[nodiscard]] bool IsDown(const Keyboard& keyboard, const Mouse& mouse) const {
+        [[nodiscard]] bool IsDown(const Keyboard& keyboard, const Mouse& mouse) const
+        {
             if (m_type == DigitalInputType::KEY)
             {
                 return keyboard.IsDown(m_key);
@@ -64,7 +70,8 @@ namespace antennae
             return false;
         }
 
-        [[nodiscard]] bool JustPressed(const Keyboard& keyboard, const Mouse& mouse) const {
+        [[nodiscard]] bool JustPressed(const Keyboard& keyboard, const Mouse& mouse) const
+        {
             if (m_type == DigitalInputType::KEY)
             {
                 return keyboard.JustPressed(m_key);
@@ -78,7 +85,8 @@ namespace antennae
             return false;
         }
 
-        [[nodiscard]] bool JustReleased(const Keyboard& keyboard, const Mouse& mouse) const {
+        [[nodiscard]] bool JustReleased(const Keyboard& keyboard, const Mouse& mouse) const
+        {
             if (m_type == DigitalInputType::KEY)
             {
                 return keyboard.JustReleased(m_key);
@@ -99,18 +107,26 @@ namespace antennae
 
         DigitalInputBinding m_inputs[kMaxInputs]{};
 
-        void Clear() {
+        void Clear()
+        {
             for (size_t i = 0; i < kMaxInputs; ++i)
             {
                 m_inputs[i] = {};
             }
         }
 
-        void AddKey(terra::Key key) { AddBinding(DigitalInputBinding::FromKey(key)); }
+        void AddKey(terra::Key key)
+        {
+            AddBinding(DigitalInputBinding::FromKey(key));
+        }
 
-        void AddMouseButton(terra::MouseButton button) { AddBinding(DigitalInputBinding::FromMouseButton(button)); }
+        void AddMouseButton(terra::MouseButton button)
+        {
+            AddBinding(DigitalInputBinding::FromMouseButton(button));
+        }
 
-        [[nodiscard]] bool IsDown(const Keyboard& keyboard, const Mouse& mouse) const {
+        [[nodiscard]] bool IsDown(const Keyboard& keyboard, const Mouse& mouse) const
+        {
             for (const auto& input : m_inputs)
             {
                 if (input.IsDown(keyboard, mouse))
@@ -122,7 +138,8 @@ namespace antennae
             return false;
         }
 
-        [[nodiscard]] bool JustPressed(const Keyboard& keyboard, const Mouse& mouse) const {
+        [[nodiscard]] bool JustPressed(const Keyboard& keyboard, const Mouse& mouse) const
+        {
             for (const auto& input : m_inputs)
             {
                 if (input.JustPressed(keyboard, mouse))
@@ -134,7 +151,8 @@ namespace antennae
             return false;
         }
 
-        [[nodiscard]] bool JustReleased(const Keyboard& keyboard, const Mouse& mouse) const {
+        [[nodiscard]] bool JustReleased(const Keyboard& keyboard, const Mouse& mouse) const
+        {
             for (const auto& input : m_inputs)
             {
                 if (input.JustReleased(keyboard, mouse))
@@ -147,7 +165,8 @@ namespace antennae
         }
 
     private:
-        void AddBinding(const DigitalInputBinding& binding) {
+        void AddBinding(const DigitalInputBinding& binding)
+        {
             for (auto& slot : m_inputs)
             {
                 if (!slot.IsBound())
@@ -165,18 +184,26 @@ namespace antennae
 
         InputActionBinding m_bindings[kActionCount]{};
 
-        InputActionMap() { SetDefaults(); }
+        InputActionMap()
+        {
+            SetDefaults();
+        }
 
-        void ClearAll() {
+        void ClearAll()
+        {
             for (auto& binding : m_bindings)
             {
                 binding.Clear();
             }
         }
 
-        void Clear(InputAction action) { Binding(action).Clear(); }
+        void Clear(InputAction action)
+        {
+            Binding(action).Clear();
+        }
 
-        void SetDefaults() {
+        void SetDefaults()
+        {
             ClearAll();
 
             AddKey(InputAction::MOVE_LEFT, terra::Key::A);
@@ -201,15 +228,23 @@ namespace antennae
             AddMouseButton(InputAction::SECONDARY, terra::MouseButton::RIGHT);
         }
 
-        void AddKey(InputAction action, terra::Key key) { Binding(action).AddKey(key); }
+        void AddKey(InputAction action, terra::Key key)
+        {
+            Binding(action).AddKey(key);
+        }
 
-        void AddMouseButton(InputAction action, terra::MouseButton button) { Binding(action).AddMouseButton(button); }
+        void AddMouseButton(InputAction action, terra::MouseButton button)
+        {
+            Binding(action).AddMouseButton(button);
+        }
 
-        [[nodiscard]] InputActionBinding& Binding(InputAction action) {
+        [[nodiscard]] InputActionBinding& Binding(InputAction action)
+        {
             return m_bindings[static_cast<size_t>(action)];
         }
 
-        [[nodiscard]] const InputActionBinding& Binding(InputAction action) const {
+        [[nodiscard]] const InputActionBinding& Binding(InputAction action) const
+        {
             return m_bindings[static_cast<size_t>(action)];
         }
     };
@@ -221,26 +256,33 @@ namespace antennae
         bool m_current[kActionCount]{};
         bool m_previous[kActionCount]{};
 
-        [[nodiscard]] bool IsDown(InputAction action) const { return m_current[static_cast<size_t>(action)]; }
+        [[nodiscard]] bool IsDown(InputAction action) const
+        {
+            return m_current[static_cast<size_t>(action)];
+        }
 
-        [[nodiscard]] bool IsHeld(InputAction action) const {
+        [[nodiscard]] bool IsHeld(InputAction action) const
+        {
             const size_t index = static_cast<size_t>(action);
             return m_current[index] && m_previous[index];
         }
 
-        [[nodiscard]] bool JustPressed(InputAction action) const {
+        [[nodiscard]] bool JustPressed(InputAction action) const
+        {
             const size_t index = static_cast<size_t>(action);
             return m_current[index] && !m_previous[index];
         }
 
-        [[nodiscard]] bool JustReleased(InputAction action) const {
+        [[nodiscard]] bool JustReleased(InputAction action) const
+        {
             const size_t index = static_cast<size_t>(action);
             return !m_current[index] && m_previous[index];
         }
     };
 
     inline void UpdateInputActions(InputActions& actions, const InputActionMap& actionMap, const Keyboard& keyboard,
-                                   const Mouse& mouse) {
+                                   const Mouse& mouse)
+    {
         for (size_t i = 0; i < InputActions::kActionCount; ++i)
         {
             actions.m_previous[i] = actions.m_current[i];

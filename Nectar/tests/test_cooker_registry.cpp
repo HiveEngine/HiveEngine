@@ -10,7 +10,8 @@
 namespace
 {
 
-    auto& GetCookRegAlloc() {
+    auto& GetCookRegAlloc()
+    {
         static comb::ModuleAllocator alloc{"TestCookReg", 4 * 1024 * 1024};
         return alloc.Get();
     }
@@ -25,9 +26,16 @@ namespace
     class TextureCooker final : public nectar::AssetCooker<DummyTex>
     {
     public:
-        wax::StringView TypeName() const override { return "Texture"; }
-        uint32_t Version() const override { return 1; }
-        nectar::CookResult Cook(wax::ByteSpan data, const nectar::CookContext& ctx) override {
+        wax::StringView TypeName() const override
+        {
+            return "Texture";
+        }
+        uint32_t Version() const override
+        {
+            return 1;
+        }
+        nectar::CookResult Cook(wax::ByteSpan data, const nectar::CookContext& ctx) override
+        {
             nectar::CookResult r;
             r.m_success = true;
             r.m_cookedData = wax::ByteBuffer{*ctx.m_alloc};
@@ -40,9 +48,16 @@ namespace
     class MeshCooker final : public nectar::AssetCooker<DummyMesh>
     {
     public:
-        wax::StringView TypeName() const override { return "Mesh"; }
-        uint32_t Version() const override { return 2; }
-        nectar::CookResult Cook(wax::ByteSpan data, const nectar::CookContext& ctx) override {
+        wax::StringView TypeName() const override
+        {
+            return "Mesh";
+        }
+        uint32_t Version() const override
+        {
+            return 2;
+        }
+        nectar::CookResult Cook(wax::ByteSpan data, const nectar::CookContext& ctx) override
+        {
             nectar::CookResult r;
             r.m_success = true;
             r.m_cookedData = wax::ByteBuffer{*ctx.m_alloc};

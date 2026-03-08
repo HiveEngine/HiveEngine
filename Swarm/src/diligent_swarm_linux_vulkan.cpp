@@ -9,7 +9,8 @@ namespace swarm
     extern bool InitRenderContextCommon(RenderContext* renderContext);
 
     bool InitRenderContextWayland(RenderContext& renderContext, wl_display* display, wl_surface* surface,
-                                  uint32_t width, uint32_t height) {
+                                  uint32_t width, uint32_t height)
+    {
         if (!InitRenderContextCommon(&renderContext))
         {
             return false;
@@ -36,7 +37,8 @@ namespace swarm
     }
 
     bool InitRenderContextX11(RenderContext& renderContext, Display* display, Window window, uint32_t width,
-                              uint32_t height) {
+                              uint32_t height)
+    {
         if (!InitRenderContextCommon(&renderContext))
         {
             return false;

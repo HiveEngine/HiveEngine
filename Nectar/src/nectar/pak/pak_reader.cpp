@@ -9,7 +9,8 @@
 
 namespace nectar
 {
-    PakReader::~PakReader() {
+    PakReader::~PakReader()
+    {
         if (m_file)
             std::fclose(m_file);
         if (m_manifest && m_alloc)
@@ -29,7 +30,8 @@ namespace nectar
         }
     }
 
-    PakReader* PakReader::Open(wax::StringView path, comb::DefaultAllocator& alloc) {
+    PakReader* PakReader::Open(wax::StringView path, comb::DefaultAllocator& alloc)
+    {
         HIVE_PROFILE_SCOPE_N("PakReader::Open");
         wax::String pathStr{alloc};
         pathStr.Append(path.Data(), path.Size());
@@ -152,7 +154,8 @@ namespace nectar
         return reader;
     }
 
-    wax::ByteBuffer PakReader::Read(ContentHash hash, comb::DefaultAllocator& alloc) {
+    wax::ByteBuffer PakReader::Read(ContentHash hash, comb::DefaultAllocator& alloc)
+    {
         HIVE_PROFILE_SCOPE_N("PakReader::Read");
         wax::ByteBuffer result{alloc};
 
@@ -225,28 +228,34 @@ namespace nectar
         return result;
     }
 
-    bool PakReader::Contains(ContentHash hash) const {
+    bool PakReader::Contains(ContentHash hash) const
+    {
         return FindAsset(hash) != nullptr;
     }
 
-    const AssetManifest* PakReader::GetManifest() const {
+    const AssetManifest* PakReader::GetManifest() const
+    {
         return m_manifest;
     }
 
-    size_t PakReader::AssetCount() const noexcept {
+    size_t PakReader::AssetCount() const noexcept
+    {
         return m_assetEntries ? m_assetEntries->Size() : 0;
     }
 
-    size_t PakReader::BlockCount() const noexcept {
+    size_t PakReader::BlockCount() const noexcept
+    {
         return m_blockEntries ? m_blockEntries->Size() : 0;
     }
 
-    size_t PakReader::GetAssetSize(ContentHash hash) const {
+    size_t PakReader::GetAssetSize(ContentHash hash) const
+    {
         const auto* entry = FindAsset(hash);
         return entry ? entry->m_uncompressedSize : 0;
     }
 
-    const NpakAssetEntry* PakReader::FindAsset(ContentHash hash) const {
+    const NpakAssetEntry* PakReader::FindAsset(ContentHash hash) const
+    {
         if (!m_assetEntries || m_assetEntries->Size() == 0)
             return nullptr;
 

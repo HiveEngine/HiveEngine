@@ -4,7 +4,8 @@
 
 namespace nectar
 {
-    wax::String NormalizePath(wax::StringView path, comb::DefaultAllocator& alloc) {
+    wax::String NormalizePath(wax::StringView path, comb::DefaultAllocator& alloc)
+    {
         if (path.Size() == 0)
             return wax::String{alloc};
 
@@ -62,21 +63,24 @@ namespace nectar
         return result;
     }
 
-    wax::StringView PathParent(wax::StringView path) {
+    wax::StringView PathParent(wax::StringView path)
+    {
         size_t pos = path.RFind('/');
         if (pos == wax::StringView::npos)
             return wax::StringView{};
         return path.Substr(0, pos);
     }
 
-    wax::StringView PathFilename(wax::StringView path) {
+    wax::StringView PathFilename(wax::StringView path)
+    {
         size_t pos = path.RFind('/');
         if (pos == wax::StringView::npos)
             return path;
         return path.Substr(pos + 1);
     }
 
-    wax::StringView PathExtension(wax::StringView path) {
+    wax::StringView PathExtension(wax::StringView path)
+    {
         auto filename = PathFilename(path);
         size_t pos = filename.RFind('.');
         if (pos == wax::StringView::npos || pos == 0)

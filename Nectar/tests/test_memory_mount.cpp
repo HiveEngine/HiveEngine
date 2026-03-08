@@ -9,7 +9,8 @@
 namespace
 {
 
-    auto& GetMemMountAlloc() {
+    auto& GetMemMountAlloc()
+    {
         static comb::ModuleAllocator alloc{"TestMemMount", 2 * 1024 * 1024};
         return alloc.Get();
     }

@@ -19,32 +19,40 @@ namespace
     class GcLoader final : public nectar::AssetLoader<GcAsset>
     {
     public:
-        GcAsset* Load(wax::ByteSpan data, comb::DefaultAllocator& alloc) override {
+        GcAsset* Load(wax::ByteSpan data, comb::DefaultAllocator& alloc) override
+        {
             if (data.Size() < sizeof(int))
                 return nullptr;
             auto* a = comb::New<GcAsset>(alloc);
             a->value = data.Read<int>(0);
             return a;
         }
-        void Unload(GcAsset* asset, comb::DefaultAllocator& alloc) override {
+        void Unload(GcAsset* asset, comb::DefaultAllocator& alloc) override
+        {
             if (asset)
                 comb::Delete(alloc, asset);
         }
-        size_t SizeOf(const GcAsset*) const override { return 1024; }
+        size_t SizeOf(const GcAsset*) const override
+        {
+            return 1024;
+        }
     };
 
-    auto& GetGcAlloc() {
+    auto& GetGcAlloc()
+    {
         static comb::ModuleAllocator alloc{"TestGcBudget", 4 * 1024 * 1024};
         return alloc.Get();
     }
 
-    wax::ByteSpan IntData(uint8_t* buf, int v) {
+    wax::ByteSpan IntData(uint8_t* buf, int v)
+    {
         std::memcpy(buf, &v, sizeof(int));
         return wax::ByteSpan{buf, sizeof(int)};
     }
 
     // Drain all events for type
-    void DrainAllEvents(nectar::AssetServer& server) {
+    void DrainAllEvents(nectar::AssetServer& server)
+    {
         nectar::AssetEvent<GcAsset> evt{};
         while (server.PollEvents<GcAsset>(evt))
         {

@@ -42,7 +42,9 @@ namespace queen
 
         constexpr Tick() noexcept = default;
         explicit constexpr Tick(uint32_t v) noexcept
-            : m_value{v} {}
+            : m_value{v}
+        {
+        }
 
         /**
          * Wraparound-safe comparison
@@ -50,7 +52,8 @@ namespace queen
          * Returns true if this tick is newer than the other tick.
          * Handles wraparound correctly assuming ticks don't differ by more than 2^31.
          */
-        [[nodiscard]] constexpr bool IsNewerThan(Tick other) const noexcept {
+        [[nodiscard]] constexpr bool IsNewerThan(Tick other) const noexcept
+        {
             // Cast to signed to handle wraparound correctly
             return static_cast<int32_t>(m_value - other.m_value) > 0;
         }
@@ -58,24 +61,33 @@ namespace queen
         /**
          * Check if this tick is at least as new as other
          */
-        [[nodiscard]] constexpr bool IsAtLeast(Tick other) const noexcept {
+        [[nodiscard]] constexpr bool IsAtLeast(Tick other) const noexcept
+        {
             return static_cast<int32_t>(m_value - other.m_value) >= 0;
         }
 
-        constexpr Tick& operator++() noexcept {
+        constexpr Tick& operator++() noexcept
+        {
             ++m_value;
             return *this;
         }
 
-        constexpr Tick operator++(int) noexcept {
+        constexpr Tick operator++(int) noexcept
+        {
             Tick tmp = *this;
             ++m_value;
             return tmp;
         }
 
-        [[nodiscard]] constexpr bool operator==(Tick other) const noexcept { return m_value == other.m_value; }
+        [[nodiscard]] constexpr bool operator==(Tick other) const noexcept
+        {
+            return m_value == other.m_value;
+        }
 
-        [[nodiscard]] constexpr bool operator!=(Tick other) const noexcept { return m_value != other.m_value; }
+        [[nodiscard]] constexpr bool operator!=(Tick other) const noexcept
+        {
+            return m_value != other.m_value;
+        }
     };
 
     /**
@@ -120,38 +132,53 @@ namespace queen
 
         explicit constexpr ComponentTicks(Tick currentTick) noexcept
             : m_added{currentTick}
-            , m_changed{currentTick} {}
+            , m_changed{currentTick}
+        {
+        }
 
         constexpr ComponentTicks(Tick addedTick, Tick changedTick) noexcept
             : m_added{addedTick}
-            , m_changed{changedTick} {}
+            , m_changed{changedTick}
+        {
+        }
 
         /**
          * Check if component was added after the given tick
          */
-        [[nodiscard]] constexpr bool WasAdded(Tick lastRun) const noexcept { return m_added.IsNewerThan(lastRun); }
+        [[nodiscard]] constexpr bool WasAdded(Tick lastRun) const noexcept
+        {
+            return m_added.IsNewerThan(lastRun);
+        }
 
         /**
          * Check if component was changed after the given tick
          */
-        [[nodiscard]] constexpr bool WasChanged(Tick lastRun) const noexcept { return m_changed.IsNewerThan(lastRun); }
+        [[nodiscard]] constexpr bool WasChanged(Tick lastRun) const noexcept
+        {
+            return m_changed.IsNewerThan(lastRun);
+        }
 
         /**
          * Check if component was added or changed after the given tick
          */
-        [[nodiscard]] constexpr bool WasAddedOrChanged(Tick lastRun) const noexcept {
+        [[nodiscard]] constexpr bool WasAddedOrChanged(Tick lastRun) const noexcept
+        {
             return WasAdded(lastRun) || WasChanged(lastRun);
         }
 
         /**
          * Mark component as changed at the given tick
          */
-        constexpr void MarkChanged(Tick currentTick) noexcept { m_changed = currentTick; }
+        constexpr void MarkChanged(Tick currentTick) noexcept
+        {
+            m_changed = currentTick;
+        }
 
         /**
          * Set both added and changed ticks (for newly added components)
          */
-        constexpr void SetAdded(Tick currentTick) noexcept {
+        constexpr void SetAdded(Tick currentTick) noexcept
+        {
             m_added = currentTick;
             m_changed = currentTick;
         }

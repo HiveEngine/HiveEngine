@@ -17,11 +17,17 @@ namespace brood
     {
     public:
         ProcessRuntime()
-            : m_logger_{m_logManager_} {}
+            : m_logger_{m_logManager_}
+        {
+        }
 
-        ~ProcessRuntime() { Finalize(); }
+        ~ProcessRuntime()
+        {
+            Finalize();
+        }
 
-        void Finalize() {
+        void Finalize()
+        {
             if (m_finalized_)
             {
                 return;
@@ -38,7 +44,8 @@ namespace brood
             m_finalized_ = true;
         }
 
-        [[noreturn]] void Exit(int exitCode) {
+        [[noreturn]] void Exit(int exitCode)
+        {
             Finalize();
             std::_Exit(exitCode);
         }

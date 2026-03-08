@@ -9,7 +9,8 @@
 
 namespace forge
 {
-    static const char* IconForExtension(const std::string& ext) {
+    static const char* IconForExtension(const std::string& ext)
+    {
         if (ext == ".gltf" || ext == ".glb" || ext == ".obj")
             return "[3D]";
         if (ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".tga" || ext == ".bmp")
@@ -21,7 +22,8 @@ namespace forge
         return "";
     }
 
-    static void DrawDirectory(const std::filesystem::path& dir) {
+    static void DrawDirectory(const std::filesystem::path& dir)
+    {
         // Collect and sort entries
         std::vector<std::filesystem::directory_entry> dirs;
         std::vector<std::filesystem::directory_entry> files;
@@ -71,7 +73,8 @@ namespace forge
         }
     }
 
-    void DrawAssetBrowser(const char* assetsRoot) {
+    void DrawAssetBrowser(const char* assetsRoot)
+    {
         if (!assetsRoot || !std::filesystem::exists(assetsRoot))
         {
             ImGui::TextDisabled("Assets directory not found");
