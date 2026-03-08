@@ -53,7 +53,7 @@ namespace queen
     class ComponentIndex
     {
     public:
-        using ArchetypeList = wax::Vector<Archetype<Allocator>*, Allocator>;
+        using ArchetypeList = wax::Vector<Archetype<Allocator>*>;
 
         explicit ComponentIndex(Allocator& allocator)
             : allocator_{&allocator}
@@ -166,6 +166,6 @@ namespace queen
 
     private:
         Allocator* allocator_;
-        wax::HashMap<TypeId, ArchetypeList, Allocator> index_;
+        wax::HashMap<TypeId, ArchetypeList> index_;
     };
 }

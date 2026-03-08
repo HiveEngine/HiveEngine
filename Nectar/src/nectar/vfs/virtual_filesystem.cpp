@@ -17,7 +17,7 @@ namespace nectar
         auto normalized = NormalizePath(mount_point, *alloc_);
 
         MountEntry entry;
-        entry.prefix = static_cast<wax::String<>&&>(normalized);
+        entry.prefix = static_cast<wax::String&&>(normalized);
         entry.source = source;
         entry.priority = priority;
 
@@ -76,7 +76,7 @@ namespace nectar
     }
 
     MountSource* VirtualFilesystem::Resolve(wax::StringView normalized_path,
-                                             wax::String<>& out_relative) const
+                                             wax::String& out_relative) const
     {
         for (size_t i = 0; i < mounts_.Size(); ++i)
         {
@@ -111,7 +111,7 @@ namespace nectar
 
             if (mount.source->Exists(relative))
             {
-                out_relative = wax::String<>{*alloc_};
+                out_relative = wax::String{*alloc_};
                 out_relative.Append(relative.Data(), relative.Size());
                 return mount.source;
             }
@@ -119,28 +119,28 @@ namespace nectar
         return nullptr;
     }
 
-    wax::ByteBuffer<> VirtualFilesystem::ReadSync(wax::StringView path)
+    wax::ByteBuffer VirtualFilesystem::ReadSync(wax::StringView path)
     {
         HIVE_PROFILE_SCOPE_N("VFS::ReadSync");
         auto normalized = NormalizePath(path, *alloc_);
-        wax::String<> relative{*alloc_};
+        wax::String relative{*alloc_};
         auto* source = Resolve(normalized.View(), relative);
         if (!source)
-            return wax::ByteBuffer<>{*alloc_};
+            return wax::ByteBuffer{*alloc_};
         return source->ReadFile(relative.View(), *alloc_);
     }
 
     bool VirtualFilesystem::Exists(wax::StringView path) const
     {
         auto normalized = NormalizePath(path, *alloc_);
-        wax::String<> relative{*alloc_};
+        wax::String relative{*alloc_};
         return Resolve(normalized.View(), relative) != nullptr;
     }
 
     FileInfo VirtualFilesystem::Stat(wax::StringView path) const
     {
         auto normalized = NormalizePath(path, *alloc_);
-        wax::String<> relative{*alloc_};
+        wax::String relative{*alloc_};
         auto* source = Resolve(normalized.View(), relative);
         if (!source)
             return FileInfo{0, false};
@@ -151,7 +151,7 @@ namespace nectar
                                            wax::Vector<DirectoryEntry>& out) const
     {
         auto normalized = NormalizePath(path, *alloc_);
-        wax::HashSet<wax::String<>> seen{*alloc_};
+        wax::HashSet<wax::String> seen{*alloc_};
 
         for (size_t i = 0; i < mounts_.Size(); ++i)
         {
@@ -184,7 +184,7 @@ namespace nectar
             {
                 if (!seen.Contains(entries[j].name))
                 {
-                    seen.Insert(wax::String<>{*alloc_, entries[j].name.View()});
+                    seen.Insert(wax::String{*alloc_, entries[j].name.View()});
                     out.PushBack(static_cast<DirectoryEntry&&>(entries[j]));
                 }
             }

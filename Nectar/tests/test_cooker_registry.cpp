@@ -24,7 +24,7 @@ namespace {
         {
             nectar::CookResult r;
             r.success = true;
-            r.cooked_data = wax::ByteBuffer<>{*ctx.alloc};
+            r.cooked_data = wax::ByteBuffer{*ctx.alloc};
             r.cooked_data.Resize(data.Size());
             std::memcpy(r.cooked_data.Data(), data.Data(), data.Size());
             return r;
@@ -40,7 +40,7 @@ namespace {
         {
             nectar::CookResult r;
             r.success = true;
-            r.cooked_data = wax::ByteBuffer<>{*ctx.alloc};
+            r.cooked_data = wax::ByteBuffer{*ctx.alloc};
             r.cooked_data.Resize(data.Size());
             std::memcpy(r.cooked_data.Data(), data.Data(), data.Size());
             return r;

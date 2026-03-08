@@ -81,6 +81,22 @@ namespace swarm
         ctx->swapchain_->Present();
     }
 
+    void WaitForIdle(RenderContext* ctx)
+    {
+        if (!ctx || !ctx->context_)
+        {
+            return;
+        }
+
+        ctx->context_->Flush();
+        ctx->context_->WaitForIdle();
+
+        if (ctx->device_)
+        {
+            ctx->device_->IdleGPU();
+        }
+    }
+
     void ResizeSwapchain(RenderContext* ctx, uint32_t width, uint32_t height)
     {
         if (ctx->swapchain_ && width > 0 && height > 0)
@@ -251,9 +267,17 @@ void main(in  PSInput  PSIn,
 
     void EndViewportRT(RenderContext* ctx, ViewportRT* rt)
     {
-        (void)rt;
-        // Transition back to shader resource happens automatically via Diligent state tracking.
-        // Just reset render targets so Diligent knows we're done.
+        using namespace Diligent;
+
+        // The offscreen color target is sampled by ImGui in the same frame.
+        // Transition it explicitly before leaving the viewport pass.
+        StateTransitionDesc barrier{
+            rt->color,
+            RESOURCE_STATE_UNKNOWN,
+            RESOURCE_STATE_SHADER_RESOURCE,
+            STATE_TRANSITION_FLAG_UPDATE_STATE
+        };
+        ctx->context_->TransitionResourceStates(1, &barrier);
         ctx->context_->SetRenderTargets(0, nullptr, nullptr, Diligent::RESOURCE_STATE_TRANSITION_MODE_NONE);
     }
 

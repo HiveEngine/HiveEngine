@@ -10,6 +10,6 @@ namespace nectar
     class HiveWriter
     {
     public:
-        [[nodiscard]] static wax::String<> Write(const HiveDocument& doc, comb::DefaultAllocator& alloc);
+        [[nodiscard]] static wax::String Write(const HiveDocument& doc, comb::DefaultAllocator& alloc);
     };
 }

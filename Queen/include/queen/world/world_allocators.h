@@ -406,7 +406,7 @@ namespace queen
         comb::BuddyAllocator persistent_;
         comb::BuddyAllocator components_;
         comb::LinearAllocator frame_;
-        wax::Vector<comb::LinearAllocator, comb::BuddyAllocator> thread_frames_;
+        wax::Vector<comb::LinearAllocator> thread_frames_;
         mutable HIVE_PROFILE_LOCKABLE_N(std::mutex, persistent_mutex_, "PersistentAllocatorMutex");  // Protects persistent_ during parallel execution
     };
 }

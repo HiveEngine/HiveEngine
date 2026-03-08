@@ -83,7 +83,7 @@ namespace nectar
     {
         HIVE_PROFILE_SCOPE_N("CookPipeline::CookSingle");
         CookResult result{};
-        result.error_message = wax::String<>{*alloc_};
+        result.error_message = wax::String{*alloc_};
 
         auto* record = db_->FindByUuid(id);
         if (!record)

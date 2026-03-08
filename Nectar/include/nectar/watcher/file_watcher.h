@@ -18,7 +18,7 @@ namespace nectar
 
     struct FileChange
     {
-        wax::String<> path;
+        wax::String path;
         FileChangeKind kind;
     };
 
@@ -58,7 +58,7 @@ namespace nectar
         comb::DefaultAllocator* alloc_;
         uint32_t interval_ms_;
         int64_t last_poll_time_{0};
-        wax::Vector<wax::String<>> watched_dirs_;
-        wax::HashMap<wax::String<>, FileSnapshot> known_files_;
+        wax::Vector<wax::String> watched_dirs_;
+        wax::HashMap<wax::String, FileSnapshot> known_files_;
     };
 }

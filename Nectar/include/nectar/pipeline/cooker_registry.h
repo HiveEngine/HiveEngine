@@ -24,6 +24,6 @@ namespace nectar
 
     private:
         comb::DefaultAllocator* alloc_;
-        wax::HashMap<wax::String<>, IAssetCooker*> type_map_;
+        wax::HashMap<wax::String, IAssetCooker*> type_map_;
     };
 }

@@ -26,7 +26,7 @@ namespace {
     });
 
     auto t3 = larvae::RegisterTest("NectarAssetStatus", "ErrorInfoWithCode", []() {
-        nectar::AssetErrorInfo info{nectar::AssetError::FileNotFound, wax::String<>{}};
+        nectar::AssetErrorInfo info{nectar::AssetError::FileNotFound, wax::String{}};
         larvae::AssertEqual(
             static_cast<uint8_t>(info.code),
             static_cast<uint8_t>(nectar::AssetError::FileNotFound));

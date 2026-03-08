@@ -249,6 +249,6 @@ namespace queen
 
     private:
         Allocator* allocator_;
-        wax::Vector<SystemDescriptor<Allocator>, Allocator> systems_;
+        wax::Vector<SystemDescriptor<Allocator>> systems_;
     };
 }

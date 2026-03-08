@@ -11,8 +11,8 @@ namespace nectar
     struct CookResult
     {
         bool success{false};
-        wax::ByteBuffer<comb::DefaultAllocator> cooked_data{};
-        wax::String<> error_message{};
+        wax::ByteBuffer cooked_data{};
+        wax::String error_message{};
     };
 
     struct CookContext

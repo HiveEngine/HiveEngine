@@ -20,7 +20,7 @@ namespace nectar
         if (Contains(hash))
             return hash;
 
-        wax::String<> path{*alloc_};
+        wax::String path{*alloc_};
         BuildBlobPath(hash, path);
 
         auto parent = std::filesystem::path{std::string{path.CStr()}}.parent_path();
@@ -37,12 +37,12 @@ namespace nectar
         return hash;
     }
 
-    wax::ByteBuffer<> CasStore::Load(ContentHash hash)
+    wax::ByteBuffer CasStore::Load(ContentHash hash)
     {
         HIVE_PROFILE_SCOPE_N("CasStore::Load");
-        wax::ByteBuffer<> buffer{*alloc_};
+        wax::ByteBuffer buffer{*alloc_};
 
-        wax::String<> path{*alloc_};
+        wax::String path{*alloc_};
         BuildBlobPath(hash, path);
 
         FILE* file = std::fopen(path.CStr(), "rb");
@@ -65,14 +65,14 @@ namespace nectar
 
     bool CasStore::Contains(ContentHash hash) const
     {
-        wax::String<> path{*alloc_};
+        wax::String path{*alloc_};
         BuildBlobPath(hash, path);
         return std::filesystem::exists(path.CStr());
     }
 
     bool CasStore::Remove(ContentHash hash)
     {
-        wax::String<> path{*alloc_};
+        wax::String path{*alloc_};
         BuildBlobPath(hash, path);
 
         std::error_code ec;
@@ -84,7 +84,7 @@ namespace nectar
         return root_dir_.View();
     }
 
-    void CasStore::BuildBlobPath(ContentHash hash, wax::String<>& out) const
+    void CasStore::BuildBlobPath(ContentHash hash, wax::String& out) const
     {
         auto hex = hash.ToString();
         // root/ab/cd/abcdef0123456789...

@@ -71,7 +71,7 @@ namespace
 
     auto test_entity_hash_3 = larvae::RegisterTest("QueenRegression", "EntityHashSetWithDifferentFlags", []() {
         comb::LinearAllocator alloc{4096};
-        wax::HashSet<queen::Entity, comb::LinearAllocator> set{alloc, 16};
+        wax::HashSet<queen::Entity> set{alloc, 16};
 
         queen::Entity e1{42, 7, queen::Entity::Flags::kAlive};
         queen::Entity e2{42, 7, queen::Entity::Flags::kDisabled};
@@ -148,11 +148,11 @@ namespace
     auto test_table_move_ticks = larvae::RegisterTest("QueenRegression", "TableMoveRowToTransfersTicks", []() {
         comb::LinearAllocator alloc{1024 * 1024};
 
-        wax::Vector<queen::ComponentMeta, comb::LinearAllocator> metas1{alloc};
+        wax::Vector<queen::ComponentMeta> metas1{alloc};
         metas1.PushBack(queen::ComponentMeta::Of<Position>());
         metas1.PushBack(queen::ComponentMeta::Of<Velocity>());
 
-        wax::Vector<queen::ComponentMeta, comb::LinearAllocator> metas2{alloc};
+        wax::Vector<queen::ComponentMeta> metas2{alloc};
         metas2.PushBack(queen::ComponentMeta::Of<Position>());
         metas2.PushBack(queen::ComponentMeta::Of<Velocity>());
         metas2.PushBack(queen::ComponentMeta::Of<Health>());

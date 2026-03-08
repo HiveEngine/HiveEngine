@@ -61,7 +61,7 @@ namespace {
         {
             nectar::CookResult r;
             r.success = true;
-            r.cooked_data = wax::ByteBuffer<>{*ctx.alloc};
+            r.cooked_data = wax::ByteBuffer{*ctx.alloc};
             r.cooked_data.Append(data.Data(), data.Size());
             return r;
         }
@@ -76,7 +76,7 @@ namespace {
         nectar::CookResult Cook(wax::ByteSpan, const nectar::CookContext& ctx) override
         {
             nectar::CookResult r;
-            r.error_message = wax::String<>{*ctx.alloc, "cook failed"};
+            r.error_message = wax::String{*ctx.alloc, "cook failed"};
             return r;
         }
     };
@@ -92,15 +92,15 @@ namespace {
 
         nectar::AssetRecord record{};
         record.uuid = id;
-        record.path = wax::String<>{alloc};
+        record.path = wax::String{alloc};
         record.path.Append(path, std::strlen(path));
-        record.type = wax::String<>{alloc};
+        record.type = wax::String{alloc};
         record.type.Append(type, std::strlen(type));
-        record.name = wax::String<>{alloc};
+        record.name = wax::String{alloc};
         record.content_hash = nectar::ContentHash::FromData(data, size);
         record.intermediate_hash = cas_hash;
         record.import_version = 1;
-        record.labels = wax::Vector<wax::String<>>{alloc};
+        record.labels = wax::Vector<wax::String>{alloc};
         db.Insert(static_cast<nectar::AssetRecord&&>(record));
 
         return cas_hash;
@@ -176,10 +176,10 @@ namespace {
         auto id = MakeId(1);
         nectar::AssetRecord record{};
         record.uuid = id;
-        record.path = wax::String<>{alloc, "test.dat"};
-        record.type = wax::String<>{alloc, "TestType"};
-        record.name = wax::String<>{alloc};
-        record.labels = wax::Vector<wax::String<>>{alloc};
+        record.path = wax::String{alloc, "test.dat"};
+        record.type = wax::String{alloc, "TestType"};
+        record.name = wax::String{alloc};
+        record.labels = wax::Vector<wax::String>{alloc};
         db.Insert(static_cast<nectar::AssetRecord&&>(record));
 
         nectar::CookPipeline pipe{alloc, reg, cas, db, cache};

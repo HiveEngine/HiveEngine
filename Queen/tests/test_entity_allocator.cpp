@@ -123,7 +123,7 @@ namespace
         comb::LinearAllocator alloc{65536};
         queen::EntityAllocator<comb::LinearAllocator> allocator{alloc, 1000};
 
-        wax::Vector<queen::Entity, comb::LinearAllocator> entities{alloc};
+        wax::Vector<queen::Entity> entities{alloc};
         entities.Reserve(100);
 
         for (int i = 0; i < 100; ++i)

@@ -19,7 +19,7 @@ namespace nectar
         PakMountSource& operator=(const PakMountSource&) = delete;
 
         // -- MountSource --
-        [[nodiscard]] wax::ByteBuffer<> ReadFile(
+        [[nodiscard]] wax::ByteBuffer ReadFile(
             wax::StringView path, comb::DefaultAllocator& alloc) override;
         [[nodiscard]] bool Exists(wax::StringView path) const override;
         [[nodiscard]] FileInfo Stat(wax::StringView path) const override;

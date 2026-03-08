@@ -16,7 +16,7 @@ namespace
         while (state.KeepRunning())
         {
             alloc.Reset();
-            wax::String<comb::LinearAllocator> str{alloc, "Hello"};
+            wax::String str{alloc, "Hello"};
             larvae::DoNotOptimize(str.Data());
         }
 
@@ -29,7 +29,7 @@ namespace
         while (state.KeepRunning())
         {
             alloc.Reset();
-            wax::String<comb::LinearAllocator> str{alloc, "This is a very long string that exceeds SSO capacity and requires heap allocation"};
+            wax::String str{alloc, "This is a very long string that exceeds SSO capacity and requires heap allocation"};
             larvae::DoNotOptimize(str.Data());
         }
 
@@ -42,7 +42,7 @@ namespace
         while (state.KeepRunning())
         {
             alloc.Reset();
-            wax::String<comb::LinearAllocator> str{alloc};
+            wax::String str{alloc};
             for (int i = 0; i < 10; ++i)
             {
                 str.Append("Hi");
@@ -59,7 +59,7 @@ namespace
         while (state.KeepRunning())
         {
             alloc.Reset();
-            wax::String<comb::LinearAllocator> str{alloc};
+            wax::String str{alloc};
             for (int i = 0; i < 10; ++i)
             {
                 str.Append("This is a longer string for testing");
@@ -76,7 +76,7 @@ namespace
         while (state.KeepRunning())
         {
             alloc.Reset();
-            wax::String<comb::LinearAllocator> str{alloc};
+            wax::String str{alloc};
             for (int i = 0; i < 100; ++i)
             {
                 str.Append('a');
@@ -89,7 +89,7 @@ namespace
 
     auto bench6 = larvae::RegisterBenchmark("WaxString", "FindChar", [](larvae::BenchmarkState& state) {
         comb::LinearAllocator alloc{1024};
-        wax::String<comb::LinearAllocator> str{alloc, "The quick brown fox jumps over the lazy dog"};
+        wax::String str{alloc, "The quick brown fox jumps over the lazy dog"};
 
         while (state.KeepRunning())
         {
@@ -102,7 +102,7 @@ namespace
 
     auto bench7 = larvae::RegisterBenchmark("WaxString", "FindSubstring", [](larvae::BenchmarkState& state) {
         comb::LinearAllocator alloc{1024};
-        wax::String<comb::LinearAllocator> str{alloc, "The quick brown fox jumps over the lazy dog"};
+        wax::String str{alloc, "The quick brown fox jumps over the lazy dog"};
 
         while (state.KeepRunning())
         {
@@ -115,8 +115,8 @@ namespace
 
     auto bench8 = larvae::RegisterBenchmark("WaxString", "Compare", [](larvae::BenchmarkState& state) {
         comb::LinearAllocator alloc{1024};
-        wax::String<comb::LinearAllocator> str1{alloc, "Hello World"};
-        wax::String<comb::LinearAllocator> str2{alloc, "Hello World"};
+        wax::String str1{alloc, "Hello World"};
+        wax::String str2{alloc, "Hello World"};
 
         while (state.KeepRunning())
         {
@@ -129,11 +129,11 @@ namespace
 
     auto bench9 = larvae::RegisterBenchmark("WaxString", "CopySmallString", [](larvae::BenchmarkState& state) {
         comb::LinearAllocator alloc{1024 * 1024};
-        wax::String<comb::LinearAllocator> source{alloc, "Hello"};
+        wax::String source{alloc, "Hello"};
 
         while (state.KeepRunning())
         {
-            wax::String<comb::LinearAllocator> copy{source};
+            wax::String copy{source};
             larvae::DoNotOptimize(copy.Data());
         }
 
@@ -146,8 +146,8 @@ namespace
         while (state.KeepRunning())
         {
             alloc.Reset();
-            wax::String<comb::LinearAllocator> source{alloc, "This is a very long string that exceeds SSO capacity"};
-            wax::String<comb::LinearAllocator> copy{source};
+            wax::String source{alloc, "This is a very long string that exceeds SSO capacity"};
+            wax::String copy{source};
             larvae::DoNotOptimize(copy.Data());
         }
 

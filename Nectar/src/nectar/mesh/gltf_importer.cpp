@@ -57,7 +57,7 @@ namespace nectar
         cgltf_result res = cgltf_parse(&options, source_data.Data(), source_data.Size(), &data);
         if (res != cgltf_result_success)
         {
-            result.error_message = wax::String<>{"glTF parse failed"};
+            result.error_message = wax::String{"glTF parse failed"};
             return result;
         }
 
@@ -74,7 +74,7 @@ namespace nectar
         if (res != cgltf_result_success)
         {
             cgltf_free(data);
-            result.error_message = wax::String<>{"glTF buffer load failed"};
+            result.error_message = wax::String{"glTF buffer load failed"};
             return result;
         }
 
@@ -239,7 +239,7 @@ namespace nectar
 
         if (vertices.empty())
         {
-            result.error_message = wax::String<>{"glTF contains no geometry"};
+            result.error_message = wax::String{"glTF contains no geometry"};
             return result;
         }
 

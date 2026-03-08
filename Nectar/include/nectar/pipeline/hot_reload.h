@@ -54,7 +54,7 @@ namespace nectar
         ImportPipeline* import_pipe_;
         CookPipeline* cook_pipe_;
         wax::Vector<AssetId> last_reloaded_;
-        wax::String<> base_dir_;
+        wax::String base_dir_;
         ImportSettingsProvider settings_fn_{nullptr};
         void* settings_user_data_{nullptr};
     };

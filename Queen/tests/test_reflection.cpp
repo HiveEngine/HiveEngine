@@ -249,7 +249,7 @@ namespace
         Position original{1.0f, 2.0f, 3.0f};
 
         comb::LinearAllocator alloc{4096};
-        wax::BinaryWriter<comb::LinearAllocator> writer{alloc};
+        wax::BinaryWriter writer{alloc};
 
         queen::Serialize(original, writer);
 
@@ -266,7 +266,7 @@ namespace
         Health original{80, 100, false};
 
         comb::LinearAllocator alloc{4096};
-        wax::BinaryWriter<comb::LinearAllocator> writer{alloc};
+        wax::BinaryWriter writer{alloc};
 
         queen::Serialize(original, writer);
 
@@ -288,7 +288,7 @@ namespace
         };
 
         comb::LinearAllocator alloc{4096};
-        wax::BinaryWriter<comb::LinearAllocator> writer{alloc};
+        wax::BinaryWriter writer{alloc};
 
         queen::Serialize(original, writer);
 
@@ -316,7 +316,7 @@ namespace
         };
 
         comb::LinearAllocator alloc{4096};
-        wax::BinaryWriter<comb::LinearAllocator> writer{alloc};
+        wax::BinaryWriter writer{alloc};
 
         queen::Serialize(original, writer);
 
@@ -403,7 +403,7 @@ namespace
         larvae::AssertNotNull(info);
 
         comb::LinearAllocator alloc{4096};
-        wax::BinaryWriter<comb::LinearAllocator> writer{alloc};
+        wax::BinaryWriter writer{alloc};
 
         queen::SerializeComponent(&original, info->reflection, writer);
 
@@ -442,7 +442,7 @@ namespace
         original.rotation = 90.0f;
 
         comb::LinearAllocator alloc{4096};
-        wax::BinaryWriter<comb::LinearAllocator> writer{alloc};
+        wax::BinaryWriter writer{alloc};
 
         queen::Serialize(original, writer);
 
@@ -466,7 +466,7 @@ namespace
         original.aggro_range = 50.0f;
 
         comb::LinearAllocator alloc{4096};
-        wax::BinaryWriter<comb::LinearAllocator> writer{alloc};
+        wax::BinaryWriter writer{alloc};
 
         queen::Serialize(original, writer);
 
@@ -493,7 +493,7 @@ namespace
         original.opacity = 0.75f;
 
         comb::LinearAllocator alloc{4096};
-        wax::BinaryWriter<comb::LinearAllocator> writer{alloc};
+        wax::BinaryWriter writer{alloc};
 
         queen::Serialize(original, writer);
 
@@ -536,7 +536,7 @@ namespace
         original.aggro_range = 25.0f;
 
         comb::LinearAllocator alloc{4096};
-        wax::BinaryWriter<comb::LinearAllocator> writer{alloc};
+        wax::BinaryWriter writer{alloc};
 
         queen::SerializeComponent(&original, info->reflection, writer);
 

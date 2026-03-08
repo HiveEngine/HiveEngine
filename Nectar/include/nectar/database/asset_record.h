@@ -11,12 +11,12 @@ namespace nectar
     struct AssetRecord
     {
         AssetId uuid;
-        wax::String<> path;            // virtual path ("textures/hero.png")
-        wax::String<> type;            // type name ("Texture", "Mesh")
-        wax::String<> name;            // short name ("hero")
+        wax::String path;            // virtual path ("textures/hero.png")
+        wax::String type;            // type name ("Texture", "Mesh")
+        wax::String name;            // short name ("hero")
         ContentHash content_hash;          // source data hash (change detection)
         ContentHash intermediate_hash;     // CAS hash of intermediate blob
         uint32_t import_version{0};
-        wax::Vector<wax::String<>> labels;
+        wax::Vector<wax::String> labels;
     };
 }

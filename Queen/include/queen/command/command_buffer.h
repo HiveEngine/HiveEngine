@@ -163,8 +163,8 @@ namespace queen
 
         CommandBuffer(CommandBuffer&& other) noexcept
             : allocator_{other.allocator_}
-            , commands_{static_cast<wax::Vector<detail::Command, Allocator>&&>(other.commands_)}
-            , spawned_entities_{static_cast<wax::Vector<Entity, Allocator>&&>(other.spawned_entities_)}
+            , commands_{static_cast<wax::Vector<detail::Command>&&>(other.commands_)}
+            , spawned_entities_{static_cast<wax::Vector<Entity>&&>(other.spawned_entities_)}
             , head_block_{other.head_block_}
             , current_block_{other.current_block_}
             , spawn_count_{other.spawn_count_}
@@ -180,8 +180,8 @@ namespace queen
             {
                 ClearBlocks();
                 allocator_ = other.allocator_;
-                commands_ = static_cast<wax::Vector<detail::Command, Allocator>&&>(other.commands_);
-                spawned_entities_ = static_cast<wax::Vector<Entity, Allocator>&&>(other.spawned_entities_);
+                commands_ = static_cast<wax::Vector<detail::Command>&&>(other.commands_);
+                spawned_entities_ = static_cast<wax::Vector<Entity>&&>(other.spawned_entities_);
                 head_block_ = other.head_block_;
                 current_block_ = other.current_block_;
                 spawn_count_ = other.spawn_count_;
@@ -461,8 +461,8 @@ namespace queen
         }
 
         Allocator* allocator_;
-        wax::Vector<detail::Command, Allocator> commands_;
-        wax::Vector<Entity, Allocator> spawned_entities_;
+        wax::Vector<detail::Command> commands_;
+        wax::Vector<Entity> spawned_entities_;
         detail::CommandDataBlock* head_block_;
         detail::CommandDataBlock* current_block_;
         uint32_t spawn_count_;

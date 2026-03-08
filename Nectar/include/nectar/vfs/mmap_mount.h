@@ -13,7 +13,7 @@ namespace nectar
         MmapMountSource(wax::StringView root_dir, comb::DefaultAllocator& alloc);
 
         // -- MountSource --
-        [[nodiscard]] wax::ByteBuffer<> ReadFile(
+        [[nodiscard]] wax::ByteBuffer ReadFile(
             wax::StringView path, comb::DefaultAllocator& alloc) override;
         [[nodiscard]] bool Exists(wax::StringView path) const override;
         [[nodiscard]] FileInfo Stat(wax::StringView path) const override;
@@ -23,9 +23,9 @@ namespace nectar
             comb::DefaultAllocator& alloc) const override;
 
     private:
-        wax::String<> BuildFullPath(wax::StringView relative, comb::DefaultAllocator& alloc) const;
+        wax::String BuildFullPath(wax::StringView relative, comb::DefaultAllocator& alloc) const;
 
         comb::DefaultAllocator* alloc_;
-        wax::String<> root_dir_;
+        wax::String root_dir_;
     };
 }

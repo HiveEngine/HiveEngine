@@ -17,7 +17,7 @@ namespace queen
     namespace detail
     {
         template<comb::Allocator Allocator>
-        ArchetypeId ComputeArchetypeId(const wax::Vector<TypeId, Allocator>& sorted_types)
+        ArchetypeId ComputeArchetypeId(const wax::Vector<TypeId>& sorted_types)
         {
             ArchetypeId hash = kFnv1aOffset;
             for (size_t i = 0; i < sorted_types.Size(); ++i)
@@ -72,7 +72,7 @@ namespace queen
     class Archetype
     {
     public:
-        Archetype(Allocator& allocator, wax::Vector<ComponentMeta, Allocator> component_metas, size_t initial_capacity = 64)
+        Archetype(Allocator& allocator, wax::Vector<ComponentMeta> component_metas, size_t initial_capacity = 64)
             : allocator_{&allocator}
             , component_types_{allocator}
             , component_metas_{std::move(component_metas)}
@@ -216,12 +216,12 @@ namespace queen
         [[nodiscard]] size_t ComponentCount() const noexcept { return component_types_.Size(); }
         [[nodiscard]] bool IsEmpty() const noexcept { return table_.IsEmpty(); }
 
-        [[nodiscard]] const wax::Vector<TypeId, Allocator>& GetComponentTypes() const noexcept
+        [[nodiscard]] const wax::Vector<TypeId>& GetComponentTypes() const noexcept
         {
             return component_types_;
         }
 
-        [[nodiscard]] const wax::Vector<ComponentMeta, Allocator>& GetComponentMetas() const noexcept
+        [[nodiscard]] const wax::Vector<ComponentMeta>& GetComponentMetas() const noexcept
         {
             return component_metas_;
         }
@@ -299,10 +299,10 @@ namespace queen
 
         Allocator* allocator_;
         ArchetypeId id_;
-        wax::Vector<TypeId, Allocator> component_types_;
-        wax::Vector<ComponentMeta, Allocator> component_metas_;
+        wax::Vector<TypeId> component_types_;
+        wax::Vector<ComponentMeta> component_metas_;
         Table<Allocator> table_;
-        wax::HashMap<TypeId, Archetype*, Allocator> add_edges_;
-        wax::HashMap<TypeId, Archetype*, Allocator> remove_edges_;
+        wax::HashMap<TypeId, Archetype*> add_edges_;
+        wax::HashMap<TypeId, Archetype*> remove_edges_;
     };
 }

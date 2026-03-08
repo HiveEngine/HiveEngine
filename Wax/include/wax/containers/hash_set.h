@@ -1,32 +1,15 @@
 #pragma once
 
-#include <hive/core/assert.h>
-#include <comb/allocator_concepts.h>
-#include <comb/default_allocator.h>
-#include <cstdint>
 #include <cstddef>
+#include <cstdint>
 #include <functional>
+#include <utility>
+#include <comb/memory_resource.h>
+#include <hive/core/assert.h>
 
 namespace wax
 {
-    /**
-     * Open-addressing hash set with Robin Hood hashing
-     *
-     * Cache-friendly set optimized for game engines. Uses linear probing
-     * with Robin Hood insertion to minimize probe distances.
-     *
-     * Use cases:
-     * - Tracking unique entity IDs
-     * - Visited node sets in pathfinding
-     * - Tag/flag collections
-     *
-     * Performance:
-     * - Insert: O(1) average
-     * - Contains: O(1) average
-     * - Remove: O(1) average
-     * - Load factor: 0.75 max
-     */
-    template<typename K, comb::Allocator Allocator = comb::DefaultAllocator, typename Hash = std::hash<K>>
+    template<typename K, typename Hash = std::hash<K>>
     class HashSet
     {
     private:
@@ -50,7 +33,9 @@ namespace wax
         {
         public:
             Iterator(Bucket* buckets, size_t index, size_t capacity)
-                : buckets_{buckets}, index_{index}, capacity_{capacity}
+                : buckets_{buckets}
+                , index_{index}
+                , capacity_{capacity}
             {
                 SkipEmpty();
             }
@@ -84,7 +69,9 @@ namespace wax
         {
         public:
             ConstIterator(const Bucket* buckets, size_t index, size_t capacity)
-                : buckets_{buckets}, index_{index}, capacity_{capacity}
+                : buckets_{buckets}
+                , index_{index}
+                , capacity_{capacity}
             {
                 SkipEmpty();
             }
@@ -114,49 +101,33 @@ namespace wax
             size_t capacity_;
         };
 
-        // Default constructor - uses global default allocator
-        HashSet(size_t initial_capacity = 16)
-            requires std::is_same_v<Allocator, comb::DefaultAllocator>
-            : allocator_{&comb::GetDefaultAllocator()}
+        explicit HashSet(size_t initial_capacity = 16)
+            : allocator_{comb::GetDefaultMemoryResource()}
             , capacity_{NextPowerOfTwo(initial_capacity)}
             , count_{0}
         {
-            hive::Assert(initial_capacity > 0, "HashSet capacity must be > 0");
-
-            buckets_ = static_cast<Bucket*>(allocator_->Allocate(sizeof(Bucket) * capacity_, alignof(Bucket)));
-            hive::Assert(buckets_ != nullptr, "Failed to allocate HashSet buckets");
-
-            for (size_t i = 0; i < capacity_; ++i)
-            {
-                buckets_[i].state = kEmpty;
-                buckets_[i].psl = 0;
-            }
+            InitializeBuckets(initial_capacity);
         }
 
-        // Constructor with allocator
+        explicit HashSet(comb::MemoryResource allocator, size_t initial_capacity = 16)
+            : allocator_{allocator}
+            , capacity_{NextPowerOfTwo(initial_capacity)}
+            , count_{0}
+        {
+            InitializeBuckets(initial_capacity);
+        }
+
+        template<comb::Allocator Allocator>
         HashSet(Allocator& allocator, size_t initial_capacity = 16)
-            : allocator_{&allocator}
-            , capacity_{NextPowerOfTwo(initial_capacity)}
-            , count_{0}
-        {
-            hive::Assert(initial_capacity > 0, "HashSet capacity must be > 0");
-
-            buckets_ = static_cast<Bucket*>(allocator.Allocate(sizeof(Bucket) * capacity_, alignof(Bucket)));
-            hive::Assert(buckets_ != nullptr, "Failed to allocate HashSet buckets");
-
-            for (size_t i = 0; i < capacity_; ++i)
-            {
-                buckets_[i].state = kEmpty;
-                buckets_[i].psl = 0;
-            }
-        }
+            : HashSet{comb::MemoryResource{allocator}, initial_capacity}
+        {}
 
         ~HashSet()
         {
             Clear();
-            if (buckets_ && allocator_)
+            if (buckets_)
             {
-                allocator_->Deallocate(buckets_);
+                allocator_.Deallocate(buckets_);
             }
         }
 
@@ -169,7 +140,6 @@ namespace wax
             , capacity_{other.capacity_}
             , count_{other.count_}
         {
-            other.allocator_ = nullptr;
             other.buckets_ = nullptr;
             other.capacity_ = 0;
             other.count_ = 0;
@@ -180,9 +150,9 @@ namespace wax
             if (this != &other)
             {
                 Clear();
-                if (buckets_ && allocator_)
+                if (buckets_)
                 {
-                    allocator_->Deallocate(buckets_);
+                    allocator_.Deallocate(buckets_);
                 }
 
                 allocator_ = other.allocator_;
@@ -190,7 +160,6 @@ namespace wax
                 capacity_ = other.capacity_;
                 count_ = other.count_;
 
-                other.allocator_ = nullptr;
                 other.buckets_ = nullptr;
                 other.capacity_ = 0;
                 other.count_ = 0;
@@ -204,13 +173,12 @@ namespace wax
             {
                 Rehash(capacity_ * 2);
             }
-
             return InsertInternal(key);
         }
 
         [[nodiscard]] bool Contains(const K& key) const noexcept
         {
-            size_t hash = Hash{}(key);
+            const size_t hash = Hash{}(key);
             size_t index = hash & (capacity_ - 1);
             uint8_t psl = 0;
 
@@ -243,7 +211,7 @@ namespace wax
 
         bool Remove(const K& key)
         {
-            size_t hash = Hash{}(key);
+            const size_t hash = Hash{}(key);
             size_t index = hash & (capacity_ - 1);
             uint8_t psl = 0;
 
@@ -268,7 +236,6 @@ namespace wax
                         bucket.Key()->~K();
                         bucket.state = kDeleted;
                         --count_;
-
                         ShiftBackward(index);
                         return true;
                     }
@@ -281,6 +248,11 @@ namespace wax
 
         void Clear() noexcept
         {
+            if (buckets_ == nullptr)
+            {
+                return;
+            }
+
             for (size_t i = 0; i < capacity_; ++i)
             {
                 if (buckets_[i].state == kOccupied)
@@ -297,6 +269,7 @@ namespace wax
         [[nodiscard]] size_t Capacity() const noexcept { return capacity_; }
         [[nodiscard]] bool IsEmpty() const noexcept { return count_ == 0; }
         [[nodiscard]] float LoadFactor() const noexcept { return static_cast<float>(count_) / static_cast<float>(capacity_); }
+        [[nodiscard]] comb::MemoryResource GetAllocator() const noexcept { return allocator_; }
 
         [[nodiscard]] Iterator begin() noexcept { return Iterator{buckets_, 0, capacity_}; }
         [[nodiscard]] Iterator end() noexcept { return Iterator{buckets_, capacity_, capacity_}; }
@@ -304,6 +277,20 @@ namespace wax
         [[nodiscard]] ConstIterator end() const noexcept { return ConstIterator{buckets_, capacity_, capacity_}; }
 
     private:
+        void InitializeBuckets(size_t initial_capacity)
+        {
+            hive::Assert(initial_capacity > 0, "HashSet capacity must be > 0");
+
+            buckets_ = static_cast<Bucket*>(allocator_.Allocate(sizeof(Bucket) * capacity_, alignof(Bucket)));
+            hive::Assert(buckets_ != nullptr, "Failed to allocate HashSet buckets");
+
+            for (size_t i = 0; i < capacity_; ++i)
+            {
+                buckets_[i].state = kEmpty;
+                buckets_[i].psl = 0;
+            }
+        }
+
         [[nodiscard]] bool ShouldRehash() const noexcept
         {
             return count_ >= static_cast<size_t>(static_cast<float>(capacity_) * kMaxLoadFactor);
@@ -312,10 +299,10 @@ namespace wax
         void Rehash(size_t new_capacity)
         {
             Bucket* old_buckets = buckets_;
-            size_t old_capacity = capacity_;
+            const size_t old_capacity = capacity_;
 
             capacity_ = new_capacity;
-            buckets_ = static_cast<Bucket*>(allocator_->Allocate(sizeof(Bucket) * capacity_, alignof(Bucket)));
+            buckets_ = static_cast<Bucket*>(allocator_.Allocate(sizeof(Bucket) * capacity_, alignof(Bucket)));
             hive::Assert(buckets_ != nullptr, "Failed to allocate HashSet buckets during rehash");
 
             for (size_t i = 0; i < capacity_; ++i)
@@ -335,12 +322,12 @@ namespace wax
                 }
             }
 
-            allocator_->Deallocate(old_buckets);
+            allocator_.Deallocate(old_buckets);
         }
 
         bool InsertInternal(const K& key)
         {
-            size_t hash = Hash{}(key);
+            const size_t hash = Hash{}(key);
             size_t index = hash & (capacity_ - 1);
             uint8_t psl = 0;
 
@@ -396,7 +383,10 @@ namespace wax
 
         static constexpr size_t NextPowerOfTwo(size_t n)
         {
-            if (n == 0) return 1;
+            if (n == 0)
+            {
+                return 1;
+            }
             --n;
             n |= n >> 1;
             n |= n >> 2;
@@ -407,8 +397,8 @@ namespace wax
             return n + 1;
         }
 
-        Allocator* allocator_;
-        Bucket* buckets_;
+        comb::MemoryResource allocator_;
+        Bucket* buckets_{nullptr};
         size_t capacity_;
         size_t count_;
     };

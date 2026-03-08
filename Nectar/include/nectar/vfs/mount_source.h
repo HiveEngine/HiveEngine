@@ -16,7 +16,7 @@ namespace nectar
     public:
         virtual ~MountSource() = default;
 
-        [[nodiscard]] virtual wax::ByteBuffer<> ReadFile(
+        [[nodiscard]] virtual wax::ByteBuffer ReadFile(
             wax::StringView path, comb::DefaultAllocator& alloc) = 0;
 
         [[nodiscard]] virtual bool Exists(wax::StringView path) const = 0;

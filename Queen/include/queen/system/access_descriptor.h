@@ -122,22 +122,22 @@ namespace queen
             return world_access_;
         }
 
-        [[nodiscard]] const wax::Vector<TypeId, Allocator>& ComponentReads() const noexcept
+        [[nodiscard]] const wax::Vector<TypeId>& ComponentReads() const noexcept
         {
             return component_reads_;
         }
 
-        [[nodiscard]] const wax::Vector<TypeId, Allocator>& ComponentWrites() const noexcept
+        [[nodiscard]] const wax::Vector<TypeId>& ComponentWrites() const noexcept
         {
             return component_writes_;
         }
 
-        [[nodiscard]] const wax::Vector<TypeId, Allocator>& ResourceReads() const noexcept
+        [[nodiscard]] const wax::Vector<TypeId>& ResourceReads() const noexcept
         {
             return resource_reads_;
         }
 
-        [[nodiscard]] const wax::Vector<TypeId, Allocator>& ResourceWrites() const noexcept
+        [[nodiscard]] const wax::Vector<TypeId>& ResourceWrites() const noexcept
         {
             return resource_writes_;
         }
@@ -206,7 +206,7 @@ namespace queen
         }
 
     private:
-        static void AddUnique(wax::Vector<TypeId, Allocator>& vec, TypeId type_id)
+        static void AddUnique(wax::Vector<TypeId>& vec, TypeId type_id)
         {
             for (size_t i = 0; i < vec.Size(); ++i)
             {
@@ -218,8 +218,8 @@ namespace queen
             vec.PushBack(type_id);
         }
 
-        static bool HasOverlap(const wax::Vector<TypeId, Allocator>& a,
-                               const wax::Vector<TypeId, Allocator>& b) noexcept
+        static bool HasOverlap(const wax::Vector<TypeId>& a,
+                               const wax::Vector<TypeId>& b) noexcept
         {
             for (size_t i = 0; i < a.Size(); ++i)
             {
@@ -234,10 +234,10 @@ namespace queen
             return false;
         }
 
-        wax::Vector<TypeId, Allocator> component_reads_;
-        wax::Vector<TypeId, Allocator> component_writes_;
-        wax::Vector<TypeId, Allocator> resource_reads_;
-        wax::Vector<TypeId, Allocator> resource_writes_;
+        wax::Vector<TypeId> component_reads_;
+        wax::Vector<TypeId> component_writes_;
+        wax::Vector<TypeId> resource_reads_;
+        wax::Vector<TypeId> resource_writes_;
         WorldAccess world_access_;
     };
 }

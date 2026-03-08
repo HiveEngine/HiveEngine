@@ -23,7 +23,7 @@
  *   vec.PushBack(42);
  *
  *   // Equivalent to:
- *   wax::Vector<int, comb::LinearAllocator> vec2{alloc};
+ *   wax::Vector<int> vec2{alloc};
  * @endcode
  *
  * Note: You still need to provide an allocator instance at construction.
@@ -34,13 +34,13 @@ namespace wax
 {
     // Linear allocator (best for frame-temp data)
     template<typename T>
-    using LinearVector = Vector<T, comb::LinearAllocator>;
+    using LinearVector = Vector<T>;
 
     // Stack allocator (best for LIFO allocation patterns)
     template<typename T>
-    using StackVector = Vector<T, comb::StackAllocator>;
+    using StackVector = Vector<T>;
 
     // Buddy allocator (best for general-purpose with low fragmentation)
     template<typename T>
-    using BuddyVector = Vector<T, comb::BuddyAllocator>;
+    using BuddyVector = Vector<T>;
 }

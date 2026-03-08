@@ -3,105 +3,53 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <comb/memory_resource.h>
 #include <hive/core/assert.h>
-#include <comb/default_allocator.h>
-#include <wax/serialization/byte_span.h>
 #include <wax/containers/vector.h>
+#include <wax/serialization/byte_span.h>
 
 namespace wax
 {
-    /**
-     * Owning binary data buffer
-     *
-     * ByteBuffer provides a growable container for binary data using a Comb allocator.
-     * It wraps wax::Vector<uint8_t> and adds convenience methods for binary I/O.
-     *
-     * Performance characteristics:
-     * - Storage: Vector overhead + data
-     * - Append: Amortized O(1) with growth
-     * - Reserve: O(n) copy on reallocation
-     * - Access: O(1) - direct pointer
-     *
-     * Limitations:
-     * - Requires allocator (not default constructible)
-     * - Growth may cause reallocation and copy
-     * - Not thread-safe
-     *
-     * Use cases:
-     * - Loading file contents
-     * - Building binary data for serialization
-     * - Asset data storage
-     * - Network packet buffers
-     *
-     * Example:
-     * @code
-     *   comb::LinearAllocator alloc{1024};
-     *   wax::ByteBuffer buffer{alloc};
-     *
-     *   buffer.Reserve(256);
-     *   buffer.Append("MAGIC", 5);
-     *   buffer.Append<uint32_t>(42);
-     *
-     *   wax::ByteSpan view = buffer.View();
-     * @endcode
-     *
-     * @tparam Allocator Comb allocator type
-     */
-    template<typename Allocator = comb::DefaultAllocator>
     class ByteBuffer
     {
     public:
-        // Default constructor - uses global default allocator
         ByteBuffer() noexcept
-            requires std::is_same_v<Allocator, comb::DefaultAllocator>
-            : data_{comb::GetDefaultAllocator()}
+            : data_{}
         {}
 
-        // Default constructor with capacity - uses global default allocator
         explicit ByteBuffer(size_t initial_capacity) noexcept
-            requires std::is_same_v<Allocator, comb::DefaultAllocator>
-            : data_{comb::GetDefaultAllocator(), initial_capacity}
+            : data_(initial_capacity)
         {}
 
-        // Constructor with allocator
+        explicit ByteBuffer(comb::MemoryResource allocator) noexcept
+            : data_{allocator}
+        {}
+
+        template<comb::Allocator Allocator>
         explicit ByteBuffer(Allocator& allocator) noexcept
             : data_{allocator}
         {}
 
+        ByteBuffer(comb::MemoryResource allocator, size_t initial_capacity) noexcept
+            : data_{allocator, initial_capacity}
+        {}
+
+        template<comb::Allocator Allocator>
         ByteBuffer(Allocator& allocator, size_t initial_capacity) noexcept
             : data_{allocator, initial_capacity}
         {}
 
         ByteBuffer(const ByteBuffer&) = delete;
         ByteBuffer& operator=(const ByteBuffer&) = delete;
-
         ByteBuffer(ByteBuffer&& other) noexcept = default;
         ByteBuffer& operator=(ByteBuffer&& other) noexcept = default;
 
-        [[nodiscard]] const uint8_t* Data() const noexcept
-        {
-            return data_.Data();
-        }
-
-        [[nodiscard]] uint8_t* Data() noexcept
-        {
-            return data_.Data();
-        }
-
-        [[nodiscard]] size_t Size() const noexcept
-        {
-            return data_.Size();
-        }
-
-        [[nodiscard]] size_t Capacity() const noexcept
-        {
-            return data_.Capacity();
-        }
-
-        [[nodiscard]] bool IsEmpty() const noexcept
-        {
-            return data_.IsEmpty();
-        }
+        [[nodiscard]] const uint8_t* Data() const noexcept { return data_.Data(); }
+        [[nodiscard]] uint8_t* Data() noexcept { return data_.Data(); }
+        [[nodiscard]] size_t Size() const noexcept { return data_.Size(); }
+        [[nodiscard]] size_t Capacity() const noexcept { return data_.Capacity(); }
+        [[nodiscard]] bool IsEmpty() const noexcept { return data_.IsEmpty(); }
+        [[nodiscard]] comb::MemoryResource GetAllocator() const noexcept { return data_.GetAllocator(); }
 
         [[nodiscard]] ByteSpan View() const noexcept
         {
@@ -114,20 +62,9 @@ namespace wax
             return ByteSpan{data_.Data() + offset, count};
         }
 
-        void Reserve(size_t capacity) noexcept
-        {
-            data_.Reserve(capacity);
-        }
-
-        void Resize(size_t new_size) noexcept
-        {
-            data_.Resize(new_size);
-        }
-
-        void Clear() noexcept
-        {
-            data_.Clear();
-        }
+        void Reserve(size_t capacity) noexcept { data_.Reserve(capacity); }
+        void Resize(size_t new_size) noexcept { data_.Resize(new_size); }
+        void Clear() noexcept { data_.Clear(); }
 
         void Append(const void* src, size_t size) noexcept
         {
@@ -136,7 +73,7 @@ namespace wax
                 return;
             }
 
-            size_t old_size = data_.Size();
+            const size_t old_size = data_.Size();
             data_.Resize(old_size + size);
             std::memcpy(data_.Data() + old_size, src, size);
         }
@@ -170,28 +107,12 @@ namespace wax
             return data_[index];
         }
 
-        [[nodiscard]] const uint8_t* begin() const noexcept
-        {
-            return data_.begin();
-        }
-
-        [[nodiscard]] const uint8_t* end() const noexcept
-        {
-            return data_.end();
-        }
-
-        [[nodiscard]] uint8_t* begin() noexcept
-        {
-            return data_.begin();
-        }
-
-        [[nodiscard]] uint8_t* end() noexcept
-        {
-            return data_.end();
-        }
+        [[nodiscard]] const uint8_t* begin() const noexcept { return data_.begin(); }
+        [[nodiscard]] const uint8_t* end() const noexcept { return data_.end(); }
+        [[nodiscard]] uint8_t* begin() noexcept { return data_.begin(); }
+        [[nodiscard]] uint8_t* end() noexcept { return data_.end(); }
 
     private:
-        wax::Vector<uint8_t, Allocator> data_;
+        wax::Vector<uint8_t> data_;
     };
-
 }

@@ -13,7 +13,7 @@ namespace nectar
     struct IORequest
     {
         IORequestId id{kInvalidIORequestId};
-        wax::String<> path;
+        wax::String path;
         LoadPriority priority{LoadPriority::Normal};
         bool cancelled{false};
     };
@@ -21,7 +21,7 @@ namespace nectar
     struct IOCompletion
     {
         IORequestId request_id{kInvalidIORequestId};
-        wax::ByteBuffer<> data;
+        wax::ByteBuffer data;
         bool success{false};
     };
 }

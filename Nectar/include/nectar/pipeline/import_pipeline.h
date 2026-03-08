@@ -28,7 +28,7 @@ namespace nectar
         bool success{false};
         ContentHash content_hash;
         uint32_t import_version{0};
-        wax::String<> error_message;
+        wax::String error_message;
         wax::Vector<DependencyEdge> dependencies;
     };
 

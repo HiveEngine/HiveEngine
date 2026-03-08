@@ -226,7 +226,7 @@ namespace queen
         }
 
         Allocator* allocator_;
-        wax::Vector<ThreadBuffer, Allocator> thread_buffers_;
+        wax::Vector<ThreadBuffer> thread_buffers_;
         size_t buffer_count_;
     };
 }

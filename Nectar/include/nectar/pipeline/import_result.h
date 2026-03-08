@@ -9,7 +9,7 @@ namespace nectar
     struct ImportResult
     {
         bool success{false};
-        wax::ByteBuffer<comb::DefaultAllocator> intermediate_data{};
-        wax::String<> error_message{};
+        wax::ByteBuffer intermediate_data{};
+        wax::String error_message{};
     };
 }

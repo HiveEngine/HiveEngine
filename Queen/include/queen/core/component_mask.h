@@ -498,7 +498,7 @@ namespace queen
         }
 
         Allocator* allocator_;
-        wax::Vector<uint64_t, Allocator> blocks_;
+        wax::Vector<uint64_t> blocks_;
     };
 
     /**

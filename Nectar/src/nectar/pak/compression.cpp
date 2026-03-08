@@ -5,11 +5,11 @@
 
 namespace nectar
 {
-    wax::ByteBuffer<> Compress(wax::ByteSpan input,
+    wax::ByteBuffer Compress(wax::ByteSpan input,
                                 CompressionMethod method,
                                 comb::DefaultAllocator& alloc)
     {
-        wax::ByteBuffer<> result{alloc};
+        wax::ByteBuffer result{alloc};
 
         if (input.Size() == 0)
             return result;
@@ -67,12 +67,12 @@ namespace nectar
         return result;
     }
 
-    wax::ByteBuffer<> Decompress(wax::ByteSpan compressed,
+    wax::ByteBuffer Decompress(wax::ByteSpan compressed,
                                   size_t uncompressed_size,
                                   CompressionMethod method,
                                   comb::DefaultAllocator& alloc)
     {
-        wax::ByteBuffer<> result{alloc};
+        wax::ByteBuffer result{alloc};
 
         if (compressed.Size() == 0 || uncompressed_size == 0)
             return result;

@@ -19,7 +19,7 @@ namespace nectar
     {
         BuildEntry entry;
         entry.hash = hash;
-        entry.data = wax::ByteBuffer<>{*alloc_};
+        entry.data = wax::ByteBuffer{*alloc_};
         entry.data.Append(data);
         entry.compression = compression;
         entries_.PushBack(static_cast<BuildEntry&&>(entry));
@@ -34,7 +34,7 @@ namespace nectar
     {
         HIVE_PROFILE_SCOPE_N("PakBuilder::Build");
         // Build path string with null terminator
-        wax::String<> path{*alloc_};
+        wax::String path{*alloc_};
         path.Append(output_path.Data(), output_path.Size());
 
         FILE* file = std::fopen(path.CStr(), "wb");
@@ -48,13 +48,13 @@ namespace nectar
         std::fwrite(&header, sizeof(NpakHeader), 1, file);
 
         // If manifest is set, add it as a blob at sentinel hash
-        wax::ByteBuffer<> manifest_data{*alloc_};
+        wax::ByteBuffer manifest_data{*alloc_};
         if (manifest_)
         {
             manifest_data = manifest_->Serialize(*alloc_);
             BuildEntry me;
             me.hash = kManifestSentinel;
-            me.data = wax::ByteBuffer<>{*alloc_};
+            me.data = wax::ByteBuffer{*alloc_};
             me.data.Append(manifest_data.View());
             me.compression = CompressionMethod::None;
             entries_.PushBack(static_cast<BuildEntry&&>(me));
@@ -155,7 +155,7 @@ namespace nectar
         // Build TOC buffer for CRC32
         size_t toc_size = sizeof(uint32_t) + asset_count * sizeof(NpakAssetEntry)
                         + sizeof(uint32_t) + block_count * sizeof(NpakBlockEntry);
-        wax::ByteBuffer<> toc_buf{*alloc_};
+        wax::ByteBuffer toc_buf{*alloc_};
         toc_buf.Resize(toc_size);
         uint8_t* toc_ptr = toc_buf.Data();
 

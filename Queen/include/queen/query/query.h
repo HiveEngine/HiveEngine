@@ -394,7 +394,7 @@ namespace queen
         }
 
         Allocator* allocator_;
-        wax::Vector<Archetype<Allocator>*, Allocator> archetypes_;
+        wax::Vector<Archetype<Allocator>*> archetypes_;
         QueryDescriptor<Allocator> descriptor_;
         Tick last_run_tick_;
     };

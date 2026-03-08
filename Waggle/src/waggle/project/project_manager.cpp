@@ -43,7 +43,7 @@ bool LoadImportCache(const char* path, nectar::AssetDatabase& db,
     if (file_size < 12) return false;
 
     file.seekg(0);
-    wax::ByteBuffer<> buf{alloc, static_cast<size_t>(file_size)};
+    wax::ByteBuffer buf{alloc, static_cast<size_t>(file_size)};
     buf.Resize(static_cast<size_t>(file_size));
     file.read(reinterpret_cast<char*>(buf.Data()), file_size);
     if (!file) return false;
@@ -84,16 +84,16 @@ bool LoadImportCache(const char* path, nectar::AssetDatabase& db,
 
         nectar::AssetRecord record{};
         record.uuid = nectar::AssetId{id_high, id_low};
-        record.path = wax::String<>{alloc};
+        record.path = wax::String{alloc};
         record.path.Append(reinterpret_cast<const char*>(path_span.Data()), path_span.Size());
-        record.type = wax::String<>{alloc};
+        record.type = wax::String{alloc};
         record.type.Append(reinterpret_cast<const char*>(type_span.Data()), type_span.Size());
-        record.name = wax::String<>{alloc};
+        record.name = wax::String{alloc};
         record.name.Append(reinterpret_cast<const char*>(name_span.Data()), name_span.Size());
         record.content_hash = nectar::ContentHash{ch_high, ch_low};
         record.intermediate_hash = nectar::ContentHash{ih_high, ih_low};
         record.import_version = imp_version;
-        record.labels = wax::Vector<wax::String<>>{alloc};
+        record.labels = wax::Vector<wax::String>{alloc};
 
         db.Insert(static_cast<nectar::AssetRecord&&>(record));
     }
@@ -108,7 +108,7 @@ bool SaveImportCacheToDisk(const char* path, const nectar::AssetDatabase& db,
     std::filesystem::create_directories(
         std::filesystem::path{path}.parent_path(), ec);
 
-    wax::BinaryWriter<comb::DefaultAllocator> writer{alloc, 4096};
+    wax::BinaryWriter writer{alloc, 4096};
 
     writer.Write<uint32_t>(kImportCacheMagic);
     writer.Write<uint16_t>(kImportCacheVersion);

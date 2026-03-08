@@ -164,6 +164,6 @@ namespace queen
         }
 
     private:
-        wax::Vector<Entity, Allocator> entities_;
+        wax::Vector<Entity> entities_;
     };
 }

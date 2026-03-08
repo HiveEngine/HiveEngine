@@ -5,6 +5,8 @@
 #if HIVE_FEATURE_PROFILER
 
     #include <tracy/Tracy.hpp>
+    #include <chrono>
+    #include <thread>
 
     // Scoped zones
     #define HIVE_PROFILE_SCOPE              ZoneScoped
@@ -34,6 +36,18 @@
     // Dynamic zone name (for runtime strings like system names)
     #define HIVE_PROFILE_ZONE_NAME(name, len)   ZoneName(name, len)
 
+    namespace hive
+    {
+        inline void ShutdownProfiler()
+        {
+            tracy::GetProfiler().RequestShutdown();
+            while (!tracy::GetProfiler().HasShutdownFinished())
+            {
+                std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            }
+        }
+    }
+
 #else
 
     #define HIVE_PROFILE_SCOPE              (void)0
@@ -56,5 +70,12 @@
     #define HIVE_PROFILE_PLOT(name, val)     (void)0
 
     #define HIVE_PROFILE_ZONE_NAME(name, len)   (void)0
+
+    namespace hive
+    {
+        inline void ShutdownProfiler()
+        {
+        }
+    }
 
 #endif

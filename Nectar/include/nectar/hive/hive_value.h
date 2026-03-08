@@ -23,11 +23,11 @@ namespace nectar
         };
 
         Type type{Type::String};
-        wax::String<> str{};
+        wax::String str{};
         int64_t int_val{0};
         double float_val{0.0};
         bool bool_val{false};
-        wax::Vector<wax::String<>> array{};
+        wax::Vector<wax::String> array{};
 
         // -- Factory methods --
 
@@ -35,7 +35,7 @@ namespace nectar
         {
             HiveValue v{};
             v.type = Type::String;
-            v.str = wax::String<>{alloc, s};
+            v.str = wax::String{alloc, s};
             return v;
         }
 
@@ -67,7 +67,7 @@ namespace nectar
         {
             HiveValue v{};
             v.type = Type::StringArray;
-            v.array = wax::Vector<wax::String<>>{alloc};
+            v.array = wax::Vector<wax::String>{alloc};
             return v;
         }
 
@@ -77,11 +77,11 @@ namespace nectar
         [[nodiscard]] bool AsBool() const noexcept { return bool_val; }
         [[nodiscard]] int64_t AsInt() const noexcept { return int_val; }
         [[nodiscard]] double AsFloat() const noexcept { return float_val; }
-        [[nodiscard]] const wax::Vector<wax::String<>>& AsStringArray() const noexcept { return array; }
+        [[nodiscard]] const wax::Vector<wax::String>& AsStringArray() const noexcept { return array; }
 
         void PushString(comb::DefaultAllocator& alloc, wax::StringView s)
         {
-            array.PushBack(wax::String<>{alloc, s});
+            array.PushBack(wax::String{alloc, s});
         }
     };
 }

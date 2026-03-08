@@ -17,10 +17,10 @@ namespace nectar
         return root_dir_.View();
     }
 
-    wax::String<> DiskMountSource::BuildFullPath(wax::StringView relative,
+    wax::String DiskMountSource::BuildFullPath(wax::StringView relative,
                                                   comb::DefaultAllocator& alloc) const
     {
-        wax::String<> full{alloc};
+        wax::String full{alloc};
         if (root_dir_.Size() > 0)
         {
             full.Append(root_dir_.View().Data(), root_dir_.View().Size());
@@ -30,10 +30,10 @@ namespace nectar
         return full;
     }
 
-    wax::ByteBuffer<> DiskMountSource::ReadFile(wax::StringView path,
+    wax::ByteBuffer DiskMountSource::ReadFile(wax::StringView path,
                                                   comb::DefaultAllocator& alloc)
     {
-        wax::ByteBuffer<> buffer{alloc};
+        wax::ByteBuffer buffer{alloc};
         auto full = BuildFullPath(path, alloc);
 
         FILE* file = std::fopen(full.CStr(), "rb");
@@ -95,7 +95,7 @@ namespace nectar
         {
             auto filename = entry.path().filename().string();
             DirectoryEntry de;
-            de.name = wax::String<>{alloc};
+            de.name = wax::String{alloc};
             de.name.Append(filename.c_str(), filename.size());
             de.is_directory = entry.is_directory();
             out.PushBack(static_cast<DirectoryEntry&&>(de));

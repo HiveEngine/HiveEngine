@@ -31,7 +31,7 @@ namespace nectar
         struct BuildEntry
         {
             ContentHash hash;
-            wax::ByteBuffer<> data;
+            wax::ByteBuffer data;
             CompressionMethod compression;
         };
 

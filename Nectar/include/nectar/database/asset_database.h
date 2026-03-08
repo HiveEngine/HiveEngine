@@ -63,7 +63,7 @@ namespace nectar
     private:
         comb::DefaultAllocator* alloc_;
         wax::HashMap<AssetId, AssetRecord> records_;
-        wax::HashMap<wax::String<>, AssetId> path_index_;
+        wax::HashMap<wax::String, AssetId> path_index_;
         DependencyGraph dep_graph_;
     };
 }

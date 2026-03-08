@@ -220,7 +220,7 @@ registry.Register<Velocity>();
 // Serialize a component
 Position pos{1.0f, 2.0f, 3.0f};
 comb::LinearAllocator alloc{4096};
-wax::BinaryWriter<comb::LinearAllocator> writer{alloc};
+wax::BinaryWriter writer{alloc};
 queen::Serialize(pos, writer);
 
 // Deserialize

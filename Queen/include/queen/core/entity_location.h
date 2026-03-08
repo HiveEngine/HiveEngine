@@ -147,6 +147,6 @@ namespace queen
             }
         }
 
-        wax::Vector<Record, Allocator> records_;
+        wax::Vector<Record> records_;
     };
 }

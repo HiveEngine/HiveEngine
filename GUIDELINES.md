@@ -172,8 +172,8 @@ comb::DeleteArray(allocator, arr, 64);
 Containers take an allocator as template param + constructor arg:
 
 ```cpp
-wax::Vector<int, comb::LinearAllocator> vec{alloc};
-wax::String<comb::BuddyAllocator> str{alloc, "hello"};
+wax::Vector<int> vec{alloc};
+wax::String str{alloc, "hello"};
 ```
 
 Smart pointers: `wax::Box<T>` (unique), `wax::Rc<T>` (refcounted). Create with `MakeBox`/`MakeRc`.

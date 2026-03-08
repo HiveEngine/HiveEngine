@@ -10,19 +10,19 @@ namespace nectar
 
     void AssetManifest::Add(wax::StringView vfs_path, ContentHash hash)
     {
-        wax::String<> key{*alloc_};
+        wax::String key{*alloc_};
         key.Append(vfs_path.Data(), vfs_path.Size());
 
         auto* existing = entries_.Find(key);
         if (existing)
             *existing = hash;
         else
-            entries_.Insert(static_cast<wax::String<>&&>(key), hash);
+            entries_.Insert(static_cast<wax::String&&>(key), hash);
     }
 
     const ContentHash* AssetManifest::Find(wax::StringView vfs_path) const
     {
-        wax::String<> key{*alloc_};
+        wax::String key{*alloc_};
         key.Append(vfs_path.Data(), vfs_path.Size());
         return entries_.Find(key);
     }
@@ -32,11 +32,11 @@ namespace nectar
         return entries_.Count();
     }
 
-    wax::ByteBuffer<> AssetManifest::Serialize(comb::DefaultAllocator& alloc) const
+    wax::ByteBuffer AssetManifest::Serialize(comb::DefaultAllocator& alloc) const
     {
         // Format: [count u32] [entry...]
         // Entry: [path_len u32] [path bytes] [hash_high u64] [hash_low u64]
-        wax::ByteBuffer<> buf{alloc};
+        wax::ByteBuffer buf{alloc};
 
         uint32_t count = static_cast<uint32_t>(entries_.Count());
         buf.Resize(sizeof(uint32_t));

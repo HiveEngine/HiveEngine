@@ -25,10 +25,10 @@ namespace nectar
     static_assert(sizeof(AssetBlobHeader) == 24, "AssetBlobHeader must be 24 bytes packed");
 
     /// Write header + payload into a single buffer.
-    inline wax::ByteBuffer<> WriteBlob(uint32_t magic, uint16_t format_version,
+    inline wax::ByteBuffer WriteBlob(uint32_t magic, uint16_t format_version,
                                         wax::ByteSpan payload, comb::DefaultAllocator& alloc)
     {
-        wax::ByteBuffer<> buf{alloc, sizeof(AssetBlobHeader) + payload.Size()};
+        wax::ByteBuffer buf{alloc, sizeof(AssetBlobHeader) + payload.Size()};
 
         AssetBlobHeader header{};
         header.magic = magic;

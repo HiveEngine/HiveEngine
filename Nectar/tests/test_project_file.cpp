@@ -112,7 +112,7 @@ auto t_roundtrip = larvae::RegisterTest("NectarProjectFile", "CreateAndSerialize
     larvae::AssertTrue(pf1.Name().Equals("RoundTrip"));
     larvae::AssertTrue(pf1.Version().Equals("2.0.0"));
 
-    wax::String<> serialized = pf1.Serialize();
+    wax::String serialized = pf1.Serialize();
     larvae::AssertTrue(serialized.Size() > 0);
 
     nectar::ProjectFile pf2{alloc};

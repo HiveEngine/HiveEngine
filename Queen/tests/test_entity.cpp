@@ -79,7 +79,7 @@ namespace
 
     auto test8 = larvae::RegisterTest("QueenEntity", "HashWorks", []() {
         comb::LinearAllocator alloc{4096};
-        wax::HashSet<queen::Entity, comb::LinearAllocator> set{alloc, 16};
+        wax::HashSet<queen::Entity> set{alloc, 16};
 
         queen::Entity e1{1, 0};
         queen::Entity e2{2, 0};

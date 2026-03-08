@@ -144,10 +144,10 @@ namespace queen
             return true;
         }
 
-        [[nodiscard]] wax::Vector<Archetype<Allocator>*, Allocator> FindMatchingArchetypes(
+        [[nodiscard]] wax::Vector<Archetype<Allocator>*> FindMatchingArchetypes(
             const ComponentIndex<Allocator>& index) const
         {
-            wax::Vector<Archetype<Allocator>*, Allocator> result{*allocator_};
+            wax::Vector<Archetype<Allocator>*> result{*allocator_};
 
             if (required_.IsEmpty())
             {
@@ -189,27 +189,27 @@ namespace queen
             return result;
         }
 
-        [[nodiscard]] const wax::Vector<Term, Allocator>& GetTerms() const noexcept
+        [[nodiscard]] const wax::Vector<Term>& GetTerms() const noexcept
         {
             return terms_;
         }
 
-        [[nodiscard]] const wax::Vector<TypeId, Allocator>& GetRequired() const noexcept
+        [[nodiscard]] const wax::Vector<TypeId>& GetRequired() const noexcept
         {
             return required_;
         }
 
-        [[nodiscard]] const wax::Vector<TypeId, Allocator>& GetExcluded() const noexcept
+        [[nodiscard]] const wax::Vector<TypeId>& GetExcluded() const noexcept
         {
             return excluded_;
         }
 
-        [[nodiscard]] const wax::Vector<TypeId, Allocator>& GetOptional() const noexcept
+        [[nodiscard]] const wax::Vector<TypeId>& GetOptional() const noexcept
         {
             return optional_;
         }
 
-        [[nodiscard]] const wax::Vector<Term, Allocator>& GetDataAccessTerms() const noexcept
+        [[nodiscard]] const wax::Vector<Term>& GetDataAccessTerms() const noexcept
         {
             return data_access_;
         }
@@ -227,10 +227,10 @@ namespace queen
 
     private:
         Allocator* allocator_;
-        wax::Vector<Term, Allocator> terms_;
-        wax::Vector<TypeId, Allocator> required_;
-        wax::Vector<TypeId, Allocator> excluded_;
-        wax::Vector<TypeId, Allocator> optional_;
-        wax::Vector<Term, Allocator> data_access_;
+        wax::Vector<Term> terms_;
+        wax::Vector<TypeId> required_;
+        wax::Vector<TypeId> excluded_;
+        wax::Vector<TypeId> optional_;
+        wax::Vector<Term> data_access_;
     };
 }

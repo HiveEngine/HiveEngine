@@ -60,7 +60,7 @@ namespace queen
     class Table
     {
     public:
-        Table(Allocator& allocator, const wax::Vector<ComponentMeta, Allocator>& component_metas, size_t initial_capacity = 64)
+        Table(Allocator& allocator, const wax::Vector<ComponentMeta>& component_metas, size_t initial_capacity = 64)
             : allocator_{&allocator}
             , entities_{allocator}
             , columns_{allocator}
@@ -303,9 +303,9 @@ namespace queen
         /**
          * Get all TypeIds present in this table
          */
-        [[nodiscard]] wax::Vector<TypeId, Allocator> GetTypeIds() const
+        [[nodiscard]] wax::Vector<TypeId> GetTypeIds() const
         {
-            wax::Vector<TypeId, Allocator> result{*allocator_};
+            wax::Vector<TypeId> result{*allocator_};
             result.Reserve(columns_.Size());
             for (size_t i = 0; i < columns_.Size(); ++i)
             {
@@ -316,8 +316,8 @@ namespace queen
 
     private:
         Allocator* allocator_;
-        wax::Vector<Entity, Allocator> entities_;
-        wax::Vector<Column<Allocator>, Allocator> columns_;
-        wax::HashMap<TypeId, size_t, Allocator> type_to_column_index_;
+        wax::Vector<Entity> entities_;
+        wax::Vector<Column<Allocator>> columns_;
+        wax::HashMap<TypeId, size_t> type_to_column_index_;
     };
 }

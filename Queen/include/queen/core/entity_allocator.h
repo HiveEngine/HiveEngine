@@ -138,8 +138,8 @@ namespace queen
         }
 
     private:
-        wax::Vector<Entity::GenerationType, Allocator> generations_;
-        wax::Vector<uint32_t, Allocator> free_list_;
+        wax::Vector<Entity::GenerationType> generations_;
+        wax::Vector<uint32_t> free_list_;
         uint32_t next_index_;
     };
 }

@@ -11,7 +11,7 @@ namespace nectar
 
     void MemoryMountSource::AddFile(wax::StringView path, wax::ByteSpan data)
     {
-        wax::String<> key{*alloc_};
+        wax::String key{*alloc_};
         key.Append(path.Data(), path.Size());
 
         if (files_.Contains(key.View()))
@@ -25,7 +25,7 @@ namespace nectar
                 bytes.PushBack(data[i]);
         }
 
-        files_.Insert(static_cast<wax::String<>&&>(key), static_cast<wax::Vector<uint8_t>&&>(bytes));
+        files_.Insert(static_cast<wax::String&&>(key), static_cast<wax::Vector<uint8_t>&&>(bytes));
     }
 
     bool MemoryMountSource::RemoveFile(wax::StringView path)
@@ -38,9 +38,9 @@ namespace nectar
         return files_.Count();
     }
 
-    wax::ByteBuffer<> MemoryMountSource::ReadFile(wax::StringView path, comb::DefaultAllocator& alloc)
+    wax::ByteBuffer MemoryMountSource::ReadFile(wax::StringView path, comb::DefaultAllocator& alloc)
     {
-        wax::ByteBuffer<> buffer{alloc};
+        wax::ByteBuffer buffer{alloc};
         auto* data = files_.Find(path);
         if (!data) return buffer;
 
@@ -71,7 +71,7 @@ namespace nectar
                                            comb::DefaultAllocator& alloc) const
     {
         // Build prefix to match: "dir/" or "" for root
-        wax::String<> prefix{alloc};
+        wax::String prefix{alloc};
         if (path.Size() > 0)
         {
             prefix.Append(path.Data(), path.Size());
@@ -79,7 +79,7 @@ namespace nectar
         }
 
         // Collect unique direct children
-        wax::HashSet<wax::String<>> seen{alloc};
+        wax::HashSet<wax::String> seen{alloc};
 
         for (auto it = files_.begin(); it != files_.end(); ++it)
         {
@@ -102,15 +102,15 @@ namespace nectar
             bool is_dir = (slash != wax::StringView::npos);
             auto name = is_dir ? remainder.Substr(0, slash) : remainder;
 
-            wax::String<> name_str{alloc};
+            wax::String name_str{alloc};
             name_str.Append(name.Data(), name.Size());
 
             if (seen.Contains(name_str))
                 continue;
-            seen.Insert(static_cast<wax::String<>&&>(wax::String<>{alloc, name_str.View()}));
+            seen.Insert(static_cast<wax::String&&>(wax::String{alloc, name_str.View()}));
 
             DirectoryEntry entry;
-            entry.name = static_cast<wax::String<>&&>(name_str);
+            entry.name = static_cast<wax::String&&>(name_str);
             entry.is_directory = is_dir;
             out.PushBack(static_cast<DirectoryEntry&&>(entry));
         }

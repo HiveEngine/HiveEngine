@@ -7,7 +7,7 @@ namespace
 {
     auto test1 = larvae::RegisterTest("WaxHashSet", "InsertAndContains", []() {
         comb::LinearAllocator alloc{4096};
-        wax::HashSet<int, comb::LinearAllocator> set{alloc, 16};
+        wax::HashSet<int> set{alloc, 16};
 
         bool inserted = set.Insert(42);
         larvae::AssertTrue(inserted);
@@ -17,7 +17,7 @@ namespace
 
     auto test2 = larvae::RegisterTest("WaxHashSet", "ContainsNotFound", []() {
         comb::LinearAllocator alloc{4096};
-        wax::HashSet<int, comb::LinearAllocator> set{alloc, 16};
+        wax::HashSet<int> set{alloc, 16};
 
         set.Insert(1);
 
@@ -26,7 +26,7 @@ namespace
 
     auto test3 = larvae::RegisterTest("WaxHashSet", "DuplicateInsert", []() {
         comb::LinearAllocator alloc{4096};
-        wax::HashSet<int, comb::LinearAllocator> set{alloc, 16};
+        wax::HashSet<int> set{alloc, 16};
 
         bool first = set.Insert(42);
         bool second = set.Insert(42);
@@ -38,7 +38,7 @@ namespace
 
     auto test4 = larvae::RegisterTest("WaxHashSet", "Remove", []() {
         comb::LinearAllocator alloc{4096};
-        wax::HashSet<int, comb::LinearAllocator> set{alloc, 16};
+        wax::HashSet<int> set{alloc, 16};
 
         set.Insert(1);
         set.Insert(2);
@@ -57,7 +57,7 @@ namespace
 
     auto test5 = larvae::RegisterTest("WaxHashSet", "RemoveNotFound", []() {
         comb::LinearAllocator alloc{4096};
-        wax::HashSet<int, comb::LinearAllocator> set{alloc, 16};
+        wax::HashSet<int> set{alloc, 16};
 
         set.Insert(1);
 
@@ -68,7 +68,7 @@ namespace
 
     auto test6 = larvae::RegisterTest("WaxHashSet", "Clear", []() {
         comb::LinearAllocator alloc{4096};
-        wax::HashSet<int, comb::LinearAllocator> set{alloc, 16};
+        wax::HashSet<int> set{alloc, 16};
 
         set.Insert(1);
         set.Insert(2);
@@ -85,7 +85,7 @@ namespace
 
     auto test7 = larvae::RegisterTest("WaxHashSet", "Rehash", []() {
         comb::BuddyAllocator alloc{65536};
-        wax::HashSet<int, comb::BuddyAllocator> set{alloc, 4};
+        wax::HashSet<int> set{alloc, 4};
 
         for (int i = 0; i < 100; ++i)
         {
@@ -102,7 +102,7 @@ namespace
 
     auto test8 = larvae::RegisterTest("WaxHashSet", "Iterator", []() {
         comb::LinearAllocator alloc{4096};
-        wax::HashSet<int, comb::LinearAllocator> set{alloc, 16};
+        wax::HashSet<int> set{alloc, 16};
 
         set.Insert(1);
         set.Insert(2);
@@ -123,12 +123,12 @@ namespace
 
     auto test9 = larvae::RegisterTest("WaxHashSet", "MoveConstruct", []() {
         comb::LinearAllocator alloc{8192};
-        wax::HashSet<int, comb::LinearAllocator> set1{alloc, 16};
+        wax::HashSet<int> set1{alloc, 16};
 
         set1.Insert(1);
         set1.Insert(2);
 
-        wax::HashSet<int, comb::LinearAllocator> set2{static_cast<wax::HashSet<int, comb::LinearAllocator>&&>(set1)};
+        wax::HashSet<int> set2{static_cast<wax::HashSet<int>&&>(set1)};
 
         larvae::AssertEqual(set2.Count(), size_t{2});
         larvae::AssertTrue(set2.Contains(1));
@@ -137,7 +137,7 @@ namespace
 
     auto test10 = larvae::RegisterTest("WaxHashSet", "RemoveAndReinsert", []() {
         comb::LinearAllocator alloc{4096};
-        wax::HashSet<int, comb::LinearAllocator> set{alloc, 16};
+        wax::HashSet<int> set{alloc, 16};
 
         set.Insert(1);
         set.Insert(2);
@@ -174,7 +174,7 @@ namespace
 
         {
             comb::LinearAllocator alloc{4096};
-            wax::HashSet<NonTrivialKey, comb::LinearAllocator, NonTrivialKeyHash> set{alloc, 16};
+            wax::HashSet<NonTrivialKey, NonTrivialKeyHash> set{alloc, 16};
 
             set.Insert(NonTrivialKey{1});
             set.Insert(NonTrivialKey{2});
@@ -190,7 +190,7 @@ namespace
 
     auto test12 = larvae::RegisterTest("WaxHashSet", "LoadFactor", []() {
         comb::LinearAllocator alloc{4096};
-        wax::HashSet<int, comb::LinearAllocator> set{alloc, 16};
+        wax::HashSet<int> set{alloc, 16};
 
         larvae::AssertEqual(set.LoadFactor(), 0.0f);
 
@@ -205,8 +205,8 @@ namespace
 
     auto test13 = larvae::RegisterTest("WaxHashSet", "MoveAssignment", []() {
         comb::BuddyAllocator alloc{16384};
-        wax::HashSet<int, comb::BuddyAllocator> set1{alloc, 16};
-        wax::HashSet<int, comb::BuddyAllocator> set2{alloc, 16};
+        wax::HashSet<int> set1{alloc, 16};
+        wax::HashSet<int> set2{alloc, 16};
 
         set1.Insert(1);
         set1.Insert(2);
@@ -214,7 +214,7 @@ namespace
 
         set2.Insert(100);
 
-        set2 = static_cast<wax::HashSet<int, comb::BuddyAllocator>&&>(set1);
+        set2 = static_cast<wax::HashSet<int>&&>(set1);
 
         larvae::AssertEqual(set2.Count(), size_t{3});
         larvae::AssertTrue(set2.Contains(1));
@@ -225,7 +225,7 @@ namespace
 
     auto test14 = larvae::RegisterTest("WaxHashSet", "EmptySetIteration", []() {
         comb::LinearAllocator alloc{4096};
-        wax::HashSet<int, comb::LinearAllocator> set{alloc, 16};
+        wax::HashSet<int> set{alloc, 16};
 
         int count = 0;
         for (auto it = set.begin(); it != set.end(); ++it)
@@ -238,7 +238,7 @@ namespace
 
     auto test15 = larvae::RegisterTest("WaxHashSet", "ConstIteration", []() {
         comb::LinearAllocator alloc{4096};
-        wax::HashSet<int, comb::LinearAllocator> set{alloc, 16};
+        wax::HashSet<int> set{alloc, 16};
 
         set.Insert(10);
         set.Insert(20);
@@ -260,7 +260,7 @@ namespace
 
     auto test16 = larvae::RegisterTest("WaxHashSet", "RangeForLoop", []() {
         comb::LinearAllocator alloc{4096};
-        wax::HashSet<int, comb::LinearAllocator> set{alloc, 16};
+        wax::HashSet<int> set{alloc, 16};
 
         set.Insert(5);
         set.Insert(10);

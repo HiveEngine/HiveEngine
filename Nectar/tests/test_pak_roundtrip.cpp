@@ -104,7 +104,7 @@ namespace {
 
         // 200KB — spans multiple 64KB blocks
         constexpr size_t kSize = 200 * 1024;
-        wax::ByteBuffer<> data{alloc};
+        wax::ByteBuffer data{alloc};
         data.Resize(kSize);
         for (size_t i = 0; i < kSize; ++i)
             data.Data()[i] = static_cast<uint8_t>(i % 251);

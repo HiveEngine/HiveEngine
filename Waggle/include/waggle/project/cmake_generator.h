@@ -20,7 +20,7 @@ namespace waggle
     class CMakeGenerator
     {
     public:
-        [[nodiscard]] static wax::String<> Generate(
+        [[nodiscard]] static wax::String Generate(
             const CMakeGenConfig& config,
             comb::DefaultAllocator& alloc);
 

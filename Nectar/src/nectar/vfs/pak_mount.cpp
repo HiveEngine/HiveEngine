@@ -17,16 +17,16 @@ namespace nectar
         }
     }
 
-    wax::ByteBuffer<> PakMountSource::ReadFile(wax::StringView path,
+    wax::ByteBuffer PakMountSource::ReadFile(wax::StringView path,
                                                  comb::DefaultAllocator& alloc)
     {
         const auto* manifest = reader_->GetManifest();
         if (!manifest)
-            return wax::ByteBuffer<>{alloc};
+            return wax::ByteBuffer{alloc};
 
         const auto* hash = manifest->Find(path);
         if (!hash)
-            return wax::ByteBuffer<>{alloc};
+            return wax::ByteBuffer{alloc};
 
         return reader_->Read(*hash, alloc);
     }
@@ -60,7 +60,7 @@ namespace nectar
         // Build prefix to match against
         // If path is "textures", we look for entries starting with "textures/"
         // If path is empty, we look for top-level entries
-        wax::String<> prefix{alloc};
+        wax::String prefix{alloc};
         if (path.Size() > 0)
         {
             prefix.Append(path.Data(), path.Size());
@@ -114,7 +114,7 @@ namespace nectar
             }
 
             DirectoryEntry de;
-            de.name = wax::String<>{alloc};
+            de.name = wax::String{alloc};
             de.name.Append(component.Data(), component.Size());
             de.is_directory = is_dir;
             out.PushBack(static_cast<DirectoryEntry&&>(de));

@@ -13,6 +13,7 @@ namespace swarm
 
     void BeginFrame(RenderContext *ctx);
     void EndFrame(RenderContext *ctx);
+    void WaitForIdle(RenderContext *ctx);
     void ResizeSwapchain(RenderContext *ctx, uint32_t width, uint32_t height);
 
     void Render(RenderContext *renderContext);

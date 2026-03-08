@@ -4,6 +4,7 @@
 #include <nectar/pak/crc32.h>
 #include <hive/profiling/profiler.h>
 #include <cstring>
+#include <memory>
 
 namespace nectar
 {
@@ -13,17 +14,17 @@ namespace nectar
             std::fclose(file_);
         if (manifest_ && alloc_)
         {
-            manifest_->~AssetManifest();
+            std::destroy_at(manifest_);
             alloc_->Deallocate(manifest_);
         }
         if (asset_entries_ && alloc_)
         {
-            asset_entries_->~Vector();
+            std::destroy_at(asset_entries_);
             alloc_->Deallocate(asset_entries_);
         }
         if (block_entries_ && alloc_)
         {
-            block_entries_->~Vector();
+            std::destroy_at(block_entries_);
             alloc_->Deallocate(block_entries_);
         }
     }
@@ -31,7 +32,7 @@ namespace nectar
     PakReader* PakReader::Open(wax::StringView path, comb::DefaultAllocator& alloc)
     {
         HIVE_PROFILE_SCOPE_N("PakReader::Open");
-        wax::String<> path_str{alloc};
+        wax::String path_str{alloc};
         path_str.Append(path.Data(), path.Size());
 
         FILE* file = std::fopen(path_str.CStr(), "rb");
@@ -58,7 +59,7 @@ namespace nectar
             return nullptr;
         }
 
-        wax::ByteBuffer<> toc_buf{alloc};
+        wax::ByteBuffer toc_buf{alloc};
         toc_buf.Resize(header.toc_size);
         if (std::fread(toc_buf.Data(), 1, header.toc_size, file) != header.toc_size)
         {
@@ -95,7 +96,7 @@ namespace nectar
 
         if (ptr + sizeof(uint32_t) > end)
         {
-            asset_vec->~Vector();
+            std::destroy_at(asset_vec);
             alloc.Deallocate(av_mem);
             std::fclose(file);
             return nullptr;
@@ -107,7 +108,7 @@ namespace nectar
         size_t block_bytes = block_count * sizeof(NpakBlockEntry);
         if (ptr + block_bytes > end)
         {
-            asset_vec->~Vector();
+            std::destroy_at(asset_vec);
             alloc.Deallocate(av_mem);
             std::fclose(file);
             return nullptr;
@@ -144,10 +145,10 @@ namespace nectar
         return reader;
     }
 
-    wax::ByteBuffer<> PakReader::Read(ContentHash hash, comb::DefaultAllocator& alloc)
+    wax::ByteBuffer PakReader::Read(ContentHash hash, comb::DefaultAllocator& alloc)
     {
         HIVE_PROFILE_SCOPE_N("PakReader::Read");
-        wax::ByteBuffer<> result{alloc};
+        wax::ByteBuffer result{alloc};
 
         const NpakAssetEntry* entry = FindAsset(hash);
         if (!entry) return result;
@@ -165,7 +166,7 @@ namespace nectar
             const auto& be = (*block_entries_)[block_idx];
 
             // Read compressed block from file
-            wax::ByteBuffer<> compressed{alloc};
+            wax::ByteBuffer compressed{alloc};
             compressed.Resize(be.compressed_size);
 
             std::fseek(file_, static_cast<long>(be.file_offset), SEEK_SET);
@@ -182,10 +183,10 @@ namespace nectar
             if (remaining + offset_in_first_block < kBlockSize)
                 block_uncompressed = remaining + offset_in_first_block;
 
-            wax::ByteBuffer<> decompressed{alloc};
+            wax::ByteBuffer decompressed{alloc};
             if (be.compression == CompressionMethod::None)
             {
-                decompressed = static_cast<wax::ByteBuffer<>&&>(compressed);
+                decompressed = static_cast<wax::ByteBuffer&&>(compressed);
             }
             else
             {

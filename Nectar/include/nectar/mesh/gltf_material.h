@@ -11,10 +11,10 @@ namespace nectar
     struct GltfMaterialInfo
     {
         int32_t material_index{-1};
-        wax::String<> base_color_texture{};       // relative path to albedo texture (empty if none)
+        wax::String base_color_texture{};       // relative path to albedo texture (empty if none)
         float base_color_factor[4]{1.f, 1.f, 1.f, 1.f};
-        wax::String<> normal_texture{};
-        wax::String<> metallic_roughness_texture{};
+        wax::String normal_texture{};
+        wax::String metallic_roughness_texture{};
         float metallic_factor{1.f};
         float roughness_factor{1.f};
         float alpha_cutoff{0.f};   // >0 enables alpha test (glTF MASK mode)

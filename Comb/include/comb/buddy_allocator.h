@@ -128,9 +128,10 @@ namespace comb
          * Construct buddy allocator with specified capacity
          * Capacity will be rounded up to nearest power-of-2
          */
-        explicit BuddyAllocator(size_t capacity)
+        explicit BuddyAllocator(size_t capacity, const char* debug_name = "BuddyAllocator")
             : capacity_{NextPowerOfTwo(capacity)}
             , used_memory_{0}
+            , debug_name_{debug_name}
         {
             hive::Assert(capacity > 0, "Capacity must be > 0");
 
@@ -177,6 +178,7 @@ namespace comb
             : memory_block_{other.memory_block_}
             , capacity_{other.capacity_}
             , used_memory_{other.used_memory_}
+            , debug_name_{other.debug_name_}
             , free_lists_{other.free_lists_}
 #if COMB_MEM_DEBUG
             , registry_{std::move(other.registry_)}
@@ -215,6 +217,7 @@ namespace comb
                 memory_block_ = other.memory_block_;
                 capacity_ = other.capacity_;
                 used_memory_ = other.used_memory_;
+                debug_name_ = other.debug_name_;
                 free_lists_ = other.free_lists_;
 
 #if COMB_MEM_DEBUG
@@ -307,7 +310,7 @@ namespace comb
 
             if (ptr)
             {
-                HIVE_PROFILE_ALLOC(ptr, size, "BuddyAllocator");
+                HIVE_PROFILE_ALLOC(ptr, size, GetName());
             }
             return ptr;
         }
@@ -326,7 +329,7 @@ namespace comb
             if (!ptr)
                 return;
 
-            HIVE_PROFILE_FREE(ptr, "BuddyAllocator");
+            HIVE_PROFILE_FREE(ptr, GetName());
 
 #if COMB_MEM_DEBUG
             DeallocateDebug(ptr);
@@ -366,7 +369,7 @@ namespace comb
          */
         [[nodiscard]] const char* GetName() const
         {
-            return "BuddyAllocator";
+            return debug_name_;
         }
 
         /**
@@ -523,6 +526,7 @@ namespace comb
         void* memory_block_{nullptr};
         size_t capacity_{0};
         size_t used_memory_{0};
+        const char* debug_name_{"BuddyAllocator"};
         std::array<FreeBlock*, MaxLevels> free_lists_{};
 
 #if COMB_MEM_DEBUG
