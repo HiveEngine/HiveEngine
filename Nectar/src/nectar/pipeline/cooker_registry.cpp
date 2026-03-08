@@ -4,9 +4,12 @@ namespace nectar
 {
     CookerRegistry::CookerRegistry(comb::DefaultAllocator& alloc)
         : m_alloc{&alloc}
-        , m_typeMap{alloc, 32} {}
+        , m_typeMap{alloc, 32}
+    {
+    }
 
-    void CookerRegistry::Register(IAssetCooker* cooker) {
+    void CookerRegistry::Register(IAssetCooker* cooker)
+    {
         if (!cooker)
             return;
 
@@ -21,7 +24,8 @@ namespace nectar
             m_typeMap.Insert(static_cast<wax::String&&>(key), cooker);
     }
 
-    IAssetCooker* CookerRegistry::FindByType(wax::StringView typeName) const {
+    IAssetCooker* CookerRegistry::FindByType(wax::StringView typeName) const
+    {
         wax::String key{*m_alloc};
         key.Append(typeName.Data(), typeName.Size());
 
@@ -29,7 +33,8 @@ namespace nectar
         return found ? *found : nullptr;
     }
 
-    size_t CookerRegistry::Count() const noexcept {
+    size_t CookerRegistry::Count() const noexcept
+    {
         return m_typeMap.Count();
     }
 } // namespace nectar

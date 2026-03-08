@@ -7,10 +7,13 @@ namespace nectar
     CookCache::CookCache(comb::DefaultAllocator& alloc)
         : m_alloc{&alloc}
         , m_entries{alloc, 64}
-        , m_assetKeys{alloc, 64} {}
+        , m_assetKeys{alloc, 64}
+    {
+    }
 
     ContentHash CookCache::BuildCookKey(ContentHash intermediateHash, uint32_t cookerVersion, wax::StringView platform,
-                                        wax::Span<const ContentHash> depCookedHashes) {
+                                        wax::Span<const ContentHash> depCookedHashes)
+    {
         constexpr size_t kHashBytes = 16;
         size_t bufSize = kHashBytes + sizeof(uint32_t) + platform.Size() + depCookedHashes.Size() * kHashBytes;
 
@@ -54,13 +57,15 @@ namespace nectar
         return result;
     }
 
-    const CookCacheEntry* CookCache::Find(AssetId id, wax::StringView platform) const {
+    const CookCacheEntry* CookCache::Find(AssetId id, wax::StringView platform) const
+    {
         std::lock_guard lock{m_mutex};
         uint64_t key = MakeKey(id, platform);
         return m_entries.Find(key);
     }
 
-    void CookCache::Store(AssetId id, wax::StringView platform, const CookCacheEntry& entry) {
+    void CookCache::Store(AssetId id, wax::StringView platform, const CookCacheEntry& entry)
+    {
         std::lock_guard lock{m_mutex};
         uint64_t key = MakeKey(id, platform);
 
@@ -88,7 +93,8 @@ namespace nectar
         }
     }
 
-    void CookCache::Invalidate(AssetId id) {
+    void CookCache::Invalidate(AssetId id)
+    {
         std::lock_guard lock{m_mutex};
         auto* keys = m_assetKeys.Find(id);
         if (!keys)
@@ -100,7 +106,8 @@ namespace nectar
         m_assetKeys.Remove(id);
     }
 
-    void CookCache::Invalidate(AssetId id, wax::StringView platform) {
+    void CookCache::Invalidate(AssetId id, wax::StringView platform)
+    {
         std::lock_guard lock{m_mutex};
         uint64_t key = MakeKey(id, platform);
         m_entries.Remove(key);
@@ -125,12 +132,14 @@ namespace nectar
         }
     }
 
-    size_t CookCache::Count() const noexcept {
+    size_t CookCache::Count() const noexcept
+    {
         std::lock_guard lock{m_mutex};
         return m_entries.Count();
     }
 
-    uint64_t CookCache::MakeKey(AssetId id, wax::StringView platform) {
+    uint64_t CookCache::MakeKey(AssetId id, wax::StringView platform)
+    {
         uint64_t h = id.Hash();
         constexpr uint64_t kFnvPrime = 0x00000100000001B3;
         for (size_t i = 0; i < platform.Size(); ++i)

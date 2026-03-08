@@ -13,7 +13,8 @@ using namespace hive::math;
 namespace waggle
 {
 
-    void TransformSystem(queen::World& world) {
+    void TransformSystem(queen::World& world)
+    {
         auto* time = world.Resource<Time>();
         if (!time)
             return;
@@ -59,7 +60,8 @@ namespace waggle
             });
     }
 
-    void WorldAABBSystem(queen::World& world) {
+    void WorldAABBSystem(queen::World& world)
+    {
         auto* time = world.Resource<Time>();
         if (!time)
             return;

@@ -8,11 +8,13 @@ namespace nectar
 {
     MmapMountSource::MmapMountSource(wax::StringView rootDir, comb::DefaultAllocator& alloc)
         : m_alloc{&alloc}
-        , m_rootDir{alloc} {
+        , m_rootDir{alloc}
+    {
         m_rootDir.Append(rootDir.Data(), rootDir.Size());
     }
 
-    wax::String MmapMountSource::BuildFullPath(wax::StringView relative, comb::DefaultAllocator& alloc) const {
+    wax::String MmapMountSource::BuildFullPath(wax::StringView relative, comb::DefaultAllocator& alloc) const
+    {
         wax::String full{alloc};
         if (m_rootDir.Size() > 0)
         {
@@ -23,7 +25,8 @@ namespace nectar
         return full;
     }
 
-    wax::ByteBuffer MmapMountSource::ReadFile(wax::StringView path, comb::DefaultAllocator& alloc) {
+    wax::ByteBuffer MmapMountSource::ReadFile(wax::StringView path, comb::DefaultAllocator& alloc)
+    {
         wax::ByteBuffer buffer{alloc};
         auto full = BuildFullPath(path, alloc);
 
@@ -35,7 +38,8 @@ namespace nectar
         return buffer;
     }
 
-    bool MmapMountSource::Exists(wax::StringView path) const {
+    bool MmapMountSource::Exists(wax::StringView path) const
+    {
         auto full = BuildFullPath(path, *m_alloc);
         std::FILE* file = std::fopen(full.CStr(), "rb");
         if (!file)
@@ -44,7 +48,8 @@ namespace nectar
         return true;
     }
 
-    FileInfo MmapMountSource::Stat(wax::StringView path) const {
+    FileInfo MmapMountSource::Stat(wax::StringView path) const
+    {
         auto full = BuildFullPath(path, *m_alloc);
         std::FILE* file = std::fopen(full.CStr(), "rb");
         if (!file)
@@ -58,7 +63,8 @@ namespace nectar
     }
 
     void MmapMountSource::ListDirectory(wax::StringView path, wax::Vector<DirectoryEntry>& out,
-                                        comb::DefaultAllocator& alloc) const {
+                                        comb::DefaultAllocator& alloc) const
+    {
         auto full = BuildFullPath(path, alloc);
 
         std::error_code ec;

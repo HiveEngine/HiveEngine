@@ -53,13 +53,20 @@ namespace wax
         uint32_t m_index{0};
         uint32_t m_generation{0};
 
-        [[nodiscard]] constexpr bool operator==(const Handle& other) const noexcept {
+        [[nodiscard]] constexpr bool operator==(const Handle& other) const noexcept
+        {
             return m_index == other.m_index && m_generation == other.m_generation;
         }
 
-        [[nodiscard]] static constexpr Handle Invalid() noexcept { return Handle{UINT32_MAX, 0}; }
+        [[nodiscard]] static constexpr Handle Invalid() noexcept
+        {
+            return Handle{UINT32_MAX, 0};
+        }
 
-        [[nodiscard]] constexpr bool IsNull() const noexcept { return m_index == UINT32_MAX; }
+        [[nodiscard]] constexpr bool IsNull() const noexcept
+        {
+            return m_index == UINT32_MAX;
+        }
     };
 
     /**
@@ -87,7 +94,8 @@ namespace wax
             : m_allocator{&allocator}
             , m_capacity{capacity}
             , m_count{0}
-            , m_firstFree{0} {
+            , m_firstFree{0}
+        {
             hive::Assert(capacity > 0, "HandlePool capacity must be > 0");
             hive::Assert(capacity <= UINT32_MAX, "HandlePool capacity exceeds max");
 
@@ -105,7 +113,8 @@ namespace wax
             m_slots[m_capacity - 1].m_alive = false;
         }
 
-        ~HandlePool() {
+        ~HandlePool()
+        {
             for (size_t i = 0; i < m_capacity; ++i)
             {
                 if (m_slots[i].m_alive)
@@ -128,7 +137,8 @@ namespace wax
             , m_slots{other.m_slots}
             , m_capacity{other.m_capacity}
             , m_count{other.m_count}
-            , m_firstFree{other.m_firstFree} {
+            , m_firstFree{other.m_firstFree}
+        {
             other.m_allocator = nullptr;
             other.m_slots = nullptr;
             other.m_capacity = 0;
@@ -136,7 +146,8 @@ namespace wax
             other.m_firstFree = UINT32_MAX;
         }
 
-        HandlePool& operator=(HandlePool&& other) noexcept {
+        HandlePool& operator=(HandlePool&& other) noexcept
+        {
             if (this != &other)
             {
                 for (size_t i = 0; i < m_capacity; ++i)
@@ -166,7 +177,8 @@ namespace wax
             return *this;
         }
 
-        template <typename... Args> [[nodiscard]] Handle<T> Create(Args&&... args) {
+        template <typename... Args> [[nodiscard]] Handle<T> Create(Args&&... args)
+        {
             if (m_firstFree == UINT32_MAX)
             {
                 return Handle<T>::Invalid();
@@ -183,7 +195,8 @@ namespace wax
             return Handle<T>{index, slot.m_generation};
         }
 
-        void Destroy(Handle<T> handle) {
+        void Destroy(Handle<T> handle)
+        {
             if (handle.IsNull() || handle.m_index >= m_capacity)
             {
                 return;
@@ -203,7 +216,8 @@ namespace wax
             --m_count;
         }
 
-        [[nodiscard]] T* Get(Handle<T> handle) noexcept {
+        [[nodiscard]] T* Get(Handle<T> handle) noexcept
+        {
             if (handle.IsNull() || handle.m_index >= m_capacity)
             {
                 return nullptr;
@@ -218,7 +232,8 @@ namespace wax
             return GetPtr(handle.m_index);
         }
 
-        [[nodiscard]] const T* Get(Handle<T> handle) const noexcept {
+        [[nodiscard]] const T* Get(Handle<T> handle) const noexcept
+        {
             if (handle.IsNull() || handle.m_index >= m_capacity)
             {
                 return nullptr;
@@ -233,7 +248,8 @@ namespace wax
             return GetPtr(handle.m_index);
         }
 
-        [[nodiscard]] bool IsValid(Handle<T> handle) const noexcept {
+        [[nodiscard]] bool IsValid(Handle<T> handle) const noexcept
+        {
             if (handle.IsNull() || handle.m_index >= m_capacity)
             {
                 return false;
@@ -243,15 +259,31 @@ namespace wax
             return slot.m_alive && slot.m_generation == handle.m_generation;
         }
 
-        [[nodiscard]] size_t Count() const noexcept { return m_count; }
-        [[nodiscard]] size_t Capacity() const noexcept { return m_capacity; }
-        [[nodiscard]] bool IsEmpty() const noexcept { return m_count == 0; }
-        [[nodiscard]] bool IsFull() const noexcept { return m_firstFree == UINT32_MAX; }
+        [[nodiscard]] size_t Count() const noexcept
+        {
+            return m_count;
+        }
+        [[nodiscard]] size_t Capacity() const noexcept
+        {
+            return m_capacity;
+        }
+        [[nodiscard]] bool IsEmpty() const noexcept
+        {
+            return m_count == 0;
+        }
+        [[nodiscard]] bool IsFull() const noexcept
+        {
+            return m_firstFree == UINT32_MAX;
+        }
 
     private:
-        [[nodiscard]] T* GetPtr(size_t index) noexcept { return reinterpret_cast<T*>(m_slots[index].m_storage); }
+        [[nodiscard]] T* GetPtr(size_t index) noexcept
+        {
+            return reinterpret_cast<T*>(m_slots[index].m_storage);
+        }
 
-        [[nodiscard]] const T* GetPtr(size_t index) const noexcept {
+        [[nodiscard]] const T* GetPtr(size_t index) const noexcept
+        {
             return reinterpret_cast<const T*>(m_slots[index].m_storage);
         }
 

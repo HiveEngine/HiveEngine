@@ -25,7 +25,8 @@ namespace queen
     {
     public:
         static JsonDeserializeResult DeserializeComponent(void* component, const ComponentReflection& reflection,
-                                                          const char* json) noexcept {
+                                                          const char* json) noexcept
+        {
             JsonDeserializeResult result{};
             Parser parser{json};
 
@@ -113,26 +114,37 @@ namespace queen
             size_t m_pos = 0;
 
             explicit Parser(const char* json) noexcept
-                : m_data{json} {}
+                : m_data{json}
+            {
+            }
 
-            [[nodiscard]] bool HasMore() const noexcept { return m_data[m_pos] != '\0'; }
-            [[nodiscard]] char Peek() const noexcept { return m_data[m_pos]; }
+            [[nodiscard]] bool HasMore() const noexcept
+            {
+                return m_data[m_pos] != '\0';
+            }
+            [[nodiscard]] char Peek() const noexcept
+            {
+                return m_data[m_pos];
+            }
 
-            void Advance() noexcept {
+            void Advance() noexcept
+            {
                 if (m_data[m_pos] != '\0')
                 {
                     ++m_pos;
                 }
             }
 
-            void SkipWhitespace() noexcept {
+            void SkipWhitespace() noexcept
+            {
                 while (m_data[m_pos] == ' ' || m_data[m_pos] == '\t' || m_data[m_pos] == '\n' || m_data[m_pos] == '\r')
                 {
                     ++m_pos;
                 }
             }
 
-            [[nodiscard]] bool Expect(char c) noexcept {
+            [[nodiscard]] bool Expect(char c) noexcept
+            {
                 SkipWhitespace();
                 if (m_data[m_pos] == c)
                 {
@@ -142,7 +154,8 @@ namespace queen
                 return false;
             }
 
-            [[nodiscard]] bool ReadString(char* out, size_t outSize) noexcept {
+            [[nodiscard]] bool ReadString(char* out, size_t outSize) noexcept
+            {
                 if (m_data[m_pos] != '"')
                 {
                     return false;
@@ -194,7 +207,8 @@ namespace queen
                 return false;
             }
 
-            [[nodiscard]] bool ReadNumber(double& out) noexcept {
+            [[nodiscard]] bool ReadNumber(double& out) noexcept
+            {
                 const char* start = m_data + m_pos;
                 char* end = nullptr;
                 out = std::strtod(start, &end);
@@ -206,7 +220,8 @@ namespace queen
                 return true;
             }
 
-            [[nodiscard]] bool ReadBool(bool& out) noexcept {
+            [[nodiscard]] bool ReadBool(bool& out) noexcept
+            {
                 if (std::strncmp(m_data + m_pos, "true", 4) == 0)
                 {
                     out = true;
@@ -222,7 +237,8 @@ namespace queen
                 return false;
             }
 
-            [[nodiscard]] bool SkipValue() noexcept {
+            [[nodiscard]] bool SkipValue() noexcept
+            {
                 SkipWhitespace();
                 const char c = Peek();
                 if (c == '"')
@@ -253,7 +269,8 @@ namespace queen
                 return ReadNumber(tmp);
             }
 
-            [[nodiscard]] bool SkipObject() noexcept {
+            [[nodiscard]] bool SkipObject() noexcept
+            {
                 if (m_data[m_pos] != '{')
                 {
                     return false;
@@ -296,7 +313,8 @@ namespace queen
                 return depth == 0;
             }
 
-            [[nodiscard]] bool SkipArray() noexcept {
+            [[nodiscard]] bool SkipArray() noexcept
+            {
                 if (m_data[m_pos] != '[')
                 {
                     return false;
@@ -340,7 +358,8 @@ namespace queen
             }
         };
 
-        static bool DeserializeValue(void* ptr, const FieldInfo& field, Parser& parser) noexcept {
+        static bool DeserializeValue(void* ptr, const FieldInfo& field, Parser& parser) noexcept
+        {
             switch (field.m_type)
             {
                 case FieldType::INT8:
@@ -414,7 +433,8 @@ namespace queen
             return false;
         }
 
-        static bool DeserializeEnum(void* ptr, const FieldInfo& field, Parser& parser) noexcept {
+        static bool DeserializeEnum(void* ptr, const FieldInfo& field, Parser& parser) noexcept
+        {
             parser.SkipWhitespace();
             if (parser.Peek() == '"')
             {
@@ -446,7 +466,8 @@ namespace queen
             return true;
         }
 
-        static bool DeserializeString(void* ptr, const FieldInfo& field, Parser& parser) noexcept {
+        static bool DeserializeString(void* ptr, const FieldInfo& field, Parser& parser) noexcept
+        {
             char tmp[64]{};
             if (!parser.ReadString(tmp, sizeof(tmp)))
             {
@@ -466,7 +487,8 @@ namespace queen
             return true;
         }
 
-        static bool DeserializeFixedArray(void* ptr, const FieldInfo& field, Parser& parser) noexcept {
+        static bool DeserializeFixedArray(void* ptr, const FieldInfo& field, Parser& parser) noexcept
+        {
             parser.SkipWhitespace();
             if (parser.Peek() != '[')
             {
@@ -507,7 +529,8 @@ namespace queen
             return true;
         }
 
-        static bool DeserializeObject(void* base, const FieldInfo* fields, size_t fieldCount, Parser& parser) noexcept {
+        static bool DeserializeObject(void* base, const FieldInfo* fields, size_t fieldCount, Parser& parser) noexcept
+        {
             parser.SkipWhitespace();
             if (parser.Peek() != '{')
             {
@@ -581,7 +604,8 @@ namespace queen
             return false;
         }
 
-        static void WriteInteger(void* ptr, const FieldInfo& field, double num) noexcept {
+        static void WriteInteger(void* ptr, const FieldInfo& field, double num) noexcept
+        {
             switch (field.m_type)
             {
                 case FieldType::INT8:
@@ -613,7 +637,8 @@ namespace queen
             }
         }
 
-        static void WriteEnumValue(void* ptr, const FieldInfo& field, int64_t value) noexcept {
+        static void WriteEnumValue(void* ptr, const FieldInfo& field, int64_t value) noexcept
+        {
             const size_t size = field.m_enumInfo != nullptr ? field.m_enumInfo->m_underlyingSize : field.m_size;
             switch (size)
             {

@@ -8,7 +8,8 @@ namespace terra
         constexpr int kMaxKeys = 512;
         constexpr int kMaxMouseButtons = 8;
 
-        void GLFWKeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
+        void GLFWKeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
+        {
             (void)scancode;
             (void)mods;
 
@@ -21,7 +22,8 @@ namespace terra
             windowContext->m_currentInputState.m_keys[key] = (action != GLFW_RELEASE);
         }
 
-        void GLFWMouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
+        void GLFWMouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
+        {
             (void)mods;
 
             WindowContext* windowContext = static_cast<WindowContext*>(glfwGetWindowUserPointer(window));
@@ -33,7 +35,8 @@ namespace terra
             windowContext->m_currentInputState.m_mouseButton[button] = (action != GLFW_RELEASE);
         }
 
-        void GLFWCursorPositionCallback(GLFWwindow* window, double x, double y) {
+        void GLFWCursorPositionCallback(GLFWwindow* window, double x, double y)
+        {
             WindowContext* windowContext = static_cast<WindowContext*>(glfwGetWindowUserPointer(window));
             if (windowContext == nullptr)
             {
@@ -49,7 +52,8 @@ namespace terra
             windowContext->m_currentInputState.m_mouseY = newY;
         }
 
-        void GLFWWindowSizeCallback(GLFWwindow* window, int width, int height) {
+        void GLFWWindowSizeCallback(GLFWwindow* window, int width, int height)
+        {
             WindowContext* windowContext = static_cast<WindowContext*>(glfwGetWindowUserPointer(window));
             if (windowContext == nullptr)
             {
@@ -61,15 +65,18 @@ namespace terra
         }
     } // namespace
 
-    bool InitSystem() {
+    bool InitSystem()
+    {
         return glfwInit();
     }
 
-    void ShutdownSystem() {
+    void ShutdownSystem()
+    {
         glfwTerminate();
     }
 
-    bool InitWindowContext(WindowContext* windowContext) {
+    bool InitWindowContext(WindowContext* windowContext)
+    {
         glfwWindowHint(GLFW_CLIENT_API,
                        GLFW_NO_API); // Disable glfw to create the OpenGL context. We will manage that in swarm
 
@@ -106,7 +113,8 @@ namespace terra
         return true;
     }
 
-    void ShutdownWindowContext(WindowContext* windowContext) {
+    void ShutdownWindowContext(WindowContext* windowContext)
+    {
         if (windowContext == nullptr || windowContext->m_window == nullptr)
         {
             return;
@@ -116,15 +124,18 @@ namespace terra
         windowContext->m_window = nullptr;
     }
 
-    bool ShouldWindowClose(WindowContext* windowContext) {
+    bool ShouldWindowClose(WindowContext* windowContext)
+    {
         return glfwWindowShouldClose(windowContext->m_window);
     }
 
-    void PollEvents() {
+    void PollEvents()
+    {
         glfwPollEvents();
     }
 
-    void PollEvents(WindowContext* windowContext) {
+    void PollEvents(WindowContext* windowContext)
+    {
         if (windowContext != nullptr)
         {
             windowContext->m_lastInputState = windowContext->m_currentInputState;
@@ -135,7 +146,8 @@ namespace terra
         glfwPollEvents();
     }
 
-    const InputState* GetWindowInputState(const WindowContext* windowContext) {
+    const InputState* GetWindowInputState(const WindowContext* windowContext)
+    {
         if (windowContext == nullptr)
         {
             return nullptr;
@@ -144,7 +156,8 @@ namespace terra
         return &windowContext->m_currentInputState;
     }
 
-    InputState* GetWindowInputState(WindowContext* windowContext) {
+    InputState* GetWindowInputState(WindowContext* windowContext)
+    {
         if (windowContext == nullptr)
         {
             return nullptr;
@@ -153,7 +166,8 @@ namespace terra
         return &windowContext->m_currentInputState;
     }
 
-    bool IsKeyDown(const InputState* inputState, Key key) {
+    bool IsKeyDown(const InputState* inputState, Key key)
+    {
         if (inputState == nullptr)
         {
             return false;
@@ -163,7 +177,8 @@ namespace terra
         return index >= 0 && index < kMaxKeys && inputState->m_keys[index];
     }
 
-    bool IsMouseButtonDown(const InputState* inputState, MouseButton button) {
+    bool IsMouseButtonDown(const InputState* inputState, MouseButton button)
+    {
         if (inputState == nullptr)
         {
             return false;
@@ -173,31 +188,38 @@ namespace terra
         return index >= 0 && index < kMaxMouseButtons && inputState->m_mouseButton[index];
     }
 
-    float GetMouseDeltaX(const InputState* inputState) {
+    float GetMouseDeltaX(const InputState* inputState)
+    {
         return inputState != nullptr ? inputState->m_mouseDeltaX : 0.0f;
     }
 
-    float GetMouseDeltaY(const InputState* inputState) {
+    float GetMouseDeltaY(const InputState* inputState)
+    {
         return inputState != nullptr ? inputState->m_mouseDeltaY : 0.0f;
     }
 
-    float GetMouseX(const InputState* inputState) {
+    float GetMouseX(const InputState* inputState)
+    {
         return inputState != nullptr ? inputState->m_mouseX : 0.0f;
     }
 
-    float GetMouseY(const InputState* inputState) {
+    float GetMouseY(const InputState* inputState)
+    {
         return inputState != nullptr ? inputState->m_mouseY : 0.0f;
     }
 
-    int GetWindowWidth(const WindowContext* windowContext) {
+    int GetWindowWidth(const WindowContext* windowContext)
+    {
         return windowContext != nullptr ? windowContext->m_width : 0;
     }
 
-    int GetWindowHeight(const WindowContext* windowContext) {
+    int GetWindowHeight(const WindowContext* windowContext)
+    {
         return windowContext != nullptr ? windowContext->m_height : 0;
     }
 
-    void SetWindowSize(WindowContext* windowContext, int width, int height) {
+    void SetWindowSize(WindowContext* windowContext, int width, int height)
+    {
         if (windowContext == nullptr)
         {
             return;
@@ -212,7 +234,8 @@ namespace terra
         }
     }
 
-    void SetWindowTitle(WindowContext* windowContext, const char* title) {
+    void SetWindowTitle(WindowContext* windowContext, const char* title)
+    {
         if (windowContext == nullptr)
         {
             return;
@@ -226,11 +249,13 @@ namespace terra
         }
     }
 
-    GLFWwindow* GetGlfwWindow(WindowContext* windowContext) {
+    GLFWwindow* GetGlfwWindow(WindowContext* windowContext)
+    {
         return windowContext != nullptr ? windowContext->m_window : nullptr;
     }
 
-    const GLFWwindow* GetGlfwWindow(const WindowContext* windowContext) {
+    const GLFWwindow* GetGlfwWindow(const WindowContext* windowContext)
+    {
         return windowContext != nullptr ? windowContext->m_window : nullptr;
     }
 } // namespace terra

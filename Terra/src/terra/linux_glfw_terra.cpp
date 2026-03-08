@@ -9,7 +9,8 @@
 #include <GLFW/glfw3native.h>
 namespace terra
 {
-    NativeWindow GetNativeWindow(WindowContext* windowContext) {
+    NativeWindow GetNativeWindow(WindowContext* windowContext)
+    {
         NativeWindow nativeWindow{};
         GLFWwindow* glfwWindow = GetGlfwWindow(windowContext);
 

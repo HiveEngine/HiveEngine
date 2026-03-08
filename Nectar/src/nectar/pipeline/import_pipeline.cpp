@@ -14,14 +14,18 @@ namespace nectar
         , m_registry{&registry}
         , m_cas{&cas}
         , m_vfs{&vfs}
-        , m_db{&db} {}
+        , m_db{&db}
+    {
+    }
 
-    ImportOutput ImportPipeline::ImportAsset(const ImportRequest& request) {
+    ImportOutput ImportPipeline::ImportAsset(const ImportRequest& request)
+    {
         HiveDocument emptySettings{*m_alloc};
         return ImportAsset(request, emptySettings);
     }
 
-    ImportOutput ImportPipeline::ImportAsset(const ImportRequest& request, const HiveDocument& settings) {
+    ImportOutput ImportPipeline::ImportAsset(const ImportRequest& request, const HiveDocument& settings)
+    {
         HIVE_PROFILE_SCOPE_N("ImportPipeline::ImportAsset");
         ImportOutput output{};
         output.m_errorMessage = wax::String{*m_alloc};
@@ -99,7 +103,8 @@ namespace nectar
         return output;
     }
 
-    void ImportPipeline::ScanOutdated(wax::Vector<AssetId>& out) const {
+    void ImportPipeline::ScanOutdated(wax::Vector<AssetId>& out) const
+    {
         HIVE_PROFILE_SCOPE_N("ImportPipeline::ScanOutdated");
         m_db->ForEach([&](AssetId id, const AssetRecord&) {
             if (NeedsReimport(id))
@@ -109,7 +114,8 @@ namespace nectar
         });
     }
 
-    size_t ImportPipeline::ReimportOutdated(const wax::Vector<AssetId>& assets) {
+    size_t ImportPipeline::ReimportOutdated(const wax::Vector<AssetId>& assets)
+    {
         HIVE_PROFILE_SCOPE_N("ImportPipeline::ReimportOutdated");
         size_t count = 0;
         for (size_t i = 0; i < assets.Size(); ++i)
@@ -132,7 +138,8 @@ namespace nectar
         return count;
     }
 
-    bool ImportPipeline::NeedsReimport(AssetId id) const {
+    bool ImportPipeline::NeedsReimport(AssetId id) const
+    {
         auto* record = m_db->FindByUuid(id);
         if (!record)
         {

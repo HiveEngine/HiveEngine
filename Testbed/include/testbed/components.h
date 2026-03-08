@@ -15,7 +15,8 @@ struct OrbitCamera
     float height{1.5f};
     float speed{1.f};
 
-    static void Reflect(queen::ComponentReflector<>& r) {
+    static void Reflect(queen::ComponentReflector<>& r)
+    {
         r.Field("target", &OrbitCamera::target);
         r.Field("radius", &OrbitCamera::radius).Range(0.1f, 100.f);
         r.Field("height", &OrbitCamera::height);
@@ -31,7 +32,8 @@ struct FreeCamera
     float yaw{0.f};
     float pitch{0.f};
 
-    static void Reflect(queen::ComponentReflector<>& r) {
+    static void Reflect(queen::ComponentReflector<>& r)
+    {
         r.Field("move_speed", &FreeCamera::move_speed).Range(0.1f, 50.f);
         r.Field("look_sensitivity", &FreeCamera::look_sensitivity).Range(0.0001f, 0.01f);
         r.Field("yaw", &FreeCamera::yaw).Flag(queen::FieldFlag::Angle);
@@ -45,7 +47,8 @@ struct Spin
     hive::math::Float3 axis{0.f, 1.f, 0.f};
     float speed{1.f};
 
-    static void Reflect(queen::ComponentReflector<>& r) {
+    static void Reflect(queen::ComponentReflector<>& r)
+    {
         r.Field("axis", &Spin::axis);
         r.Field("speed", &Spin::speed).Range(0.f, 20.f);
     }

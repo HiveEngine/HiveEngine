@@ -28,8 +28,9 @@ namespace larvae
         std::vector<TestPlaylist> m_playlists;
         std::vector<std::string> m_selectedSuites;
 
-        static std::filesystem::path GetConfigPath() {
-    #if defined(_WIN32)
+        static std::filesystem::path GetConfigPath()
+        {
+#if defined(_WIN32)
             char* appdata = nullptr;
             size_t appdataSize = 0;
             if (_dupenv_s(&appdata, &appdataSize, "APPDATA") == 0 && appdata != nullptr)
@@ -40,18 +41,19 @@ namespace larvae
                 return path;
             }
             std::free(appdata);
-    #else
+#else
             if (const char* appdata = std::getenv("APPDATA"))
             {
                 auto path = std::filesystem::path{appdata} / "HiveEngine" / "larvae_runner_gui.cfg";
                 std::filesystem::create_directories(path.parent_path());
                 return path;
             }
-    #endif
+#endif
             return "larvae_runner_gui.cfg";
         }
 
-        void Save() const {
+        void Save() const
+        {
             std::ofstream file{GetConfigPath()};
             if (!file.is_open())
                 return;
@@ -83,7 +85,8 @@ namespace larvae
             }
         }
 
-        void Load() {
+        void Load()
+        {
             std::ifstream file{GetConfigPath()};
             if (!file.is_open())
                 return;

@@ -46,9 +46,12 @@ namespace queen
     public:
         constexpr FieldBuilder(FieldInfo& info, FieldAttributes& attrs) noexcept
             : m_info{info}
-            , m_attrs{attrs} {}
+            , m_attrs{attrs}
+        {
+        }
 
-        FieldBuilder& Range(float min, float max, float step = 0.f) noexcept {
+        FieldBuilder& Range(float min, float max, float step = 0.f) noexcept
+        {
             EnsureAttributes();
             m_attrs.m_min = min;
             m_attrs.m_max = max;
@@ -56,32 +59,37 @@ namespace queen
             return *this;
         }
 
-        FieldBuilder& Tooltip(const char* text) noexcept {
+        FieldBuilder& Tooltip(const char* text) noexcept
+        {
             EnsureAttributes();
             m_attrs.m_tooltip = text;
             return *this;
         }
 
-        FieldBuilder& Category(const char* cat) noexcept {
+        FieldBuilder& Category(const char* cat) noexcept
+        {
             EnsureAttributes();
             m_attrs.m_category = cat;
             return *this;
         }
 
-        FieldBuilder& DisplayName(const char* name) noexcept {
+        FieldBuilder& DisplayName(const char* name) noexcept
+        {
             EnsureAttributes();
             m_attrs.m_displayName = name;
             return *this;
         }
 
-        FieldBuilder& Flag(FieldFlag flag) noexcept {
+        FieldBuilder& Flag(FieldFlag flag) noexcept
+        {
             EnsureAttributes();
             m_attrs.m_flags |= static_cast<uint32_t>(flag);
             return *this;
         }
 
     private:
-        void EnsureAttributes() noexcept {
+        void EnsureAttributes() noexcept
+        {
             if (m_info.m_attributes == nullptr)
             {
                 m_info.m_attributes = &m_attrs;
@@ -151,7 +159,8 @@ namespace queen
          * @param member_ptr Pointer-to-member for the field
          * @return FieldBuilder for chaining annotations
          */
-        template <typename T, typename C> FieldBuilder Field(const char* name, T C::* memberPtr) noexcept {
+        template <typename T, typename C> FieldBuilder Field(const char* name, T C::* memberPtr) noexcept
+        {
             hive::Assert(m_count < MaxFields, "Too many fields, increase MaxFields");
 
             size_t idx = m_count++;
@@ -203,7 +212,10 @@ namespace queen
                     struct NestedHolder
                     {
                         ComponentReflector<MaxFields> m_reflector;
-                        NestedHolder() { T::Reflect(m_reflector); }
+                        NestedHolder()
+                        {
+                            T::Reflect(m_reflector);
+                        }
                     };
                     static NestedHolder s_nested;
                     info.m_nestedFields = s_nested.m_reflector.Data();
@@ -217,19 +229,26 @@ namespace queen
         /**
          * Get number of registered fields
          */
-        [[nodiscard]] constexpr size_t Count() const noexcept { return m_count; }
+        [[nodiscard]] constexpr size_t Count() const noexcept
+        {
+            return m_count;
+        }
 
         /**
          * Get field info by index
          */
-        [[nodiscard]] constexpr const FieldInfo& operator[](size_t index) const noexcept { return m_fields[index]; }
+        [[nodiscard]] constexpr const FieldInfo& operator[](size_t index) const noexcept
+        {
+            return m_fields[index];
+        }
 
         /**
          * Get field info by name (linear search)
          *
          * @return Pointer to FieldInfo or nullptr if not found
          */
-        [[nodiscard]] constexpr const FieldInfo* FindField(const char* name) const noexcept {
+        [[nodiscard]] constexpr const FieldInfo* FindField(const char* name) const noexcept
+        {
             for (size_t i = 0; i < m_count; ++i)
             {
                 if (detail::StringsEqual(m_fields[i].m_name, name))
@@ -243,17 +262,27 @@ namespace queen
         /**
          * Get pointer to fields array
          */
-        [[nodiscard]] constexpr const FieldInfo* Data() const noexcept { return m_fields; }
+        [[nodiscard]] constexpr const FieldInfo* Data() const noexcept
+        {
+            return m_fields;
+        }
 
         /**
          * Iterate over all fields
          */
-        [[nodiscard]] constexpr const FieldInfo* Begin() const noexcept { return m_fields; }
+        [[nodiscard]] constexpr const FieldInfo* Begin() const noexcept
+        {
+            return m_fields;
+        }
 
-        [[nodiscard]] constexpr const FieldInfo* End() const noexcept { return m_fields + m_count; }
+        [[nodiscard]] constexpr const FieldInfo* End() const noexcept
+        {
+            return m_fields + m_count;
+        }
 
     private:
-        template <typename T, typename C> static size_t GetMemberOffset(T C::* memberPtr) noexcept {
+        template <typename T, typename C> static size_t GetMemberOffset(T C::* memberPtr) noexcept
+        {
             // Use stack-allocated storage to avoid nullptr dereference UB
             alignas(C) unsigned char storage[sizeof(C)]{};
             return static_cast<size_t>(
@@ -278,9 +307,13 @@ namespace queen
         TypeId m_typeId = 0;
         const char* m_name = nullptr;
 
-        [[nodiscard]] constexpr bool IsValid() const noexcept { return m_typeId != 0 && m_fields != nullptr; }
+        [[nodiscard]] constexpr bool IsValid() const noexcept
+        {
+            return m_typeId != 0 && m_fields != nullptr;
+        }
 
-        [[nodiscard]] constexpr const FieldInfo* FindField(const char* fieldName) const noexcept {
+        [[nodiscard]] constexpr const FieldInfo* FindField(const char* fieldName) const noexcept
+        {
             for (size_t i = 0; i < m_fieldCount; ++i)
             {
                 if (detail::StringsEqual(m_fields[i].m_name, fieldName))
@@ -291,8 +324,14 @@ namespace queen
             return nullptr;
         }
 
-        [[nodiscard]] constexpr const FieldInfo* Begin() const noexcept { return m_fields; }
+        [[nodiscard]] constexpr const FieldInfo* Begin() const noexcept
+        {
+            return m_fields;
+        }
 
-        [[nodiscard]] constexpr const FieldInfo* End() const noexcept { return m_fields + m_fieldCount; }
+        [[nodiscard]] constexpr const FieldInfo* End() const noexcept
+        {
+            return m_fields + m_fieldCount;
+        }
     };
 } // namespace queen

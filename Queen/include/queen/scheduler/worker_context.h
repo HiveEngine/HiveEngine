@@ -31,24 +31,36 @@ namespace queen
          * Returns kMainThread if called from main thread (not in parallel),
          * otherwise returns the worker index (0 to N-1).
          */
-        [[nodiscard]] static size_t CurrentWorkerIndex() noexcept { return g_tCurrentWorkerIndex; }
+        [[nodiscard]] static size_t CurrentWorkerIndex() noexcept
+        {
+            return g_tCurrentWorkerIndex;
+        }
 
         /**
          * Check if currently executing in a parallel worker
          */
-        [[nodiscard]] static bool IsInWorker() noexcept { return g_tCurrentWorkerIndex != kMainThread; }
+        [[nodiscard]] static bool IsInWorker() noexcept
+        {
+            return g_tCurrentWorkerIndex != kMainThread;
+        }
 
         /**
          * Set current worker index (called by ThreadPool)
          *
          * @param index Worker index (0 to N-1)
          */
-        static void SetCurrentWorkerIndex(size_t index) noexcept { g_tCurrentWorkerIndex = index; }
+        static void SetCurrentWorkerIndex(size_t index) noexcept
+        {
+            g_tCurrentWorkerIndex = index;
+        }
 
         /**
          * Clear current worker index (called when task completes)
          */
-        static void ClearCurrentWorkerIndex() noexcept { g_tCurrentWorkerIndex = kMainThread; }
+        static void ClearCurrentWorkerIndex() noexcept
+        {
+            g_tCurrentWorkerIndex = kMainThread;
+        }
 
     private:
         // Thread-local storage for current worker index

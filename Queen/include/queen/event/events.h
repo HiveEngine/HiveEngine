@@ -78,9 +78,12 @@ namespace queen
         explicit Events(Allocator& allocator)
             : m_allocator{&allocator}
             , m_queues{allocator, 32}
-            , m_entries{allocator} {}
+            , m_entries{allocator}
+        {
+        }
 
-        ~Events() {
+        ~Events()
+        {
             // Call destructors on all queue entries
             for (size_t i = 0; i < m_entries.Size(); ++i)
             {
@@ -105,7 +108,8 @@ namespace queen
          * @tparam T Event type (must satisfy Event concept)
          * @return EventWriter for the event type
          */
-        template <Event T> [[nodiscard]] EventWriter<T, Allocator> Writer() {
+        template <Event T> [[nodiscard]] EventWriter<T, Allocator> Writer()
+        {
             return EventWriter<T, Allocator>{this->template GetOrCreateQueue<T>()};
         }
 
@@ -117,7 +121,8 @@ namespace queen
          * @tparam T Event type (must satisfy Event concept)
          * @return EventReader for the event type
          */
-        template <Event T> [[nodiscard]] EventReader<T, Allocator> Reader() {
+        template <Event T> [[nodiscard]] EventReader<T, Allocator> Reader()
+        {
             return EventReader<T, Allocator>{this->template GetOrCreateQueue<T>()};
         }
 
@@ -127,7 +132,10 @@ namespace queen
          * @tparam T Event type
          * @param event Event to send
          */
-        template <Event T> void Send(const T& event) { this->template GetOrCreateQueue<T>().Push(event); }
+        template <Event T> void Send(const T& event)
+        {
+            this->template GetOrCreateQueue<T>().Push(event);
+        }
 
         /**
          * Send an event (move, convenience method)
@@ -135,7 +143,8 @@ namespace queen
          * @tparam T Event type
          * @param event Event to send
          */
-        template <Event T> void Send(T&& event) {
+        template <Event T> void Send(T&& event)
+        {
             using EventType = std::remove_cvref_t<T>;
             this->template GetOrCreateQueue<EventType>().Push(std::forward<T>(event));
         }
@@ -146,7 +155,8 @@ namespace queen
          * Should be called at the end of each frame (Update).
          * Clears previous frame's events and rotates buffers.
          */
-        void SwapBuffers() {
+        void SwapBuffers()
+        {
             for (size_t i = 0; i < m_entries.Size(); ++i)
             {
                 if (m_entries[i].m_swapFn != nullptr)
@@ -159,7 +169,8 @@ namespace queen
         /**
          * Clear all events from all queues
          */
-        void ClearAll() {
+        void ClearAll()
+        {
             for (size_t i = 0; i < m_entries.Size(); ++i)
             {
                 if (m_entries[i].m_clearFn != nullptr)
@@ -175,7 +186,8 @@ namespace queen
          * @tparam T Event type
          * @return true if queue exists
          */
-        template <Event T> [[nodiscard]] bool HasQueue() const {
+        template <Event T> [[nodiscard]] bool HasQueue() const
+        {
             TypeId id = TypeIdOf<T>();
             return m_queues.Find(id) != nullptr;
         }
@@ -183,7 +195,10 @@ namespace queen
         /**
          * Get number of registered event types
          */
-        [[nodiscard]] size_t QueueCount() const noexcept { return m_entries.Size(); }
+        [[nodiscard]] size_t QueueCount() const noexcept
+        {
+            return m_entries.Size();
+        }
 
     private:
         struct QueueEntry
@@ -195,7 +210,8 @@ namespace queen
             TypeId m_typeId;
         };
 
-        template <Event T> EventQueue<T, Allocator>& GetOrCreateQueue() {
+        template <Event T> EventQueue<T, Allocator>& GetOrCreateQueue()
+        {
             TypeId id = TypeIdOf<T>();
 
             if (auto* index = m_queues.Find(id))

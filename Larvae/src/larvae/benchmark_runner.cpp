@@ -9,9 +9,12 @@
 namespace larvae
 {
     BenchmarkRunner::BenchmarkRunner(BenchmarkConfig config)
-        : config_{std::move(config)} {}
+        : config_{std::move(config)}
+    {
+    }
 
-    std::vector<BenchmarkResult> BenchmarkRunner::RunAll() {
+    std::vector<BenchmarkResult> BenchmarkRunner::RunAll()
+    {
         std::vector<BenchmarkResult> results;
         const auto& benchmarks = BenchmarkRegistry::GetInstance().GetBenchmarks();
 
@@ -31,7 +34,8 @@ namespace larvae
         return results;
     }
 
-    bool BenchmarkRunner::MatchesFilter(const std::string& full_name) const {
+    bool BenchmarkRunner::MatchesFilter(const std::string& full_name) const
+    {
         const auto& pattern = config_.filter;
 
         if (pattern == "*")
@@ -61,7 +65,8 @@ namespace larvae
     }
 
     BenchmarkResult BenchmarkRunner::RunSingle(const char* suite_name, const char* benchmark_name,
-                                               std::function<void(BenchmarkState&)> benchmark_func) {
+                                               std::function<void(BenchmarkState&)> benchmark_func)
+    {
         for (size_t i = 0; i < config_.warmup_runs; ++i)
         {
             BenchmarkState warmup_state{config_.min_iterations};
@@ -119,7 +124,8 @@ namespace larvae
         return result;
     }
 
-    size_t BenchmarkRunner::DetermineIterations(std::function<void(BenchmarkState&)> benchmark_func) {
+    size_t BenchmarkRunner::DetermineIterations(std::function<void(BenchmarkState&)> benchmark_func)
+    {
         size_t iterations = config_.min_iterations;
 
         while (true)
@@ -143,7 +149,8 @@ namespace larvae
         return iterations;
     }
 
-    void PrintBenchmarkResults(const std::vector<BenchmarkResult>& results) {
+    void PrintBenchmarkResults(const std::vector<BenchmarkResult>& results)
+    {
         if (results.empty())
         {
             std::cout << "No benchmarks matched the filter.\n";
@@ -203,7 +210,8 @@ namespace larvae
         std::cout << std::string(90, '-') << '\n';
     }
 
-    BenchmarkConfig ParseBenchmarkCommandLine(int argc, char** argv) {
+    BenchmarkConfig ParseBenchmarkCommandLine(int argc, char** argv)
+    {
         BenchmarkConfig config{};
 
         for (int i = 1; i < argc; ++i)

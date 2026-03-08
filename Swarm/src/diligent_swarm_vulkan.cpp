@@ -4,7 +4,8 @@
 #include <EngineFactoryVk.h>
 namespace swarm
 {
-    bool InitRenderContextCommon(RenderContext* renderContext) {
+    bool InitRenderContextCommon(RenderContext* renderContext)
+    {
         auto* factory = Diligent::GetEngineFactoryVk();
 
         Diligent::EngineVkCreateInfo createInfo{};

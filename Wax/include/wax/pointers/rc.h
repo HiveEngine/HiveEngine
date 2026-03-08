@@ -72,7 +72,9 @@ namespace wax
             template <typename... Args>
             ControlBlock(Args&&... args)
                 : ref_count{1}
-                , object{std::forward<Args>(args)...} {}
+                , object{std::forward<Args>(args)...}
+            {
+            }
         };
 
         // Friend declarations for MakeRc
@@ -86,24 +88,30 @@ namespace wax
 
         constexpr Rc() noexcept
             : control_{nullptr}
-            , allocator_{nullptr} {}
+            , allocator_{nullptr}
+        {
+        }
 
         // Constructor with control block (takes ownership)
         constexpr Rc(Allocator& allocator, ControlBlock* control) noexcept
             : control_{control}
-            , allocator_{&allocator} {}
+            , allocator_{&allocator}
+        {
+        }
 
         // Copy constructor (increments ref count)
         Rc(const Rc& other) noexcept
             : control_{other.control_}
-            , allocator_{other.allocator_} {
+            , allocator_{other.allocator_}
+        {
             if (control_)
             {
                 ++control_->ref_count;
             }
         }
 
-        Rc& operator=(const Rc& other) noexcept {
+        Rc& operator=(const Rc& other) noexcept
+        {
             if (this != &other)
             {
                 Release();
@@ -121,12 +129,14 @@ namespace wax
 
         constexpr Rc(Rc&& other) noexcept
             : control_{other.control_}
-            , allocator_{other.allocator_} {
+            , allocator_{other.allocator_}
+        {
             other.control_ = nullptr;
             other.allocator_ = nullptr;
         }
 
-        constexpr Rc& operator=(Rc&& other) noexcept {
+        constexpr Rc& operator=(Rc&& other) noexcept
+        {
             if (this != &other)
             {
                 Release();
@@ -141,48 +151,82 @@ namespace wax
         }
 
         // Destructor (decrements ref count, destroys if zero)
-        ~Rc() noexcept { Release(); }
+        ~Rc() noexcept
+        {
+            Release();
+        }
 
         // Dereference operators (checked in debug)
-        [[nodiscard]] T& operator*() const noexcept {
+        [[nodiscard]] T& operator*() const noexcept
+        {
             hive::Assert(control_ != nullptr, "Dereferencing null Rc");
             return control_->object;
         }
 
-        [[nodiscard]] T* operator->() const noexcept {
+        [[nodiscard]] T* operator->() const noexcept
+        {
             hive::Assert(control_ != nullptr, "Dereferencing null Rc");
             return &control_->object;
         }
 
-        [[nodiscard]] T* Get() const noexcept { return control_ ? &control_->object : nullptr; }
+        [[nodiscard]] T* Get() const noexcept
+        {
+            return control_ ? &control_->object : nullptr;
+        }
 
-        [[nodiscard]] Allocator* GetAllocator() const noexcept { return allocator_; }
+        [[nodiscard]] Allocator* GetAllocator() const noexcept
+        {
+            return allocator_;
+        }
 
-        [[nodiscard]] size_t GetRefCount() const noexcept { return control_ ? control_->ref_count : 0; }
+        [[nodiscard]] size_t GetRefCount() const noexcept
+        {
+            return control_ ? control_->ref_count : 0;
+        }
 
-        [[nodiscard]] bool IsUnique() const noexcept { return control_ && control_->ref_count == 1; }
+        [[nodiscard]] bool IsUnique() const noexcept
+        {
+            return control_ && control_->ref_count == 1;
+        }
 
         // Bool conversion (null check)
-        [[nodiscard]] explicit operator bool() const noexcept { return control_ != nullptr; }
+        [[nodiscard]] explicit operator bool() const noexcept
+        {
+            return control_ != nullptr;
+        }
 
-        [[nodiscard]] bool IsNull() const noexcept { return control_ == nullptr; }
+        [[nodiscard]] bool IsNull() const noexcept
+        {
+            return control_ == nullptr;
+        }
 
-        [[nodiscard]] bool IsValid() const noexcept { return control_ != nullptr; }
+        [[nodiscard]] bool IsValid() const noexcept
+        {
+            return control_ != nullptr;
+        }
 
         // Reset (releases ownership)
-        void Reset() noexcept {
+        void Reset() noexcept
+        {
             Release();
             control_ = nullptr;
             allocator_ = nullptr;
         }
 
         // Comparison operators
-        [[nodiscard]] bool operator==(const Rc& other) const noexcept { return control_ == other.control_; }
+        [[nodiscard]] bool operator==(const Rc& other) const noexcept
+        {
+            return control_ == other.control_;
+        }
 
-        [[nodiscard]] bool operator==(std::nullptr_t) const noexcept { return control_ == nullptr; }
+        [[nodiscard]] bool operator==(std::nullptr_t) const noexcept
+        {
+            return control_ == nullptr;
+        }
 
     private:
-        void Release() noexcept {
+        void Release() noexcept
+        {
             if (control_ && allocator_)
             {
                 --control_->ref_count;
@@ -203,7 +247,8 @@ namespace wax
     };
 
     template <typename T, comb::Allocator Allocator, typename... Args>
-    [[nodiscard]] Rc<T, Allocator> MakeRc(Allocator& allocator, Args&&... args) {
+    [[nodiscard]] Rc<T, Allocator> MakeRc(Allocator& allocator, Args&&... args)
+    {
         using ControlBlock = typename Rc<T, Allocator>::ControlBlock;
 
         void* mem = allocator.Allocate(sizeof(ControlBlock), alignof(ControlBlock));
@@ -215,7 +260,8 @@ namespace wax
     }
 
     // Default allocator overload
-    template <typename T, typename... Args> [[nodiscard]] Rc<T, comb::DefaultAllocator> MakeRc(Args&&... args) {
+    template <typename T, typename... Args> [[nodiscard]] Rc<T, comb::DefaultAllocator> MakeRc(Args&&... args)
+    {
         auto& allocator = comb::GetDefaultAllocator();
         using ControlBlock = typename Rc<T, comb::DefaultAllocator>::ControlBlock;
 

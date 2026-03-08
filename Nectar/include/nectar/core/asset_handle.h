@@ -14,15 +14,25 @@ namespace nectar
     {
         wax::Handle<T> m_raw{wax::Handle<T>::Invalid()};
 
-        [[nodiscard]] constexpr bool IsNull() const noexcept { return m_raw.IsNull(); }
+        [[nodiscard]] constexpr bool IsNull() const noexcept
+        {
+            return m_raw.IsNull();
+        }
 
-        [[nodiscard]] constexpr bool operator==(const WeakHandle& other) const noexcept { return m_raw == other.m_raw; }
+        [[nodiscard]] constexpr bool operator==(const WeakHandle& other) const noexcept
+        {
+            return m_raw == other.m_raw;
+        }
 
-        [[nodiscard]] constexpr bool operator!=(const WeakHandle& other) const noexcept {
+        [[nodiscard]] constexpr bool operator!=(const WeakHandle& other) const noexcept
+        {
             return !(m_raw == other.m_raw);
         }
 
-        [[nodiscard]] static constexpr WeakHandle Invalid() noexcept { return WeakHandle{}; }
+        [[nodiscard]] static constexpr WeakHandle Invalid() noexcept
+        {
+            return WeakHandle{};
+        }
     };
 
     /// Owning handle to an asset. RAII ref counting — copies increment,
@@ -32,7 +42,9 @@ namespace nectar
     public:
         constexpr StrongHandle() noexcept
             : m_handle{wax::Handle<T>::Invalid()}
-            , m_server{nullptr} {}
+            , m_server{nullptr}
+        {
+        }
 
         ~StrongHandle() noexcept;
 
@@ -41,12 +53,14 @@ namespace nectar
 
         StrongHandle(StrongHandle&& other) noexcept
             : m_handle{other.m_handle}
-            , m_server{other.m_server} {
+            , m_server{other.m_server}
+        {
             other.m_handle = wax::Handle<T>::Invalid();
             other.m_server = nullptr;
         }
 
-        StrongHandle& operator=(StrongHandle&& other) noexcept {
+        StrongHandle& operator=(StrongHandle&& other) noexcept
+        {
             if (this != &other)
             {
                 Release();
@@ -58,15 +72,28 @@ namespace nectar
             return *this;
         }
 
-        [[nodiscard]] bool IsNull() const noexcept { return m_handle.IsNull(); }
+        [[nodiscard]] bool IsNull() const noexcept
+        {
+            return m_handle.IsNull();
+        }
 
-        [[nodiscard]] WeakHandle<T> MakeWeak() const noexcept { return WeakHandle<T>{m_handle}; }
+        [[nodiscard]] WeakHandle<T> MakeWeak() const noexcept
+        {
+            return WeakHandle<T>{m_handle};
+        }
 
-        [[nodiscard]] wax::Handle<T> Raw() const noexcept { return m_handle; }
+        [[nodiscard]] wax::Handle<T> Raw() const noexcept
+        {
+            return m_handle;
+        }
 
-        [[nodiscard]] bool operator==(const StrongHandle& other) const noexcept { return m_handle == other.m_handle; }
+        [[nodiscard]] bool operator==(const StrongHandle& other) const noexcept
+        {
+            return m_handle == other.m_handle;
+        }
 
-        [[nodiscard]] bool operator!=(const StrongHandle& other) const noexcept {
+        [[nodiscard]] bool operator!=(const StrongHandle& other) const noexcept
+        {
             return !(m_handle == other.m_handle);
         }
 
@@ -75,7 +102,9 @@ namespace nectar
 
         StrongHandle(wax::Handle<T> handle, AssetServer* server) noexcept
             : m_handle{handle}
-            , m_server{server} {}
+            , m_server{server}
+        {
+        }
 
         void Release() noexcept;
 

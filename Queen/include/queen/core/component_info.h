@@ -32,7 +32,8 @@ namespace queen
         {
         };
 
-        template <typename T> constexpr StorageType DeduceStorage() noexcept {
+        template <typename T> constexpr StorageType DeduceStorage() noexcept
+        {
             if constexpr (HasStorageType<T>::value)
             {
                 return T::storage;
@@ -78,13 +79,25 @@ namespace queen
         static constexpr bool isTriviallyDestructible = std::is_trivially_destructible_v<T>;
         inline static const StorageType storage = detail::DeduceStorage<T>();
 
-        static void Construct(void* ptr) { new (ptr) T{}; }
+        static void Construct(void* ptr)
+        {
+            new (ptr) T{};
+        }
 
-        static void Destruct(void* ptr) { static_cast<T*>(ptr)->~T(); }
+        static void Destruct(void* ptr)
+        {
+            static_cast<T*>(ptr)->~T();
+        }
 
-        static void Move(void* dst, void* src) { new (dst) T{std::move(*static_cast<T*>(src))}; }
+        static void Move(void* dst, void* src)
+        {
+            new (dst) T{std::move(*static_cast<T*>(src))};
+        }
 
-        static void Copy(void* dst, const void* src) { new (dst) T{*static_cast<const T*>(src)}; }
+        static void Copy(void* dst, const void* src)
+        {
+            new (dst) T{*static_cast<const T*>(src)};
+        }
     };
 
     /**
@@ -131,11 +144,18 @@ namespace queen
         MoveFn m_move = nullptr;
         CopyFn m_copy = nullptr;
 
-        [[nodiscard]] constexpr bool IsValid() const noexcept { return m_typeId != 0 && m_size > 0; }
+        [[nodiscard]] constexpr bool IsValid() const noexcept
+        {
+            return m_typeId != 0 && m_size > 0;
+        }
 
-        [[nodiscard]] constexpr bool IsTrivial() const noexcept { return m_destruct == nullptr; }
+        [[nodiscard]] constexpr bool IsTrivial() const noexcept
+        {
+            return m_destruct == nullptr;
+        }
 
-        template <typename T> [[nodiscard]] static ComponentMeta Of() noexcept {
+        template <typename T> [[nodiscard]] static ComponentMeta Of() noexcept
+        {
             using Info = ComponentInfo<T>;
 
             ComponentMeta meta{};
@@ -167,7 +187,8 @@ namespace queen
             return meta;
         }
 
-        template <typename T> [[nodiscard]] static ComponentMeta OfTag() noexcept {
+        template <typename T> [[nodiscard]] static ComponentMeta OfTag() noexcept
+        {
             ComponentMeta meta{};
             meta.m_typeId = TypeIdOf<T>();
             meta.m_size = 0;

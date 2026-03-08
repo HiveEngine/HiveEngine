@@ -93,30 +93,41 @@ namespace comb::debug
         /**
          * Check if this allocation info is valid
          */
-        [[nodiscard]] constexpr bool IsValid() const noexcept { return m_address != nullptr && m_size > 0; }
+        [[nodiscard]] constexpr bool IsValid() const noexcept
+        {
+            return m_address != nullptr && m_size > 0;
+        }
 
         /**
          * Get raw pointer (before guard bytes)
          * This is the actual pointer allocated from the underlying allocator
          */
-        [[nodiscard]] void* GetRawPointer() const noexcept { return static_cast<std::byte*>(m_address) - guardSize; }
+        [[nodiscard]] void* GetRawPointer() const noexcept
+        {
+            return static_cast<std::byte*>(m_address) - guardSize;
+        }
 
         /**
          * Get total allocated size (including guard bytes)
          */
-        [[nodiscard]] constexpr size_t GetTotalSize() const noexcept { return m_size + totalGuardSize; }
+        [[nodiscard]] constexpr size_t GetTotalSize() const noexcept
+        {
+            return m_size + totalGuardSize;
+        }
 
         /**
          * Read front guard value (memcpy-safe for potentially misaligned addresses)
          */
-        [[nodiscard]] uint32_t ReadGuardFront() const noexcept {
+        [[nodiscard]] uint32_t ReadGuardFront() const noexcept
+        {
             return ReadGuard(static_cast<std::byte*>(m_address) - guardSize);
         }
 
         /**
          * Read back guard value (memcpy-safe for potentially misaligned addresses)
          */
-        [[nodiscard]] uint32_t ReadGuardBack() const noexcept {
+        [[nodiscard]] uint32_t ReadGuardBack() const noexcept
+        {
             return ReadGuard(static_cast<std::byte*>(m_address) + m_size);
         }
 
@@ -124,14 +135,16 @@ namespace comb::debug
          * Check if guard bytes are intact
          * Returns true if both guards match GuardMagic (0xDEADBEEF)
          */
-        [[nodiscard]] bool CheckGuards() const noexcept {
+        [[nodiscard]] bool CheckGuards() const noexcept
+        {
             return ReadGuardFront() == guardMagic && ReadGuardBack() == guardMagic;
         }
 
         /**
          * Get tag or default string
          */
-        [[nodiscard]] const char* GetTagOrDefault(const char* defaultTag = "<no tag>") const noexcept {
+        [[nodiscard]] const char* GetTagOrDefault(const char* defaultTag = "<no tag>") const noexcept
+        {
             return m_tag ? m_tag : defaultTag;
         }
     };
@@ -156,14 +169,16 @@ namespace comb::debug
         /**
          * Calculate memory leak count
          */
-        [[nodiscard]] constexpr size_t GetLeakCount() const noexcept {
+        [[nodiscard]] constexpr size_t GetLeakCount() const noexcept
+        {
             return m_totalAllocations - m_totalDeallocations;
         }
 
         /**
          * Calculate overhead percentage
          */
-        [[nodiscard]] constexpr float GetOverheadPercentage() const noexcept {
+        [[nodiscard]] constexpr float GetOverheadPercentage() const noexcept
+        {
             if (m_currentBytesUsed == 0)
                 return 0.0f;
             return (static_cast<float>(m_overheadBytes) / static_cast<float>(m_currentBytesUsed + m_overheadBytes)) *
@@ -174,7 +189,8 @@ namespace comb::debug
          * Calculate fragmentation ratio (0.0 = no fragmentation, 1.0 = high)
          * This is a simplified metric based on allocation/deallocation patterns
          */
-        [[nodiscard]] constexpr float GetFragmentationRatio() const noexcept {
+        [[nodiscard]] constexpr float GetFragmentationRatio() const noexcept
+        {
             if (m_totalAllocations == 0)
                 return 0.0f;
 

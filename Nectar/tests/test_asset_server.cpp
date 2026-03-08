@@ -19,14 +19,16 @@ namespace
     class ServerTestLoader final : public nectar::AssetLoader<ServerTestAsset>
     {
     public:
-        ServerTestAsset* Load(wax::ByteSpan data, comb::DefaultAllocator& alloc) override {
+        ServerTestAsset* Load(wax::ByteSpan data, comb::DefaultAllocator& alloc) override
+        {
             if (data.Size() < sizeof(int))
                 return nullptr;
             auto* a = comb::New<ServerTestAsset>(alloc);
             a->value = data.Read<int>(0);
             return a;
         }
-        void Unload(ServerTestAsset* asset, comb::DefaultAllocator& alloc) override {
+        void Unload(ServerTestAsset* asset, comb::DefaultAllocator& alloc) override
+        {
             if (asset)
                 comb::Delete(alloc, asset);
         }
@@ -41,30 +43,35 @@ namespace
     class OtherLoader final : public nectar::AssetLoader<OtherAsset>
     {
     public:
-        OtherAsset* Load(wax::ByteSpan data, comb::DefaultAllocator& alloc) override {
+        OtherAsset* Load(wax::ByteSpan data, comb::DefaultAllocator& alloc) override
+        {
             if (data.Size() < sizeof(float))
                 return nullptr;
             auto* a = comb::New<OtherAsset>(alloc);
             a->x = data.Read<float>(0);
             return a;
         }
-        void Unload(OtherAsset* asset, comb::DefaultAllocator& alloc) override {
+        void Unload(OtherAsset* asset, comb::DefaultAllocator& alloc) override
+        {
             if (asset)
                 comb::Delete(alloc, asset);
         }
     };
 
-    auto& GetServerTestAlloc() {
+    auto& GetServerTestAlloc()
+    {
         static comb::ModuleAllocator alloc{"TestServer", 8 * 1024 * 1024};
         return alloc.Get();
     }
 
-    wax::ByteSpan MakeIntSpan(uint8_t* buf, int value) {
+    wax::ByteSpan MakeIntSpan(uint8_t* buf, int value)
+    {
         std::memcpy(buf, &value, sizeof(int));
         return wax::ByteSpan{buf, sizeof(int)};
     }
 
-    wax::ByteSpan MakeFloatSpan(uint8_t* buf, float value) {
+    wax::ByteSpan MakeFloatSpan(uint8_t* buf, float value)
+    {
         std::memcpy(buf, &value, sizeof(float));
         return wax::ByteSpan{buf, sizeof(float)};
     }

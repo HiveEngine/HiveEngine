@@ -40,7 +40,8 @@ namespace queen
         constexpr uint64_t kFnv1aOffset = 14695981039346656037ULL;
         constexpr uint64_t kFnv1aPrime = 1099511628211ULL;
 
-        constexpr uint64_t Fnv1aHash(std::string_view str) noexcept {
+        constexpr uint64_t Fnv1aHash(std::string_view str) noexcept
+        {
             uint64_t hash = kFnv1aOffset;
             for (char c : str)
             {
@@ -50,7 +51,8 @@ namespace queen
             return hash;
         }
 
-        template <typename T> constexpr std::string_view RawTypeName() noexcept {
+        template <typename T> constexpr std::string_view RawTypeName() noexcept
+        {
 #if defined(__clang__) || defined(__GNUC__)
             return __PRETTY_FUNCTION__;
 #elif defined(_MSC_VER)
@@ -60,7 +62,8 @@ namespace queen
 #endif
         }
 
-        template <typename T> constexpr std::string_view TypeName() noexcept {
+        template <typename T> constexpr std::string_view TypeName() noexcept
+        {
             constexpr std::string_view raw = RawTypeName<T>();
 
 #if defined(__clang__)
@@ -91,14 +94,16 @@ namespace queen
     /**
      * Get compile-time type ID for type T
      */
-    template <typename T> consteval TypeId TypeIdOf() noexcept {
+    template <typename T> consteval TypeId TypeIdOf() noexcept
+    {
         return detail::Fnv1aHash(detail::RawTypeName<T>());
     }
 
     /**
      * Get human-readable type name for debugging
      */
-    template <typename T> constexpr std::string_view TypeNameOf() noexcept {
+    template <typename T> constexpr std::string_view TypeNameOf() noexcept
+    {
         return detail::TypeName<T>();
     }
 } // namespace queen

@@ -23,16 +23,19 @@
 
 namespace nectar
 {
-    wax::Span<const char* const> ObjImporter::SourceExtensions() const {
+    wax::Span<const char* const> ObjImporter::SourceExtensions() const
+    {
         static const char* const exts[] = {".obj"};
         return {exts, 1};
     }
 
-    uint32_t ObjImporter::Version() const {
+    uint32_t ObjImporter::Version() const
+    {
         return 2;
     }
 
-    wax::StringView ObjImporter::TypeName() const {
+    wax::StringView ObjImporter::TypeName() const
+    {
         return "Mesh";
     }
 
@@ -43,7 +46,8 @@ namespace nectar
         int m_uvIdx;
         int m_matIdx;
 
-        bool operator==(const VertexKey& other) const {
+        bool operator==(const VertexKey& other) const
+        {
             return m_posIdx == other.m_posIdx && m_normIdx == other.m_normIdx && m_uvIdx == other.m_uvIdx &&
                    m_matIdx == other.m_matIdx;
         }
@@ -51,7 +55,8 @@ namespace nectar
 
     struct VertexKeyHash
     {
-        size_t operator()(const VertexKey& key) const {
+        size_t operator()(const VertexKey& key) const
+        {
             auto toSize = [](int value) {
                 return static_cast<size_t>(static_cast<unsigned>(value));
             };
@@ -64,15 +69,16 @@ namespace nectar
         }
     };
 
-    static uint32_t PackRGBA8(float r, float g, float b, float a = 1.f) {
+    static uint32_t PackRGBA8(float r, float g, float b, float a = 1.f)
+    {
         auto toU8 = [](float value) -> uint32_t {
             return static_cast<uint32_t>(value * 255.f + 0.5f) & 0xFFu;
         };
         return toU8(r) | (toU8(g) << 8) | (toU8(b) << 16) | (toU8(a) << 24);
     }
 
-    ImportResult ObjImporter::Import(wax::ByteSpan sourceData, const HiveDocument& settings,
-                                     ImportContext& /*context*/) {
+    ImportResult ObjImporter::Import(wax::ByteSpan sourceData, const HiveDocument& settings, ImportContext& /*context*/)
+    {
         ImportResult result{};
 
         auto scale = static_cast<float>(settings.GetFloat("import", "scale", 1.0));

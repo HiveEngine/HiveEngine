@@ -18,25 +18,33 @@ namespace
         static int destruct_count;
 
         NonTrivial()
-            : value{0} {
+            : value{0}
+        {
             ++construct_count;
         }
         explicit NonTrivial(int v)
-            : value{v} {
+            : value{v}
+        {
             ++construct_count;
         }
-        ~NonTrivial() { ++destruct_count; }
+        ~NonTrivial()
+        {
+            ++destruct_count;
+        }
         NonTrivial(const NonTrivial& other)
-            : value{other.value} {
+            : value{other.value}
+        {
             ++construct_count;
         }
         NonTrivial(NonTrivial&& other) noexcept
-            : value{other.value} {
+            : value{other.value}
+        {
             other.value = 0;
             ++construct_count;
         }
 
-        static void ResetCounts() {
+        static void ResetCounts()
+        {
             construct_count = 0;
             destruct_count = 0;
         }

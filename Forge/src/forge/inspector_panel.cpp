@@ -32,8 +32,8 @@ namespace forge
 
         DragState g_sDrag{};
 
-        void BeginDrag(queen::Entity entity, queen::TypeId typeId, uint16_t offset, uint16_t size,
-                       const void* current) {
+        void BeginDrag(queen::Entity entity, queen::TypeId typeId, uint16_t offset, uint16_t size, const void* current)
+        {
             if (g_sDrag.m_active)
             {
                 return;
@@ -50,7 +50,8 @@ namespace forge
             g_sDrag.m_active = true;
         }
 
-        void EndDrag(UndoStack& undo, const void* current) {
+        void EndDrag(UndoStack& undo, const void* current)
+        {
             if (!g_sDrag.m_active)
             {
                 return;
@@ -64,7 +65,8 @@ namespace forge
             }
         }
 
-        [[nodiscard]] const char* GetFieldDisplayName(const queen::FieldInfo& field) noexcept {
+        [[nodiscard]] const char* GetFieldDisplayName(const queen::FieldInfo& field) noexcept
+        {
             if (field.m_attributes != nullptr && field.m_attributes->m_displayName != nullptr)
             {
                 return field.m_attributes->m_displayName;
@@ -73,12 +75,14 @@ namespace forge
             return field.m_name;
         }
 
-        [[nodiscard]] bool HasFlag(const queen::FieldInfo& field, queen::FieldFlag flag) noexcept {
+        [[nodiscard]] bool HasFlag(const queen::FieldInfo& field, queen::FieldFlag flag) noexcept
+        {
             return field.m_attributes != nullptr && field.m_attributes->HasFlag(flag);
         }
 
         bool DrawFloat3Widget(const char* label, void* data, const queen::FieldInfo& field, queen::Entity entity,
-                              queen::TypeId typeId, uint16_t baseOffset, UndoStack& undo) {
+                              queen::TypeId typeId, uint16_t baseOffset, UndoStack& undo)
+        {
             auto* value = static_cast<float*>(data);
             const uint16_t offset = static_cast<uint16_t>(baseOffset + field.m_offset);
 
@@ -121,7 +125,8 @@ namespace forge
         }
 
         bool DrawQuatWidget(const char* label, void* data, queen::Entity entity, queen::TypeId typeId,
-                            uint16_t baseOffset, const queen::FieldInfo& field, UndoStack& undo) {
+                            uint16_t baseOffset, const queen::FieldInfo& field, UndoStack& undo)
+        {
             auto* q = static_cast<float*>(data);
             const uint16_t offset = static_cast<uint16_t>(baseOffset + field.m_offset);
 
@@ -181,7 +186,8 @@ namespace forge
         }
 
         bool DrawField(const queen::FieldInfo& field, void* componentData, queen::Entity entity, queen::TypeId typeId,
-                       uint16_t baseOffset, UndoStack& undo) {
+                       uint16_t baseOffset, UndoStack& undo)
+        {
             if (HasFlag(field, queen::FieldFlag::HIDDEN))
             {
                 return false;
@@ -396,7 +402,8 @@ namespace forge
         }
 
         void DrawComponent(queen::World& world, queen::Entity entity, queen::TypeId typeId, void* componentData,
-                           const queen::ComponentReflection& reflection, UndoStack& undo) {
+                           const queen::ComponentReflection& reflection, UndoStack& undo)
+        {
             IM_UNUSED(world);
 
             const char* typeName = reflection.m_name != nullptr ? reflection.m_name : "Component";
@@ -421,7 +428,8 @@ namespace forge
     } // namespace
 
     void DrawInspectorPanel(queen::World& world, EditorSelection& selection,
-                            const queen::ComponentRegistry<256>& registry, UndoStack& undo) {
+                            const queen::ComponentRegistry<256>& registry, UndoStack& undo)
+    {
         const queen::Entity entity = selection.Primary();
         if (entity.IsNull() || !world.IsAlive(entity))
         {

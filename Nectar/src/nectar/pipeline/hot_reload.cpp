@@ -16,13 +16,17 @@ namespace nectar
         , m_importPipe{&importPipe}
         , m_cookPipe{&cookPipe}
         , m_lastReloaded{alloc}
-        , m_baseDir{alloc} {}
+        , m_baseDir{alloc}
+    {
+    }
 
-    void HotReloadManager::WatchDirectory(wax::StringView dir) {
+    void HotReloadManager::WatchDirectory(wax::StringView dir)
+    {
         m_watcher->Watch(dir);
     }
 
-    void HotReloadManager::SetBaseDirectory(wax::StringView baseDir) {
+    void HotReloadManager::SetBaseDirectory(wax::StringView baseDir)
+    {
         m_baseDir = wax::String{*m_alloc};
         m_baseDir.Append(baseDir.Data(), baseDir.Size());
 
@@ -40,12 +44,14 @@ namespace nectar
         }
     }
 
-    void HotReloadManager::SetImportSettingsProvider(ImportSettingsProvider fn, void* userData) {
+    void HotReloadManager::SetImportSettingsProvider(ImportSettingsProvider fn, void* userData)
+    {
         m_settingsFn = fn;
         m_settingsUserData = userData;
     }
 
-    size_t HotReloadManager::ProcessChanges(wax::StringView platform) {
+    size_t HotReloadManager::ProcessChanges(wax::StringView platform)
+    {
         HIVE_PROFILE_SCOPE_N("HotReload::ProcessChanges");
         m_lastReloaded.Clear();
 
@@ -137,7 +143,8 @@ namespace nectar
         return m_lastReloaded.Size();
     }
 
-    const wax::Vector<AssetId>& HotReloadManager::LastReloaded() const noexcept {
+    const wax::Vector<AssetId>& HotReloadManager::LastReloaded() const noexcept
+    {
         return m_lastReloaded;
     }
 } // namespace nectar

@@ -7,10 +7,18 @@ namespace larvae
     public:
         virtual ~TestFixture() = default;
 
-        virtual void SetUp() {}
-        virtual void TearDown() {}
+        virtual void SetUp()
+        {
+        }
+        virtual void TearDown()
+        {
+        }
 
-        static void SetUpTestSuite() {}
-        static void TearDownTestSuite() {}
+        static void SetUpTestSuite()
+        {
+        }
+        static void TearDownTestSuite()
+        {
+        }
     };
 } // namespace larvae

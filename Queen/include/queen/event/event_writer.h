@@ -61,21 +61,29 @@ namespace queen
         using EventType = T;
 
         explicit EventWriter(EventQueue<T, Allocator>& queue) noexcept
-            : m_queue{&queue} {}
+            : m_queue{&queue}
+        {
+        }
 
         /**
          * Send an event (copy)
          *
          * @param event Event to send
          */
-        void Send(const T& event) { m_queue->Push(event); }
+        void Send(const T& event)
+        {
+            m_queue->Push(event);
+        }
 
         /**
          * Send an event (move)
          *
          * @param event Event to send
          */
-        void Send(T&& event) { m_queue->Push(std::move(event)); }
+        void Send(T&& event)
+        {
+            m_queue->Push(std::move(event));
+        }
 
         /**
          * Construct and send an event in-place
@@ -84,7 +92,10 @@ namespace queen
          * @param args Arguments forwarded to event constructor
          * @return Reference to the sent event
          */
-        template <typename... Args> T& Emplace(Args&&... args) { return m_queue->Emplace(std::forward<Args>(args)...); }
+        template <typename... Args> T& Emplace(Args&&... args)
+        {
+            return m_queue->Emplace(std::forward<Args>(args)...);
+        }
 
         /**
          * Send multiple events from a range
@@ -93,7 +104,8 @@ namespace queen
          * @param first Begin iterator
          * @param last End iterator
          */
-        template <typename InputIt> void SendBatch(InputIt first, InputIt last) {
+        template <typename InputIt> void SendBatch(InputIt first, InputIt last)
+        {
             for (; first != last; ++first)
             {
                 m_queue->Push(*first);
@@ -103,12 +115,18 @@ namespace queen
         /**
          * Get number of events sent this frame
          */
-        [[nodiscard]] size_t Count() const noexcept { return m_queue->CurrentCount(); }
+        [[nodiscard]] size_t Count() const noexcept
+        {
+            return m_queue->CurrentCount();
+        }
 
         /**
          * Check if no events have been sent this frame
          */
-        [[nodiscard]] bool IsEmpty() const noexcept { return m_queue->IsCurrentEmpty(); }
+        [[nodiscard]] bool IsEmpty() const noexcept
+        {
+            return m_queue->IsCurrentEmpty();
+        }
 
     private:
         EventQueue<T, Allocator>* m_queue;

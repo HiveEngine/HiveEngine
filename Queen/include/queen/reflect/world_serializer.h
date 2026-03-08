@@ -53,7 +53,8 @@ namespace queen
         WorldSerializer() noexcept = default;
 
         template <size_t MaxComponents>
-        WorldSerializeResult Serialize(World& world, const ComponentRegistry<MaxComponents>& registry) noexcept {
+        WorldSerializeResult Serialize(World& world, const ComponentRegistry<MaxComponents>& registry) noexcept
+        {
             WorldSerializeResult result{};
             m_pos = 0;
 
@@ -126,16 +127,24 @@ namespace queen
             return result;
         }
 
-        [[nodiscard]] const char* CStr() const noexcept { return m_buf; }
-        [[nodiscard]] size_t Size() const noexcept { return m_pos; }
+        [[nodiscard]] const char* CStr() const noexcept
+        {
+            return m_buf;
+        }
+        [[nodiscard]] size_t Size() const noexcept
+        {
+            return m_pos;
+        }
 
     private:
-        void Put(char c) noexcept {
+        void Put(char c) noexcept
+        {
             if (m_pos < BufSize - 1)
                 m_buf[m_pos++] = c;
         }
 
-        void WriteRaw(const char* s) noexcept {
+        void WriteRaw(const char* s) noexcept
+        {
             if (s == nullptr)
                 return;
             while (*s && m_pos < BufSize - 1)
@@ -144,14 +153,18 @@ namespace queen
             }
         }
 
-        void WriteUint64(uint64_t v) noexcept {
+        void WriteUint64(uint64_t v) noexcept
+        {
             char tmp[24];
             int n = std::snprintf(tmp, sizeof(tmp), "%llu", static_cast<unsigned long long>(v));
             for (int i = 0; i < n; ++i)
                 Put(tmp[i]);
         }
 
-        void Terminate() noexcept { m_buf[m_pos < BufSize ? m_pos : BufSize - 1] = '\0'; }
+        void Terminate() noexcept
+        {
+            m_buf[m_pos < BufSize ? m_pos : BufSize - 1] = '\0';
+        }
 
         char m_buf[BufSize]{};
         size_t m_pos = 0;

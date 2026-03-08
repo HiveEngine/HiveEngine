@@ -39,7 +39,8 @@
 
 namespace hive
 {
-    inline void ShutdownProfiler() {
+    inline void ShutdownProfiler()
+    {
         tracy::GetProfiler().RequestShutdown();
         while (!tracy::GetProfiler().HasShutdownFinished())
         {
@@ -73,7 +74,9 @@ namespace hive
 
 namespace hive
 {
-    inline void ShutdownProfiler() {}
+    inline void ShutdownProfiler()
+    {
+    }
 } // namespace hive
 
 #endif

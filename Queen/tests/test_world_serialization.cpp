@@ -20,7 +20,8 @@ namespace
         float y = 0.f;
         float z = 0.f;
 
-        static void Reflect(queen::ComponentReflector<>& r) {
+        static void Reflect(queen::ComponentReflector<>& r)
+        {
             r.Field("x", &Pos::x);
             r.Field("y", &Pos::y);
             r.Field("z", &Pos::z);
@@ -33,7 +34,8 @@ namespace
         float dy = 0.f;
         float dz = 0.f;
 
-        static void Reflect(queen::ComponentReflector<>& r) {
+        static void Reflect(queen::ComponentReflector<>& r)
+        {
             r.Field("dx", &Vel::dx);
             r.Field("dy", &Vel::dy);
             r.Field("dz", &Vel::dz);
@@ -45,7 +47,8 @@ namespace
         queen::Entity target;
         int32_t priority = 0;
 
-        static void Reflect(queen::ComponentReflector<>& r) {
+        static void Reflect(queen::ComponentReflector<>& r)
+        {
             r.Field("target", &Targeting::target);
             r.Field("priority", &Targeting::priority);
         }
@@ -56,7 +59,8 @@ namespace
         int32_t current = 100;
         int32_t max = 100;
 
-        static void Reflect(queen::ComponentReflector<>& r) {
+        static void Reflect(queen::ComponentReflector<>& r)
+        {
             r.Field("current", &Health::current);
             r.Field("max", &Health::max);
         }
@@ -66,7 +70,8 @@ namespace
     // Helpers
     // ============================================================
 
-    bool HasEntityWithPos(queen::World& world, float ex, float ey, float ez) {
+    bool HasEntityWithPos(queen::World& world, float ex, float ey, float ez)
+    {
         bool found = false;
         world.ForEachArchetype([&](queen::Archetype<queen::ComponentAllocator>& arch) {
             if (!arch.template HasComponent<Pos>())
@@ -83,7 +88,8 @@ namespace
         return found;
     }
 
-    queen::Entity FindEntityWithPos(queen::World& world, float ex, float ey, float ez) {
+    queen::Entity FindEntityWithPos(queen::World& world, float ex, float ey, float ez)
+    {
         queen::Entity result;
         world.ForEachArchetype([&](queen::Archetype<queen::ComponentAllocator>& arch) {
             if (!arch.template HasComponent<Pos>())

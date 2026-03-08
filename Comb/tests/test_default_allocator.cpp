@@ -6,10 +6,12 @@
 
 namespace
 {
-    constexpr size_t operator""_KB(unsigned long long kb) {
+    constexpr size_t operator""_KB(unsigned long long kb)
+    {
         return kb * 1024;
     }
-    constexpr size_t operator""_MB(unsigned long long mb) {
+    constexpr size_t operator""_MB(unsigned long long mb)
+    {
         return mb * 1024 * 1024;
     }
 
@@ -46,7 +48,9 @@ namespace
             float y;
             TestObj(int a, float b)
                 : x{a}
-                , y{b} {}
+                , y{b}
+            {
+            }
         };
 
         TestObj* obj = comb::New<TestObj>(alloc, 42, 3.14f);

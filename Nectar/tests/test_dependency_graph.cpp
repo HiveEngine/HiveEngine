@@ -10,13 +10,15 @@
 namespace
 {
 
-    auto& GetGraphAlloc() {
+    auto& GetGraphAlloc()
+    {
         static comb::ModuleAllocator alloc{"TestDepGraph", 4 * 1024 * 1024};
         return alloc.Get();
     }
 
     // Deterministic test IDs (avoid random UUIDs in tests)
-    nectar::AssetId MakeId(uint64_t v) {
+    nectar::AssetId MakeId(uint64_t v)
+    {
         uint8_t bytes[16] = {};
         std::memcpy(bytes, &v, sizeof(v));
         return nectar::AssetId::FromBytes(bytes);

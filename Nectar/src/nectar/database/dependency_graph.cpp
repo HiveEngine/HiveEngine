@@ -8,9 +8,12 @@ namespace nectar
     DependencyGraph::DependencyGraph(comb::DefaultAllocator& alloc)
         : m_alloc{&alloc}
         , m_forward{alloc, 64}
-        , m_reverse{alloc, 64} {}
+        , m_reverse{alloc, 64}
+    {
+    }
 
-    bool DependencyGraph::AddEdge(AssetId from, AssetId to, DepKind kind) {
+    bool DependencyGraph::AddEdge(AssetId from, AssetId to, DepKind kind)
+    {
         // Self-loop
         if (from == to)
             return false;
@@ -39,7 +42,8 @@ namespace nectar
         return true;
     }
 
-    bool DependencyGraph::RemoveEdge(AssetId from, AssetId to) {
+    bool DependencyGraph::RemoveEdge(AssetId from, AssetId to)
+    {
         auto* fwd = m_forward.Find(from);
         if (!fwd)
             return false;
@@ -79,7 +83,8 @@ namespace nectar
         return true;
     }
 
-    void DependencyGraph::RemoveNode(AssetId id) {
+    void DependencyGraph::RemoveNode(AssetId id)
+    {
         // Remove all outgoing edges from forward, and their reverse entries
         auto* fwd = m_forward.Find(id);
         if (fwd)
@@ -129,7 +134,8 @@ namespace nectar
         }
     }
 
-    void DependencyGraph::GetDependencies(AssetId id, DepKind filter, wax::Vector<AssetId>& out) const {
+    void DependencyGraph::GetDependencies(AssetId id, DepKind filter, wax::Vector<AssetId>& out) const
+    {
         auto* edges = m_forward.Find(id);
         if (!edges)
             return;
@@ -140,7 +146,8 @@ namespace nectar
         }
     }
 
-    void DependencyGraph::GetDependents(AssetId id, DepKind filter, wax::Vector<AssetId>& out) const {
+    void DependencyGraph::GetDependents(AssetId id, DepKind filter, wax::Vector<AssetId>& out) const
+    {
         auto* edges = m_reverse.Find(id);
         if (!edges)
             return;
@@ -151,7 +158,8 @@ namespace nectar
         }
     }
 
-    void DependencyGraph::GetTransitiveDependencies(AssetId id, DepKind filter, wax::Vector<AssetId>& out) const {
+    void DependencyGraph::GetTransitiveDependencies(AssetId id, DepKind filter, wax::Vector<AssetId>& out) const
+    {
         wax::HashSet<AssetId> visited{*m_alloc};
         wax::Vector<AssetId> stack{*m_alloc};
 
@@ -186,7 +194,8 @@ namespace nectar
         }
     }
 
-    void DependencyGraph::GetTransitiveDependents(AssetId id, DepKind filter, wax::Vector<AssetId>& out) const {
+    void DependencyGraph::GetTransitiveDependents(AssetId id, DepKind filter, wax::Vector<AssetId>& out) const
+    {
         wax::HashSet<AssetId> visited{*m_alloc};
         wax::Vector<AssetId> stack{*m_alloc};
 
@@ -220,13 +229,15 @@ namespace nectar
         }
     }
 
-    bool DependencyGraph::HasCycle() const {
+    bool DependencyGraph::HasCycle() const
+    {
         // Kahn's algorithm: if topo sort fails to include all nodes, there's a cycle
         wax::Vector<AssetId> order{*m_alloc};
         return !TopologicalSort(order);
     }
 
-    bool DependencyGraph::TopologicalSort(wax::Vector<AssetId>& order) const {
+    bool DependencyGraph::TopologicalSort(wax::Vector<AssetId>& order) const
+    {
         // Kahn's algorithm with in-degree counting
         wax::HashMap<AssetId, size_t> inDegree{*m_alloc};
 
@@ -296,7 +307,8 @@ namespace nectar
         return true;
     }
 
-    bool DependencyGraph::TopologicalSortLevels(wax::Vector<wax::Vector<AssetId>>& levels) const {
+    bool DependencyGraph::TopologicalSortLevels(wax::Vector<wax::Vector<AssetId>>& levels) const
+    {
         wax::HashMap<AssetId, size_t> inDegree{*m_alloc};
 
         for (auto it = m_forward.Begin(); it != m_forward.End(); ++it)
@@ -359,7 +371,8 @@ namespace nectar
         return processed == totalNodes;
     }
 
-    size_t DependencyGraph::NodeCount() const {
+    size_t DependencyGraph::NodeCount() const
+    {
         // Count unique nodes from both maps
         wax::HashSet<AssetId> nodes{*m_alloc};
         for (auto it = m_forward.Begin(); it != m_forward.End(); ++it)
@@ -369,18 +382,21 @@ namespace nectar
         return nodes.Count();
     }
 
-    size_t DependencyGraph::EdgeCount() const {
+    size_t DependencyGraph::EdgeCount() const
+    {
         size_t count = 0;
         for (auto it = m_forward.Begin(); it != m_forward.End(); ++it)
             count += it.Value().Size();
         return count;
     }
 
-    bool DependencyGraph::HasNode(AssetId id) const {
+    bool DependencyGraph::HasNode(AssetId id) const
+    {
         return m_forward.Contains(id) || m_reverse.Contains(id);
     }
 
-    bool DependencyGraph::HasEdge(AssetId from, AssetId to) const {
+    bool DependencyGraph::HasEdge(AssetId from, AssetId to) const
+    {
         auto* edges = m_forward.Find(from);
         if (!edges)
             return false;
@@ -392,7 +408,8 @@ namespace nectar
         return false;
     }
 
-    bool DependencyGraph::CanReach(AssetId start, AssetId target) const {
+    bool DependencyGraph::CanReach(AssetId start, AssetId target) const
+    {
         wax::HashSet<AssetId> visited{*m_alloc};
         wax::Vector<AssetId> stack{*m_alloc};
         stack.PushBack(start);

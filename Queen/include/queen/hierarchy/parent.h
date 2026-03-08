@@ -52,12 +52,22 @@ namespace queen
         Entity m_entity;
 
         Parent() noexcept
-            : m_entity{Entity::Invalid()} {}
+            : m_entity{Entity::Invalid()}
+        {
+        }
         explicit Parent(Entity e) noexcept
-            : m_entity{e} {}
+            : m_entity{e}
+        {
+        }
 
-        [[nodiscard]] bool IsValid() const noexcept { return !m_entity.IsNull(); }
+        [[nodiscard]] bool IsValid() const noexcept
+        {
+            return !m_entity.IsNull();
+        }
 
-        [[nodiscard]] bool operator==(const Parent& other) const noexcept { return m_entity == other.m_entity; }
+        [[nodiscard]] bool operator==(const Parent& other) const noexcept
+        {
+            return m_entity == other.m_entity;
+        }
     };
 } // namespace queen

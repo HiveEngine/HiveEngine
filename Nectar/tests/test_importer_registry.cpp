@@ -8,7 +8,8 @@
 namespace
 {
 
-    auto& GetRegAlloc() {
+    auto& GetRegAlloc()
+    {
         static comb::ModuleAllocator alloc{"TestRegistry", 4 * 1024 * 1024};
         return alloc.Get();
     }
@@ -20,13 +21,21 @@ namespace
     class PngImporter final : public nectar::AssetImporter<DummyAsset>
     {
     public:
-        wax::Span<const char* const> SourceExtensions() const override {
+        wax::Span<const char* const> SourceExtensions() const override
+        {
             static const char* const exts[] = {".png"};
             return {exts, 1};
         }
-        uint32_t Version() const override { return 1; }
-        wax::StringView TypeName() const override { return "Texture"; }
-        nectar::ImportResult Import(wax::ByteSpan, const nectar::HiveDocument&, nectar::ImportContext&) override {
+        uint32_t Version() const override
+        {
+            return 1;
+        }
+        wax::StringView TypeName() const override
+        {
+            return "Texture";
+        }
+        nectar::ImportResult Import(wax::ByteSpan, const nectar::HiveDocument&, nectar::ImportContext&) override
+        {
             return {};
         }
     };
@@ -34,13 +43,21 @@ namespace
     class JpgImporter final : public nectar::AssetImporter<DummyAsset>
     {
     public:
-        wax::Span<const char* const> SourceExtensions() const override {
+        wax::Span<const char* const> SourceExtensions() const override
+        {
             static const char* const exts[] = {".jpg", ".jpeg"};
             return {exts, 2};
         }
-        uint32_t Version() const override { return 2; }
-        wax::StringView TypeName() const override { return "Texture"; }
-        nectar::ImportResult Import(wax::ByteSpan, const nectar::HiveDocument&, nectar::ImportContext&) override {
+        uint32_t Version() const override
+        {
+            return 2;
+        }
+        wax::StringView TypeName() const override
+        {
+            return "Texture";
+        }
+        nectar::ImportResult Import(wax::ByteSpan, const nectar::HiveDocument&, nectar::ImportContext&) override
+        {
             return {};
         }
     };
@@ -48,13 +65,21 @@ namespace
     class MeshImporter final : public nectar::AssetImporter<DummyAsset>
     {
     public:
-        wax::Span<const char* const> SourceExtensions() const override {
+        wax::Span<const char* const> SourceExtensions() const override
+        {
             static const char* const exts[] = {".glb", ".gltf"};
             return {exts, 2};
         }
-        uint32_t Version() const override { return 1; }
-        wax::StringView TypeName() const override { return "Mesh"; }
-        nectar::ImportResult Import(wax::ByteSpan, const nectar::HiveDocument&, nectar::ImportContext&) override {
+        uint32_t Version() const override
+        {
+            return 1;
+        }
+        wax::StringView TypeName() const override
+        {
+            return "Mesh";
+        }
+        nectar::ImportResult Import(wax::ByteSpan, const nectar::HiveDocument&, nectar::ImportContext&) override
+        {
             return {};
         }
     };

@@ -84,7 +84,9 @@ namespace queen
             : m_world{&world}
             , m_allocator{&allocator}
             , m_storage{&storage}
-            , m_observer{observer} {}
+            , m_observer{observer}
+        {
+        }
 
         /**
          * Add a filter component requirement
@@ -95,7 +97,8 @@ namespace queen
          * @tparam T Component type to require
          * @return Reference to this builder for chaining
          */
-        template <typename T> ObserverBuilder& With() {
+        template <typename T> ObserverBuilder& With()
+        {
             m_observer->AddFilter(TypeIdOf<T>());
             return *this;
         }
@@ -110,7 +113,8 @@ namespace queen
          * @param func Callback function
          * @return ObserverId for the registered observer
          */
-        template <typename F> ObserverId Each(F&& func) {
+        template <typename F> ObserverId Each(F&& func)
+        {
             using FuncType = std::decay_t<F>;
 
             void* userData = m_allocator->Allocate(sizeof(FuncType), alignof(FuncType));
@@ -145,7 +149,8 @@ namespace queen
          * @param func Callback function
          * @return ObserverId for the registered observer
          */
-        template <typename F> ObserverId EachEntity(F&& func) {
+        template <typename F> ObserverId EachEntity(F&& func)
+        {
             using FuncType = std::decay_t<F>;
 
             void* userData = m_allocator->Allocate(sizeof(FuncType), alignof(FuncType));
@@ -177,7 +182,8 @@ namespace queen
          * @param func Callback function
          * @return ObserverId for the registered observer
          */
-        template <typename F> ObserverId EachWithWorld(F&& func) {
+        template <typename F> ObserverId EachWithWorld(F&& func)
+        {
             using FuncType = std::decay_t<F>;
 
             void* userData = m_allocator->Allocate(sizeof(FuncType), alignof(FuncType));
@@ -204,7 +210,10 @@ namespace queen
         /**
          * Get the observer ID (before callback is registered)
          */
-        [[nodiscard]] ObserverId Id() const noexcept { return m_observer->Id(); }
+        [[nodiscard]] ObserverId Id() const noexcept
+        {
+            return m_observer->Id();
+        }
 
     private:
         World* m_world;

@@ -64,12 +64,14 @@ namespace queen
             , m_data{nullptr}
             , m_ticks{nullptr}
             , m_size{0}
-            , m_capacity{0} {
+            , m_capacity{0}
+        {
             hive::Assert(meta.IsValid(), "Column requires valid ComponentMeta");
             Reserve(initialCapacity);
         }
 
-        ~Column() {
+        ~Column()
+        {
             Clear();
             if (m_data != nullptr)
             {
@@ -92,14 +94,16 @@ namespace queen
             , m_data{other.m_data}
             , m_ticks{other.m_ticks}
             , m_size{other.m_size}
-            , m_capacity{other.m_capacity} {
+            , m_capacity{other.m_capacity}
+        {
             other.m_data = nullptr;
             other.m_ticks = nullptr;
             other.m_size = 0;
             other.m_capacity = 0;
         }
 
-        Column& operator=(Column&& other) noexcept {
+        Column& operator=(Column&& other) noexcept
+        {
             if (this != &other)
             {
                 Clear();
@@ -127,7 +131,8 @@ namespace queen
             return *this;
         }
 
-        void PushDefault(Tick currentTick = Tick{0}) {
+        void PushDefault(Tick currentTick = Tick{0})
+        {
             EnsureCapacity(m_size + 1);
 
             void* dst = GetRaw(m_size);
@@ -143,7 +148,8 @@ namespace queen
             ++m_size;
         }
 
-        void PushCopy(const void* src, Tick currentTick = Tick{0}) {
+        void PushCopy(const void* src, Tick currentTick = Tick{0})
+        {
             hive::Assert(src != nullptr, "Cannot push null source");
             EnsureCapacity(m_size + 1);
 
@@ -160,7 +166,8 @@ namespace queen
             ++m_size;
         }
 
-        void PushMove(void* src, Tick currentTick = Tick{0}) {
+        void PushMove(void* src, Tick currentTick = Tick{0})
+        {
             hive::Assert(src != nullptr, "Cannot push null source");
             EnsureCapacity(m_size + 1);
 
@@ -177,7 +184,8 @@ namespace queen
             ++m_size;
         }
 
-        void Pop() {
+        void Pop()
+        {
             hive::Assert(m_size > 0, "Cannot pop from empty column");
 
             --m_size;
@@ -188,7 +196,8 @@ namespace queen
             }
         }
 
-        void SwapRemove(size_t index) {
+        void SwapRemove(size_t index)
+        {
             hive::Assert(index < m_size, "Index out of bounds");
 
             if (index != m_size - 1)
@@ -228,39 +237,46 @@ namespace queen
             --m_size;
         }
 
-        [[nodiscard]] void* GetRaw(size_t index) noexcept {
+        [[nodiscard]] void* GetRaw(size_t index) noexcept
+        {
             hive::Assert(index < m_capacity, "Index out of bounds");
             return static_cast<std::byte*>(m_data) + (index * m_meta.m_size);
         }
 
-        [[nodiscard]] const void* GetRaw(size_t index) const noexcept {
+        [[nodiscard]] const void* GetRaw(size_t index) const noexcept
+        {
             hive::Assert(index < m_capacity, "Index out of bounds");
             return static_cast<const std::byte*>(m_data) + (index * m_meta.m_size);
         }
 
-        template <typename T> [[nodiscard]] T* Get(size_t index) noexcept {
+        template <typename T> [[nodiscard]] T* Get(size_t index) noexcept
+        {
             hive::Assert(TypeIdOf<T>() == m_meta.m_typeId, "Type mismatch");
             hive::Assert(index < m_size, "Index out of bounds");
             return static_cast<T*>(GetRaw(index));
         }
 
-        template <typename T> [[nodiscard]] const T* Get(size_t index) const noexcept {
+        template <typename T> [[nodiscard]] const T* Get(size_t index) const noexcept
+        {
             hive::Assert(TypeIdOf<T>() == m_meta.m_typeId, "Type mismatch");
             hive::Assert(index < m_size, "Index out of bounds");
             return static_cast<const T*>(GetRaw(index));
         }
 
-        template <typename T> [[nodiscard]] T* Data() noexcept {
+        template <typename T> [[nodiscard]] T* Data() noexcept
+        {
             hive::Assert(TypeIdOf<T>() == m_meta.m_typeId, "Type mismatch");
             return static_cast<T*>(m_data);
         }
 
-        template <typename T> [[nodiscard]] const T* Data() const noexcept {
+        template <typename T> [[nodiscard]] const T* Data() const noexcept
+        {
             hive::Assert(TypeIdOf<T>() == m_meta.m_typeId, "Type mismatch");
             return static_cast<const T*>(m_data);
         }
 
-        void Clear() {
+        void Clear()
+        {
             if (m_meta.m_destruct != nullptr)
             {
                 for (size_t i = 0; i < m_size; ++i)
@@ -271,7 +287,8 @@ namespace queen
             m_size = 0;
         }
 
-        void Reserve(size_t newCapacity) {
+        void Reserve(size_t newCapacity)
+        {
             if (newCapacity <= m_capacity)
             {
                 return;
@@ -321,21 +338,38 @@ namespace queen
             m_capacity = newCapacity;
         }
 
-        [[nodiscard]] size_t Size() const noexcept { return m_size; }
-        [[nodiscard]] size_t Capacity() const noexcept { return m_capacity; }
-        [[nodiscard]] bool IsEmpty() const noexcept { return m_size == 0; }
-        [[nodiscard]] TypeId GetTypeId() const noexcept { return m_meta.m_typeId; }
-        [[nodiscard]] const ComponentMeta& GetMeta() const noexcept { return m_meta; }
+        [[nodiscard]] size_t Size() const noexcept
+        {
+            return m_size;
+        }
+        [[nodiscard]] size_t Capacity() const noexcept
+        {
+            return m_capacity;
+        }
+        [[nodiscard]] bool IsEmpty() const noexcept
+        {
+            return m_size == 0;
+        }
+        [[nodiscard]] TypeId GetTypeId() const noexcept
+        {
+            return m_meta.m_typeId;
+        }
+        [[nodiscard]] const ComponentMeta& GetMeta() const noexcept
+        {
+            return m_meta;
+        }
 
         /**
          * Get ticks for a component at the given index
          */
-        [[nodiscard]] ComponentTicks& GetTicks(size_t index) noexcept {
+        [[nodiscard]] ComponentTicks& GetTicks(size_t index) noexcept
+        {
             hive::Assert(index < m_size, "Index out of bounds");
             return m_ticks[index];
         }
 
-        [[nodiscard]] const ComponentTicks& GetTicks(size_t index) const noexcept {
+        [[nodiscard]] const ComponentTicks& GetTicks(size_t index) const noexcept
+        {
             hive::Assert(index < m_size, "Index out of bounds");
             return m_ticks[index];
         }
@@ -343,19 +377,27 @@ namespace queen
         /**
          * Get raw ticks array
          */
-        [[nodiscard]] ComponentTicks* TicksData() noexcept { return m_ticks; }
-        [[nodiscard]] const ComponentTicks* TicksData() const noexcept { return m_ticks; }
+        [[nodiscard]] ComponentTicks* TicksData() noexcept
+        {
+            return m_ticks;
+        }
+        [[nodiscard]] const ComponentTicks* TicksData() const noexcept
+        {
+            return m_ticks;
+        }
 
         /**
          * Mark component as changed at the given tick
          */
-        void MarkChanged(size_t index, Tick currentTick) noexcept {
+        void MarkChanged(size_t index, Tick currentTick) noexcept
+        {
             hive::Assert(index < m_size, "Index out of bounds");
             m_ticks[index].MarkChanged(currentTick);
         }
 
     private:
-        void EnsureCapacity(size_t required) {
+        void EnsureCapacity(size_t required)
+        {
             if (required > m_capacity)
             {
                 size_t newCapacity = m_capacity == 0 ? 8 : m_capacity * 2;

@@ -10,7 +10,8 @@ namespace waggle
 {
     App::App(const AppConfig& config)
         : m_world{config.m_world}
-        , m_config{config} {
+        , m_config{config}
+    {
         m_world.InsertResource(Time{hive::Clock::SecondsF(config.m_fixedDtNs), 0.f, config.m_fixedDtNs, 0, 0});
 
         m_world.InsertResource(FrameInfo{0.f, 0.f, 0, 0, 0, 0.f});
@@ -18,7 +19,8 @@ namespace waggle
 
     App::~App() = default;
 
-    int32_t App::Tick() {
+    int32_t App::Tick()
+    {
         HIVE_PROFILE_SCOPE_N("Waggle::Tick");
 
         // First tick: just reset the clock so the next Tick() has a valid delta
@@ -54,7 +56,8 @@ namespace waggle
         return steps;
     }
 
-    void App::UpdateTimeResource() {
+    void App::UpdateTimeResource()
+    {
         Time* time = m_world.Resource<Time>();
         // dt is constant (set at construction)
         // elapsed/tick reflect the state AFTER this step completes
@@ -63,7 +66,8 @@ namespace waggle
         time->m_tick = m_simTick + 1;
     }
 
-    void App::UpdateFrameInfoResource() {
+    void App::UpdateFrameInfoResource()
+    {
         FrameInfo* fi = m_world.Resource<FrameInfo>();
         fi->m_realDtNs = m_frameClock.m_deltaNs;
         fi->m_realDt = hive::Clock::SecondsF(m_frameClock.m_deltaNs);

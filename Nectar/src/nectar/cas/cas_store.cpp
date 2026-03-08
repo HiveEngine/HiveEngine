@@ -9,9 +9,12 @@ namespace nectar
 {
     CasStore::CasStore(comb::DefaultAllocator& alloc, wax::StringView rootDir)
         : m_alloc{&alloc}
-        , m_rootDir{alloc, rootDir} {}
+        , m_rootDir{alloc, rootDir}
+    {
+    }
 
-    ContentHash CasStore::Store(wax::ByteSpan data) {
+    ContentHash CasStore::Store(wax::ByteSpan data)
+    {
         HIVE_PROFILE_SCOPE_N("CasStore::Store");
         ContentHash hash = ContentHash::FromData(data);
 
@@ -36,7 +39,8 @@ namespace nectar
         return hash;
     }
 
-    wax::ByteBuffer CasStore::Load(ContentHash hash) {
+    wax::ByteBuffer CasStore::Load(ContentHash hash)
+    {
         HIVE_PROFILE_SCOPE_N("CasStore::Load");
         wax::ByteBuffer buffer{*m_alloc};
 
@@ -61,13 +65,15 @@ namespace nectar
         return buffer;
     }
 
-    bool CasStore::Contains(ContentHash hash) const {
+    bool CasStore::Contains(ContentHash hash) const
+    {
         wax::String path{*m_alloc};
         BuildBlobPath(hash, path);
         return std::filesystem::exists(path.CStr());
     }
 
-    bool CasStore::Remove(ContentHash hash) {
+    bool CasStore::Remove(ContentHash hash)
+    {
         wax::String path{*m_alloc};
         BuildBlobPath(hash, path);
 
@@ -75,11 +81,13 @@ namespace nectar
         return std::filesystem::remove(path.CStr(), ec);
     }
 
-    wax::StringView CasStore::RootDir() const noexcept {
+    wax::StringView CasStore::RootDir() const noexcept
+    {
         return m_rootDir.View();
     }
 
-    void CasStore::BuildBlobPath(ContentHash hash, wax::String& out) const {
+    void CasStore::BuildBlobPath(ContentHash hash, wax::String& out) const
+    {
         auto hex = hash.ToString();
         // root/ab/cd/abcdef0123456789...
         out.Append(m_rootDir.View().Data(), m_rootDir.View().Size());
@@ -91,7 +99,8 @@ namespace nectar
         out.Append(hex.CStr(), hex.Size()); // full hash
     }
 
-    void CasStore::EnsureDirectoryExists(wax::StringView dirPath) const {
+    void CasStore::EnsureDirectoryExists(wax::StringView dirPath) const
+    {
         std::error_code ec;
         std::filesystem::create_directories(std::string{dirPath.Data(), dirPath.Size()}, ec);
     }

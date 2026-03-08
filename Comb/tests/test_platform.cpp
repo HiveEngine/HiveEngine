@@ -216,13 +216,15 @@ namespace
     class PlatformFixture : public larvae::TestFixture
     {
     public:
-        void SetUp() override {
+        void SetUp() override
+        {
             page_size = comb::GetPageSize();
             ptr1 = comb::AllocatePages(page_size);
             ptr2 = comb::AllocatePages(page_size * 2);
         }
 
-        void TearDown() override {
+        void TearDown() override
+        {
             if (ptr1)
                 comb::FreePages(ptr1, page_size);
             if (ptr2)

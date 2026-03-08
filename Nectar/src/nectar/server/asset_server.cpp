@@ -10,7 +10,9 @@ namespace nectar
         , m_storages{alloc, 16}
         , m_pathCache{alloc, 64}
         , m_basePath{alloc}
-        , m_pendingLoads{alloc, 16} {}
+        , m_pendingLoads{alloc, 16}
+    {
+    }
 
     AssetServer::AssetServer(comb::DefaultAllocator& alloc, VirtualFilesystem& vfs, IOScheduler& io)
         : m_allocator{&alloc}
@@ -18,9 +20,12 @@ namespace nectar
         , m_pathCache{alloc, 64}
         , m_basePath{alloc}
         , m_io{&io}
-        , m_pendingLoads{alloc, 64} {}
+        , m_pendingLoads{alloc, 64}
+    {
+    }
 
-    AssetServer::~AssetServer() {
+    AssetServer::~AssetServer()
+    {
         for (auto it = m_storages.Begin(); it != m_storages.End(); ++it)
         {
             IAssetStorage* storage = it.Value();
@@ -31,7 +36,8 @@ namespace nectar
         }
     }
 
-    void AssetServer::Update() {
+    void AssetServer::Update()
+    {
         HIVE_PROFILE_SCOPE_N("AssetServer::Update");
 
         if (m_io != nullptr)
@@ -93,7 +99,8 @@ namespace nectar
         }
     }
 
-    size_t AssetServer::GetTotalAssetCount() const {
+    size_t AssetServer::GetTotalAssetCount() const
+    {
         size_t total = 0;
         for (auto it = m_storages.Begin(); it != m_storages.End(); ++it)
         {
@@ -102,8 +109,8 @@ namespace nectar
         return total;
     }
 
-    void AssetServer::SubmitAsyncLoad(uint32_t index, uint32_t generation, nectar::TypeId typeId,
-                                      wax::StringView path) {
+    void AssetServer::SubmitAsyncLoad(uint32_t index, uint32_t generation, nectar::TypeId typeId, wax::StringView path)
+    {
         HIVE_PROFILE_SCOPE_N("AssetServer::SubmitAsyncLoad");
 
         if (m_io == nullptr)
@@ -115,7 +122,8 @@ namespace nectar
         m_pendingLoads.Insert(requestId, PendingLoad{index, generation, typeId});
     }
 
-    wax::ByteBuffer AssetServer::ReadFile(wax::StringView path) {
+    wax::ByteBuffer AssetServer::ReadFile(wax::StringView path)
+    {
         wax::ByteBuffer buffer{*m_allocator};
 
         wax::String fullPath{*m_allocator};

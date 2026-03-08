@@ -4,23 +4,31 @@ namespace hive
     template <typename T> class Singleton
     {
     public:
-        Singleton() {
+        Singleton()
+        {
             if (g_mInstance == nullptr)
             {
                 g_mInstance = static_cast<T*>(this);
             }
         }
 
-        ~Singleton() {
+        ~Singleton()
+        {
             if (g_mInstance == this)
             {
                 g_mInstance = nullptr;
             }
         }
 
-        static T& GetInstance() { return *g_mInstance; }
+        static T& GetInstance()
+        {
+            return *g_mInstance;
+        }
 
-        [[nodiscard]] static inline bool IsInitialized() { return g_mInstance != nullptr; }
+        [[nodiscard]] static inline bool IsInitialized()
+        {
+            return g_mInstance != nullptr;
+        }
 
     protected:
         static inline T* g_mInstance = nullptr;

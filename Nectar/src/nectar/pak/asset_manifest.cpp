@@ -6,9 +6,12 @@ namespace nectar
 {
     AssetManifest::AssetManifest(comb::DefaultAllocator& alloc)
         : m_alloc{&alloc}
-        , m_entries{alloc, 64} {}
+        , m_entries{alloc, 64}
+    {
+    }
 
-    void AssetManifest::Add(wax::StringView vfsPath, ContentHash hash) {
+    void AssetManifest::Add(wax::StringView vfsPath, ContentHash hash)
+    {
         wax::String key{*m_alloc};
         key.Append(vfsPath.Data(), vfsPath.Size());
 
@@ -19,17 +22,20 @@ namespace nectar
             m_entries.Insert(static_cast<wax::String&&>(key), hash);
     }
 
-    const ContentHash* AssetManifest::Find(wax::StringView vfsPath) const {
+    const ContentHash* AssetManifest::Find(wax::StringView vfsPath) const
+    {
         wax::String key{*m_alloc};
         key.Append(vfsPath.Data(), vfsPath.Size());
         return m_entries.Find(key);
     }
 
-    size_t AssetManifest::Count() const noexcept {
+    size_t AssetManifest::Count() const noexcept
+    {
         return m_entries.Count();
     }
 
-    wax::ByteBuffer AssetManifest::Serialize(comb::DefaultAllocator& alloc) const {
+    wax::ByteBuffer AssetManifest::Serialize(comb::DefaultAllocator& alloc) const
+    {
         // Format: [count u32] [entry...]
         // Entry: [path_len u32] [path bytes] [hash_high u64] [hash_low u64]
         wax::ByteBuffer buf{alloc};
@@ -64,7 +70,8 @@ namespace nectar
         return buf;
     }
 
-    AssetManifest AssetManifest::Deserialize(wax::ByteSpan data, comb::DefaultAllocator& alloc) {
+    AssetManifest AssetManifest::Deserialize(wax::ByteSpan data, comb::DefaultAllocator& alloc)
+    {
         AssetManifest manifest{alloc};
 
         if (data.Size() < sizeof(uint32_t))

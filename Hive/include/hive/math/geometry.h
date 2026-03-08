@@ -24,7 +24,8 @@ namespace hive::math
         Plane m_planes[6];
     };
 
-    [[nodiscard]] inline Frustum ExtractFrustum(const Mat4& vp) {
+    [[nodiscard]] inline Frustum ExtractFrustum(const Mat4& vp)
+    {
         Frustum frustum{};
         frustum.m_planes[0] = {vp.m_m[0][3] + vp.m_m[0][0], vp.m_m[1][3] + vp.m_m[1][0], vp.m_m[2][3] + vp.m_m[2][0],
                                vp.m_m[3][3] + vp.m_m[3][0]};
@@ -55,7 +56,8 @@ namespace hive::math
         return frustum;
     }
 
-    [[nodiscard]] inline bool IsVisible(const Frustum& frustum, const AABB& box) {
+    [[nodiscard]] inline bool IsVisible(const Frustum& frustum, const AABB& box)
+    {
         for (const Plane& plane : frustum.m_planes)
         {
             const float px = plane.m_a >= 0.f ? box.m_max.m_x : box.m_min.m_x;
@@ -71,7 +73,8 @@ namespace hive::math
         return true;
     }
 
-    [[nodiscard]] inline AABB TransformAABB(const Mat4& m, const AABB& box) {
+    [[nodiscard]] inline AABB TransformAABB(const Mat4& m, const AABB& box)
+    {
         Float3 newMin{m.m_m[3][0], m.m_m[3][1], m.m_m[3][2]};
         Float3 newMax = newMin;
 

@@ -15,7 +15,8 @@
 namespace
 {
 
-    auto& GetAlloc() {
+    auto& GetAlloc()
+    {
         static comb::ModuleAllocator alloc{"TestProjectManager", 64 * 1024 * 1024};
         return alloc.Get();
     }
@@ -23,19 +24,22 @@ namespace
     struct TempDir
     {
         std::filesystem::path path;
-        explicit TempDir(const char* name) {
+        explicit TempDir(const char* name)
+        {
             path = std::filesystem::temp_directory_path() / name;
             std::error_code ec;
             std::filesystem::remove_all(path, ec);
             std::filesystem::create_directories(path);
         }
-        ~TempDir() {
+        ~TempDir()
+        {
             std::error_code ec;
             std::filesystem::remove_all(path, ec);
         }
     };
 
-    void WriteProjectHive(const std::filesystem::path& dir, const char* name = "TestProject") {
+    void WriteProjectHive(const std::filesystem::path& dir, const char* name = "TestProject")
+    {
         auto& alloc = GetAlloc();
         nectar::ProjectFile pf{alloc};
         pf.Create(nectar::ProjectDesc{.m_name = name, .m_version = "1.0.0", .m_enginePath = "", .m_backend = "vulkan"});
@@ -46,7 +50,8 @@ namespace
         std::filesystem::create_directories(dir / "assets");
     }
 
-    std::string ProjectHivePath(const TempDir& dir) {
+    std::string ProjectHivePath(const TempDir& dir)
+    {
         return (dir.path / "project.hive").generic_string();
     }
 

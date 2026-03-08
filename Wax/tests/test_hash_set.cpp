@@ -156,31 +156,47 @@ namespace
         int value;
 
         NonTrivialKey(int v = 0)
-            : value{v} {}
-        ~NonTrivialKey() { ++destructor_count; }
+            : value{v}
+        {
+        }
+        ~NonTrivialKey()
+        {
+            ++destructor_count;
+        }
         NonTrivialKey(const NonTrivialKey& other)
-            : value{other.value} {}
+            : value{other.value}
+        {
+        }
         NonTrivialKey(NonTrivialKey&& other) noexcept
-            : value{other.value} {
+            : value{other.value}
+        {
             other.value = 0;
         }
-        NonTrivialKey& operator=(const NonTrivialKey& other) {
+        NonTrivialKey& operator=(const NonTrivialKey& other)
+        {
             value = other.value;
             return *this;
         }
-        NonTrivialKey& operator=(NonTrivialKey&& other) noexcept {
+        NonTrivialKey& operator=(NonTrivialKey&& other) noexcept
+        {
             value = other.value;
             other.value = 0;
             return *this;
         }
-        bool operator==(const NonTrivialKey& other) const { return value == other.value; }
+        bool operator==(const NonTrivialKey& other) const
+        {
+            return value == other.value;
+        }
     };
 
     int NonTrivialKey::destructor_count = 0;
 
     struct NonTrivialKeyHash
     {
-        size_t operator()(const NonTrivialKey& k) const { return std::hash<int>{}(k.value); }
+        size_t operator()(const NonTrivialKey& k) const
+        {
+            return std::hash<int>{}(k.value);
+        }
     };
 
     auto test11 = larvae::RegisterTest("WaxHashSet", "DestructorsCalled", []() {

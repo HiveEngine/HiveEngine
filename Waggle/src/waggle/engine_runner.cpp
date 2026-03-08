@@ -38,7 +38,8 @@ namespace
         EngineSession(const waggle::EngineConfig& config, const waggle::EngineCallbacks& callbacks)
             : m_config{config}
             , m_callbacks{callbacks}
-            , m_app{config.m_app} {
+            , m_app{config.m_app}
+        {
             m_context.m_app = &m_app;
             m_context.m_world = &m_app.GetWorld();
 
@@ -49,12 +50,14 @@ namespace
 #endif
         }
 
-        ~EngineSession() {
+        ~EngineSession()
+        {
             InvokeShutdownCallback();
             Cleanup();
         }
 
-        int Run() {
+        int Run()
+        {
             if (!InitializeModules())
             {
                 return 1;
@@ -75,7 +78,8 @@ namespace
         }
 
     private:
-        [[nodiscard]] bool InitializeModules() {
+        [[nodiscard]] bool InitializeModules()
+        {
             if (m_callbacks.m_onRegisterModules != nullptr)
             {
                 m_callbacks.m_onRegisterModules();
@@ -88,7 +92,8 @@ namespace
             return true;
         }
 
-        [[nodiscard]] bool InitializeRuntime() {
+        [[nodiscard]] bool InitializeRuntime()
+        {
             if (!IsGraphical())
             {
                 return true;
@@ -115,7 +120,8 @@ namespace
         }
 
 #if HIVE_FEATURE_GLFW
-        [[nodiscard]] bool InitializeWindow() {
+        [[nodiscard]] bool InitializeWindow()
+        {
             if (!terra::InitSystem())
             {
                 hive::LogError(LOG_ENGINE, "Failed to initialize windowing backend");
@@ -137,7 +143,8 @@ namespace
 #endif
 
 #if (HIVE_FEATURE_VULKAN || HIVE_FEATURE_D3D12) && HIVE_FEATURE_GLFW
-        [[nodiscard]] bool InitializeRenderer() {
+        [[nodiscard]] bool InitializeRenderer()
+        {
             if (!swarm::InitSystem())
             {
                 hive::LogError(LOG_ENGINE, "Failed to initialize Swarm");
@@ -157,14 +164,16 @@ namespace
             switch (native.type_)
             {
                 case terra::NativeWindowType::X11:
-                    renderOk = swarm::InitRenderContextX11(m_renderContext, native.x11Display_, native.x11Window_,
-                                                           static_cast<uint32_t>(terra::GetWindowWidth(&m_windowContext)),
-                                                           static_cast<uint32_t>(terra::GetWindowHeight(&m_windowContext)));
+                    renderOk =
+                        swarm::InitRenderContextX11(m_renderContext, native.x11Display_, native.x11Window_,
+                                                    static_cast<uint32_t>(terra::GetWindowWidth(&m_windowContext)),
+                                                    static_cast<uint32_t>(terra::GetWindowHeight(&m_windowContext)));
                     break;
                 case terra::NativeWindowType::WAYLAND:
-                    renderOk = swarm::InitRenderContextWayland(m_renderContext, native.wlDisplay_, native.wlSurface_,
-                                                               static_cast<uint32_t>(terra::GetWindowWidth(&m_windowContext)),
-                                                               static_cast<uint32_t>(terra::GetWindowHeight(&m_windowContext)));
+                    renderOk = swarm::InitRenderContextWayland(
+                        m_renderContext, native.wlDisplay_, native.wlSurface_,
+                        static_cast<uint32_t>(terra::GetWindowWidth(&m_windowContext)),
+                        static_cast<uint32_t>(terra::GetWindowHeight(&m_windowContext)));
                     break;
             }
 #endif
@@ -182,7 +191,8 @@ namespace
         }
 #endif
 
-        [[nodiscard]] bool RunSetupCallback() {
+        [[nodiscard]] bool RunSetupCallback()
+        {
             if (m_callbacks.m_onSetup != nullptr && !m_callbacks.m_onSetup(m_context, m_callbacks.m_userData))
             {
                 return false;
@@ -192,7 +202,8 @@ namespace
             return true;
         }
 
-        void RunMainLoop() {
+        void RunMainLoop()
+        {
 #if HIVE_FEATURE_GLFW
             if (IsGraphical())
             {
@@ -205,7 +216,8 @@ namespace
         }
 
 #if HIVE_FEATURE_GLFW
-        void RunGraphicalLoop() {
+        void RunGraphicalLoop()
+        {
             while (!terra::ShouldWindowClose(&m_windowContext) && m_app.IsRunning())
             {
                 HIVE_PROFILE_SCOPE_N("Frame");
@@ -239,7 +251,8 @@ namespace
         }
 #endif
 
-        void RunHeadlessLoop() {
+        void RunHeadlessLoop()
+        {
             while (m_app.IsRunning())
             {
                 HIVE_PROFILE_SCOPE_N("Frame");
@@ -256,7 +269,8 @@ namespace
             }
         }
 
-        void InvokeShutdownCallback() {
+        void InvokeShutdownCallback()
+        {
             if (!m_setupCompleted || m_shutdownCallbackInvoked || m_callbacks.m_onShutdown == nullptr)
             {
                 return;
@@ -266,7 +280,8 @@ namespace
             m_shutdownCallbackInvoked = true;
         }
 
-        void Cleanup() {
+        void Cleanup()
+        {
 #if HIVE_FEATURE_VULKAN || HIVE_FEATURE_D3D12
             if (m_rendererInitialized)
             {
@@ -304,7 +319,10 @@ namespace
             }
         }
 
-        [[nodiscard]] bool IsGraphical() const { return m_config.m_mode != waggle::EngineMode::HEADLESS; }
+        [[nodiscard]] bool IsGraphical() const
+        {
+            return m_config.m_mode != waggle::EngineMode::HEADLESS;
+        }
 
         const waggle::EngineConfig& m_config;
         const waggle::EngineCallbacks& m_callbacks;
@@ -332,7 +350,8 @@ namespace
 namespace waggle
 {
 
-    int Run(const EngineConfig& config, const EngineCallbacks& callbacks) {
+    int Run(const EngineConfig& config, const EngineCallbacks& callbacks)
+    {
         EngineSession session{config, callbacks};
         return session.Run();
     }

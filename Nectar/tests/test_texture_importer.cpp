@@ -15,12 +15,14 @@
 namespace
 {
 
-    auto& GetTexAlloc() {
+    auto& GetTexAlloc()
+    {
         static comb::ModuleAllocator alloc{"TestTexture", 8 * 1024 * 1024};
         return alloc.Get();
     }
 
-    nectar::AssetId MakeId(uint64_t v) {
+    nectar::AssetId MakeId(uint64_t v)
+    {
         uint8_t bytes[16] = {};
         std::memcpy(bytes, &v, sizeof(v));
         return nectar::AssetId::FromBytes(bytes);
@@ -33,9 +35,12 @@ namespace
         wax::Vector<uint8_t> data;
 
         explicit BmpBuilder(comb::DefaultAllocator& alloc)
-            : data{alloc} {}
+            : data{alloc}
+        {
+        }
 
-        void Build(uint32_t w, uint32_t h, const uint8_t* rgba_pixels) {
+        void Build(uint32_t w, uint32_t h, const uint8_t* rgba_pixels)
+        {
             // BMP header (14 bytes) + DIB header (40 bytes BITMAPINFOHEADER)
             uint32_t pixel_data_size = w * h * 4;
             uint32_t file_size = 14 + 40 + pixel_data_size;
@@ -73,19 +78,28 @@ namespace
             }
         }
 
-        void PushU8(uint8_t v) { data.PushBack(v); }
-        void PushU16(uint16_t v) {
+        void PushU8(uint8_t v)
+        {
+            data.PushBack(v);
+        }
+        void PushU16(uint16_t v)
+        {
             PushU8(v & 0xFF);
             PushU8((v >> 8) & 0xFF);
         }
-        void PushU32(uint32_t v) {
+        void PushU32(uint32_t v)
+        {
             PushU16(v & 0xFFFF);
             PushU16((v >> 16) & 0xFFFF);
         }
-        void PushI32(int32_t v) { PushU32(static_cast<uint32_t>(v)); }
+        void PushI32(int32_t v)
+        {
+            PushU32(static_cast<uint32_t>(v));
+        }
     };
 
-    wax::ByteSpan MakeBmp(BmpBuilder& b, uint32_t w, uint32_t h, const uint8_t* rgba) {
+    wax::ByteSpan MakeBmp(BmpBuilder& b, uint32_t w, uint32_t h, const uint8_t* rgba)
+    {
         b.Build(w, h, rgba);
         return wax::ByteSpan{b.data.Data(), b.data.Size()};
     }

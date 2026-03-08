@@ -38,12 +38,14 @@ namespace nectar
 
         // -- Registration --
 
-        template <typename T> void RegisterLoader(AssetLoader<T>* loader) {
+        template <typename T> void RegisterLoader(AssetLoader<T>* loader)
+        {
             auto& storage = GetOrCreateStorage<T>();
             storage.SetLoader(loader);
         }
 
-        template <typename T> void RegisterPlaceholder(T* placeholder) {
+        template <typename T> void RegisterPlaceholder(T* placeholder)
+        {
             auto& storage = GetOrCreateStorage<T>();
             storage.SetPlaceholder(placeholder);
         }
@@ -59,7 +61,8 @@ namespace nectar
         // -- Access --
 
         /// Returns the loaded asset, or placeholder if not ready. nullptr if nothing available.
-        template <typename T> [[nodiscard]] T* Get(const StrongHandle<T>& handle) const {
+        template <typename T> [[nodiscard]] T* Get(const StrongHandle<T>& handle) const
+        {
             if (handle.IsNull())
                 return GetPlaceholder<T>();
             auto* storage = FindStorage<T>();
@@ -70,7 +73,8 @@ namespace nectar
 
         // -- Status --
 
-        template <typename T> [[nodiscard]] AssetStatus GetStatus(const StrongHandle<T>& handle) const {
+        template <typename T> [[nodiscard]] AssetStatus GetStatus(const StrongHandle<T>& handle) const
+        {
             if (handle.IsNull())
                 return AssetStatus::NOT_LOADED;
             auto* storage = FindStorage<T>();
@@ -79,11 +83,13 @@ namespace nectar
             return storage->GetStatus(handle.Raw().m_index);
         }
 
-        template <typename T> [[nodiscard]] bool IsReady(const StrongHandle<T>& handle) const {
+        template <typename T> [[nodiscard]] bool IsReady(const StrongHandle<T>& handle) const
+        {
             return GetStatus(handle) == AssetStatus::READY;
         }
 
-        template <typename T> const AssetErrorInfo* GetError(const StrongHandle<T>& handle) const {
+        template <typename T> const AssetErrorInfo* GetError(const StrongHandle<T>& handle) const
+        {
             if (handle.IsNull())
                 return nullptr;
             auto* storage = FindStorage<T>();
@@ -98,12 +104,16 @@ namespace nectar
         void Update();
 
         /// Explicitly release a strong handle (sets it to null).
-        template <typename T> void Release(StrongHandle<T>& handle) { handle = StrongHandle<T>{}; }
+        template <typename T> void Release(StrongHandle<T>& handle)
+        {
+            handle = StrongHandle<T>{};
+        }
 
         // -- Weak handle support --
 
         /// Promote a weak handle to strong. Returns null if the asset was unloaded.
-        template <typename T> StrongHandle<T> Lock(const WeakHandle<T>& weak) {
+        template <typename T> StrongHandle<T> Lock(const WeakHandle<T>& weak)
+        {
             if (weak.IsNull())
                 return StrongHandle<T>{};
             auto* storage = FindStorage<T>();
@@ -119,7 +129,8 @@ namespace nectar
 
         // -- Ref counting (called by StrongHandle RAII) --
 
-        template <typename T> void IncrementRef(wax::Handle<T> handle) {
+        template <typename T> void IncrementRef(wax::Handle<T> handle)
+        {
             auto* storage = FindStorage<T>();
             if (storage && storage->IsHandleValid(handle.m_index, handle.m_generation))
             {
@@ -127,7 +138,8 @@ namespace nectar
             }
         }
 
-        template <typename T> void DecrementRef(wax::Handle<T> handle) {
+        template <typename T> void DecrementRef(wax::Handle<T> handle)
+        {
             auto* storage = FindStorage<T>();
             if (storage && storage->IsHandleValid(handle.m_index, handle.m_generation))
             {
@@ -142,7 +154,8 @@ namespace nectar
         // -- Events --
 
         /// Poll one event for type T. Returns true if an event was available.
-        template <typename T> bool PollEvents(AssetEvent<T>& out) {
+        template <typename T> bool PollEvents(AssetEvent<T>& out)
+        {
             auto* storage = FindStorage<T>();
             if (!storage)
                 return false;
@@ -151,10 +164,17 @@ namespace nectar
 
         // -- GC configuration --
 
-        void SetGcGraceFrames(uint32_t frames) { m_gcGraceFrames = frames; }
-        [[nodiscard]] uint32_t GetGcGraceFrames() const { return m_gcGraceFrames; }
+        void SetGcGraceFrames(uint32_t frames)
+        {
+            m_gcGraceFrames = frames;
+        }
+        [[nodiscard]] uint32_t GetGcGraceFrames() const
+        {
+            return m_gcGraceFrames;
+        }
 
-        template <typename T> void SetPersistent(const StrongHandle<T>& handle, bool persistent) {
+        template <typename T> void SetPersistent(const StrongHandle<T>& handle, bool persistent)
+        {
             if (handle.IsNull())
                 return;
             auto* storage = FindStorage<T>();
@@ -164,20 +184,23 @@ namespace nectar
 
         // -- Budget --
 
-        template <typename T> void SetBudget(size_t bytes) {
+        template <typename T> void SetBudget(size_t bytes)
+        {
             auto* storage = FindStorage<T>();
             if (storage)
                 storage->SetBudget(bytes);
         }
 
-        template <typename T> [[nodiscard]] size_t GetBytesUsed() const {
+        template <typename T> [[nodiscard]] size_t GetBytesUsed() const
+        {
             auto* storage = FindStorage<T>();
             return storage ? storage->BytesUsed() : 0;
         }
 
         // -- Hot reload --
 
-        template <typename T> bool Reload(wax::Handle<T> handle, wax::ByteSpan newData) {
+        template <typename T> bool Reload(wax::Handle<T> handle, wax::ByteSpan newData)
+        {
             HIVE_PROFILE_SCOPE_N("AssetServer::Reload");
             auto* storage = FindStorage<T>();
             if (!storage)
@@ -190,7 +213,8 @@ namespace nectar
 
         template <typename T> AssetStorageFor<T>* FindStorage() const;
 
-        template <typename T> [[nodiscard]] T* GetPlaceholder() const {
+        template <typename T> [[nodiscard]] T* GetPlaceholder() const
+        {
             auto* storage = FindStorage<T>();
             return storage ? storage->GetPlaceholder() : nullptr;
         }
@@ -207,14 +231,16 @@ namespace nectar
             nectar::TypeId m_type{0};
             wax::String m_path{};
 
-            bool operator==(const PathKey& other) const noexcept {
+            bool operator==(const PathKey& other) const noexcept
+            {
                 return m_type == other.m_type && m_path.View().Equals(other.m_path.View());
             }
         };
 
         struct PathKeyHash
         {
-            size_t operator()(const PathKey& key) const noexcept {
+            size_t operator()(const PathKey& key) const noexcept
+            {
                 // FNV-1a combine
                 size_t h = static_cast<size_t>(key.m_type);
                 auto view = key.m_path.View();
@@ -252,7 +278,8 @@ namespace nectar
 
     // -- Template implementations that need full AssetServer definition --
 
-    template <typename T> AssetStorageFor<T>& AssetServer::GetOrCreateStorage() {
+    template <typename T> AssetStorageFor<T>& AssetServer::GetOrCreateStorage()
+    {
         nectar::TypeId tid = nectar::TypeIdOf<T>();
         auto* existing = m_storages.Find(tid);
         if (existing)
@@ -265,7 +292,8 @@ namespace nectar
         return *storage;
     }
 
-    template <typename T> AssetStorageFor<T>* AssetServer::FindStorage() const {
+    template <typename T> AssetStorageFor<T>* AssetServer::FindStorage() const
+    {
         nectar::TypeId tid = nectar::TypeIdOf<T>();
         auto* found = m_storages.Find(tid);
         if (!found)
@@ -273,7 +301,8 @@ namespace nectar
         return static_cast<AssetStorageFor<T>*>(*found);
     }
 
-    template <typename T> StrongHandle<T> AssetServer::Load(wax::StringView path) {
+    template <typename T> StrongHandle<T> AssetServer::Load(wax::StringView path)
+    {
         HIVE_PROFILE_SCOPE_N("AssetServer::Load");
         nectar::TypeId tid = nectar::TypeIdOf<T>();
         auto& storage = GetOrCreateStorage<T>();
@@ -349,7 +378,8 @@ namespace nectar
         return StrongHandle<T>{handle, this};
     }
 
-    template <typename T> StrongHandle<T> AssetServer::LoadFromMemory(wax::StringView name, wax::ByteSpan data) {
+    template <typename T> StrongHandle<T> AssetServer::LoadFromMemory(wax::StringView name, wax::ByteSpan data)
+    {
         HIVE_PROFILE_SCOPE_N("AssetServer::LoadFromMemory");
         nectar::TypeId tid = nectar::TypeIdOf<T>();
         auto& storage = GetOrCreateStorage<T>();

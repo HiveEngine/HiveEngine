@@ -14,7 +14,8 @@ namespace hive
     // Thread-local to avoid allocations
     thread_local char g_sAssertMessageBuffer[2048];
 
-    bool HandleAssertionFailure(const char* file, std::uint_least32_t line, const char* function, const char* message) {
+    bool HandleAssertionFailure(const char* file, std::uint_least32_t line, const char* function, const char* message)
+    {
         const char* filename = file;
         const char* lastSlash = std::strrchr(file, '/');
         const char* lastBackslash = std::strrchr(file, '\\');

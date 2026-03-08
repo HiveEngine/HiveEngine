@@ -18,9 +18,18 @@ namespace forge
         void Clear();
 
         [[nodiscard]] bool IsSelected(queen::Entity entity) const noexcept;
-        [[nodiscard]] queen::Entity Primary() const noexcept { return m_primary; }
-        [[nodiscard]] const std::vector<queen::Entity>& All() const noexcept { return m_selected; }
-        [[nodiscard]] bool IsEmpty() const noexcept { return m_selected.empty(); }
+        [[nodiscard]] queen::Entity Primary() const noexcept
+        {
+            return m_primary;
+        }
+        [[nodiscard]] const std::vector<queen::Entity>& All() const noexcept
+        {
+            return m_selected;
+        }
+        [[nodiscard]] bool IsEmpty() const noexcept
+        {
+            return m_selected.empty();
+        }
 
     private:
         queen::Entity m_primary{};

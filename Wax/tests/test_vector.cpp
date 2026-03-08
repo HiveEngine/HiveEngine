@@ -615,24 +615,32 @@ namespace
         int value;
 
         Tracked(int v = 0)
-            : value{v} {
+            : value{v}
+        {
             ++alive_count;
         }
-        ~Tracked() { --alive_count; }
+        ~Tracked()
+        {
+            --alive_count;
+        }
         Tracked(const Tracked& o)
-            : value{o.value} {
+            : value{o.value}
+        {
             ++alive_count;
         }
         Tracked(Tracked&& o) noexcept
-            : value{o.value} {
+            : value{o.value}
+        {
             o.value = -1;
             ++alive_count;
         }
-        Tracked& operator=(const Tracked& o) {
+        Tracked& operator=(const Tracked& o)
+        {
             value = o.value;
             return *this;
         }
-        Tracked& operator=(Tracked&& o) noexcept {
+        Tracked& operator=(Tracked&& o) noexcept
+        {
             value = o.value;
             o.value = -1;
             return *this;

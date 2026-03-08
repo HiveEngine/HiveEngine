@@ -8,7 +8,8 @@
 namespace
 {
 
-    auto& GetParserAlloc() {
+    auto& GetParserAlloc()
+    {
         static comb::ModuleAllocator alloc{"TestHiveParser", 4 * 1024 * 1024};
         return alloc.Get();
     }

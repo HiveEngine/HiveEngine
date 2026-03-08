@@ -10,7 +10,8 @@ namespace nectar
 {
     namespace
     {
-        void DownscaleHalf(const uint8_t* src, uint32_t srcW, uint32_t srcH, uint8_t* dst, uint32_t channels) {
+        void DownscaleHalf(const uint8_t* src, uint32_t srcW, uint32_t srcH, uint8_t* dst, uint32_t channels)
+        {
             const uint32_t dstW = srcW / 2;
             const uint32_t dstH = srcH / 2;
             for (uint32_t y = 0; y < dstH; ++y)
@@ -30,7 +31,8 @@ namespace nectar
             }
         }
 
-        void FlipVertical(uint8_t* data, uint32_t width, uint32_t height, uint32_t channels) {
+        void FlipVertical(uint8_t* data, uint32_t width, uint32_t height, uint32_t channels)
+        {
             const uint32_t rowBytes = width * channels;
             for (uint32_t y = 0; y < height / 2; ++y)
             {
@@ -46,21 +48,25 @@ namespace nectar
         }
     } // namespace
 
-    wax::Span<const char* const> TextureImporter::SourceExtensions() const {
+    wax::Span<const char* const> TextureImporter::SourceExtensions() const
+    {
         static const char* const kExtensions[] = {".png", ".jpg", ".jpeg", ".bmp", ".tga", ".hdr"};
         return {kExtensions, 6};
     }
 
-    uint32_t TextureImporter::Version() const {
+    uint32_t TextureImporter::Version() const
+    {
         return 2;
     }
 
-    wax::StringView TextureImporter::TypeName() const {
+    wax::StringView TextureImporter::TypeName() const
+    {
         return "Texture";
     }
 
     ImportResult TextureImporter::Import(wax::ByteSpan sourceData, const HiveDocument& settings,
-                                         ImportContext& /*context*/) {
+                                         ImportContext& /*context*/)
+    {
         ImportResult result{};
 
         int widthInt = 0;

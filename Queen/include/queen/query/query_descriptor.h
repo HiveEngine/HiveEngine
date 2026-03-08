@@ -62,7 +62,9 @@ namespace queen
             , m_required{allocator}
             , m_excluded{allocator}
             , m_optional{allocator}
-            , m_dataAccess{allocator} {}
+            , m_dataAccess{allocator}
+        {
+        }
 
         ~QueryDescriptor() = default;
 
@@ -71,11 +73,18 @@ namespace queen
         QueryDescriptor(QueryDescriptor&&) = default;
         QueryDescriptor& operator=(QueryDescriptor&&) = default;
 
-        void AddTerm(const Term& term) { m_terms.PushBack(term); }
+        void AddTerm(const Term& term)
+        {
+            m_terms.PushBack(term);
+        }
 
-        template <typename TermWrapper> void AddTerm() { AddTerm(TermWrapper::ToTerm()); }
+        template <typename TermWrapper> void AddTerm()
+        {
+            AddTerm(TermWrapper::ToTerm());
+        }
 
-        void Finalize() {
+        void Finalize()
+        {
             m_required.Clear();
             m_excluded.Clear();
             m_optional.Clear();
@@ -105,14 +114,16 @@ namespace queen
             }
         }
 
-        template <typename... TermWrappers> static QueryDescriptor FromTerms(Allocator& allocator) {
+        template <typename... TermWrappers> static QueryDescriptor FromTerms(Allocator& allocator)
+        {
             QueryDescriptor desc{allocator};
             (desc.template AddTerm<TermWrappers>(), ...);
             desc.Finalize();
             return desc;
         }
 
-        [[nodiscard]] bool MatchesArchetype(const Archetype<Allocator>& archetype) const noexcept {
+        [[nodiscard]] bool MatchesArchetype(const Archetype<Allocator>& archetype) const noexcept
+        {
             for (size_t i = 0; i < m_required.Size(); ++i)
             {
                 if (!archetype.HasComponent(m_required[i]))
@@ -133,7 +144,8 @@ namespace queen
         }
 
         [[nodiscard]] wax::Vector<Archetype<Allocator>*>
-        FindMatchingArchetypes(const ComponentIndex<Allocator>& index) const {
+        FindMatchingArchetypes(const ComponentIndex<Allocator>& index) const
+        {
             wax::Vector<Archetype<Allocator>*> result{*m_allocator};
 
             if (m_required.IsEmpty())
@@ -176,26 +188,68 @@ namespace queen
             return result;
         }
 
-        [[nodiscard]] const wax::Vector<Term>& GetTerms() const noexcept { return m_terms; }
+        [[nodiscard]] const wax::Vector<Term>& GetTerms() const noexcept
+        {
+            return m_terms;
+        }
 
-        [[nodiscard]] const wax::Vector<TypeId>& GetRequired() const noexcept { return m_required; }
+        [[nodiscard]] const wax::Vector<TypeId>& GetRequired() const noexcept
+        {
+            return m_required;
+        }
 
-        [[nodiscard]] const wax::Vector<TypeId>& GetExcluded() const noexcept { return m_excluded; }
+        [[nodiscard]] const wax::Vector<TypeId>& GetExcluded() const noexcept
+        {
+            return m_excluded;
+        }
 
-        [[nodiscard]] const wax::Vector<TypeId>& GetOptional() const noexcept { return m_optional; }
+        [[nodiscard]] const wax::Vector<TypeId>& GetOptional() const noexcept
+        {
+            return m_optional;
+        }
 
-        [[nodiscard]] const wax::Vector<Term>& GetDataAccessTerms() const noexcept { return m_dataAccess; }
+        [[nodiscard]] const wax::Vector<Term>& GetDataAccessTerms() const noexcept
+        {
+            return m_dataAccess;
+        }
 
-        [[nodiscard]] size_t TermCount() const noexcept { return m_terms.Size(); }
-        [[nodiscard]] size_t RequiredCount() const noexcept { return m_required.Size(); }
-        [[nodiscard]] size_t ExcludedCount() const noexcept { return m_excluded.Size(); }
-        [[nodiscard]] size_t OptionalCount() const noexcept { return m_optional.Size(); }
-        [[nodiscard]] size_t DataAccessCount() const noexcept { return m_dataAccess.Size(); }
+        [[nodiscard]] size_t TermCount() const noexcept
+        {
+            return m_terms.Size();
+        }
+        [[nodiscard]] size_t RequiredCount() const noexcept
+        {
+            return m_required.Size();
+        }
+        [[nodiscard]] size_t ExcludedCount() const noexcept
+        {
+            return m_excluded.Size();
+        }
+        [[nodiscard]] size_t OptionalCount() const noexcept
+        {
+            return m_optional.Size();
+        }
+        [[nodiscard]] size_t DataAccessCount() const noexcept
+        {
+            return m_dataAccess.Size();
+        }
 
-        [[nodiscard]] bool IsEmpty() const noexcept { return m_terms.IsEmpty(); }
-        [[nodiscard]] bool HasRequired() const noexcept { return !m_required.IsEmpty(); }
-        [[nodiscard]] bool HasExcluded() const noexcept { return !m_excluded.IsEmpty(); }
-        [[nodiscard]] bool HasOptional() const noexcept { return !m_optional.IsEmpty(); }
+        [[nodiscard]] bool IsEmpty() const noexcept
+        {
+            return m_terms.IsEmpty();
+        }
+        [[nodiscard]] bool HasRequired() const noexcept
+        {
+            return !m_required.IsEmpty();
+        }
+        [[nodiscard]] bool HasExcluded() const noexcept
+        {
+            return !m_excluded.IsEmpty();
+        }
+        [[nodiscard]] bool HasOptional() const noexcept
+        {
+            return !m_optional.IsEmpty();
+        }
 
     private:
         Allocator* m_allocator;

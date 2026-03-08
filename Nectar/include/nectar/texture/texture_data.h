@@ -41,7 +41,8 @@ namespace nectar
         uint8_t m_padding[1]{};
     };
 
-    [[nodiscard]] constexpr size_t BytesPerPixel(PixelFormat fmt) noexcept {
+    [[nodiscard]] constexpr size_t BytesPerPixel(PixelFormat fmt) noexcept
+    {
         switch (fmt)
         {
             case PixelFormat::RGBA8:

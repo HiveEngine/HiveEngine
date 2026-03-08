@@ -58,7 +58,9 @@ namespace queen
 
         explicit ComponentIndex(Allocator& allocator)
             : m_allocator{&allocator}
-            , m_index{allocator} {}
+            , m_index{allocator}
+        {
+        }
 
         ~ComponentIndex() = default;
 
@@ -67,7 +69,8 @@ namespace queen
         ComponentIndex(ComponentIndex&&) = default;
         ComponentIndex& operator=(ComponentIndex&&) = default;
 
-        void RegisterArchetype(Archetype<Allocator>* archetype) {
+        void RegisterArchetype(Archetype<Allocator>* archetype)
+        {
             const auto& types = archetype->GetComponentTypes();
             for (size_t i = 0; i < types.Size(); ++i)
             {
@@ -82,15 +85,18 @@ namespace queen
             }
         }
 
-        template <typename T> [[nodiscard]] const ArchetypeList* GetArchetypesWith() const noexcept {
+        template <typename T> [[nodiscard]] const ArchetypeList* GetArchetypesWith() const noexcept
+        {
             return GetArchetypesWith(TypeIdOf<T>());
         }
 
-        [[nodiscard]] const ArchetypeList* GetArchetypesWith(TypeId typeId) const noexcept {
+        [[nodiscard]] const ArchetypeList* GetArchetypesWith(TypeId typeId) const noexcept
+        {
             return m_index.Find(typeId);
         }
 
-        template <typename... Types> [[nodiscard]] ArchetypeList GetArchetypesWithAll() const {
+        template <typename... Types> [[nodiscard]] ArchetypeList GetArchetypesWithAll() const
+        {
             ArchetypeList result{*m_allocator};
 
             if constexpr (sizeof...(Types) == 0)
@@ -104,7 +110,8 @@ namespace queen
             }
         }
 
-        [[nodiscard]] ArchetypeList GetArchetypesWithAll(const TypeId* typeIds, size_t count) const {
+        [[nodiscard]] ArchetypeList GetArchetypesWithAll(const TypeId* typeIds, size_t count) const
+        {
             ArchetypeList result{*m_allocator};
 
             if (count == 0)
@@ -151,7 +158,10 @@ namespace queen
             return result;
         }
 
-        [[nodiscard]] size_t ComponentTypeCount() const noexcept { return m_index.Count(); }
+        [[nodiscard]] size_t ComponentTypeCount() const noexcept
+        {
+            return m_index.Count();
+        }
 
     private:
         Allocator* m_allocator;

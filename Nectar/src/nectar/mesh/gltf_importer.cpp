@@ -23,20 +23,24 @@
 
 namespace nectar
 {
-    wax::Span<const char* const> GltfImporter::SourceExtensions() const {
+    wax::Span<const char* const> GltfImporter::SourceExtensions() const
+    {
         static const char* const EXTS[] = {".gltf", ".glb"};
         return {EXTS, 2};
     }
 
-    uint32_t GltfImporter::Version() const {
+    uint32_t GltfImporter::Version() const
+    {
         return 2;
     }
 
-    wax::StringView GltfImporter::TypeName() const {
+    wax::StringView GltfImporter::TypeName() const
+    {
         return "Mesh";
     }
 
-    static uint32_t PackRGBA8(float r, float g, float b, float a = 1.f) {
+    static uint32_t PackRGBA8(float r, float g, float b, float a = 1.f)
+    {
         auto toU8 = [](float v) -> uint32_t {
             return static_cast<uint32_t>(v * 255.f + 0.5f) & 0xFFu;
         };
@@ -44,7 +48,8 @@ namespace nectar
     }
 
     ImportResult GltfImporter::Import(wax::ByteSpan sourceData, const HiveDocument& settings,
-                                      ImportContext& /*context*/) {
+                                      ImportContext& /*context*/)
+    {
         ImportResult result{};
 
         auto scale = static_cast<float>(settings.GetFloat("import", "scale", 1.0));

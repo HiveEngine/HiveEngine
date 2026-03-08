@@ -119,7 +119,8 @@ namespace comb
             size_t free_list_offset_{0}; // Track offset for Reset()
             size_t user_size_{0};        // Track user-visible size (without guard bytes)
 
-            void Initialize(size_t size, size_t free_list_offset = 0, size_t user_size = 0) {
+            void Initialize(size_t size, size_t free_list_offset = 0, size_t user_size = 0)
+            {
                 slot_size = size;
                 total_size = ObjectsPerSlab * slot_size;
                 free_list_offset_ = free_list_offset;
@@ -135,7 +136,8 @@ namespace comb
                 RebuildFreeList(free_list_offset);
             }
 
-            void Destroy() {
+            void Destroy()
+            {
                 if (memory_block)
                 {
                     FreePages(memory_block, total_size);
@@ -144,7 +146,8 @@ namespace comb
                 }
             }
 
-            void RebuildFreeList(size_t free_list_offset) {
+            void RebuildFreeList(size_t free_list_offset)
+            {
                 // In debug mode, free_list_offset skips the guard bytes at the start of each slot
                 char* current = static_cast<char*>(memory_block) + free_list_offset;
                 free_list_head = current;
@@ -160,12 +163,14 @@ namespace comb
                 used_count = 0;
             }
 
-            void RebuildFreeList() {
+            void RebuildFreeList()
+            {
                 // Use stored offset from Initialize()
                 RebuildFreeList(free_list_offset_);
             }
 
-            void* Allocate() {
+            void* Allocate()
+            {
                 if (!free_list_head)
                 {
                     return nullptr;
@@ -177,7 +182,8 @@ namespace comb
                 return ptr;
             }
 
-            void Deallocate(void* ptr) {
+            void Deallocate(void* ptr)
+            {
                 if (!ptr)
                     return;
 
@@ -188,7 +194,8 @@ namespace comb
                 --used_count;
             }
 
-            bool Contains(void* ptr) const {
+            bool Contains(void* ptr) const
+            {
                 if (!ptr || !memory_block)
                     return false;
 
@@ -199,23 +206,29 @@ namespace comb
                 return p >= start && p < end;
             }
 
-            size_t GetUsedMemory() const {
+            size_t GetUsedMemory() const
+            {
                 // Return user-visible memory (excluding guard bytes)
                 return used_count * user_size_;
             }
 
-            size_t GetTotalMemory() const {
+            size_t GetTotalMemory() const
+            {
                 // Return user-visible capacity (excluding guard bytes)
                 return ObjectsPerSlab * user_size_;
             }
 
-            size_t GetFreeCount() const { return ObjectsPerSlab - used_count; }
+            size_t GetFreeCount() const
+            {
+                return ObjectsPerSlab - used_count;
+            }
         };
 
         std::array<Slab, NumSlabs> slabs_{};
 
         // Find slab index for given size
-        constexpr size_t FindSlabIndex(size_t size) const {
+        constexpr size_t FindSlabIndex(size_t size) const
+        {
             for (size_t i = 0; i < sizes_.size(); ++i)
             {
                 if (size <= sizes_[i])
@@ -233,7 +246,8 @@ namespace comb
         /**
          * Construct slab allocator and initialize all slabs
          */
-        SlabAllocator() {
+        SlabAllocator()
+        {
             for (size_t i = 0; i < NumSlabs; ++i)
             {
 #if COMB_MEM_DEBUG
@@ -261,7 +275,8 @@ namespace comb
         /**
          * Destructor - frees all slab memory
          */
-        ~SlabAllocator() {
+        ~SlabAllocator()
+        {
 #if COMB_MEM_DEBUG
             if (registry_)
             {
@@ -307,7 +322,8 @@ namespace comb
             }
         }
 
-        SlabAllocator& operator=(SlabAllocator&& other) noexcept {
+        SlabAllocator& operator=(SlabAllocator&& other) noexcept
+        {
             if (this != &other)
             {
 #if COMB_MEM_DEBUG
@@ -365,7 +381,8 @@ namespace comb
          *
          * IMPORTANT: Does NOT fallback to operator new. Returns nullptr when out of memory.
          */
-        [[nodiscard]] void* Allocate(size_t size, size_t alignment, const char* tag = nullptr) {
+        [[nodiscard]] void* Allocate(size_t size, size_t alignment, const char* tag = nullptr)
+        {
 #if COMB_MEM_DEBUG
             void* ptr = AllocateDebug(size, alignment, tag);
 #else
@@ -399,7 +416,8 @@ namespace comb
          * IMPORTANT: Pointer must have been allocated from THIS allocator.
          * Finds which slab owns the pointer and returns it to that slab's free-list.
          */
-        void Deallocate(void* ptr) {
+        void Deallocate(void* ptr)
+        {
             if (!ptr)
                 return;
 
@@ -427,7 +445,8 @@ namespace comb
          * Reset all slabs - marks all memory as free
          * Rebuilds free-lists for all slabs
          */
-        void Reset() {
+        void Reset()
+        {
             for (auto& slab : slabs_)
             {
                 slab.RebuildFreeList();
@@ -445,7 +464,8 @@ namespace comb
         /**
          * Get total bytes currently allocated across all slabs
          */
-        [[nodiscard]] size_t GetUsedMemory() const {
+        [[nodiscard]] size_t GetUsedMemory() const
+        {
             size_t total = 0;
             for (const auto& slab : slabs_)
             {
@@ -457,7 +477,8 @@ namespace comb
         /**
          * Get total capacity across all slabs
          */
-        [[nodiscard]] size_t GetTotalMemory() const {
+        [[nodiscard]] size_t GetTotalMemory() const
+        {
             size_t total = 0;
             for (const auto& slab : slabs_)
             {
@@ -469,22 +490,32 @@ namespace comb
         /**
          * Get allocator name for debugging
          */
-        [[nodiscard]] const char* GetName() const { return "SlabAllocator"; }
+        [[nodiscard]] const char* GetName() const
+        {
+            return "SlabAllocator";
+        }
 
         /**
          * Get number of size classes
          */
-        [[nodiscard]] constexpr size_t GetSlabCount() const { return NumSlabs; }
+        [[nodiscard]] constexpr size_t GetSlabCount() const
+        {
+            return NumSlabs;
+        }
 
         /**
          * Get size classes array
          */
-        [[nodiscard]] constexpr auto GetSizeClasses() const { return sizes_; }
+        [[nodiscard]] constexpr auto GetSizeClasses() const
+        {
+            return sizes_;
+        }
 
         /**
          * Get usage stats for a specific slab
          */
-        [[nodiscard]] size_t GetSlabUsedCount(size_t slab_index) const {
+        [[nodiscard]] size_t GetSlabUsedCount(size_t slab_index) const
+        {
             hive::Assert(slab_index < NumSlabs, "Slab index out of range");
             return slabs_[slab_index].used_count;
         }
@@ -492,7 +523,8 @@ namespace comb
         /**
          * Get free count for a specific slab
          */
-        [[nodiscard]] size_t GetSlabFreeCount(size_t slab_index) const {
+        [[nodiscard]] size_t GetSlabFreeCount(size_t slab_index) const
+        {
             hive::Assert(slab_index < NumSlabs, "Slab index out of range");
             return slabs_[slab_index].GetFreeCount();
         }
@@ -518,7 +550,8 @@ namespace comb
     // ========================================================================
 
     template <size_t ObjectsPerSlab, size_t... SizeClasses>
-    void* SlabAllocator<ObjectsPerSlab, SizeClasses...>::AllocateDebug(size_t size, size_t alignment, const char* tag) {
+    void* SlabAllocator<ObjectsPerSlab, SizeClasses...>::AllocateDebug(size_t size, size_t alignment, const char* tag)
+    {
         using namespace debug;
 
         hive::Assert(alignment <= alignof(std::max_align_t), "SlabAllocator alignment limited to max_align_t");
@@ -586,7 +619,8 @@ namespace comb
     }
 
     template <size_t ObjectsPerSlab, size_t... SizeClasses>
-    void SlabAllocator<ObjectsPerSlab, SizeClasses...>::DeallocateDebug(void* ptr) {
+    void SlabAllocator<ObjectsPerSlab, SizeClasses...>::DeallocateDebug(void* ptr)
+    {
         using namespace debug;
 
         if (!ptr)

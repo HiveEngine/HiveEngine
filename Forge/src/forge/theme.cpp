@@ -9,15 +9,18 @@ namespace forge
     // Swapchain is B8G8R8A8_UNORM_SRGB — GPU applies sRGB encoding on output.
     // ImGui colors are specified in sRGB, but the GPU gamma-corrects them again.
     // Convert sRGB → linear so the final output matches intended sRGB values.
-    static float SrgbToLinear(float s) {
+    static float SrgbToLinear(float s)
+    {
         return s <= 0.04045f ? s / 12.92f : std::pow((s + 0.055f) / 1.055f, 2.4f);
     }
 
-    static ImVec4 L(float r, float g, float b, float a) {
+    static ImVec4 L(float r, float g, float b, float a)
+    {
         return {SrgbToLinear(r), SrgbToLinear(g), SrgbToLinear(b), a};
     }
 
-    void ApplyForgeTheme() {
+    void ApplyForgeTheme()
+    {
         ImGuiIO& io = ImGui::GetIO();
 
         // Font — Segoe UI 15px (Windows system font)

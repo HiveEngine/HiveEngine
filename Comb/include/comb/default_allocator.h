@@ -40,12 +40,14 @@ namespace comb
             ModuleAllocator* m_allocator;
         };
 
-        static ModuleRegistry& GetInstance() {
+        static ModuleRegistry& GetInstance()
+        {
             static ModuleRegistry s_instance;
             return s_instance;
         }
 
-        void Register(const char* name, ModuleAllocator* alloc) {
+        void Register(const char* name, ModuleAllocator* alloc)
+        {
             std::lock_guard<std::mutex> lock{m_mutex};
             if (m_count < kMaxModules)
             {
@@ -54,7 +56,8 @@ namespace comb
             }
         }
 
-        void Unregister(ModuleAllocator* alloc) {
+        void Unregister(ModuleAllocator* alloc)
+        {
             std::lock_guard<std::mutex> lock{m_mutex};
             for (size_t i = 0; i < m_count; ++i)
             {
@@ -69,8 +72,14 @@ namespace comb
 
         void PrintStats() const;
 
-        [[nodiscard]] size_t GetCount() const noexcept { return m_count; }
-        [[nodiscard]] const Entry& GetEntry(size_t index) const noexcept { return m_entries[index]; }
+        [[nodiscard]] size_t GetCount() const noexcept
+        {
+            return m_count;
+        }
+        [[nodiscard]] const Entry& GetEntry(size_t index) const noexcept
+        {
+            return m_entries[index];
+        }
 
     private:
         ModuleRegistry() = default;
@@ -109,25 +118,47 @@ namespace comb
         ModuleAllocator(const char* name, size_t capacity)
             : m_name{name}
             , m_buddy{capacity, name}
-            , m_allocator{m_buddy} {
+            , m_allocator{m_buddy}
+        {
             ModuleRegistry::GetInstance().Register(m_name, this);
         }
 
-        ~ModuleAllocator() { ModuleRegistry::GetInstance().Unregister(this); }
+        ~ModuleAllocator()
+        {
+            ModuleRegistry::GetInstance().Unregister(this);
+        }
 
         ModuleAllocator(const ModuleAllocator&) = delete;
         ModuleAllocator& operator=(const ModuleAllocator&) = delete;
         ModuleAllocator(ModuleAllocator&&) = delete;
         ModuleAllocator& operator=(ModuleAllocator&&) = delete;
 
-        [[nodiscard]] DefaultAllocator& Get() noexcept { return m_allocator; }
-        [[nodiscard]] const DefaultAllocator& Get() const noexcept { return m_allocator; }
+        [[nodiscard]] DefaultAllocator& Get() noexcept
+        {
+            return m_allocator;
+        }
+        [[nodiscard]] const DefaultAllocator& Get() const noexcept
+        {
+            return m_allocator;
+        }
 
-        [[nodiscard]] BuddyAllocator& GetUnderlying() noexcept { return m_buddy; }
-        [[nodiscard]] const char* GetName() const noexcept { return m_name; }
+        [[nodiscard]] BuddyAllocator& GetUnderlying() noexcept
+        {
+            return m_buddy;
+        }
+        [[nodiscard]] const char* GetName() const noexcept
+        {
+            return m_name;
+        }
 
-        [[nodiscard]] size_t GetUsedMemory() const { return m_allocator.GetUsedMemory(); }
-        [[nodiscard]] size_t GetTotalMemory() const { return m_allocator.GetTotalMemory(); }
+        [[nodiscard]] size_t GetUsedMemory() const
+        {
+            return m_allocator.GetUsedMemory();
+        }
+        [[nodiscard]] size_t GetTotalMemory() const
+        {
+            return m_allocator.GetTotalMemory();
+        }
 
     private:
         const char* m_name;
@@ -138,7 +169,8 @@ namespace comb
     /**
      * Print memory stats for all registered modules
      */
-    inline void ModuleRegistry::PrintStats() const {
+    inline void ModuleRegistry::PrintStats() const
+    {
         std::lock_guard<std::mutex> lock{m_mutex};
 
         std::printf("========== Module Memory Stats ==========\n");
@@ -173,7 +205,8 @@ namespace comb
      *
      * @return Reference to the global default allocator
      */
-    inline DefaultAllocator& GetDefaultAllocator() {
+    inline DefaultAllocator& GetDefaultAllocator()
+    {
         static ModuleAllocator s_global{"Global", 32 * 1024 * 1024}; // 32 MB
         return s_global.Get();
     }

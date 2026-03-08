@@ -26,10 +26,22 @@ namespace wax
             uint8_t m_state{kEmpty};
             uint8_t m_psl{0};
 
-            [[nodiscard]] K* Key() { return reinterpret_cast<K*>(m_keyStorage); }
-            [[nodiscard]] const K* Key() const { return reinterpret_cast<const K*>(m_keyStorage); }
-            [[nodiscard]] V* Value() { return reinterpret_cast<V*>(m_valueStorage); }
-            [[nodiscard]] const V* Value() const { return reinterpret_cast<const V*>(m_valueStorage); }
+            [[nodiscard]] K* Key()
+            {
+                return reinterpret_cast<K*>(m_keyStorage);
+            }
+            [[nodiscard]] const K* Key() const
+            {
+                return reinterpret_cast<const K*>(m_keyStorage);
+            }
+            [[nodiscard]] V* Value()
+            {
+                return reinterpret_cast<V*>(m_valueStorage);
+            }
+            [[nodiscard]] const V* Value() const
+            {
+                return reinterpret_cast<const V*>(m_valueStorage);
+            }
         };
 
     public:
@@ -39,26 +51,39 @@ namespace wax
             Iterator(Bucket* buckets, size_t index, size_t capacity)
                 : m_buckets{buckets}
                 , m_index{index}
-                , m_capacity{capacity} {
+                , m_capacity{capacity}
+            {
                 SkipEmpty();
             }
 
-            [[nodiscard]] std::pair<const K&, V&> operator*() const {
+            [[nodiscard]] std::pair<const K&, V&> operator*() const
+            {
                 return {*m_buckets[m_index].Key(), *m_buckets[m_index].Value()};
             }
 
-            Iterator& operator++() {
+            Iterator& operator++()
+            {
                 ++m_index;
                 SkipEmpty();
                 return *this;
             }
 
-            bool operator==(const Iterator& other) const { return m_index == other.m_index; }
-            [[nodiscard]] const K& Key() const { return *m_buckets[m_index].Key(); }
-            [[nodiscard]] V& Value() { return *m_buckets[m_index].Value(); }
+            bool operator==(const Iterator& other) const
+            {
+                return m_index == other.m_index;
+            }
+            [[nodiscard]] const K& Key() const
+            {
+                return *m_buckets[m_index].Key();
+            }
+            [[nodiscard]] V& Value()
+            {
+                return *m_buckets[m_index].Value();
+            }
 
         private:
-            void SkipEmpty() {
+            void SkipEmpty()
+            {
                 while (m_index < m_capacity && m_buckets[m_index].m_state != kOccupied)
                 {
                     ++m_index;
@@ -76,26 +101,39 @@ namespace wax
             ConstIterator(const Bucket* buckets, size_t index, size_t capacity)
                 : m_buckets{buckets}
                 , m_index{index}
-                , m_capacity{capacity} {
+                , m_capacity{capacity}
+            {
                 SkipEmpty();
             }
 
-            [[nodiscard]] std::pair<const K&, const V&> operator*() const {
+            [[nodiscard]] std::pair<const K&, const V&> operator*() const
+            {
                 return {*m_buckets[m_index].Key(), *m_buckets[m_index].Value()};
             }
 
-            ConstIterator& operator++() {
+            ConstIterator& operator++()
+            {
                 ++m_index;
                 SkipEmpty();
                 return *this;
             }
 
-            bool operator==(const ConstIterator& other) const { return m_index == other.m_index; }
-            [[nodiscard]] const K& Key() const { return *m_buckets[m_index].Key(); }
-            [[nodiscard]] const V& Value() const { return *m_buckets[m_index].Value(); }
+            bool operator==(const ConstIterator& other) const
+            {
+                return m_index == other.m_index;
+            }
+            [[nodiscard]] const K& Key() const
+            {
+                return *m_buckets[m_index].Key();
+            }
+            [[nodiscard]] const V& Value() const
+            {
+                return *m_buckets[m_index].Value();
+            }
 
         private:
-            void SkipEmpty() {
+            void SkipEmpty()
+            {
                 while (m_index < m_capacity && m_buckets[m_index].m_state != kOccupied)
                 {
                     ++m_index;
@@ -110,22 +148,27 @@ namespace wax
         explicit HashMap(size_t initialCapacity = 16)
             : m_allocator{comb::GetDefaultMemoryResource()}
             , m_capacity{NextPowerOfTwo(initialCapacity)}
-            , m_count{0} {
+            , m_count{0}
+        {
             InitializeBuckets(initialCapacity);
         }
 
         explicit HashMap(comb::MemoryResource allocator, size_t initialCapacity = 16)
             : m_allocator{allocator}
             , m_capacity{NextPowerOfTwo(initialCapacity)}
-            , m_count{0} {
+            , m_count{0}
+        {
             InitializeBuckets(initialCapacity);
         }
 
         template <comb::Allocator Allocator>
         HashMap(Allocator& allocator, size_t initialCapacity = 16)
-            : HashMap{comb::MemoryResource{allocator}, initialCapacity} {}
+            : HashMap{comb::MemoryResource{allocator}, initialCapacity}
+        {
+        }
 
-        ~HashMap() {
+        ~HashMap()
+        {
             Clear();
             if (m_buckets)
             {
@@ -140,13 +183,15 @@ namespace wax
             : m_allocator{other.m_allocator}
             , m_buckets{other.m_buckets}
             , m_capacity{other.m_capacity}
-            , m_count{other.m_count} {
+            , m_count{other.m_count}
+        {
             other.m_buckets = nullptr;
             other.m_capacity = 0;
             other.m_count = 0;
         }
 
-        HashMap& operator=(HashMap&& other) noexcept {
+        HashMap& operator=(HashMap&& other) noexcept
+        {
             if (this != &other)
             {
                 Clear();
@@ -167,7 +212,8 @@ namespace wax
             return *this;
         }
 
-        bool Insert(const K& key, const V& value) {
+        bool Insert(const K& key, const V& value)
+        {
             if (ShouldRehash())
             {
                 Rehash(m_capacity * 2);
@@ -175,7 +221,8 @@ namespace wax
             return InsertInternal(key, value);
         }
 
-        bool Insert(const K& key, V&& value) {
+        bool Insert(const K& key, V&& value)
+        {
             if (ShouldRehash())
             {
                 Rehash(m_capacity * 2);
@@ -183,7 +230,8 @@ namespace wax
             return InsertInternalMove(key, static_cast<V&&>(value));
         }
 
-        template <typename... Args> bool Emplace(const K& key, Args&&... args) {
+        template <typename... Args> bool Emplace(const K& key, Args&&... args)
+        {
             if (ShouldRehash())
             {
                 Rehash(m_capacity * 2);
@@ -235,7 +283,8 @@ namespace wax
             }
         }
 
-        [[nodiscard]] V* Find(const K& key) noexcept {
+        [[nodiscard]] V* Find(const K& key) noexcept
+        {
             const size_t hash = Hash{}(key);
             size_t index = hash & (m_capacity - 1);
             uint8_t psl = 0;
@@ -267,11 +316,18 @@ namespace wax
             }
         }
 
-        [[nodiscard]] const V* Find(const K& key) const noexcept { return const_cast<HashMap*>(this)->Find(key); }
+        [[nodiscard]] const V* Find(const K& key) const noexcept
+        {
+            return const_cast<HashMap*>(this)->Find(key);
+        }
 
-        [[nodiscard]] bool Contains(const K& key) const noexcept { return Find(key) != nullptr; }
+        [[nodiscard]] bool Contains(const K& key) const noexcept
+        {
+            return Find(key) != nullptr;
+        }
 
-        bool Remove(const K& key) {
+        bool Remove(const K& key)
+        {
             const size_t hash = Hash{}(key);
             size_t index = hash & (m_capacity - 1);
             uint8_t psl = 0;
@@ -308,7 +364,8 @@ namespace wax
             }
         }
 
-        V& operator[](const K& key) {
+        V& operator[](const K& key)
+        {
             if (V* found = Find(key))
             {
                 return *found;
@@ -318,7 +375,8 @@ namespace wax
             return *Find(key);
         }
 
-        void Clear() noexcept {
+        void Clear() noexcept
+        {
             if (m_buckets == nullptr)
             {
                 return;
@@ -337,21 +395,47 @@ namespace wax
             m_count = 0;
         }
 
-        [[nodiscard]] size_t Count() const noexcept { return m_count; }
-        [[nodiscard]] size_t Capacity() const noexcept { return m_capacity; }
-        [[nodiscard]] bool IsEmpty() const noexcept { return m_count == 0; }
-        [[nodiscard]] float LoadFactor() const noexcept {
+        [[nodiscard]] size_t Count() const noexcept
+        {
+            return m_count;
+        }
+        [[nodiscard]] size_t Capacity() const noexcept
+        {
+            return m_capacity;
+        }
+        [[nodiscard]] bool IsEmpty() const noexcept
+        {
+            return m_count == 0;
+        }
+        [[nodiscard]] float LoadFactor() const noexcept
+        {
             return static_cast<float>(m_count) / static_cast<float>(m_capacity);
         }
-        [[nodiscard]] comb::MemoryResource GetAllocator() const noexcept { return m_allocator; }
+        [[nodiscard]] comb::MemoryResource GetAllocator() const noexcept
+        {
+            return m_allocator;
+        }
 
-        [[nodiscard]] Iterator Begin() noexcept { return Iterator{m_buckets, 0, m_capacity}; }
-        [[nodiscard]] Iterator End() noexcept { return Iterator{m_buckets, m_capacity, m_capacity}; }
-        [[nodiscard]] ConstIterator Begin() const noexcept { return ConstIterator{m_buckets, 0, m_capacity}; }
-        [[nodiscard]] ConstIterator End() const noexcept { return ConstIterator{m_buckets, m_capacity, m_capacity}; }
+        [[nodiscard]] Iterator Begin() noexcept
+        {
+            return Iterator{m_buckets, 0, m_capacity};
+        }
+        [[nodiscard]] Iterator End() noexcept
+        {
+            return Iterator{m_buckets, m_capacity, m_capacity};
+        }
+        [[nodiscard]] ConstIterator Begin() const noexcept
+        {
+            return ConstIterator{m_buckets, 0, m_capacity};
+        }
+        [[nodiscard]] ConstIterator End() const noexcept
+        {
+            return ConstIterator{m_buckets, m_capacity, m_capacity};
+        }
 
     private:
-        void InitializeBuckets(size_t initialCapacity) {
+        void InitializeBuckets(size_t initialCapacity)
+        {
             hive::Assert(initialCapacity > 0, "HashMap capacity must be > 0");
 
             m_buckets = static_cast<Bucket*>(m_allocator.Allocate(sizeof(Bucket) * m_capacity, alignof(Bucket)));
@@ -364,11 +448,13 @@ namespace wax
             }
         }
 
-        [[nodiscard]] bool ShouldRehash() const noexcept {
+        [[nodiscard]] bool ShouldRehash() const noexcept
+        {
             return m_count >= static_cast<size_t>(static_cast<float>(m_capacity) * kMaxLoadFactor);
         }
 
-        void Rehash(size_t newCapacity) {
+        void Rehash(size_t newCapacity)
+        {
             Bucket* oldBuckets = m_buckets;
             const size_t oldCapacity = m_capacity;
 
@@ -397,7 +483,8 @@ namespace wax
             m_allocator.Deallocate(oldBuckets);
         }
 
-        bool InsertInternal(const K& key, const V& value) {
+        bool InsertInternal(const K& key, const V& value)
+        {
             const size_t hash = Hash{}(key);
             size_t index = hash & (m_capacity - 1);
             uint8_t psl = 0;
@@ -436,7 +523,8 @@ namespace wax
             }
         }
 
-        bool InsertInternalMove(const K& key, V&& value) {
+        bool InsertInternalMove(const K& key, V&& value)
+        {
             const size_t hash = Hash{}(key);
             size_t index = hash & (m_capacity - 1);
             uint8_t psl = 0;
@@ -475,7 +563,8 @@ namespace wax
             }
         }
 
-        void InsertDisplaced(K&& key, V&& value, uint8_t psl, size_t startIndex) {
+        void InsertDisplaced(K&& key, V&& value, uint8_t psl, size_t startIndex)
+        {
             size_t index = (startIndex + 1) & (m_capacity - 1);
             ++psl;
 
@@ -504,7 +593,8 @@ namespace wax
             }
         }
 
-        void ShiftBackward(size_t removedIndex) {
+        void ShiftBackward(size_t removedIndex)
+        {
             size_t current = removedIndex;
             size_t next = (current + 1) & (m_capacity - 1);
 
@@ -524,7 +614,8 @@ namespace wax
             }
         }
 
-        static constexpr size_t NextPowerOfTwo(size_t n) {
+        static constexpr size_t NextPowerOfTwo(size_t n)
+        {
             if (n == 0)
             {
                 return 1;

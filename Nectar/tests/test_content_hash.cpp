@@ -9,7 +9,8 @@
 namespace
 {
 
-    constexpr size_t operator""_KB(unsigned long long kb) {
+    constexpr size_t operator""_KB(unsigned long long kb)
+    {
         return kb * 1024;
     }
 

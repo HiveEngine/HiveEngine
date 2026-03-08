@@ -18,7 +18,8 @@ namespace nectar
 {
 #ifdef _WIN32
 
-    MappedFile MappedFile::Open(wax::StringView path) {
+    MappedFile MappedFile::Open(wax::StringView path)
+    {
         HIVE_PROFILE_SCOPE_N("MappedFile::Open");
         MappedFile result;
 
@@ -69,7 +70,8 @@ namespace nectar
         return result;
     }
 
-    void MappedFile::Close() noexcept {
+    void MappedFile::Close() noexcept
+    {
         if (m_data)
             UnmapViewOfFile(m_data);
         if (m_mappingHandle)
@@ -84,7 +86,8 @@ namespace nectar
 
 #else // POSIX
 
-    MappedFile MappedFile::Open(wax::StringView path) {
+    MappedFile MappedFile::Open(wax::StringView path)
+    {
         HIVE_PROFILE_SCOPE_N("MappedFile::Open");
         MappedFile result;
 
@@ -119,7 +122,8 @@ namespace nectar
         return result;
     }
 
-    void MappedFile::Close() noexcept {
+    void MappedFile::Close() noexcept
+    {
         if (data_)
             ::munmap(data_, size_);
         if (fd_ >= 0)
@@ -131,7 +135,8 @@ namespace nectar
 
 #endif // _WIN32
 
-    MappedFile::~MappedFile() {
+    MappedFile::~MappedFile()
+    {
         Close();
     }
 
@@ -155,7 +160,8 @@ namespace nectar
 #endif
     }
 
-    MappedFile& MappedFile::operator=(MappedFile&& other) noexcept {
+    MappedFile& MappedFile::operator=(MappedFile&& other) noexcept
+    {
         if (this != &other)
         {
             Close();
@@ -176,19 +182,23 @@ namespace nectar
         return *this;
     }
 
-    bool MappedFile::IsValid() const noexcept {
+    bool MappedFile::IsValid() const noexcept
+    {
         return m_data != nullptr;
     }
 
-    const uint8_t* MappedFile::Data() const noexcept {
+    const uint8_t* MappedFile::Data() const noexcept
+    {
         return static_cast<const uint8_t*>(m_data);
     }
 
-    size_t MappedFile::Size() const noexcept {
+    size_t MappedFile::Size() const noexcept
+    {
         return m_size;
     }
 
-    wax::ByteSpan MappedFile::View() const noexcept {
+    wax::ByteSpan MappedFile::View() const noexcept
+    {
         return wax::ByteSpan{static_cast<const uint8_t*>(m_data), m_size};
     }
 } // namespace nectar

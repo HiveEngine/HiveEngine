@@ -69,40 +69,79 @@ namespace queen
         constexpr Entity() noexcept
             : m_index{UINT32_MAX}
             , m_generation{0}
-            , m_flags{0} {}
+            , m_flags{0}
+        {
+        }
 
         constexpr Entity(IndexType index, GenerationType generation, FlagsType flags = Flags::kAlive) noexcept
             : m_index{index}
             , m_generation{generation}
-            , m_flags{flags} {}
+            , m_flags{flags}
+        {
+        }
 
-        [[nodiscard]] static constexpr Entity Invalid() noexcept { return Entity{}; }
+        [[nodiscard]] static constexpr Entity Invalid() noexcept
+        {
+            return Entity{};
+        }
 
-        [[nodiscard]] constexpr IndexType Index() const noexcept { return m_index; }
+        [[nodiscard]] constexpr IndexType Index() const noexcept
+        {
+            return m_index;
+        }
 
-        [[nodiscard]] constexpr GenerationType Generation() const noexcept { return m_generation; }
+        [[nodiscard]] constexpr GenerationType Generation() const noexcept
+        {
+            return m_generation;
+        }
 
-        [[nodiscard]] constexpr FlagsType GetFlags() const noexcept { return m_flags; }
+        [[nodiscard]] constexpr FlagsType GetFlags() const noexcept
+        {
+            return m_flags;
+        }
 
-        [[nodiscard]] constexpr bool IsNull() const noexcept { return m_index == UINT32_MAX; }
+        [[nodiscard]] constexpr bool IsNull() const noexcept
+        {
+            return m_index == UINT32_MAX;
+        }
 
-        [[nodiscard]] constexpr bool HasFlag(FlagsType flag) const noexcept { return (m_flags & flag) != 0; }
+        [[nodiscard]] constexpr bool HasFlag(FlagsType flag) const noexcept
+        {
+            return (m_flags & flag) != 0;
+        }
 
-        [[nodiscard]] constexpr bool IsAlive() const noexcept { return HasFlag(Flags::kAlive); }
+        [[nodiscard]] constexpr bool IsAlive() const noexcept
+        {
+            return HasFlag(Flags::kAlive);
+        }
 
-        [[nodiscard]] constexpr bool IsDisabled() const noexcept { return HasFlag(Flags::kDisabled); }
+        [[nodiscard]] constexpr bool IsDisabled() const noexcept
+        {
+            return HasFlag(Flags::kDisabled);
+        }
 
-        [[nodiscard]] constexpr bool IsPendingDelete() const noexcept { return HasFlag(Flags::kPendingDelete); }
+        [[nodiscard]] constexpr bool IsPendingDelete() const noexcept
+        {
+            return HasFlag(Flags::kPendingDelete);
+        }
 
-        constexpr void SetFlag(FlagsType flag) noexcept { m_flags |= flag; }
+        constexpr void SetFlag(FlagsType flag) noexcept
+        {
+            m_flags |= flag;
+        }
 
-        constexpr void ClearFlag(FlagsType flag) noexcept { m_flags &= static_cast<FlagsType>(~flag); }
+        constexpr void ClearFlag(FlagsType flag) noexcept
+        {
+            m_flags &= static_cast<FlagsType>(~flag);
+        }
 
-        [[nodiscard]] constexpr bool operator==(const Entity& other) const noexcept {
+        [[nodiscard]] constexpr bool operator==(const Entity& other) const noexcept
+        {
             return m_index == other.m_index && m_generation == other.m_generation;
         }
 
-        [[nodiscard]] constexpr bool operator<(const Entity& other) const noexcept {
+        [[nodiscard]] constexpr bool operator<(const Entity& other) const noexcept
+        {
             if (m_index != other.m_index)
             {
                 return m_index < other.m_index;
@@ -110,12 +149,14 @@ namespace queen
             return m_generation < other.m_generation;
         }
 
-        [[nodiscard]] constexpr uint64_t ToU64() const noexcept {
+        [[nodiscard]] constexpr uint64_t ToU64() const noexcept
+        {
             return static_cast<uint64_t>(m_index) | (static_cast<uint64_t>(m_generation) << 32) |
                    (static_cast<uint64_t>(m_flags) << 48);
         }
 
-        [[nodiscard]] static constexpr Entity FromU64(uint64_t value) noexcept {
+        [[nodiscard]] static constexpr Entity FromU64(uint64_t value) noexcept
+        {
             return Entity{static_cast<IndexType>(value & 0xFFFFFFFF),
                           static_cast<GenerationType>((value >> 32) & 0xFFFF),
                           static_cast<FlagsType>((value >> 48) & 0xFFFF)};
@@ -135,7 +176,8 @@ namespace queen
 {
     struct EntityHash
     {
-        [[nodiscard]] constexpr size_t operator()(const Entity& e) const noexcept {
+        [[nodiscard]] constexpr size_t operator()(const Entity& e) const noexcept
+        {
             return static_cast<size_t>(e.Index()) | (static_cast<size_t>(e.Generation()) << 32);
         }
     };
@@ -143,5 +185,8 @@ namespace queen
 
 template <> struct std::hash<queen::Entity>
 {
-    [[nodiscard]] constexpr size_t operator()(const queen::Entity& e) const noexcept { return queen::EntityHash{}(e); }
+    [[nodiscard]] constexpr size_t operator()(const queen::Entity& e) const noexcept
+    {
+        return queen::EntityHash{}(e);
+    }
 };

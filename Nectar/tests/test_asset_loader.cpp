@@ -21,7 +21,8 @@ namespace
     class TestAssetLoader final : public nectar::AssetLoader<TestAsset>
     {
     public:
-        TestAsset* Load(wax::ByteSpan data, comb::DefaultAllocator& alloc) override {
+        TestAsset* Load(wax::ByteSpan data, comb::DefaultAllocator& alloc) override
+        {
             if (data.Size() < sizeof(int) + sizeof(float))
                 return nullptr;
 
@@ -31,13 +32,15 @@ namespace
             return asset;
         }
 
-        void Unload(TestAsset* asset, comb::DefaultAllocator& alloc) override {
+        void Unload(TestAsset* asset, comb::DefaultAllocator& alloc) override
+        {
             if (asset)
                 comb::Delete(alloc, asset);
         }
     };
 
-    auto& GetTestAllocator() {
+    auto& GetTestAllocator()
+    {
         static comb::ModuleAllocator alloc{"TestLoader", 1 * 1024 * 1024};
         return alloc.Get();
     }

@@ -9,9 +9,12 @@ namespace nectar
 {
     VirtualFilesystem::VirtualFilesystem(comb::DefaultAllocator& alloc)
         : m_alloc{&alloc}
-        , m_mounts{alloc} {}
+        , m_mounts{alloc}
+    {
+    }
 
-    void VirtualFilesystem::Mount(wax::StringView mountPoint, MountSource* source, int priority) {
+    void VirtualFilesystem::Mount(wax::StringView mountPoint, MountSource* source, int priority)
+    {
         if (source == nullptr)
         {
             return;
@@ -43,7 +46,8 @@ namespace nectar
         }
     }
 
-    void VirtualFilesystem::Unmount(wax::StringView mountPoint, MountSource* source) {
+    void VirtualFilesystem::Unmount(wax::StringView mountPoint, MountSource* source)
+    {
         const wax::String normalized = NormalizePath(mountPoint, *m_alloc);
 
         for (size_t i = 0; i < m_mounts.Size(); ++i)
@@ -73,7 +77,8 @@ namespace nectar
         }
     }
 
-    MountSource* VirtualFilesystem::Resolve(wax::StringView normalizedPath, wax::String& outRelative) const {
+    MountSource* VirtualFilesystem::Resolve(wax::StringView normalizedPath, wax::String& outRelative) const
+    {
         for (size_t i = 0; i < m_mounts.Size(); ++i)
         {
             const MountEntry& mount = m_mounts[i];
@@ -115,7 +120,8 @@ namespace nectar
         return nullptr;
     }
 
-    wax::ByteBuffer VirtualFilesystem::ReadSync(wax::StringView path) {
+    wax::ByteBuffer VirtualFilesystem::ReadSync(wax::StringView path)
+    {
         HIVE_PROFILE_SCOPE_N("VFS::ReadSync");
 
         const wax::String normalized = NormalizePath(path, *m_alloc);
@@ -129,13 +135,15 @@ namespace nectar
         return source->ReadFile(relative.View(), *m_alloc);
     }
 
-    bool VirtualFilesystem::Exists(wax::StringView path) const {
+    bool VirtualFilesystem::Exists(wax::StringView path) const
+    {
         const wax::String normalized = NormalizePath(path, *m_alloc);
         wax::String relative{*m_alloc};
         return Resolve(normalized.View(), relative) != nullptr;
     }
 
-    FileInfo VirtualFilesystem::Stat(wax::StringView path) const {
+    FileInfo VirtualFilesystem::Stat(wax::StringView path) const
+    {
         const wax::String normalized = NormalizePath(path, *m_alloc);
         wax::String relative{*m_alloc};
         MountSource* source = Resolve(normalized.View(), relative);
@@ -147,7 +155,8 @@ namespace nectar
         return source->Stat(relative.View());
     }
 
-    void VirtualFilesystem::ListDirectory(wax::StringView path, wax::Vector<DirectoryEntry>& out) const {
+    void VirtualFilesystem::ListDirectory(wax::StringView path, wax::Vector<DirectoryEntry>& out) const
+    {
         const wax::String normalized = NormalizePath(path, *m_alloc);
         wax::HashSet<wax::String> seen{*m_alloc};
 
@@ -195,7 +204,8 @@ namespace nectar
         }
     }
 
-    size_t VirtualFilesystem::MountCount() const noexcept {
+    size_t VirtualFilesystem::MountCount() const noexcept
+    {
         return m_mounts.Size();
     }
 } // namespace nectar

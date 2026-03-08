@@ -22,16 +22,26 @@ namespace hive
     public:
         constexpr explicit LogCategory(const char* name, const LogCategory* parentCategory = nullptr)
             : m_name{name}
-            , m_parentCategory{parentCategory} {
+            , m_parentCategory{parentCategory}
+        {
             if (m_parentCategory)
                 m_fullPath = std::string(m_parentCategory->GetFullPath()) + "/" + name;
             else
                 m_fullPath = name;
         }
 
-        [[nodiscard]] constexpr const char* GetName() const { return m_name; }
-        [[nodiscard]] constexpr const LogCategory* GetParentCategory() const { return m_parentCategory; }
-        [[nodiscard]] const std::string& GetFullPath() const { return m_fullPath; }
+        [[nodiscard]] constexpr const char* GetName() const
+        {
+            return m_name;
+        }
+        [[nodiscard]] constexpr const LogCategory* GetParentCategory() const
+        {
+            return m_parentCategory;
+        }
+        [[nodiscard]] const std::string& GetFullPath() const
+        {
+            return m_fullPath;
+        }
 
         LogCategory(const LogCategory& other) = delete;
         LogCategory(LogCategory&& other) = delete;
@@ -65,7 +75,8 @@ namespace hive
         void Log(const LogCategory& cat, LogSeverity sev, const char* msg);
 
         template <typename T>
-        [[nodiscard]] LoggerId RegisterLogger(T* obj, void (T::*method)(const LogCategory&, LogSeverity, const char*)) {
+        [[nodiscard]] LoggerId RegisterLogger(T* obj, void (T::*method)(const LogCategory&, LogSeverity, const char*))
+        {
             Assert(m_count + 1 < m_loggers.size(), "Too many loggers registered");
             m_loggers[m_count++] = {m_count, LogCallback{obj, method}};
             return ++m_idCount;
@@ -91,7 +102,8 @@ namespace hive
         LogManager::LoggerId m_loggerId;
     };
 
-    inline void LogGeneral(const LogCategory& cat, LogSeverity sev, const char* msg) {
+    inline void LogGeneral(const LogCategory& cat, LogSeverity sev, const char* msg)
+    {
         if (!LogManager::IsInitialized())
             return;
         LogManager::GetInstance().Log(cat, sev, msg);
@@ -99,42 +111,50 @@ namespace hive
 
     // Primary API: Formatted logging (modern {fmt})
     template <typename... Args>
-    void LogTrace(const LogCategory& category, fmt::format_string<Args...> format, Args&&... args) {
+    void LogTrace(const LogCategory& category, fmt::format_string<Args...> format, Args&&... args)
+    {
         auto msg = fmt::format(format, std::forward<Args>(args)...);
         LogGeneral(category, LogSeverity::TRACE, msg.c_str());
     }
 
     template <typename... Args>
-    void LogInfo(const LogCategory& category, fmt::format_string<Args...> format, Args&&... args) {
+    void LogInfo(const LogCategory& category, fmt::format_string<Args...> format, Args&&... args)
+    {
         auto msg = fmt::format(format, std::forward<Args>(args)...);
         LogGeneral(category, LogSeverity::INFO, msg.c_str());
     }
 
     template <typename... Args>
-    void LogWarning(const LogCategory& category, fmt::format_string<Args...> format, Args&&... args) {
+    void LogWarning(const LogCategory& category, fmt::format_string<Args...> format, Args&&... args)
+    {
         auto msg = fmt::format(format, std::forward<Args>(args)...);
         LogGeneral(category, LogSeverity::WARN, msg.c_str());
     }
 
     template <typename... Args>
-    void LogError(const LogCategory& category, fmt::format_string<Args...> format, Args&&... args) {
+    void LogError(const LogCategory& category, fmt::format_string<Args...> format, Args&&... args)
+    {
         auto msg = fmt::format(format, std::forward<Args>(args)...);
         LogGeneral(category, LogSeverity::ERROR, msg.c_str());
     }
 
-    inline void LogTrace(const LogCategory& category, const char* message) {
+    inline void LogTrace(const LogCategory& category, const char* message)
+    {
         LogGeneral(category, LogSeverity::TRACE, message);
     }
 
-    inline void LogInfo(const LogCategory& category, const char* message) {
+    inline void LogInfo(const LogCategory& category, const char* message)
+    {
         LogGeneral(category, LogSeverity::INFO, message);
     }
 
-    inline void LogWarning(const LogCategory& category, const char* message) {
+    inline void LogWarning(const LogCategory& category, const char* message)
+    {
         LogGeneral(category, LogSeverity::WARN, message);
     }
 
-    inline void LogError(const LogCategory& category, const char* message) {
+    inline void LogError(const LogCategory& category, const char* message)
+    {
         LogGeneral(category, LogSeverity::ERROR, message);
     }
 } // namespace hive

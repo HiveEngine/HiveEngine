@@ -28,8 +28,8 @@
 
 // Platform includes (use Hive's platform detection macros)
 #if HIVE_PLATFORM_WINDOWS
-#include <intrin.h> // For __rdtsc
 #include <Windows.h>
+#include <intrin.h> // For __rdtsc
 #elif HIVE_PLATFORM_LINUX || HIVE_PLATFORM_MACOS
 #include <pthread.h>
 #include <sys/time.h>
@@ -71,7 +71,8 @@ namespace comb::debug
      * - Requires serialization for accuracy
      *
      */
-    inline uint64_t GetTimestamp() noexcept {
+    inline uint64_t GetTimestamp() noexcept
+    {
 #if HIVE_PLATFORM_WINDOWS
         // Windows: Use QueryPerformanceCounter (QPC)
         LARGE_INTEGER counter, frequency;
@@ -119,7 +120,8 @@ namespace comb::debug
  * Check availability with: if constexpr (kHasCycleCounter)
  */
 #if defined(__x86_64__) || defined(__i386__) || defined(_M_X64) || defined(_M_IX86)
-    inline uint64_t GetCycleCounter() noexcept {
+    inline uint64_t GetCycleCounter() noexcept
+    {
         return __rdtsc();
     }
 #endif
@@ -139,7 +141,8 @@ namespace comb::debug
      * We need a numeric ID for display/logging purposes.
      *
      */
-    inline uint32_t GetThreadId() noexcept {
+    inline uint32_t GetThreadId() noexcept
+    {
 #if HIVE_PLATFORM_WINDOWS
         return static_cast<uint32_t>(GetCurrentThreadId());
 
@@ -173,7 +176,8 @@ namespace comb::debug
      *
      * Only use when debugging specific leaks!
      */
-    inline void CaptureCallstack(void** frames, uint32_t& depth) noexcept {
+    inline void CaptureCallstack(void** frames, uint32_t& depth) noexcept
+    {
         hive::Assert(frames != nullptr, "frames must not be null");
 
 #if HIVE_PLATFORM_WINDOWS
@@ -229,7 +233,8 @@ namespace comb::debug
      * @param nanos Duration in nanoseconds
      * @return Formatted string (e.g., "1.5ms", "500ns", "2.3s")
      */
-    inline const char* FormatDuration(uint64_t nanos) {
+    inline const char* FormatDuration(uint64_t nanos)
+    {
         static thread_local char s_buffer[64];
 
         if (nanos < 1000)

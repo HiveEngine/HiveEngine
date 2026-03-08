@@ -17,18 +17,21 @@ namespace
     class DummyLoader final : public nectar::AssetLoader<DummyAsset>
     {
     public:
-        DummyAsset* Load(wax::ByteSpan, comb::DefaultAllocator& alloc) override {
+        DummyAsset* Load(wax::ByteSpan, comb::DefaultAllocator& alloc) override
+        {
             auto* a = comb::New<DummyAsset>(alloc);
             a->id = 777;
             return a;
         }
-        void Unload(DummyAsset* asset, comb::DefaultAllocator& alloc) override {
+        void Unload(DummyAsset* asset, comb::DefaultAllocator& alloc) override
+        {
             if (asset)
                 comb::Delete(alloc, asset);
         }
     };
 
-    auto& GetStorageAlloc() {
+    auto& GetStorageAlloc()
+    {
         static comb::ModuleAllocator alloc{"TestStorage", 4 * 1024 * 1024};
         return alloc.Get();
     }

@@ -43,11 +43,19 @@ namespace hive
         {
         public:
             explicit FreeFunction(R (*fn)(Args...)) noexcept
-                : m_fn{fn} {}
+                : m_fn{fn}
+            {
+            }
 
-            R Invoke(Args&&... args) override { return m_fn(static_cast<Args&&>(args)...); }
+            R Invoke(Args&&... args) override
+            {
+                return m_fn(static_cast<Args&&>(args)...);
+            }
 
-            FreeFunction* Clone(void* dst) const override { return ::new (dst) FreeFunction{*this}; }
+            FreeFunction* Clone(void* dst) const override
+            {
+                return ::new (dst) FreeFunction{*this};
+            }
 
         private:
             R (*m_fn)(Args...);
@@ -58,11 +66,19 @@ namespace hive
         public:
             MemberFunction(T* obj, R (T::*fn)(Args...)) noexcept
                 : m_obj{obj}
-                , m_fn{fn} {}
+                , m_fn{fn}
+            {
+            }
 
-            R Invoke(Args&&... args) override { return (m_obj->*m_fn)(static_cast<Args&&>(args)...); }
+            R Invoke(Args&&... args) override
+            {
+                return (m_obj->*m_fn)(static_cast<Args&&>(args)...);
+            }
 
-            MemberFunction* Clone(void* dst) const override { return ::new (dst) MemberFunction{*this}; }
+            MemberFunction* Clone(void* dst) const override
+            {
+                return ::new (dst) MemberFunction{*this};
+            }
 
         private:
             T* m_obj;
@@ -74,11 +90,19 @@ namespace hive
         public:
             ConstMemberFunction(T* obj, R (T::*fn)(Args...) const) noexcept
                 : m_obj{obj}
-                , m_fn{fn} {}
+                , m_fn{fn}
+            {
+            }
 
-            R Invoke(Args&&... args) override { return (m_obj->*m_fn)(static_cast<Args&&>(args)...); }
+            R Invoke(Args&&... args) override
+            {
+                return (m_obj->*m_fn)(static_cast<Args&&>(args)...);
+            }
 
-            ConstMemberFunction* Clone(void* dst) const override { return ::new (dst) ConstMemberFunction{*this}; }
+            ConstMemberFunction* Clone(void* dst) const override
+            {
+                return ::new (dst) ConstMemberFunction{*this};
+            }
 
         private:
             T* m_obj;
@@ -92,25 +116,37 @@ namespace hive
         Callable* m_callable{};
 
     public:
-        [[nodiscard]] bool IsEmpty() const noexcept { return !m_callable; }
+        [[nodiscard]] bool IsEmpty() const noexcept
+        {
+            return !m_callable;
+        }
 
         Functor() = default;
 
         Functor(R (*fn)(Args...))
-            : m_callable{::new (m_buffer) FreeFunction{fn}} {}
+            : m_callable{::new (m_buffer) FreeFunction{fn}}
+        {
+        }
 
         template <class T>
         Functor(T* obj, R (T::*fn)(Args...))
-            : m_callable{::new (m_buffer) MemberFunction<T>{obj, fn}} {}
+            : m_callable{::new (m_buffer) MemberFunction<T>{obj, fn}}
+        {
+        }
 
         template <class T>
         Functor(T* obj, R (T::*fn)(Args...) const)
-            : m_callable{::new (m_buffer) ConstMemberFunction<T>{obj, fn}} {}
+            : m_callable{::new (m_buffer) ConstMemberFunction<T>{obj, fn}}
+        {
+        }
 
         Functor(const Functor& other)
-            : m_callable{other.IsEmpty() ? nullptr : other.m_callable->Clone(m_buffer)} {}
+            : m_callable{other.IsEmpty() ? nullptr : other.m_callable->Clone(m_buffer)}
+        {
+        }
 
-        Functor& operator=(const Functor& other) {
+        Functor& operator=(const Functor& other)
+        {
             if (this != &other)
             {
                 if (m_callable)
@@ -120,12 +156,16 @@ namespace hive
             return *this;
         }
 
-        ~Functor() {
+        ~Functor()
+        {
             if (m_callable)
                 m_callable->~Callable();
         }
 
-        R operator()(Args... args) { return m_callable->Invoke(static_cast<Args&&>(args)...); }
+        R operator()(Args... args)
+        {
+            return m_callable->Invoke(static_cast<Args&&>(args)...);
+        }
     };
 
 } // namespace hive

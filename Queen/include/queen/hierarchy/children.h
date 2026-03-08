@@ -55,7 +55,9 @@ namespace queen
     {
     public:
         explicit ChildrenT(Allocator& alloc)
-            : m_entities{alloc} {}
+            : m_entities{alloc}
+        {
+        }
 
         ChildrenT(const ChildrenT&) = delete;
         ChildrenT& operator=(const ChildrenT&) = delete;
@@ -68,7 +70,10 @@ namespace queen
          *
          * @param child Entity to add
          */
-        void Add(Entity child) { m_entities.PushBack(child); }
+        void Add(Entity child)
+        {
+            m_entities.PushBack(child);
+        }
 
         /**
          * Remove a child entity from the list
@@ -78,7 +83,8 @@ namespace queen
          * @param child Entity to remove
          * @return true if child was found and removed
          */
-        bool Remove(Entity child) {
+        bool Remove(Entity child)
+        {
             for (size_t i = 0; i < m_entities.Size(); ++i)
             {
                 if (m_entities[i] == child)
@@ -98,7 +104,8 @@ namespace queen
         /**
          * Check if a child entity is in the list
          */
-        [[nodiscard]] bool Contains(Entity child) const {
+        [[nodiscard]] bool Contains(Entity child) const
+        {
             for (size_t i = 0; i < m_entities.Size(); ++i)
             {
                 if (m_entities[i] == child)
@@ -112,29 +119,50 @@ namespace queen
         /**
          * Get child at index
          */
-        [[nodiscard]] Entity At(size_t index) const { return m_entities[index]; }
+        [[nodiscard]] Entity At(size_t index) const
+        {
+            return m_entities[index];
+        }
 
         /**
          * Get number of children
          */
-        [[nodiscard]] size_t Count() const noexcept { return m_entities.Size(); }
+        [[nodiscard]] size_t Count() const noexcept
+        {
+            return m_entities.Size();
+        }
 
         /**
          * Check if there are no children
          */
-        [[nodiscard]] bool IsEmpty() const noexcept { return m_entities.IsEmpty(); }
+        [[nodiscard]] bool IsEmpty() const noexcept
+        {
+            return m_entities.IsEmpty();
+        }
 
         // ─────────────────────────────────────────────────────────────
         // Iterator support
         // ─────────────────────────────────────────────────────────────
 
-        [[nodiscard]] const Entity* Begin() const noexcept { return m_entities.Begin(); }
+        [[nodiscard]] const Entity* Begin() const noexcept
+        {
+            return m_entities.Begin();
+        }
 
-        [[nodiscard]] const Entity* End() const noexcept { return m_entities.End(); }
+        [[nodiscard]] const Entity* End() const noexcept
+        {
+            return m_entities.End();
+        }
 
-        [[nodiscard]] Entity* Begin() noexcept { return m_entities.Begin(); }
+        [[nodiscard]] Entity* Begin() noexcept
+        {
+            return m_entities.Begin();
+        }
 
-        [[nodiscard]] Entity* End() noexcept { return m_entities.End(); }
+        [[nodiscard]] Entity* End() noexcept
+        {
+            return m_entities.End();
+        }
 
     private:
         wax::Vector<Entity> m_entities;

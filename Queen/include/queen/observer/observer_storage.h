@@ -69,7 +69,9 @@ namespace queen
         explicit ObserverStorage(Allocator& allocator)
             : m_allocator{&allocator}
             , m_observers{allocator}
-            , m_lookup{allocator, 32} {}
+            , m_lookup{allocator, 32}
+        {
+        }
 
         ~ObserverStorage() = default;
 
@@ -91,7 +93,8 @@ namespace queen
          * @return ObserverBuilder for further configuration
          */
         template <ObserverTrigger TriggerEvent>
-        ObserverBuilder<TriggerEvent, Allocator> Register(World& world, const char* name) {
+        ObserverBuilder<TriggerEvent, Allocator> Register(World& world, const char* name)
+        {
             // Start IDs at 1 so 0 can be used as invalid sentinel
             ObserverId id{static_cast<uint32_t>(m_observers.Size()) + 1};
 
@@ -119,7 +122,8 @@ namespace queen
          * @param id Observer identifier
          * @return Pointer to observer, or nullptr if invalid
          */
-        [[nodiscard]] Observer<Allocator>* GetObserver(ObserverId id) {
+        [[nodiscard]] Observer<Allocator>* GetObserver(ObserverId id)
+        {
             // IDs start at 1, so index = id - 1
             if (!id.IsValid() || id.Value() > m_observers.Size())
             {
@@ -128,7 +132,8 @@ namespace queen
             return &m_observers[id.Value() - 1];
         }
 
-        [[nodiscard]] const Observer<Allocator>* GetObserver(ObserverId id) const {
+        [[nodiscard]] const Observer<Allocator>* GetObserver(ObserverId id) const
+        {
             // IDs start at 1, so index = id - 1
             if (!id.IsValid() || id.Value() > m_observers.Size())
             {
@@ -143,7 +148,8 @@ namespace queen
          * @param name Observer name
          * @return Pointer to observer, or nullptr if not found
          */
-        [[nodiscard]] Observer<Allocator>* GetObserverByName(const char* name) {
+        [[nodiscard]] Observer<Allocator>* GetObserverByName(const char* name)
+        {
             for (size_t i = 0; i < m_observers.Size(); ++i)
             {
                 if (std::strcmp(m_observers[i].Name(), name) == 0)
@@ -181,7 +187,8 @@ namespace queen
          * @param component Pointer to component data
          */
         template <ObserverTrigger TriggerEvent>
-        void Trigger(World& world, Entity entity, const typename TriggerEvent::ComponentType* component) {
+        void Trigger(World& world, Entity entity, const typename TriggerEvent::ComponentType* component)
+        {
             Trigger(GetTriggerType<TriggerEvent>(), GetTriggerComponentId<TriggerEvent>(), world, entity,
                     static_cast<const void*>(component));
         }
@@ -193,7 +200,8 @@ namespace queen
         /**
          * Enable or disable an observer
          */
-        void SetEnabled(ObserverId id, bool enabled) {
+        void SetEnabled(ObserverId id, bool enabled)
+        {
             Observer<Allocator>* obs = GetObserver(id);
             if (obs != nullptr)
             {
@@ -204,7 +212,8 @@ namespace queen
         /**
          * Check if an observer is enabled
          */
-        [[nodiscard]] bool IsEnabled(ObserverId id) const {
+        [[nodiscard]] bool IsEnabled(ObserverId id) const
+        {
             const Observer<Allocator>* obs = GetObserver(id);
             if (obs != nullptr)
             {
@@ -216,28 +225,37 @@ namespace queen
         /**
          * Get the number of registered observers
          */
-        [[nodiscard]] size_t ObserverCount() const noexcept { return m_observers.Size(); }
+        [[nodiscard]] size_t ObserverCount() const noexcept
+        {
+            return m_observers.Size();
+        }
 
         /**
          * Check if any observers are registered
          */
-        [[nodiscard]] bool IsEmpty() const noexcept { return m_observers.IsEmpty(); }
+        [[nodiscard]] bool IsEmpty() const noexcept
+        {
+            return m_observers.IsEmpty();
+        }
 
         /**
          * Check if any observers exist for a given key
          */
-        [[nodiscard]] bool HasObservers(TriggerType trigger, TypeId componentId) const {
+        [[nodiscard]] bool HasObservers(TriggerType trigger, TypeId componentId) const
+        {
             ObserverKey key{trigger, componentId};
             auto* indices = m_lookup.Find(key);
             return indices != nullptr && !indices->IsEmpty();
         }
 
-        template <ObserverTrigger TriggerEvent> [[nodiscard]] bool HasObservers() const {
+        template <ObserverTrigger TriggerEvent> [[nodiscard]] bool HasObservers() const
+        {
             return HasObservers(GetTriggerType<TriggerEvent>(), GetTriggerComponentId<TriggerEvent>());
         }
 
     private:
-        void AddToLookup(ObserverKey key, uint32_t observerIndex) {
+        void AddToLookup(ObserverKey key, uint32_t observerIndex)
+        {
             auto* indices = m_lookup.Find(key);
             if (indices == nullptr)
             {

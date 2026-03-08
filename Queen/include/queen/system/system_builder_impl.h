@@ -15,7 +15,8 @@ namespace queen
 
     template <comb::Allocator Allocator, typename... Terms>
     template <typename F>
-    SystemId SystemBuilder<Allocator, Terms...>::Each(F&& func) {
+    SystemId SystemBuilder<Allocator, Terms...>::Each(F&& func)
+    {
         using FuncType = std::decay_t<F>;
 
         void* userData = m_allocator->Allocate(sizeof(FuncType), alignof(FuncType));
@@ -38,7 +39,8 @@ namespace queen
 
     template <comb::Allocator Allocator, typename... Terms>
     template <typename F>
-    SystemId SystemBuilder<Allocator, Terms...>::EachWithEntity(F&& func) {
+    SystemId SystemBuilder<Allocator, Terms...>::EachWithEntity(F&& func)
+    {
         using FuncType = std::decay_t<F>;
 
         void* userData = m_allocator->Allocate(sizeof(FuncType), alignof(FuncType));
@@ -61,7 +63,8 @@ namespace queen
 
     template <comb::Allocator Allocator, typename... Terms>
     template <typename F>
-    SystemId SystemBuilder<Allocator, Terms...>::EachWithCommands(F&& func) {
+    SystemId SystemBuilder<Allocator, Terms...>::EachWithCommands(F&& func)
+    {
         using FuncType = std::decay_t<F>;
 
         void* userData = m_allocator->Allocate(sizeof(FuncType), alignof(FuncType));
@@ -90,7 +93,8 @@ namespace queen
 
     template <comb::Allocator Allocator, typename... Terms>
     template <typename R, typename F>
-    SystemId SystemBuilder<Allocator, Terms...>::EachWithRes(F&& func) {
+    SystemId SystemBuilder<Allocator, Terms...>::EachWithRes(F&& func)
+    {
         using FuncType = std::decay_t<F>;
 
         m_descriptor->Access().template AddResourceRead<R>();
@@ -123,7 +127,8 @@ namespace queen
 
     template <comb::Allocator Allocator, typename... Terms>
     template <typename R, typename F>
-    SystemId SystemBuilder<Allocator, Terms...>::EachWithResMut(F&& func) {
+    SystemId SystemBuilder<Allocator, Terms...>::EachWithResMut(F&& func)
+    {
         using FuncType = std::decay_t<F>;
 
         m_descriptor->Access().template AddResourceWrite<R>();
@@ -160,7 +165,8 @@ namespace queen
 
     template <comb::Allocator Allocator>
     template <typename R, typename F>
-    SystemId SystemBuilder<Allocator>::RunWithRes(F&& func) {
+    SystemId SystemBuilder<Allocator>::RunWithRes(F&& func)
+    {
         using FuncType = std::decay_t<F>;
 
         m_descriptor->Access().template AddResourceRead<R>();
@@ -187,7 +193,8 @@ namespace queen
 
     template <comb::Allocator Allocator>
     template <typename R, typename F>
-    SystemId SystemBuilder<Allocator>::RunWithResMut(F&& func) {
+    SystemId SystemBuilder<Allocator>::RunWithResMut(F&& func)
+    {
         using FuncType = std::decay_t<F>;
 
         m_descriptor->Access().template AddResourceWrite<R>();

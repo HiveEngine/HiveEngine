@@ -79,7 +79,8 @@ namespace queen
             , m_userData{nullptr}
             , m_destructorFn{nullptr}
             , m_executorMode{SystemExecutor::PARALLEL}
-            , m_enabled{true} {
+            , m_enabled{true}
+        {
             if (name != nullptr)
             {
                 size_t len = std::strlen(name);
@@ -94,7 +95,8 @@ namespace queen
             }
         }
 
-        ~SystemDescriptor() {
+        ~SystemDescriptor()
+        {
             if (m_userData != nullptr)
             {
                 if (m_destructorFn != nullptr)
@@ -119,7 +121,8 @@ namespace queen
             , m_enabled{other.m_enabled}
             , m_afterCount{other.m_afterCount}
             , m_beforeCount{other.m_beforeCount}
-            , m_lastRunTick{other.m_lastRunTick} {
+            , m_lastRunTick{other.m_lastRunTick}
+        {
             std::memcpy(m_name, other.m_name, sizeof(m_name));
             std::memcpy(m_explicitAfter, other.m_explicitAfter, sizeof(SystemId) * m_afterCount);
             std::memcpy(m_explicitBefore, other.m_explicitBefore, sizeof(SystemId) * m_beforeCount);
@@ -127,7 +130,8 @@ namespace queen
             other.m_destructorFn = nullptr;
         }
 
-        SystemDescriptor& operator=(SystemDescriptor&& other) noexcept {
+        SystemDescriptor& operator=(SystemDescriptor&& other) noexcept
+        {
             if (this != &other)
             {
                 if (m_userData != nullptr)
@@ -161,17 +165,45 @@ namespace queen
             return *this;
         }
 
-        [[nodiscard]] SystemId Id() const noexcept { return m_id; }
-        [[nodiscard]] const char* Name() const noexcept { return m_name; }
-        [[nodiscard]] const AccessDescriptor<Allocator>& Access() const noexcept { return m_access; }
-        [[nodiscard]] AccessDescriptor<Allocator>& Access() noexcept { return m_access; }
-        [[nodiscard]] const QueryDescriptor<Allocator>& Query() const noexcept { return m_query; }
-        [[nodiscard]] QueryDescriptor<Allocator>& Query() noexcept { return m_query; }
-        [[nodiscard]] SystemExecutor ExecutorMode() const noexcept { return m_executorMode; }
-        [[nodiscard]] bool IsEnabled() const noexcept { return m_enabled; }
-        [[nodiscard]] Tick LastRunTick() const noexcept { return m_lastRunTick; }
+        [[nodiscard]] SystemId Id() const noexcept
+        {
+            return m_id;
+        }
+        [[nodiscard]] const char* Name() const noexcept
+        {
+            return m_name;
+        }
+        [[nodiscard]] const AccessDescriptor<Allocator>& Access() const noexcept
+        {
+            return m_access;
+        }
+        [[nodiscard]] AccessDescriptor<Allocator>& Access() noexcept
+        {
+            return m_access;
+        }
+        [[nodiscard]] const QueryDescriptor<Allocator>& Query() const noexcept
+        {
+            return m_query;
+        }
+        [[nodiscard]] QueryDescriptor<Allocator>& Query() noexcept
+        {
+            return m_query;
+        }
+        [[nodiscard]] SystemExecutor ExecutorMode() const noexcept
+        {
+            return m_executorMode;
+        }
+        [[nodiscard]] bool IsEnabled() const noexcept
+        {
+            return m_enabled;
+        }
+        [[nodiscard]] Tick LastRunTick() const noexcept
+        {
+            return m_lastRunTick;
+        }
 
-        void SetExecutorMode(SystemExecutor mode) noexcept {
+        void SetExecutorMode(SystemExecutor mode) noexcept
+        {
             m_executorMode = mode;
             if (mode == SystemExecutor::EXCLUSIVE)
             {
@@ -179,9 +211,13 @@ namespace queen
             }
         }
 
-        void SetEnabled(bool enabled) noexcept { m_enabled = enabled; }
+        void SetEnabled(bool enabled) noexcept
+        {
+            m_enabled = enabled;
+        }
 
-        void SetExecutor(SystemExecutorFn fn, void* userData, void (*destructor)(void*)) {
+        void SetExecutor(SystemExecutorFn fn, void* userData, void (*destructor)(void*))
+        {
             if (m_userData != nullptr)
             {
                 if (m_destructorFn != nullptr)
@@ -201,7 +237,8 @@ namespace queen
          * @param world The world to execute on
          * @param current_tick The current world tick (for change detection)
          */
-        void Execute(World& world, Tick currentTick) {
+        void Execute(World& world, Tick currentTick)
+        {
             if (m_executorFn != nullptr && m_enabled)
             {
                 m_executorFn(world, m_userData);
@@ -209,26 +246,43 @@ namespace queen
             }
         }
 
-        [[nodiscard]] bool HasExecutor() const noexcept { return m_executorFn != nullptr; }
+        [[nodiscard]] bool HasExecutor() const noexcept
+        {
+            return m_executorFn != nullptr;
+        }
 
-        void AddAfter(SystemId id) noexcept {
+        void AddAfter(SystemId id) noexcept
+        {
             if (m_afterCount < kMaxExplicitDeps)
             {
                 m_explicitAfter[m_afterCount++] = id;
             }
         }
 
-        void AddBefore(SystemId id) noexcept {
+        void AddBefore(SystemId id) noexcept
+        {
             if (m_beforeCount < kMaxExplicitDeps)
             {
                 m_explicitBefore[m_beforeCount++] = id;
             }
         }
 
-        [[nodiscard]] uint8_t AfterCount() const noexcept { return m_afterCount; }
-        [[nodiscard]] uint8_t BeforeCount() const noexcept { return m_beforeCount; }
-        [[nodiscard]] SystemId AfterDep(uint8_t i) const noexcept { return m_explicitAfter[i]; }
-        [[nodiscard]] SystemId BeforeDep(uint8_t i) const noexcept { return m_explicitBefore[i]; }
+        [[nodiscard]] uint8_t AfterCount() const noexcept
+        {
+            return m_afterCount;
+        }
+        [[nodiscard]] uint8_t BeforeCount() const noexcept
+        {
+            return m_beforeCount;
+        }
+        [[nodiscard]] SystemId AfterDep(uint8_t i) const noexcept
+        {
+            return m_explicitAfter[i];
+        }
+        [[nodiscard]] SystemId BeforeDep(uint8_t i) const noexcept
+        {
+            return m_explicitBefore[i];
+        }
 
     private:
         SystemId m_id;

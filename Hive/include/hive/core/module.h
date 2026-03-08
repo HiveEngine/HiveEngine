@@ -9,9 +9,15 @@ namespace hive
     class ModuleContext
     {
     public:
-        template <typename T> void AddDependency() { m_dependencies.emplace_back(T::GetStaticName()); }
+        template <typename T> void AddDependency()
+        {
+            m_dependencies.emplace_back(T::GetStaticName());
+        }
 
-        const std::vector<std::string>& GetDependencies() const { return m_dependencies; }
+        const std::vector<std::string>& GetDependencies() const
+        {
+            return m_dependencies;
+        }
 
     private:
         std::vector<std::string> m_dependencies;
@@ -32,14 +38,23 @@ namespace hive
 
         [[nodiscard]] bool CanInitialize(const std::unordered_set<std::string>& initModulesNames) const;
 
-        [[nodiscard]] bool IsInitialized() const { return m_isInitialized; }
+        [[nodiscard]] bool IsInitialized() const
+        {
+            return m_isInitialized;
+        }
 
     protected:
-        virtual void DoConfigure([[maybe_unused]] ModuleContext& context) {}
+        virtual void DoConfigure([[maybe_unused]] ModuleContext& context)
+        {
+        }
 
-        virtual void DoInitialize() {}
+        virtual void DoInitialize()
+        {
+        }
 
-        virtual void DoShutdown() {}
+        virtual void DoShutdown()
+        {
+        }
 
     private:
         ModuleContext m_context;

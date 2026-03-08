@@ -50,14 +50,18 @@ namespace queen
         Func m_func{nullptr};
         void* m_userData{nullptr};
 
-        void Execute() const {
+        void Execute() const
+        {
             if (m_func != nullptr)
             {
                 m_func(m_userData);
             }
         }
 
-        [[nodiscard]] bool IsValid() const noexcept { return m_func != nullptr; }
+        [[nodiscard]] bool IsValid() const noexcept
+        {
+            return m_func != nullptr;
+        }
     };
 
     /**
@@ -149,7 +153,8 @@ namespace queen
             , m_workerCount{workerCount == 0 ? GetDefaultWorkerCount() : workerCount}
             , m_idleStrategy{idleStrategy}
             , m_running{false}
-            , m_pendingTasks{0} {
+            , m_pendingTasks{0}
+        {
             // The deque uses safe_allocator_ internally for Grow() which can happen from any thread
             void* globalMem = m_allocator->Allocate(sizeof(WorkStealingDeque<Task, SafeAllocator>),
                                                     alignof(WorkStealingDeque<Task, SafeAllocator>));
@@ -173,7 +178,8 @@ namespace queen
             }
         }
 
-        ~ThreadPool() {
+        ~ThreadPool()
+        {
             Stop();
 
             for (size_t i = 0; i < m_workerCount; ++i)
@@ -205,7 +211,8 @@ namespace queen
          *
          * Spawns worker threads that begin executing tasks.
          */
-        void Start() {
+        void Start()
+        {
             if (m_running.exchange(true))
             {
                 return; // Already running
@@ -223,7 +230,8 @@ namespace queen
          *
          * Signals all workers to stop and waits for them to finish.
          */
-        void Stop() {
+        void Stop()
+        {
             if (!m_running.exchange(false))
             {
                 return; // Already stopped
@@ -255,7 +263,8 @@ namespace queen
          * @param func Function pointer to execute
          * @param user_data User data passed to function
          */
-        void Submit(Task::Func func, void* userData) {
+        void Submit(Task::Func func, void* userData)
+        {
             HIVE_PROFILE_SCOPE_N("ThreadPool::Submit");
 
             Task task{func, userData};
@@ -287,7 +296,8 @@ namespace queen
          * @param func Function pointer to execute
          * @param user_data User data passed to function
          */
-        void SubmitTo([[maybe_unused]] size_t workerIdx, Task::Func func, void* userData) {
+        void SubmitTo([[maybe_unused]] size_t workerIdx, Task::Func func, void* userData)
+        {
             // External threads cannot push to worker deques (Chase-Lev constraint)
             // All submissions go through the global queue
             Submit(func, userData);
@@ -298,7 +308,8 @@ namespace queen
          *
          * Blocks until all tasks have finished executing.
          */
-        void WaitAll() {
+        void WaitAll()
+        {
             while (m_pendingTasks.load(std::memory_order_acquire) > 0)
             {
                 ApplyIdleStrategy();
@@ -308,44 +319,59 @@ namespace queen
         /**
          * Check if there are pending tasks
          */
-        [[nodiscard]] bool HasPendingTasks() const noexcept {
+        [[nodiscard]] bool HasPendingTasks() const noexcept
+        {
             return m_pendingTasks.load(std::memory_order_acquire) > 0;
         }
 
         /**
          * Get the number of pending tasks
          */
-        [[nodiscard]] int64_t PendingTaskCount() const noexcept {
+        [[nodiscard]] int64_t PendingTaskCount() const noexcept
+        {
             return m_pendingTasks.load(std::memory_order_acquire);
         }
 
-        [[nodiscard]] bool IsRunning() const noexcept { return m_running.load(std::memory_order_acquire); }
+        [[nodiscard]] bool IsRunning() const noexcept
+        {
+            return m_running.load(std::memory_order_acquire);
+        }
 
-        [[nodiscard]] size_t WorkerCount() const noexcept { return m_workerCount; }
+        [[nodiscard]] size_t WorkerCount() const noexcept
+        {
+            return m_workerCount;
+        }
 
-        [[nodiscard]] IdleStrategy GetIdleStrategy() const noexcept { return m_idleStrategy; }
+        [[nodiscard]] IdleStrategy GetIdleStrategy() const noexcept
+        {
+            return m_idleStrategy;
+        }
 
-        [[nodiscard]] WorkerState GetWorkerState(size_t index) const noexcept {
+        [[nodiscard]] WorkerState GetWorkerState(size_t index) const noexcept
+        {
             if (index >= m_workerCount)
                 return WorkerState::STOPPED;
             return m_workers[index].m_state.load(std::memory_order_acquire);
         }
 
     private:
-        static size_t GetDefaultWorkerCount() noexcept {
+        static size_t GetDefaultWorkerCount() noexcept
+        {
             size_t count = std::thread::hardware_concurrency();
             return count > 0 ? count : 4;
         }
 
         // Simple xorshift32 for fast random numbers
-        static uint32_t XorShift32(uint32_t& state) noexcept {
+        static uint32_t XorShift32(uint32_t& state) noexcept
+        {
             state ^= state << 13;
             state ^= state >> 17;
             state ^= state << 5;
             return state;
         }
 
-        void WorkerMain(WorkerContext* ctx) {
+        void WorkerMain(WorkerContext* ctx)
+        {
             constexpr int kSpinAttempts = 64; // Spin before yielding
             int idleSpins = 0;
 
@@ -429,7 +455,8 @@ namespace queen
             ctx->m_state.store(WorkerState::STOPPED, std::memory_order_release);
         }
 
-        Task TrySteal(WorkerContext* ctx) {
+        Task TrySteal(WorkerContext* ctx)
+        {
             HIVE_PROFILE_SCOPE_N("TrySteal");
             // Random starting point to reduce contention
             uint32_t start = XorShift32(ctx->m_rngState) % static_cast<uint32_t>(m_workerCount);
@@ -451,7 +478,8 @@ namespace queen
             return Task{};
         }
 
-        void ApplyIdleStrategy() {
+        void ApplyIdleStrategy()
+        {
             switch (m_idleStrategy)
             {
                 case IdleStrategy::SPIN:

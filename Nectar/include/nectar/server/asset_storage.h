@@ -73,7 +73,8 @@ namespace nectar
             , m_capacity{capacity}
             , m_count{0}
             , m_firstFree{0}
-            , m_eventQueue{alloc} {
+            , m_eventQueue{alloc}
+        {
             hive::Assert(capacity > 0, "AssetStorageFor capacity must be > 0");
             hive::Assert(capacity <= UINT32_MAX, "AssetStorageFor capacity exceeds max");
 
@@ -89,7 +90,8 @@ namespace nectar
             m_slots[m_capacity - 1].m_nextFree = UINT32_MAX;
         }
 
-        ~AssetStorageFor() override {
+        ~AssetStorageFor() override
+        {
             for (size_t i = 0; i < m_capacity; ++i)
             {
                 if (m_slots[i].m_alive && m_slots[i].m_asset && m_loader)
@@ -108,16 +110,32 @@ namespace nectar
         AssetStorageFor(const AssetStorageFor&) = delete;
         AssetStorageFor& operator=(const AssetStorageFor&) = delete;
 
-        nectar::TypeId GetTypeId() const noexcept override { return nectar::TypeIdOf<T>(); }
+        nectar::TypeId GetTypeId() const noexcept override
+        {
+            return nectar::TypeIdOf<T>();
+        }
 
-        void SetLoader(AssetLoader<T>* loader) noexcept { m_loader = loader; }
-        [[nodiscard]] AssetLoader<T>* GetLoader() const noexcept { return m_loader; }
+        void SetLoader(AssetLoader<T>* loader) noexcept
+        {
+            m_loader = loader;
+        }
+        [[nodiscard]] AssetLoader<T>* GetLoader() const noexcept
+        {
+            return m_loader;
+        }
 
-        void SetPlaceholder(T* placeholder) noexcept { m_placeholder = placeholder; }
-        [[nodiscard]] T* GetPlaceholder() const noexcept { return m_placeholder; }
+        void SetPlaceholder(T* placeholder) noexcept
+        {
+            m_placeholder = placeholder;
+        }
+        [[nodiscard]] T* GetPlaceholder() const noexcept
+        {
+            return m_placeholder;
+        }
 
         /// Allocate a new slot. Returns Handle::Invalid() if full.
-        [[nodiscard]] wax::Handle<T> AllocateSlot() noexcept {
+        [[nodiscard]] wax::Handle<T> AllocateSlot() noexcept
+        {
             if (m_firstFree == UINT32_MAX)
             {
                 return wax::Handle<T>::Invalid();
@@ -137,7 +155,8 @@ namespace nectar
             return wax::Handle<T>{index, slot.m_generation};
         }
 
-        void SetAsset(wax::Handle<T> handle, T* asset) noexcept {
+        void SetAsset(wax::Handle<T> handle, T* asset) noexcept
+        {
             hive::Assert(!handle.IsNull() && handle.m_index < m_capacity, "Invalid handle in SetAsset");
             Slot& slot = m_slots[handle.m_index];
             hive::Assert(slot.m_alive && slot.m_generation == handle.m_generation, "Stale handle in SetAsset");
@@ -146,7 +165,8 @@ namespace nectar
                 m_bytesUsed += m_loader->SizeOf(asset);
         }
 
-        [[nodiscard]] T* GetAsset(wax::Handle<T> handle) const noexcept {
+        [[nodiscard]] T* GetAsset(wax::Handle<T> handle) const noexcept
+        {
             if (handle.IsNull() || handle.m_index >= m_capacity)
                 return nullptr;
             const Slot& slot = m_slots[handle.m_index];
@@ -156,7 +176,8 @@ namespace nectar
         }
 
         /// Returns the loaded asset if ready, or the placeholder otherwise.
-        [[nodiscard]] T* GetAssetOrPlaceholder(wax::Handle<T> handle) const noexcept {
+        [[nodiscard]] T* GetAssetOrPlaceholder(wax::Handle<T> handle) const noexcept
+        {
             if (handle.IsNull() || handle.m_index >= m_capacity)
                 return m_placeholder;
             const Slot& slot = m_slots[handle.m_index];
@@ -169,30 +190,35 @@ namespace nectar
 
         // -- IAssetStorage interface --
 
-        void IncrementRef(uint32_t index) noexcept override {
+        void IncrementRef(uint32_t index) noexcept override
+        {
             hive::Assert(index < m_capacity && m_slots[index].m_alive, "IncrementRef on dead slot");
             ++m_slots[index].m_refCount;
         }
 
-        void DecrementRef(uint32_t index) noexcept override {
+        void DecrementRef(uint32_t index) noexcept override
+        {
             hive::Assert(index < m_capacity && m_slots[index].m_alive, "DecrementRef on dead slot");
             hive::Assert(m_slots[index].m_refCount > 0, "DecrementRef below zero");
             --m_slots[index].m_refCount;
         }
 
-        uint32_t GetRefCount(uint32_t index) const noexcept override {
+        uint32_t GetRefCount(uint32_t index) const noexcept override
+        {
             if (index >= m_capacity || !m_slots[index].m_alive)
                 return 0;
             return m_slots[index].m_refCount;
         }
 
-        AssetStatus GetStatus(uint32_t index) const noexcept override {
+        AssetStatus GetStatus(uint32_t index) const noexcept override
+        {
             if (index >= m_capacity || !m_slots[index].m_alive)
                 return AssetStatus::NOT_LOADED;
             return m_slots[index].m_status;
         }
 
-        void SetStatus(uint32_t index, AssetStatus status) noexcept override {
+        void SetStatus(uint32_t index, AssetStatus status) noexcept override
+        {
             hive::Assert(index < m_capacity && m_slots[index].m_alive, "SetStatus on dead slot");
             auto old = m_slots[index].m_status;
             m_slots[index].m_status = status;
@@ -203,24 +229,28 @@ namespace nectar
                 EmitEvent(AssetEventKind::Failed, index, m_slots[index].m_generation);
         }
 
-        const AssetErrorInfo* GetError(uint32_t index) const noexcept override {
+        const AssetErrorInfo* GetError(uint32_t index) const noexcept override
+        {
             if (index >= m_capacity || !m_slots[index].m_alive)
                 return nullptr;
             return &m_slots[index].m_error;
         }
 
-        void SetError(uint32_t index, AssetErrorInfo error) noexcept override {
+        void SetError(uint32_t index, AssetErrorInfo error) noexcept override
+        {
             hive::Assert(index < m_capacity && m_slots[index].m_alive, "SetError on dead slot");
             m_slots[index].m_error = static_cast<AssetErrorInfo&&>(error);
         }
 
-        bool IsHandleValid(uint32_t index, uint32_t generation) const noexcept override {
+        bool IsHandleValid(uint32_t index, uint32_t generation) const noexcept override
+        {
             if (index >= m_capacity)
                 return false;
             return m_slots[index].m_alive && m_slots[index].m_generation == generation;
         }
 
-        void UnloadSlot(uint32_t index, uint32_t generation) noexcept override {
+        void UnloadSlot(uint32_t index, uint32_t generation) noexcept override
+        {
             if (index >= m_capacity)
                 return;
             Slot& slot = m_slots[index];
@@ -250,7 +280,8 @@ namespace nectar
             --m_count;
         }
 
-        size_t CollectGarbage(uint32_t gcGraceFrames) noexcept override {
+        size_t CollectGarbage(uint32_t gcGraceFrames) noexcept override
+        {
             size_t collected = 0;
             bool overBudget = (m_budget > 0 && m_bytesUsed > m_budget);
 
@@ -307,7 +338,8 @@ namespace nectar
         }
 
         bool LoadFromData(uint32_t index, uint32_t generation, wax::ByteSpan data,
-                          comb::DefaultAllocator& alloc) noexcept override {
+                          comb::DefaultAllocator& alloc) noexcept override
+        {
             if (index >= m_capacity || !m_slots[index].m_alive || m_slots[index].m_generation != generation)
                 return false;
             if (!m_loader)
@@ -322,12 +354,19 @@ namespace nectar
             return true;
         }
 
-        size_t Count() const noexcept override { return m_count; }
-        size_t Capacity() const noexcept override { return m_capacity; }
+        size_t Count() const noexcept override
+        {
+            return m_count;
+        }
+        size_t Capacity() const noexcept override
+        {
+            return m_capacity;
+        }
 
         // -- Events --
 
-        size_t DrainEvents(void* outBuffer, size_t maxCount) noexcept override {
+        size_t DrainEvents(void* outBuffer, size_t maxCount) noexcept override
+        {
             size_t count = m_eventQueue.Size() < maxCount ? m_eventQueue.Size() : maxCount;
             auto* dst = static_cast<AssetEvent<T>*>(outBuffer);
             for (size_t i = 0; i < count; ++i)
@@ -351,19 +390,30 @@ namespace nectar
 
         // -- GC / Budget --
 
-        void SetPersistent(uint32_t index, bool persistent) noexcept override {
+        void SetPersistent(uint32_t index, bool persistent) noexcept override
+        {
             if (index < m_capacity && m_slots[index].m_alive)
                 m_slots[index].m_persistent = persistent;
         }
 
-        size_t BytesUsed() const noexcept override { return m_bytesUsed; }
+        size_t BytesUsed() const noexcept override
+        {
+            return m_bytesUsed;
+        }
 
-        void SetBudget(size_t bytes) noexcept override { m_budget = bytes; }
+        void SetBudget(size_t bytes) noexcept override
+        {
+            m_budget = bytes;
+        }
 
-        void Destroy(comb::DefaultAllocator& alloc) noexcept override { comb::Delete(alloc, this); }
+        void Destroy(comb::DefaultAllocator& alloc) noexcept override
+        {
+            comb::Delete(alloc, this);
+        }
 
         /// Reload an asset in-place. Swaps old → new, emits Reloaded event.
-        bool ReloadAsset(wax::Handle<T> handle, wax::ByteSpan data) {
+        bool ReloadAsset(wax::Handle<T> handle, wax::ByteSpan data)
+        {
             if (handle.IsNull() || handle.m_index >= m_capacity)
                 return false;
             Slot& slot = m_slots[handle.m_index];
@@ -406,7 +456,8 @@ namespace nectar
             T* m_asset{nullptr};
         };
 
-        void EmitEvent(AssetEventKind kind, uint32_t index, uint32_t generation) {
+        void EmitEvent(AssetEventKind kind, uint32_t index, uint32_t generation)
+        {
             m_eventQueue.PushBack(AssetEvent<T>{kind, wax::Handle<T>{index, generation}});
         }
 

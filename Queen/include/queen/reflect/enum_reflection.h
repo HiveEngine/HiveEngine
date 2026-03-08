@@ -38,7 +38,8 @@ namespace queen
          * Get the name for a given enum value
          * @return Name string or nullptr if not found
          */
-        [[nodiscard]] const char* NameOf(int64_t value) const noexcept {
+        [[nodiscard]] const char* NameOf(int64_t value) const noexcept
+        {
             for (size_t i = 0; i < m_entryCount; ++i)
             {
                 if (m_entries[i].m_value == value)
@@ -53,7 +54,8 @@ namespace queen
          * Get the value for a given enum name
          * @return true if found, false otherwise
          */
-        [[nodiscard]] bool ValueOf(const char* name, int64_t& out) const noexcept {
+        [[nodiscard]] bool ValueOf(const char* name, int64_t& out) const noexcept
+        {
             if (name == nullptr)
                 return false;
 
@@ -68,7 +70,10 @@ namespace queen
             return false;
         }
 
-        [[nodiscard]] constexpr bool IsValid() const noexcept { return m_entries != nullptr && m_entryCount > 0; }
+        [[nodiscard]] constexpr bool IsValid() const noexcept
+        {
+            return m_entries != nullptr && m_entryCount > 0;
+        }
     };
 
     /**
@@ -102,7 +107,8 @@ namespace queen
         /**
          * Register an enum value with its name
          */
-        template <typename E> void Value(const char* name, E value) noexcept {
+        template <typename E> void Value(const char* name, E value) noexcept
+        {
             static_assert(std::is_enum_v<E>, "Value() requires an enum type");
             hive::Assert(m_count < MaxEntries, "Too many enum entries, increase MaxEntries");
 
@@ -121,9 +127,15 @@ namespace queen
         /**
          * Get the type-erased reflection data
          */
-        [[nodiscard]] const EnumReflectionBase& Base() const noexcept { return m_base; }
+        [[nodiscard]] const EnumReflectionBase& Base() const noexcept
+        {
+            return m_base;
+        }
 
-        [[nodiscard]] size_t Count() const noexcept { return m_count; }
+        [[nodiscard]] size_t Count() const noexcept
+        {
+            return m_count;
+        }
 
     private:
         EnumEntry m_entries[MaxEntries]{};

@@ -7,7 +7,8 @@ namespace queen
 {
     template <comb::Allocator Allocator>
     void ObserverStorage<Allocator>::Trigger(TriggerType trigger, TypeId componentId, World& world, Entity entity,
-                                             const void* component) {
+                                             const void* component)
+    {
         ObserverKey key{trigger, componentId};
 
         auto* indices = m_lookup.Find(key);

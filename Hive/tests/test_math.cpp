@@ -11,7 +11,8 @@ namespace
 
     constexpr float kTol = 1e-5f;
 
-    bool Near(float a, float b) {
+    bool Near(float a, float b)
+    {
         return std::fabs(a - b) < kTol;
     }
 

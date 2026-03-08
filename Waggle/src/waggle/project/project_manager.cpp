@@ -36,7 +36,8 @@ namespace
     constexpr uint32_t kImportCacheMagic = 0x4244494E;
     constexpr uint16_t kImportCacheVersion = 1;
 
-    bool LoadImportCache(const char* path, nectar::AssetDatabase& db, comb::DefaultAllocator& alloc) {
+    bool LoadImportCache(const char* path, nectar::AssetDatabase& db, comb::DefaultAllocator& alloc)
+    {
         std::ifstream file{path, std::ios::binary | std::ios::ate};
         if (!file)
             return false;
@@ -108,7 +109,8 @@ namespace
         return true;
     }
 
-    bool SaveImportCacheToDisk(const char* path, const nectar::AssetDatabase& db, comb::DefaultAllocator& alloc) {
+    bool SaveImportCacheToDisk(const char* path, const nectar::AssetDatabase& db, comb::DefaultAllocator& alloc)
+    {
         std::error_code ec;
         std::filesystem::create_directories(std::filesystem::path{path}.parent_path(), ec);
 
@@ -149,13 +151,17 @@ namespace waggle
 
     ProjectManager::ProjectManager(comb::DefaultAllocator& alloc)
         : m_alloc{&alloc}
-        , m_project{alloc} {}
+        , m_project{alloc}
+    {
+    }
 
-    ProjectManager::~ProjectManager() {
+    ProjectManager::~ProjectManager()
+    {
         Close();
     }
 
-    bool ProjectManager::Open(wax::StringView projectHivePath, const ProjectConfig& config) {
+    bool ProjectManager::Open(wax::StringView projectHivePath, const ProjectConfig& config)
+    {
         if (m_open)
             Close();
 
@@ -210,7 +216,8 @@ namespace waggle
         return true;
     }
 
-    void ProjectManager::Close() {
+    void ProjectManager::Close()
+    {
         if (!m_open)
             return;
 
@@ -252,67 +259,83 @@ namespace waggle
         m_open = false;
     }
 
-    bool ProjectManager::IsOpen() const noexcept {
+    bool ProjectManager::IsOpen() const noexcept
+    {
         return m_open;
     }
 
-    void ProjectManager::RegisterImporter(nectar::IAssetImporter* importer) {
+    void ProjectManager::RegisterImporter(nectar::IAssetImporter* importer)
+    {
         m_importerRegistry->Register(importer);
     }
 
-    void ProjectManager::RegisterCooker(nectar::IAssetCooker* cooker) {
+    void ProjectManager::RegisterCooker(nectar::IAssetCooker* cooker)
+    {
         m_cookerRegistry->Register(cooker);
     }
 
-    const nectar::ProjectFile& ProjectManager::Project() const noexcept {
+    const nectar::ProjectFile& ProjectManager::Project() const noexcept
+    {
         return m_project;
     }
 
-    const nectar::ProjectPaths& ProjectManager::Paths() const noexcept {
+    const nectar::ProjectPaths& ProjectManager::Paths() const noexcept
+    {
         return m_paths;
     }
 
-    nectar::VirtualFilesystem& ProjectManager::VFS() noexcept {
+    nectar::VirtualFilesystem& ProjectManager::VFS() noexcept
+    {
         return *m_vfs;
     }
 
-    nectar::AssetServer& ProjectManager::Server() noexcept {
+    nectar::AssetServer& ProjectManager::Server() noexcept
+    {
         return *m_server;
     }
 
-    nectar::ImportPipeline& ProjectManager::Import() noexcept {
+    nectar::ImportPipeline& ProjectManager::Import() noexcept
+    {
         return *m_importPipeline;
     }
 
-    nectar::CookPipeline& ProjectManager::Cook() noexcept {
+    nectar::CookPipeline& ProjectManager::Cook() noexcept
+    {
         return *m_cookPipeline;
     }
 
-    nectar::CookCache& ProjectManager::CookCacheRef() noexcept {
+    nectar::CookCache& ProjectManager::CookCacheRef() noexcept
+    {
         return *m_cookCache;
     }
 
-    nectar::CasStore& ProjectManager::CAS() noexcept {
+    nectar::CasStore& ProjectManager::CAS() noexcept
+    {
         return *m_cas;
     }
 
-    nectar::AssetDatabase& ProjectManager::Database() noexcept {
+    nectar::AssetDatabase& ProjectManager::Database() noexcept
+    {
         return *m_importDb;
     }
 
-    nectar::IOScheduler& ProjectManager::IO() noexcept {
+    nectar::IOScheduler& ProjectManager::IO() noexcept
+    {
         return *m_io;
     }
 
-    nectar::HotReloadManager* ProjectManager::HotReload() noexcept {
+    nectar::HotReloadManager* ProjectManager::HotReload() noexcept
+    {
         return m_hotReload;
     }
 
-    nectar::PollingFileWatcher* ProjectManager::Watcher() noexcept {
+    nectar::PollingFileWatcher* ProjectManager::Watcher() noexcept
+    {
         return m_watcher;
     }
 
-    void ProjectManager::SaveImportCache() {
+    void ProjectManager::SaveImportCache()
+    {
         if (m_importDb == nullptr || !m_open)
             return;
 
@@ -322,7 +345,8 @@ namespace waggle
             hive::LogWarning(LOG_PROJECT, "Failed to save import cache");
     }
 
-    void ProjectManager::Update() {
+    void ProjectManager::Update()
+    {
         if (m_server != nullptr)
             m_server->Update();
     }

@@ -13,9 +13,16 @@ namespace nectar
     class PassthroughMeshCooker final : public IAssetCooker
     {
     public:
-        wax::StringView TypeName() const override { return "Mesh"; }
-        uint32_t Version() const override { return 1; }
-        CookResult Cook(wax::ByteSpan data, const CookContext& ctx) override {
+        wax::StringView TypeName() const override
+        {
+            return "Mesh";
+        }
+        uint32_t Version() const override
+        {
+            return 1;
+        }
+        CookResult Cook(wax::ByteSpan data, const CookContext& ctx) override
+        {
             CookResult r;
             r.success = true;
             r.cooked_data = wax::ByteBuffer{*ctx.alloc};
@@ -27,9 +34,16 @@ namespace nectar
     class PassthroughTextureCooker final : public IAssetCooker
     {
     public:
-        wax::StringView TypeName() const override { return "Texture"; }
-        uint32_t Version() const override { return 1; }
-        CookResult Cook(wax::ByteSpan data, const CookContext& ctx) override {
+        wax::StringView TypeName() const override
+        {
+            return "Texture";
+        }
+        uint32_t Version() const override
+        {
+            return 1;
+        }
+        CookResult Cook(wax::ByteSpan data, const CookContext& ctx) override
+        {
             CookResult r;
             r.success = true;
             r.cooked_data = wax::ByteBuffer{*ctx.alloc};

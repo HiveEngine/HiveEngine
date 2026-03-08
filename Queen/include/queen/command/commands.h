@@ -72,17 +72,22 @@ namespace queen
 
             explicit ThreadBuffer(Allocator& alloc)
                 : m_threadId{}
-                , m_buffer{alloc} {}
+                , m_buffer{alloc}
+            {
+            }
 
             ThreadBuffer(std::thread::id id, Allocator& alloc)
                 : m_threadId{id}
-                , m_buffer{alloc} {}
+                , m_buffer{alloc}
+            {
+            }
         };
 
         explicit Commands(Allocator& allocator, size_t maxThreads = 16)
             : m_allocator{&allocator}
             , m_threadBuffers{allocator}
-            , m_bufferCount{0} {
+            , m_bufferCount{0}
+        {
             m_threadBuffers.Reserve(maxThreads);
         }
 
@@ -100,7 +105,8 @@ namespace queen
          *
          * @return Reference to thread-local CommandBuffer
          */
-        [[nodiscard]] CommandBuffer<Allocator>& Get() {
+        [[nodiscard]] CommandBuffer<Allocator>& Get()
+        {
             std::thread::id currentId = std::this_thread::get_id();
 
             for (size_t i = 0; i < m_bufferCount; ++i)
@@ -119,7 +125,8 @@ namespace queen
          *
          * Asserts if no buffer exists for this thread.
          */
-        [[nodiscard]] const CommandBuffer<Allocator>& Get() const {
+        [[nodiscard]] const CommandBuffer<Allocator>& Get() const
+        {
             std::thread::id currentId = std::this_thread::get_id();
 
             for (size_t i = 0; i < m_bufferCount; ++i)
@@ -143,7 +150,8 @@ namespace queen
          *
          * @param world The World to apply commands to
          */
-        void FlushAll(World& world) {
+        void FlushAll(World& world)
+        {
             // Apply buffers in deterministic order (index order)
             for (size_t i = 0; i < m_bufferCount; ++i)
             {
@@ -157,7 +165,8 @@ namespace queen
         /**
          * Clear all command buffers without applying them
          */
-        void ClearAll() {
+        void ClearAll()
+        {
             for (size_t i = 0; i < m_bufferCount; ++i)
             {
                 m_threadBuffers[i].m_buffer.Clear();
@@ -167,12 +176,16 @@ namespace queen
         /**
          * Get the number of active thread buffers
          */
-        [[nodiscard]] size_t BufferCount() const noexcept { return m_bufferCount; }
+        [[nodiscard]] size_t BufferCount() const noexcept
+        {
+            return m_bufferCount;
+        }
 
         /**
          * Get total command count across all buffers
          */
-        [[nodiscard]] size_t TotalCommandCount() const noexcept {
+        [[nodiscard]] size_t TotalCommandCount() const noexcept
+        {
             size_t total = 0;
             for (size_t i = 0; i < m_bufferCount; ++i)
             {
@@ -184,7 +197,8 @@ namespace queen
         /**
          * Check if all buffers are empty
          */
-        [[nodiscard]] bool IsEmpty() const noexcept {
+        [[nodiscard]] bool IsEmpty() const noexcept
+        {
             for (size_t i = 0; i < m_bufferCount; ++i)
             {
                 if (!m_threadBuffers[i].m_buffer.IsEmpty())
@@ -198,7 +212,8 @@ namespace queen
         /**
          * Iterate over all buffers (for advanced use)
          */
-        template <typename Func> void ForEach(Func&& func) {
+        template <typename Func> void ForEach(Func&& func)
+        {
             for (size_t i = 0; i < m_bufferCount; ++i)
             {
                 func(m_threadBuffers[i].m_buffer);
@@ -206,7 +221,8 @@ namespace queen
         }
 
     private:
-        CommandBuffer<Allocator>& CreateBuffer(std::thread::id id) {
+        CommandBuffer<Allocator>& CreateBuffer(std::thread::id id)
+        {
             m_threadBuffers.EmplaceBack(id, *m_allocator);
             return m_threadBuffers[m_bufferCount++].m_buffer;
         }

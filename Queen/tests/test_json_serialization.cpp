@@ -24,7 +24,8 @@ namespace
         float y = 0.f;
         float z = 0.f;
 
-        static void Reflect(queen::ComponentReflector<>& r) {
+        static void Reflect(queen::ComponentReflector<>& r)
+        {
             r.Field("x", &Position::x);
             r.Field("y", &Position::y);
             r.Field("z", &Position::z);
@@ -39,7 +40,8 @@ namespace
         double f64 = 0.0;
         bool flag = false;
 
-        static void Reflect(queen::ComponentReflector<>& r) {
+        static void Reflect(queen::ComponentReflector<>& r)
+        {
             r.Field("i32", &AllPrimitives::i32);
             r.Field("u32", &AllPrimitives::u32);
             r.Field("f32", &AllPrimitives::f32);
@@ -53,7 +55,8 @@ namespace
         float x = 0.f;
         float y = 0.f;
 
-        static void Reflect(queen::ComponentReflector<>& r) {
+        static void Reflect(queen::ComponentReflector<>& r)
+        {
             r.Field("x", &Vec2::x);
             r.Field("y", &Vec2::y);
         }
@@ -64,7 +67,8 @@ namespace
         Vec2 position;
         float rotation = 0.f;
 
-        static void Reflect(queen::ComponentReflector<>& r) {
+        static void Reflect(queen::ComponentReflector<>& r)
+        {
             r.Field("position", &Transform::position);
             r.Field("rotation", &Transform::rotation);
         }
@@ -82,7 +86,8 @@ namespace
         queen::Entity target;
         int32_t data = 0;
 
-        static void Reflect(queen::ComponentReflector<>& r) {
+        static void Reflect(queen::ComponentReflector<>& r)
+        {
             r.Field("target", &WithEntity::target);
             r.Field("data", &WithEntity::data);
         }
@@ -92,7 +97,10 @@ namespace
     {
         float values[3] = {0.f, 0.f, 0.f};
 
-        static void Reflect(queen::ComponentReflector<>& r) { r.Field("values", &WithFixedArray::values); }
+        static void Reflect(queen::ComponentReflector<>& r)
+        {
+            r.Field("values", &WithFixedArray::values);
+        }
     };
 
     struct WithString
@@ -100,7 +108,8 @@ namespace
         wax::FixedString name;
         int32_t id = 0;
 
-        static void Reflect(queen::ComponentReflector<>& r) {
+        static void Reflect(queen::ComponentReflector<>& r)
+        {
             r.Field("name", &WithString::name);
             r.Field("id", &WithString::id);
         }
@@ -109,7 +118,8 @@ namespace
 
 template <> struct queen::EnumInfo<RenderMode>
 {
-    static const queen::EnumReflectionBase& Get() {
+    static const queen::EnumReflectionBase& Get()
+    {
         static auto r = []() {
             queen::EnumReflector<> e;
             e.Value("Opaque", RenderMode::Opaque);
@@ -128,14 +138,16 @@ namespace
         RenderMode mode = RenderMode::Opaque;
         float alpha = 1.f;
 
-        static void Reflect(queen::ComponentReflector<>& r) {
+        static void Reflect(queen::ComponentReflector<>& r)
+        {
             r.Field("mode", &WithEnum::mode);
             r.Field("alpha", &WithEnum::alpha);
         }
     };
 
     // Helper to do a JSON roundtrip
-    template <queen::Reflectable T> void JsonRoundtrip(const T& original, T& loaded) {
+    template <queen::Reflectable T> void JsonRoundtrip(const T& original, T& loaded)
+    {
         auto reflection = queen::GetReflectionData<T>();
 
         queen::JsonSerializer<4096> serializer;

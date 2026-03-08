@@ -20,7 +20,8 @@ namespace queen
 
     namespace detail
     {
-        template <comb::Allocator Allocator> ArchetypeId ComputeArchetypeId(const wax::Vector<TypeId>& sortedTypes) {
+        template <comb::Allocator Allocator> ArchetypeId ComputeArchetypeId(const wax::Vector<TypeId>& sortedTypes)
+        {
             ArchetypeId hash = kFnv1aOffset;
             for (size_t i = 0; i < sortedTypes.Size(); ++i)
             {
@@ -79,7 +80,8 @@ namespace queen
             , m_componentMetas{std::move(componentMetas)}
             , m_table{allocator, m_componentMetas, initialCapacity}
             , m_addEdges{allocator}
-            , m_removeEdges{allocator} {
+            , m_removeEdges{allocator}
+        {
             m_componentTypes.Reserve(m_componentMetas.Size());
             for (size_t i = 0; i < m_componentMetas.Size(); ++i)
             {
@@ -97,25 +99,43 @@ namespace queen
         Archetype(Archetype&&) = default;
         Archetype& operator=(Archetype&&) = default;
 
-        [[nodiscard]] ArchetypeId GetId() const noexcept { return m_id; }
+        [[nodiscard]] ArchetypeId GetId() const noexcept
+        {
+            return m_id;
+        }
 
-        [[nodiscard]] bool HasComponent(TypeId typeId) const noexcept { return BinarySearch(typeId) != SIZE_MAX; }
+        [[nodiscard]] bool HasComponent(TypeId typeId) const noexcept
+        {
+            return BinarySearch(typeId) != SIZE_MAX;
+        }
 
-        template <typename T> [[nodiscard]] bool HasComponent() const noexcept { return HasComponent(TypeIdOf<T>()); }
+        template <typename T> [[nodiscard]] bool HasComponent() const noexcept
+        {
+            return HasComponent(TypeIdOf<T>());
+        }
 
-        [[nodiscard]] size_t GetColumnIndex(TypeId typeId) const noexcept { return BinarySearch(typeId); }
+        [[nodiscard]] size_t GetColumnIndex(TypeId typeId) const noexcept
+        {
+            return BinarySearch(typeId);
+        }
 
-        template <typename T> [[nodiscard]] size_t GetColumnIndex() const noexcept {
+        template <typename T> [[nodiscard]] size_t GetColumnIndex() const noexcept
+        {
             return GetColumnIndex(TypeIdOf<T>());
         }
 
-        uint32_t AllocateRow(Entity entity, Tick currentTick = Tick{0}) {
+        uint32_t AllocateRow(Entity entity, Tick currentTick = Tick{0})
+        {
             return m_table.AllocateRow(entity, currentTick);
         }
 
-        Entity FreeRow(uint32_t row) { return m_table.FreeRow(row); }
+        Entity FreeRow(uint32_t row)
+        {
+            return m_table.FreeRow(row);
+        }
 
-        template <typename T> void SetComponent(uint32_t row, const T& value) {
+        template <typename T> void SetComponent(uint32_t row, const T& value)
+        {
             m_table.template SetComponent<T>(row, value);
         }
 
@@ -126,9 +146,13 @@ namespace queen
             m_table.template SetComponent<T>(row, std::forward<T>(value));
         }
 
-        void SetComponent(uint32_t row, TypeId typeId, const void* data) { m_table.SetComponent(row, typeId, data); }
+        void SetComponent(uint32_t row, TypeId typeId, const void* data)
+        {
+            m_table.SetComponent(row, typeId, data);
+        }
 
-        template <typename T> [[nodiscard]] T* GetComponent(uint32_t row) noexcept {
+        template <typename T> [[nodiscard]] T* GetComponent(uint32_t row) noexcept
+        {
             auto* column = m_table.template GetColumn<T>();
             if (column == nullptr)
             {
@@ -137,7 +161,8 @@ namespace queen
             return column->template Get<T>(row);
         }
 
-        template <typename T> [[nodiscard]] const T* GetComponent(uint32_t row) const noexcept {
+        template <typename T> [[nodiscard]] const T* GetComponent(uint32_t row) const noexcept
+        {
             const auto* column = m_table.template GetColumn<T>();
             if (column == nullptr)
             {
@@ -146,7 +171,8 @@ namespace queen
             return column->template Get<T>(row);
         }
 
-        [[nodiscard]] void* GetComponentRaw(uint32_t row, TypeId typeId) noexcept {
+        [[nodiscard]] void* GetComponentRaw(uint32_t row, TypeId typeId) noexcept
+        {
             auto* column = m_table.GetColumnByTypeId(typeId);
             if (column == nullptr)
             {
@@ -155,7 +181,8 @@ namespace queen
             return column->GetRaw(row);
         }
 
-        [[nodiscard]] const void* GetComponentRaw(uint32_t row, TypeId typeId) const noexcept {
+        [[nodiscard]] const void* GetComponentRaw(uint32_t row, TypeId typeId) const noexcept
+        {
             const auto* column = m_table.GetColumnByTypeId(typeId);
             if (column == nullptr)
             {
@@ -164,43 +191,83 @@ namespace queen
             return column->GetRaw(row);
         }
 
-        [[nodiscard]] Entity GetEntity(uint32_t row) const noexcept { return m_table.GetEntity(row); }
+        [[nodiscard]] Entity GetEntity(uint32_t row) const noexcept
+        {
+            return m_table.GetEntity(row);
+        }
 
-        [[nodiscard]] const Entity* GetEntities() const noexcept { return m_table.GetEntities(); }
+        [[nodiscard]] const Entity* GetEntities() const noexcept
+        {
+            return m_table.GetEntities();
+        }
 
-        [[nodiscard]] Column<Allocator>* GetColumn(TypeId typeId) noexcept { return m_table.GetColumnByTypeId(typeId); }
+        [[nodiscard]] Column<Allocator>* GetColumn(TypeId typeId) noexcept
+        {
+            return m_table.GetColumnByTypeId(typeId);
+        }
 
-        template <typename T> [[nodiscard]] Column<Allocator>* GetColumn() noexcept {
+        template <typename T> [[nodiscard]] Column<Allocator>* GetColumn() noexcept
+        {
             return m_table.template GetColumn<T>();
         }
 
-        [[nodiscard]] size_t EntityCount() const noexcept { return m_table.RowCount(); }
-        [[nodiscard]] size_t ComponentCount() const noexcept { return m_componentTypes.Size(); }
-        [[nodiscard]] bool IsEmpty() const noexcept { return m_table.IsEmpty(); }
+        [[nodiscard]] size_t EntityCount() const noexcept
+        {
+            return m_table.RowCount();
+        }
+        [[nodiscard]] size_t ComponentCount() const noexcept
+        {
+            return m_componentTypes.Size();
+        }
+        [[nodiscard]] bool IsEmpty() const noexcept
+        {
+            return m_table.IsEmpty();
+        }
 
-        [[nodiscard]] const wax::Vector<TypeId>& GetComponentTypes() const noexcept { return m_componentTypes; }
+        [[nodiscard]] const wax::Vector<TypeId>& GetComponentTypes() const noexcept
+        {
+            return m_componentTypes;
+        }
 
-        [[nodiscard]] const wax::Vector<ComponentMeta>& GetComponentMetas() const noexcept { return m_componentMetas; }
+        [[nodiscard]] const wax::Vector<ComponentMeta>& GetComponentMetas() const noexcept
+        {
+            return m_componentMetas;
+        }
 
-        void SetAddEdge(TypeId typeId, Archetype* target) { m_addEdges.Insert(typeId, target); }
+        void SetAddEdge(TypeId typeId, Archetype* target)
+        {
+            m_addEdges.Insert(typeId, target);
+        }
 
-        void SetRemoveEdge(TypeId typeId, Archetype* target) { m_removeEdges.Insert(typeId, target); }
+        void SetRemoveEdge(TypeId typeId, Archetype* target)
+        {
+            m_removeEdges.Insert(typeId, target);
+        }
 
-        [[nodiscard]] Archetype* GetAddEdge(TypeId typeId) noexcept {
+        [[nodiscard]] Archetype* GetAddEdge(TypeId typeId) noexcept
+        {
             Archetype** result = m_addEdges.Find(typeId);
             return result ? *result : nullptr;
         }
 
-        [[nodiscard]] Archetype* GetRemoveEdge(TypeId typeId) noexcept {
+        [[nodiscard]] Archetype* GetRemoveEdge(TypeId typeId) noexcept
+        {
             Archetype** result = m_removeEdges.Find(typeId);
             return result ? *result : nullptr;
         }
 
-        [[nodiscard]] Table<Allocator>& GetTable() noexcept { return m_table; }
-        [[nodiscard]] const Table<Allocator>& GetTable() const noexcept { return m_table; }
+        [[nodiscard]] Table<Allocator>& GetTable() noexcept
+        {
+            return m_table;
+        }
+        [[nodiscard]] const Table<Allocator>& GetTable() const noexcept
+        {
+            return m_table;
+        }
 
     private:
-        void SortComponentTypes() {
+        void SortComponentTypes()
+        {
             for (size_t i = 1; i < m_componentTypes.Size(); ++i)
             {
                 TypeId key = m_componentTypes[i];
@@ -214,7 +281,8 @@ namespace queen
             }
         }
 
-        [[nodiscard]] size_t BinarySearch(TypeId typeId) const noexcept {
+        [[nodiscard]] size_t BinarySearch(TypeId typeId) const noexcept
+        {
             if (m_componentTypes.IsEmpty())
             {
                 return SIZE_MAX;

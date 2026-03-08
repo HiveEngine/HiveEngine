@@ -27,8 +27,14 @@ namespace waggle
         App(App&&) = delete;
         App& operator=(App&&) = delete;
 
-        [[nodiscard]] queen::World& GetWorld() noexcept { return m_world; }
-        [[nodiscard]] const queen::World& GetWorld() const noexcept { return m_world; }
+        [[nodiscard]] queen::World& GetWorld() noexcept
+        {
+            return m_world;
+        }
+        [[nodiscard]] const queen::World& GetWorld() const noexcept
+        {
+            return m_world;
+        }
 
         // Call once per rendered frame.
         // Advances the FrameClock, accumulates time, runs World::Advance() for each
@@ -36,8 +42,14 @@ namespace waggle
         // Returns the number of fixed steps taken this frame.
         int32_t Tick();
 
-        [[nodiscard]] bool IsRunning() const noexcept { return m_running; }
-        void RequestStop() noexcept { m_running = false; }
+        [[nodiscard]] bool IsRunning() const noexcept
+        {
+            return m_running;
+        }
+        void RequestStop() noexcept
+        {
+            m_running = false;
+        }
 
     private:
         void UpdateTimeResource();

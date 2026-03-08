@@ -39,12 +39,14 @@ namespace queen
         explicit CircularBuffer(Allocator& allocator, size_t capacity)
             : m_allocator{&allocator}
             , m_capacity{capacity}
-            , m_mask{capacity - 1} {
+            , m_mask{capacity - 1}
+        {
             void* mem = m_allocator->Allocate(sizeof(T) * m_capacity, alignof(T));
             m_data = static_cast<T*>(mem);
         }
 
-        ~CircularBuffer() {
+        ~CircularBuffer()
+        {
             if (m_data != nullptr)
             {
                 m_allocator->Deallocate(m_data);
@@ -56,21 +58,26 @@ namespace queen
         CircularBuffer(CircularBuffer&&) = delete;
         CircularBuffer& operator=(CircularBuffer&&) = delete;
 
-        [[nodiscard]] size_t Capacity() const noexcept { return m_capacity; }
+        [[nodiscard]] size_t Capacity() const noexcept
+        {
+            return m_capacity;
+        }
 
 // No-sanitize: owner Put and thief Get always access different physical slots
 // (guaranteed by modular arithmetic + grow check). See class comment.
 #if defined(__clang__)
         [[clang::no_sanitize("thread")]]
 #endif
-        [[nodiscard]] T Get(int64_t index) const noexcept {
+        [[nodiscard]] T Get(int64_t index) const noexcept
+        {
             return m_data[static_cast<size_t>(index) & m_mask];
         }
 
 #if defined(__clang__)
         [[clang::no_sanitize("thread")]]
 #endif
-        void Put(int64_t index, T value) noexcept {
+        void Put(int64_t index, T value) noexcept
+        {
             m_data[static_cast<size_t>(index) & m_mask] = value;
         }
 
@@ -81,7 +88,8 @@ namespace queen
          * @param top Current top index (inclusive lower bound)
          * @return Pointer to new larger buffer
          */
-        [[nodiscard]] CircularBuffer* Grow(int64_t bottom, int64_t top) {
+        [[nodiscard]] CircularBuffer* Grow(int64_t bottom, int64_t top)
+        {
             size_t newCapacity = m_capacity * 2;
             void* mem = m_allocator->Allocate(sizeof(CircularBuffer), alignof(CircularBuffer));
             auto* newBuffer = new (mem) CircularBuffer{*m_allocator, newCapacity};
@@ -145,14 +153,16 @@ namespace queen
             : m_allocator{&allocator}
             , m_top{0}
             , m_bottom{0}
-            , m_retiredHead{nullptr} {
+            , m_retiredHead{nullptr}
+        {
             void* mem =
                 m_allocator->Allocate(sizeof(CircularBuffer<T, Allocator>), alignof(CircularBuffer<T, Allocator>));
             auto* initialBuffer = new (mem) CircularBuffer<T, Allocator>{allocator, initialCapacity};
             m_buffer.store(initialBuffer, std::memory_order_relaxed);
         }
 
-        ~WorkStealingDeque() {
+        ~WorkStealingDeque()
+        {
             auto* buf = m_buffer.load(std::memory_order_relaxed);
             if (buf != nullptr)
             {
@@ -175,7 +185,8 @@ namespace queen
          *
          * @param item Item to push
          */
-        void Push(T item) {
+        void Push(T item)
+        {
             int64_t b = m_bottom.load(std::memory_order_relaxed);
             int64_t t = m_top.load(std::memory_order_acquire);
             auto* buf = m_buffer.load(std::memory_order_relaxed);
@@ -201,7 +212,8 @@ namespace queen
          *
          * @return The popped item or std::nullopt
          */
-        [[nodiscard]] std::optional<T> Pop() {
+        [[nodiscard]] std::optional<T> Pop()
+        {
             int64_t b = m_bottom.load(std::memory_order_relaxed) - 1;
             auto* buf = m_buffer.load(std::memory_order_relaxed);
             m_bottom.store(b, std::memory_order_relaxed);
@@ -236,7 +248,8 @@ namespace queen
          *
          * @return The stolen item or std::nullopt
          */
-        [[nodiscard]] std::optional<T> Steal() {
+        [[nodiscard]] std::optional<T> Steal()
+        {
             int64_t t = m_top.load(std::memory_order_acquire);
             std::atomic_thread_fence(std::memory_order_seq_cst);
             int64_t b = m_bottom.load(std::memory_order_acquire);
@@ -262,7 +275,8 @@ namespace queen
          *
          * @return true if the deque appears empty
          */
-        [[nodiscard]] bool IsEmpty() const noexcept {
+        [[nodiscard]] bool IsEmpty() const noexcept
+        {
             int64_t t = m_top.load(std::memory_order_acquire);
             int64_t b = m_bottom.load(std::memory_order_acquire);
             return t >= b;
@@ -275,7 +289,8 @@ namespace queen
          *
          * @return Approximate number of items
          */
-        [[nodiscard]] size_t Size() const noexcept {
+        [[nodiscard]] size_t Size() const noexcept
+        {
             int64_t t = m_top.load(std::memory_order_acquire);
             int64_t b = m_bottom.load(std::memory_order_acquire);
             return static_cast<size_t>(b > t ? b - t : 0);
@@ -288,13 +303,15 @@ namespace queen
             RetiredNode* m_next;
         };
 
-        void RetireBuffer(CircularBuffer<T, Allocator>* buf) {
+        void RetireBuffer(CircularBuffer<T, Allocator>* buf)
+        {
             void* mem = m_allocator->Allocate(sizeof(RetiredNode), alignof(RetiredNode));
             auto* node = new (mem) RetiredNode{buf, m_retiredHead};
             m_retiredHead = node;
         }
 
-        void FreeRetiredBuffers() {
+        void FreeRetiredBuffers()
+        {
             RetiredNode* node = m_retiredHead;
             while (node != nullptr)
             {

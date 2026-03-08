@@ -16,7 +16,8 @@ namespace
 namespace waggle
 {
 
-    GameplayModule::~GameplayModule() {
+    GameplayModule::~GameplayModule()
+    {
         Unload();
     }
 
@@ -25,14 +26,16 @@ namespace waggle
         , m_registerFn{other.m_registerFn}
         , m_unregisterFn{other.m_unregisterFn}
         , m_versionFn{other.m_versionFn}
-        , m_registered{other.m_registered} {
+        , m_registered{other.m_registered}
+    {
         other.m_registerFn = nullptr;
         other.m_unregisterFn = nullptr;
         other.m_versionFn = nullptr;
         other.m_registered = false;
     }
 
-    GameplayModule& GameplayModule::operator=(GameplayModule&& other) noexcept {
+    GameplayModule& GameplayModule::operator=(GameplayModule&& other) noexcept
+    {
         if (this != &other)
         {
             Unload();
@@ -49,7 +52,8 @@ namespace waggle
         return *this;
     }
 
-    bool GameplayModule::Load(const char* dllPath) {
+    bool GameplayModule::Load(const char* dllPath)
+    {
         Unload();
 
         if (!m_lib.Load(dllPath))
@@ -74,7 +78,8 @@ namespace waggle
         return true;
     }
 
-    void GameplayModule::Unload() {
+    void GameplayModule::Unload()
+    {
         m_registerFn = nullptr;
         m_unregisterFn = nullptr;
         m_versionFn = nullptr;
@@ -82,7 +87,8 @@ namespace waggle
         m_lib.Unload();
     }
 
-    bool GameplayModule::Register(queen::World& world) {
+    bool GameplayModule::Register(queen::World& world)
+    {
         if (m_registerFn == nullptr)
             return false;
 
@@ -92,7 +98,8 @@ namespace waggle
         return true;
     }
 
-    void GameplayModule::Unregister(queen::World& world) {
+    void GameplayModule::Unregister(queen::World& world)
+    {
         if (!m_registered)
             return;
 
@@ -102,7 +109,8 @@ namespace waggle
         m_registered = false;
     }
 
-    bool GameplayModule::Reload(const char* dllPath, queen::World& world) {
+    bool GameplayModule::Reload(const char* dllPath, queen::World& world)
+    {
         Unregister(world);
         Unload();
 
@@ -112,19 +120,23 @@ namespace waggle
         return Register(world);
     }
 
-    bool GameplayModule::IsLoaded() const noexcept {
+    bool GameplayModule::IsLoaded() const noexcept
+    {
         return m_lib.IsLoaded();
     }
 
-    bool GameplayModule::IsRegistered() const noexcept {
+    bool GameplayModule::IsRegistered() const noexcept
+    {
         return m_registered;
     }
 
-    const char* GameplayModule::Version() const noexcept {
+    const char* GameplayModule::Version() const noexcept
+    {
         return m_versionFn != nullptr ? m_versionFn() : "";
     }
 
-    const char* GameplayModule::GetError() const noexcept {
+    const char* GameplayModule::GetError() const noexcept
+    {
         return m_lib.GetError();
     }
 

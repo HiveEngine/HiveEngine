@@ -65,7 +65,8 @@ namespace queen
             : m_world{&world}
             , m_allocator{&allocator}
             , m_storage{&storage}
-            , m_descriptor{descriptor} {
+            , m_descriptor{descriptor}
+        {
             InitializeFromTerms();
         }
 
@@ -74,7 +75,8 @@ namespace queen
          *
          * @param id SystemId of the system to run after
          */
-        SystemBuilder& After(SystemId id) {
+        SystemBuilder& After(SystemId id)
+        {
             m_descriptor->AddAfter(id);
             return *this;
         }
@@ -84,7 +86,8 @@ namespace queen
          *
          * @param name Name of the system to run after (must already be registered)
          */
-        SystemBuilder& After(const char* name) {
+        SystemBuilder& After(const char* name)
+        {
             auto* other = m_storage->GetSystemByName(name);
             hive::Assert(other != nullptr, "After(): system not found");
             m_descriptor->AddAfter(other->Id());
@@ -96,7 +99,8 @@ namespace queen
          *
          * @param id SystemId of the system to run before
          */
-        SystemBuilder& Before(SystemId id) {
+        SystemBuilder& Before(SystemId id)
+        {
             m_descriptor->AddBefore(id);
             return *this;
         }
@@ -106,7 +110,8 @@ namespace queen
          *
          * @param name Name of the system to run before (must already be registered)
          */
-        SystemBuilder& Before(const char* name) {
+        SystemBuilder& Before(const char* name)
+        {
             auto* other = m_storage->GetSystemByName(name);
             hive::Assert(other != nullptr, "Before(): system not found");
             m_descriptor->AddBefore(other->Id());
@@ -116,7 +121,8 @@ namespace queen
         /**
          * Mark system as exclusive (requires exclusive world access)
          */
-        SystemBuilder& Exclusive() {
+        SystemBuilder& Exclusive()
+        {
             m_descriptor->SetExecutorMode(SystemExecutor::EXCLUSIVE);
             return *this;
         }
@@ -124,7 +130,8 @@ namespace queen
         /**
          * Add read access to a resource
          */
-        template <typename T> SystemBuilder& WithResource() {
+        template <typename T> SystemBuilder& WithResource()
+        {
             m_descriptor->Access().template AddResourceRead<T>();
             return *this;
         }
@@ -132,7 +139,8 @@ namespace queen
         /**
          * Add write access to a resource
          */
-        template <typename T> SystemBuilder& WithResourceMut() {
+        template <typename T> SystemBuilder& WithResourceMut()
+        {
             m_descriptor->Access().template AddResourceWrite<T>();
             return *this;
         }
@@ -191,7 +199,8 @@ namespace queen
          * @param func The callback function
          * @return SystemId for the registered system
          */
-        template <typename F> SystemId Run(F&& func) {
+        template <typename F> SystemId Run(F&& func)
+        {
             using FuncType = std::decay_t<F>;
 
             void* userData = m_allocator->Allocate(sizeof(FuncType), alignof(FuncType));
@@ -254,10 +263,14 @@ namespace queen
         /**
          * Get the system ID (for ordering constraints)
          */
-        [[nodiscard]] SystemId Id() const noexcept { return m_descriptor->Id(); }
+        [[nodiscard]] SystemId Id() const noexcept
+        {
+            return m_descriptor->Id();
+        }
 
     private:
-        void InitializeFromTerms() {
+        void InitializeFromTerms()
+        {
             if constexpr (sizeof...(Terms) > 0)
             {
                 (AddTermToAccess<Terms>(), ...);
@@ -265,7 +278,8 @@ namespace queen
             }
         }
 
-        template <typename T> void AddTermToAccess() {
+        template <typename T> void AddTermToAccess()
+        {
             if constexpr (T::access == TermAccess::READ)
             {
                 m_descriptor->Access().AddComponentRead(T::typeId);
@@ -276,7 +290,10 @@ namespace queen
             }
         }
 
-        template <typename T> void AddTermToQuery() { m_descriptor->Query().AddTerm(T::ToTerm()); }
+        template <typename T> void AddTermToQuery()
+        {
+            m_descriptor->Query().AddTerm(T::ToTerm());
+        }
 
         World* m_world;
         Allocator* m_allocator;
@@ -295,48 +312,58 @@ namespace queen
             : m_world{&world}
             , m_allocator{&allocator}
             , m_storage{&storage}
-            , m_descriptor{descriptor} {}
+            , m_descriptor{descriptor}
+        {
+        }
 
-        SystemBuilder& After(SystemId id) {
+        SystemBuilder& After(SystemId id)
+        {
             m_descriptor->AddAfter(id);
             return *this;
         }
 
-        SystemBuilder& After(const char* name) {
+        SystemBuilder& After(const char* name)
+        {
             auto* other = m_storage->GetSystemByName(name);
             hive::Assert(other != nullptr, "After(): system not found");
             m_descriptor->AddAfter(other->Id());
             return *this;
         }
 
-        SystemBuilder& Before(SystemId id) {
+        SystemBuilder& Before(SystemId id)
+        {
             m_descriptor->AddBefore(id);
             return *this;
         }
 
-        SystemBuilder& Before(const char* name) {
+        SystemBuilder& Before(const char* name)
+        {
             auto* other = m_storage->GetSystemByName(name);
             hive::Assert(other != nullptr, "Before(): system not found");
             m_descriptor->AddBefore(other->Id());
             return *this;
         }
 
-        SystemBuilder& Exclusive() {
+        SystemBuilder& Exclusive()
+        {
             m_descriptor->SetExecutorMode(SystemExecutor::EXCLUSIVE);
             return *this;
         }
 
-        template <typename T> SystemBuilder& WithResource() {
+        template <typename T> SystemBuilder& WithResource()
+        {
             m_descriptor->Access().template AddResourceRead<T>();
             return *this;
         }
 
-        template <typename T> SystemBuilder& WithResourceMut() {
+        template <typename T> SystemBuilder& WithResourceMut()
+        {
             m_descriptor->Access().template AddResourceWrite<T>();
             return *this;
         }
 
-        template <typename F> SystemId Run(F&& func) {
+        template <typename F> SystemId Run(F&& func)
+        {
             using FuncType = std::decay_t<F>;
 
             void* userData = m_allocator->Allocate(sizeof(FuncType), alignof(FuncType));
@@ -392,7 +419,10 @@ namespace queen
          */
         template <typename R, typename F> SystemId RunWithResMut(F&& func); // Implementation in system_builder_impl.h
 
-        [[nodiscard]] SystemId Id() const noexcept { return m_descriptor->Id(); }
+        [[nodiscard]] SystemId Id() const noexcept
+        {
+            return m_descriptor->Id();
+        }
 
     private:
         World* m_world;

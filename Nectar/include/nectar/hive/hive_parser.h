@@ -21,7 +21,10 @@ namespace nectar
         HiveDocument m_document;
         wax::Vector<HiveParseError> m_errors;
 
-        [[nodiscard]] bool Success() const noexcept { return m_errors.IsEmpty(); }
+        [[nodiscard]] bool Success() const noexcept
+        {
+            return m_errors.IsEmpty();
+        }
     };
 
     /// Parses .hive file text into a HiveDocument.

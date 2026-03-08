@@ -16,18 +16,21 @@
 namespace
 {
 
-    auto& GetGltfAlloc() {
+    auto& GetGltfAlloc()
+    {
         static comb::ModuleAllocator alloc{"TestGltf", 8 * 1024 * 1024};
         return alloc.Get();
     }
 
-    nectar::AssetId MakeId(uint64_t v) {
+    nectar::AssetId MakeId(uint64_t v)
+    {
         uint8_t bytes[16] = {};
         std::memcpy(bytes, &v, sizeof(v));
         return nectar::AssetId::FromBytes(bytes);
     }
 
-    wax::ByteSpan GltfSpan(const char* json) {
+    wax::ByteSpan GltfSpan(const char* json)
+    {
         return wax::ByteSpan{reinterpret_cast<const uint8_t*>(json), std::strlen(json)};
     }
 

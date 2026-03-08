@@ -17,7 +17,9 @@ namespace comb
         using GetNameFn = const char* (*)(void* object);
 
         MemoryResource() noexcept
-            : MemoryResource{GetDefaultAllocator()} {}
+            : MemoryResource{GetDefaultAllocator()}
+        {
+        }
 
         MemoryResource(const MemoryResource&) noexcept = default;
         MemoryResource(MemoryResource&&) noexcept = default;
@@ -32,38 +34,58 @@ namespace comb
             , m_deallocate{&DeallocateImpl<T>}
             , m_getUsedMemory{&GetUsedMemoryImpl<T>}
             , m_getTotalMemory{&GetTotalMemoryImpl<T>}
-            , m_getName{&GetNameImpl<T>} {}
+            , m_getName{&GetNameImpl<T>}
+        {
+        }
 
-        [[nodiscard]] void* Allocate(size_t size, size_t alignment) const {
+        [[nodiscard]] void* Allocate(size_t size, size_t alignment) const
+        {
             return m_allocate(m_object, size, alignment);
         }
 
-        void Deallocate(void* ptr) const { m_deallocate(m_object, ptr); }
+        void Deallocate(void* ptr) const
+        {
+            m_deallocate(m_object, ptr);
+        }
 
-        [[nodiscard]] size_t GetUsedMemory() const { return m_getUsedMemory(m_object); }
+        [[nodiscard]] size_t GetUsedMemory() const
+        {
+            return m_getUsedMemory(m_object);
+        }
 
-        [[nodiscard]] size_t GetTotalMemory() const { return m_getTotalMemory(m_object); }
+        [[nodiscard]] size_t GetTotalMemory() const
+        {
+            return m_getTotalMemory(m_object);
+        }
 
-        [[nodiscard]] const char* GetName() const { return m_getName(m_object); }
+        [[nodiscard]] const char* GetName() const
+        {
+            return m_getName(m_object);
+        }
 
     private:
-        template <Allocator T> static void* AllocateImpl(void* object, size_t size, size_t alignment) {
+        template <Allocator T> static void* AllocateImpl(void* object, size_t size, size_t alignment)
+        {
             return static_cast<T*>(object)->Allocate(size, alignment);
         }
 
-        template <Allocator T> static void DeallocateImpl(void* object, void* ptr) {
+        template <Allocator T> static void DeallocateImpl(void* object, void* ptr)
+        {
             static_cast<T*>(object)->Deallocate(ptr);
         }
 
-        template <Allocator T> static size_t GetUsedMemoryImpl(void* object) {
+        template <Allocator T> static size_t GetUsedMemoryImpl(void* object)
+        {
             return static_cast<T*>(object)->GetUsedMemory();
         }
 
-        template <Allocator T> static size_t GetTotalMemoryImpl(void* object) {
+        template <Allocator T> static size_t GetTotalMemoryImpl(void* object)
+        {
             return static_cast<T*>(object)->GetTotalMemory();
         }
 
-        template <Allocator T> static const char* GetNameImpl(void* object) {
+        template <Allocator T> static const char* GetNameImpl(void* object)
+        {
             return static_cast<T*>(object)->GetName();
         }
 
@@ -75,7 +97,8 @@ namespace comb
         GetNameFn m_getName;
     };
 
-    [[nodiscard]] inline MemoryResource GetDefaultMemoryResource() noexcept {
+    [[nodiscard]] inline MemoryResource GetDefaultMemoryResource() noexcept
+    {
         return MemoryResource{GetDefaultAllocator()};
     }
 } // namespace comb

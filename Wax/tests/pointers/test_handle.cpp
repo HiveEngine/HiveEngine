@@ -14,11 +14,15 @@ namespace
         Entity()
             : id{0}
             , x{0}
-            , y{0} {}
+            , y{0}
+        {
+        }
         Entity(int i, float px, float py)
             : id{i}
             , x{px}
-            , y{py} {}
+            , y{py}
+        {
+        }
     };
 
     auto test1 = larvae::RegisterTest("WaxHandle", "CreateAndGet", []() {
@@ -166,8 +170,13 @@ namespace
         int value;
 
         NonTrivial(int v)
-            : value{v} {}
-        ~NonTrivial() { ++destructor_count; }
+            : value{v}
+        {
+        }
+        ~NonTrivial()
+        {
+            ++destructor_count;
+        }
     };
 
     int NonTrivial::destructor_count = 0;

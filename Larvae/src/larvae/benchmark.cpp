@@ -3,9 +3,12 @@
 namespace larvae
 {
     BenchmarkState::BenchmarkState(size_t initial_iterations)
-        : iterations_{initial_iterations} {}
+        : iterations_{initial_iterations}
+    {
+    }
 
-    bool BenchmarkState::KeepRunning() {
+    bool BenchmarkState::KeepRunning()
+    {
         if (current_iteration_ == 0)
         {
             StartTiming();
@@ -21,7 +24,8 @@ namespace larvae
         return true;
     }
 
-    void BenchmarkState::StartTiming() {
+    void BenchmarkState::StartTiming()
+    {
         if (!is_timing_)
         {
             start_time_ = std::chrono::high_resolution_clock::now();
@@ -29,7 +33,8 @@ namespace larvae
         }
     }
 
-    void BenchmarkState::StopTiming() {
+    void BenchmarkState::StopTiming()
+    {
         if (is_timing_)
         {
             auto end_time = std::chrono::high_resolution_clock::now();

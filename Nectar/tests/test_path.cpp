@@ -7,7 +7,8 @@
 namespace
 {
 
-    auto& GetPathAlloc() {
+    auto& GetPathAlloc()
+    {
         static comb::ModuleAllocator alloc{"TestPath", 1 * 1024 * 1024};
         return alloc.Get();
     }

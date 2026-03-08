@@ -10,7 +10,8 @@ namespace nectar
         , m_alloc{&alloc}
         , m_requestQueue{alloc}
         , m_completionQueue{alloc}
-        , m_cancelledIds{alloc} {
+        , m_cancelledIds{alloc}
+    {
         m_workers.reserve(config.m_workerCount);
         for (size_t i = 0; i < config.m_workerCount; ++i)
         {
@@ -18,11 +19,13 @@ namespace nectar
         }
     }
 
-    IOScheduler::~IOScheduler() {
+    IOScheduler::~IOScheduler()
+    {
         Shutdown();
     }
 
-    void IOScheduler::Shutdown() {
+    void IOScheduler::Shutdown()
+    {
         bool expected = false;
         if (!m_shutdown.compare_exchange_strong(expected, true))
         {
@@ -39,7 +42,8 @@ namespace nectar
         }
     }
 
-    IORequestId IOScheduler::Submit(wax::StringView path, LoadPriority priority) {
+    IORequestId IOScheduler::Submit(wax::StringView path, LoadPriority priority)
+    {
         HIVE_PROFILE_SCOPE_N("IOScheduler::Submit");
         std::lock_guard<std::mutex> lock{m_requestMutex};
 
@@ -57,7 +61,8 @@ namespace nectar
         return id;
     }
 
-    void IOScheduler::Cancel(IORequestId id) {
+    void IOScheduler::Cancel(IORequestId id)
+    {
         std::lock_guard<std::mutex> lock{m_requestMutex};
 
         for (size_t i = 0; i < m_requestQueue.Size(); ++i)
@@ -72,7 +77,8 @@ namespace nectar
         m_cancelledIds.Insert(id);
     }
 
-    size_t IOScheduler::DrainCompletions(wax::Vector<IOCompletion>& out) {
+    size_t IOScheduler::DrainCompletions(wax::Vector<IOCompletion>& out)
+    {
         HIVE_PROFILE_SCOPE_N("IOScheduler::DrainCompletions");
 
         wax::Vector<IOCompletion> raw{*m_alloc};
@@ -100,16 +106,19 @@ namespace nectar
         return out.Size();
     }
 
-    size_t IOScheduler::PendingCount() const {
+    size_t IOScheduler::PendingCount() const
+    {
         std::lock_guard<std::mutex> lock{m_requestMutex};
         return m_requestQueue.Size();
     }
 
-    bool IOScheduler::IsShutdown() const noexcept {
+    bool IOScheduler::IsShutdown() const noexcept
+    {
         return m_shutdown.load(std::memory_order_relaxed);
     }
 
-    void IOScheduler::WorkerLoop() {
+    void IOScheduler::WorkerLoop()
+    {
         int id = m_workerIdCounter.fetch_add(1);
         char threadName[32];
         std::snprintf(threadName, sizeof(threadName), "Nectar-IO-%d", id);

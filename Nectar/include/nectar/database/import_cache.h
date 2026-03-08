@@ -20,12 +20,14 @@ namespace nectar
     inline constexpr uint32_t kImportCacheMagic = 0x4244494E; // "NIDB"
     inline constexpr uint16_t kImportCacheVersion = 1;
 
-    inline AssetId AssetIdFromPath(const char* path) {
+    inline AssetId AssetIdFromPath(const char* path)
+    {
         auto hash = ContentHash::FromData(path, std::strlen(path));
         return AssetId{hash.High(), hash.Low()};
     }
 
-    inline bool LoadImportCache(const char* path, AssetDatabase& db, comb::DefaultAllocator& alloc) {
+    inline bool LoadImportCache(const char* path, AssetDatabase& db, comb::DefaultAllocator& alloc)
+    {
         std::ifstream file{path, std::ios::binary | std::ios::ate};
         if (!file)
             return false;
@@ -97,7 +99,8 @@ namespace nectar
         return true;
     }
 
-    inline bool SaveImportCache(const char* path, const AssetDatabase& db, comb::DefaultAllocator& alloc) {
+    inline bool SaveImportCache(const char* path, const AssetDatabase& db, comb::DefaultAllocator& alloc)
+    {
         std::error_code ec;
         std::filesystem::create_directories(std::filesystem::path{path}.parent_path(), ec);
 

@@ -60,11 +60,13 @@ namespace queen
         explicit ArchetypeGraph(Allocator& allocator)
             : m_allocator{&allocator}
             , m_archetypes{allocator}
-            , m_archetypeStorage{allocator} {
+            , m_archetypeStorage{allocator}
+        {
             CreateEmptyArchetype();
         }
 
-        ~ArchetypeGraph() {
+        ~ArchetypeGraph()
+        {
             for (size_t i = 0; i < m_archetypeStorage.Size(); ++i)
             {
                 comb::Delete(*m_allocator, m_archetypeStorage[i]);
@@ -78,11 +80,13 @@ namespace queen
             : m_allocator{other.m_allocator}
             , m_archetypes{static_cast<wax::HashMap<ArchetypeId, Archetype<Allocator>*>&&>(other.m_archetypes)}
             , m_archetypeStorage{static_cast<wax::Vector<Archetype<Allocator>*>&&>(other.m_archetypeStorage)}
-            , m_emptyArchetype{other.m_emptyArchetype} {
+            , m_emptyArchetype{other.m_emptyArchetype}
+        {
             other.m_emptyArchetype = nullptr;
         }
 
-        ArchetypeGraph& operator=(ArchetypeGraph&& other) noexcept {
+        ArchetypeGraph& operator=(ArchetypeGraph&& other) noexcept
+        {
             if (this != &other)
             {
                 for (size_t i = 0; i < m_archetypeStorage.Size(); ++i)
@@ -98,25 +102,35 @@ namespace queen
             return *this;
         }
 
-        [[nodiscard]] Archetype<Allocator>* GetEmptyArchetype() noexcept { return m_emptyArchetype; }
+        [[nodiscard]] Archetype<Allocator>* GetEmptyArchetype() noexcept
+        {
+            return m_emptyArchetype;
+        }
 
-        [[nodiscard]] Archetype<Allocator>* GetArchetype(ArchetypeId id) noexcept {
+        [[nodiscard]] Archetype<Allocator>* GetArchetype(ArchetypeId id) noexcept
+        {
             Archetype<Allocator>** result = m_archetypes.Find(id);
             return result ? *result : nullptr;
         }
 
-        [[nodiscard]] size_t ArchetypeCount() const noexcept { return m_archetypeStorage.Size(); }
+        [[nodiscard]] size_t ArchetypeCount() const noexcept
+        {
+            return m_archetypeStorage.Size();
+        }
 
-        [[nodiscard]] const wax::Vector<Archetype<Allocator>*>& GetArchetypes() const noexcept {
+        [[nodiscard]] const wax::Vector<Archetype<Allocator>*>& GetArchetypes() const noexcept
+        {
             return m_archetypeStorage;
         }
 
-        template <typename T> [[nodiscard]] Archetype<Allocator>* GetOrCreateAddTarget(Archetype<Allocator>& source) {
+        template <typename T> [[nodiscard]] Archetype<Allocator>* GetOrCreateAddTarget(Archetype<Allocator>& source)
+        {
             return GetOrCreateAddTarget(source, ComponentMeta::Of<T>());
         }
 
         [[nodiscard]] Archetype<Allocator>* GetOrCreateAddTarget(Archetype<Allocator>& source,
-                                                                 const ComponentMeta& newComponent) {
+                                                                 const ComponentMeta& newComponent)
+        {
             TypeId typeId = newComponent.m_typeId;
 
             Archetype<Allocator>* cached = source.GetAddEdge(typeId);
@@ -148,12 +162,13 @@ namespace queen
             return target;
         }
 
-        template <typename T>
-        [[nodiscard]] Archetype<Allocator>* GetOrCreateRemoveTarget(Archetype<Allocator>& source) {
+        template <typename T> [[nodiscard]] Archetype<Allocator>* GetOrCreateRemoveTarget(Archetype<Allocator>& source)
+        {
             return GetOrCreateRemoveTarget(source, TypeIdOf<T>());
         }
 
-        [[nodiscard]] Archetype<Allocator>* GetOrCreateRemoveTarget(Archetype<Allocator>& source, TypeId typeId) {
+        [[nodiscard]] Archetype<Allocator>* GetOrCreateRemoveTarget(Archetype<Allocator>& source, TypeId typeId)
+        {
             Archetype<Allocator>* cached = source.GetRemoveEdge(typeId);
             if (cached != nullptr)
             {
@@ -186,12 +201,14 @@ namespace queen
         }
 
     private:
-        void CreateEmptyArchetype() {
+        void CreateEmptyArchetype()
+        {
             wax::Vector<ComponentMeta> emptyMetas{*m_allocator};
             m_emptyArchetype = CreateArchetype(std::move(emptyMetas));
         }
 
-        Archetype<Allocator>* GetOrCreateArchetype(wax::Vector<ComponentMeta> metas) {
+        Archetype<Allocator>* GetOrCreateArchetype(wax::Vector<ComponentMeta> metas)
+        {
             wax::Vector<TypeId> typeIds{*m_allocator};
             typeIds.Reserve(metas.Size());
             for (size_t i = 0; i < metas.Size(); ++i)
@@ -211,14 +228,16 @@ namespace queen
             return CreateArchetype(std::move(metas));
         }
 
-        Archetype<Allocator>* CreateArchetype(wax::Vector<ComponentMeta> metas) {
+        Archetype<Allocator>* CreateArchetype(wax::Vector<ComponentMeta> metas)
+        {
             auto* archetype = comb::New<Archetype<Allocator>>(*m_allocator, *m_allocator, std::move(metas));
             m_archetypeStorage.PushBack(archetype);
             m_archetypes.Insert(archetype->GetId(), archetype);
             return archetype;
         }
 
-        void SortTypeIds(wax::Vector<TypeId>& typeIds) {
+        void SortTypeIds(wax::Vector<TypeId>& typeIds)
+        {
             for (size_t i = 1; i < typeIds.Size(); ++i)
             {
                 TypeId key = typeIds[i];

@@ -24,24 +24,30 @@ namespace
     class LifecycleSmokeModule final : public hive::Module
     {
     public:
-        [[nodiscard]] const char* GetName() const override { return "LifecycleSmokeModule"; }
+        [[nodiscard]] const char* GetName() const override
+        {
+            return "LifecycleSmokeModule";
+        }
 
     protected:
-        void DoConfigure([[maybe_unused]] hive::ModuleContext& context) override {
+        void DoConfigure([[maybe_unused]] hive::ModuleContext& context) override
+        {
             if (g_moduleLifecycleState != nullptr)
             {
                 ++g_moduleLifecycleState->configure_calls;
             }
         }
 
-        void DoInitialize() override {
+        void DoInitialize() override
+        {
             if (g_moduleLifecycleState != nullptr)
             {
                 ++g_moduleLifecycleState->initialize_calls;
             }
         }
 
-        void DoShutdown() override {
+        void DoShutdown() override
+        {
             if (g_moduleLifecycleState != nullptr)
             {
                 ++g_moduleLifecycleState->shutdown_calls;
@@ -49,7 +55,8 @@ namespace
         }
     };
 
-    void RegisterLifecycleSmokeModule() {
+    void RegisterLifecycleSmokeModule()
+    {
         hive::ModuleRegistry::GetInstance().RegisterModule(
             []() -> std::unique_ptr<hive::Module> { return std::make_unique<LifecycleSmokeModule>(); });
     }

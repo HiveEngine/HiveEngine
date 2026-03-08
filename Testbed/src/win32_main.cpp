@@ -26,7 +26,8 @@ struct PlatformContext
     antennae::InputActionMap* actionMap_;
 };
 
-static void GameLogic(PlatformContext& context) {
+static void GameLogic(PlatformContext& context)
+{
     if (context.actions_->IsDown(antennae::InputAction::MOVE_LEFT))
     {
         std::cout << "MoveLeft" << std::endl;
@@ -61,9 +62,12 @@ private:
 };
 
 Engine::Engine()
-    : consoleLogger_(logManager_) {}
+    : consoleLogger_(logManager_)
+{
+}
 
-void Engine::Run() {
+void Engine::Run()
+{
     if (!Init())
     {
         return;
@@ -74,7 +78,8 @@ void Engine::Run() {
     Shutdown();
 }
 
-bool Engine::Init() {
+bool Engine::Init()
+{
     terra::SetWindowTitle(&windowContext_, "Hive Engine");
     terra::SetWindowSize(&windowContext_, 1280, 720);
 
@@ -100,7 +105,8 @@ bool Engine::Init() {
     return true;
 }
 
-void Engine::Shutdown() {
+void Engine::Shutdown()
+{
     swarm::ShutdownRenderContext(renderContext_);
     swarm::ShutdownSystem();
 
@@ -108,7 +114,8 @@ void Engine::Shutdown() {
     terra::ShutdownSystem();
 }
 
-void Engine::Loop() {
+void Engine::Loop()
+{
     PlatformContext platformContext{&renderContext_, &windowContext_, &keyboard_, &mouse_, &actions_, &actionMap_};
     while (!terra::ShouldWindowClose(platformContext.windowContext_))
     {
@@ -122,7 +129,8 @@ void Engine::Loop() {
     }
 }
 
-int main() {
+int main()
+{
     Engine engine;
     engine.Run();
 }

@@ -8,15 +8,18 @@ namespace nectar
 {
     DiskMountSource::DiskMountSource(wax::StringView rootDir, comb::DefaultAllocator& alloc)
         : m_alloc{&alloc}
-        , m_rootDir{alloc} {
+        , m_rootDir{alloc}
+    {
         m_rootDir.Append(rootDir.Data(), rootDir.Size());
     }
 
-    wax::StringView DiskMountSource::RootDir() const noexcept {
+    wax::StringView DiskMountSource::RootDir() const noexcept
+    {
         return m_rootDir.View();
     }
 
-    wax::String DiskMountSource::BuildFullPath(wax::StringView relative, comb::DefaultAllocator& alloc) const {
+    wax::String DiskMountSource::BuildFullPath(wax::StringView relative, comb::DefaultAllocator& alloc) const
+    {
         wax::String full{alloc};
         if (m_rootDir.Size() > 0)
         {
@@ -27,7 +30,8 @@ namespace nectar
         return full;
     }
 
-    wax::ByteBuffer DiskMountSource::ReadFile(wax::StringView path, comb::DefaultAllocator& alloc) {
+    wax::ByteBuffer DiskMountSource::ReadFile(wax::StringView path, comb::DefaultAllocator& alloc)
+    {
         wax::ByteBuffer buffer{alloc};
         const wax::String full = BuildFullPath(path, alloc);
 
@@ -59,7 +63,8 @@ namespace nectar
         return buffer;
     }
 
-    bool DiskMountSource::Exists(wax::StringView path) const {
+    bool DiskMountSource::Exists(wax::StringView path) const
+    {
         const wax::String full = BuildFullPath(path, *m_alloc);
         FILE* file = std::fopen(full.CStr(), "rb");
         if (file == nullptr)
@@ -71,7 +76,8 @@ namespace nectar
         return true;
     }
 
-    FileInfo DiskMountSource::Stat(wax::StringView path) const {
+    FileInfo DiskMountSource::Stat(wax::StringView path) const
+    {
         const wax::String full = BuildFullPath(path, *m_alloc);
         FILE* file = std::fopen(full.CStr(), "rb");
         if (file == nullptr)
@@ -87,7 +93,8 @@ namespace nectar
     }
 
     void DiskMountSource::ListDirectory(wax::StringView path, wax::Vector<DirectoryEntry>& out,
-                                        comb::DefaultAllocator& alloc) const {
+                                        comb::DefaultAllocator& alloc) const
+    {
         const wax::String full = BuildFullPath(path, alloc);
 
         std::error_code error;

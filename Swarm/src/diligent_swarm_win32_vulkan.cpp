@@ -11,7 +11,8 @@ namespace swarm
     extern bool InitRenderContextCommon(RenderContext* renderContext);
 
     bool InitRenderContextWin32(RenderContext* renderContext, HINSTANCE instance, HWND window, uint32_t width,
-                                uint32_t height) {
+                                uint32_t height)
+    {
         if (!InitRenderContextCommon(renderContext))
         {
             return false;

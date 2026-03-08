@@ -74,7 +74,8 @@ namespace queen
 
         template <typename... Terms> constexpr bool hasChangeFilterV = HasChangeFilter<Terms...>::value;
 
-        template <typename Archetype, typename ChangeFilterTerm> const ComponentTicks* GetTicksPtr(Archetype* arch) {
+        template <typename Archetype, typename ChangeFilterTerm> const ComponentTicks* GetTicksPtr(Archetype* arch)
+        {
             using ComponentT = typename ChangeFilterTerm::ComponentType;
             auto* column = arch->template GetColumn<ComponentT>();
             if (column == nullptr)
@@ -84,7 +85,8 @@ namespace queen
 
         template <size_t I, typename TicksTuple, typename... ChangeFilterTerms>
         bool CheckAllFiltersImpl(const TicksTuple& ticksPtrs, size_t row, Tick lastRun,
-                                 std::tuple<ChangeFilterTerms...>) {
+                                 std::tuple<ChangeFilterTerms...>)
+        {
             if constexpr (I >= sizeof...(ChangeFilterTerms))
             {
                 return true;
@@ -109,7 +111,8 @@ namespace queen
 
         // Check if a row passes all change filters
         template <typename Allocator, typename Archetype, typename... ChangeFilterTerms>
-        bool PassesChangeFilters(Archetype* arch, size_t row, Tick lastRun, std::tuple<ChangeFilterTerms...>) {
+        bool PassesChangeFilters(Archetype* arch, size_t row, Tick lastRun, std::tuple<ChangeFilterTerms...>)
+        {
             if constexpr (sizeof...(ChangeFilterTerms) == 0)
             {
                 return true;
@@ -124,7 +127,8 @@ namespace queen
             }
         }
 
-        template <typename Allocator, typename Archetype, typename Term> auto GetColumnPtr(Archetype* arch) {
+        template <typename Allocator, typename Archetype, typename Term> auto GetColumnPtr(Archetype* arch)
+        {
             using ComponentT = typename Term::ComponentType;
 
             if constexpr (Term::op == TermOperator::Optional)
@@ -143,7 +147,8 @@ namespace queen
             }
         }
 
-        template <typename Term, typename ColumnPtr> decltype(auto) GetComponentRef(ColumnPtr ptr, size_t row) {
+        template <typename Term, typename ColumnPtr> decltype(auto) GetComponentRef(ColumnPtr ptr, size_t row)
+        {
             using ComponentT = typename Term::ComponentType;
 
             if constexpr (Term::op == TermOperator::Optional)
@@ -207,7 +212,8 @@ namespace queen
             : m_allocator{&allocator}
             , m_archetypes{allocator}
             , m_descriptor{allocator}
-            , m_lastRunTick{0} {
+            , m_lastRunTick{0}
+        {
             (m_descriptor.template AddTerm<Terms>(), ...);
             m_descriptor.Finalize();
 
@@ -227,11 +233,18 @@ namespace queen
          * When set, queries with Added<T>/Changed<T> filters will only
          * iterate entities where the component ticks match the filter.
          */
-        void SetLastRunTick(Tick tick) noexcept { m_lastRunTick = tick; }
+        void SetLastRunTick(Tick tick) noexcept
+        {
+            m_lastRunTick = tick;
+        }
 
-        [[nodiscard]] Tick LastRunTick() const noexcept { return m_lastRunTick; }
+        [[nodiscard]] Tick LastRunTick() const noexcept
+        {
+            return m_lastRunTick;
+        }
 
-        template <typename Func> void Each(Func&& func) {
+        template <typename Func> void Each(Func&& func)
+        {
             for (size_t a = 0; a < m_archetypes.Size(); ++a)
             {
                 Archetype<Allocator>* arch = m_archetypes[a];
@@ -239,7 +252,8 @@ namespace queen
             }
         }
 
-        template <typename Func> void EachWithEntity(Func&& func) {
+        template <typename Func> void EachWithEntity(Func&& func)
+        {
             for (size_t a = 0; a < m_archetypes.Size(); ++a)
             {
                 Archetype<Allocator>* arch = m_archetypes[a];
@@ -247,9 +261,13 @@ namespace queen
             }
         }
 
-        [[nodiscard]] size_t ArchetypeCount() const noexcept { return m_archetypes.Size(); }
+        [[nodiscard]] size_t ArchetypeCount() const noexcept
+        {
+            return m_archetypes.Size();
+        }
 
-        [[nodiscard]] size_t EntityCount() const noexcept {
+        [[nodiscard]] size_t EntityCount() const noexcept
+        {
             size_t count = 0;
             for (size_t i = 0; i < m_archetypes.Size(); ++i)
             {
@@ -258,12 +276,16 @@ namespace queen
             return count;
         }
 
-        [[nodiscard]] bool IsEmpty() const noexcept { return EntityCount() == 0; }
+        [[nodiscard]] bool IsEmpty() const noexcept
+        {
+            return EntityCount() == 0;
+        }
 
     private:
         template <typename Func, typename... DataTermTypes, typename... ChangeFilterTypes>
         void EachInArchetype(Archetype<Allocator>* arch, Func&& func, std::tuple<DataTermTypes...>,
-                             std::tuple<ChangeFilterTypes...>) {
+                             std::tuple<ChangeFilterTypes...>)
+        {
             size_t count = arch->EntityCount();
             if (count == 0)
                 return;
@@ -297,7 +319,8 @@ namespace queen
 
         template <typename Func, typename... DataTermTypes, typename... ChangeFilterTypes>
         void EachInArchetypeWithEntity(Archetype<Allocator>* arch, Func&& func, std::tuple<DataTermTypes...>,
-                                       std::tuple<ChangeFilterTypes...>) {
+                                       std::tuple<ChangeFilterTypes...>)
+        {
             size_t count = arch->EntityCount();
             if (count == 0)
                 return;
@@ -334,13 +357,15 @@ namespace queen
 
         template <typename Func, typename Tuple, size_t... Is, typename... DataTermTypes>
         void InvokeCallback(Func& func, Tuple& columns, size_t row, std::index_sequence<Is...>,
-                            std::tuple<DataTermTypes...>) {
+                            std::tuple<DataTermTypes...>)
+        {
             func(detail::GetComponentRef<DataTermTypes>(std::get<Is>(columns), row)...);
         }
 
         template <typename Func, typename Tuple, size_t... Is, typename... DataTermTypes>
         void InvokeCallbackWithEntity(Func& func, Entity entity, Tuple& columns, size_t row, std::index_sequence<Is...>,
-                                      std::tuple<DataTermTypes...>) {
+                                      std::tuple<DataTermTypes...>)
+        {
             func(entity, detail::GetComponentRef<DataTermTypes>(std::get<Is>(columns), row)...);
         }
 

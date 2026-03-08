@@ -45,7 +45,8 @@ namespace
 // EnumInfo specializations (outside anonymous namespace for template specialization)
 template <> struct queen::EnumInfo<RenderMode>
 {
-    static const queen::EnumReflectionBase& Get() {
+    static const queen::EnumReflectionBase& Get()
+    {
         static auto r = []() {
             queen::EnumReflector<> e;
             e.Value("Opaque", RenderMode::Opaque);
@@ -59,7 +60,8 @@ template <> struct queen::EnumInfo<RenderMode>
 
 template <> struct queen::EnumInfo<Alignment>
 {
-    static const queen::EnumReflectionBase& Get() {
+    static const queen::EnumReflectionBase& Get()
+    {
         static auto r = []() {
             queen::EnumReflector<> e;
             e.Value("Left", Alignment::Left);
@@ -82,7 +84,8 @@ namespace
         RenderMode mode;
         float alpha;
 
-        static void Reflect(queen::ComponentReflector<>& r) {
+        static void Reflect(queen::ComponentReflector<>& r)
+        {
             r.Field("mode", &WithEnum::mode);
             r.Field("alpha", &WithEnum::alpha);
         }
@@ -93,7 +96,8 @@ namespace
         Alignment align;
         int32_t padding;
 
-        static void Reflect(queen::ComponentReflector<>& r) {
+        static void Reflect(queen::ComponentReflector<>& r)
+        {
             r.Field("align", &WithAlignment::align);
             r.Field("padding", &WithAlignment::padding);
         }
@@ -104,7 +108,8 @@ namespace
         InternalFlag flag;
         uint8_t data;
 
-        static void Reflect(queen::ComponentReflector<>& r) {
+        static void Reflect(queen::ComponentReflector<>& r)
+        {
             r.Field("flag", &WithUnreflectedEnum::flag);
             r.Field("data", &WithUnreflectedEnum::data);
         }
@@ -115,7 +120,8 @@ namespace
         wax::FixedString name;
         int32_t id;
 
-        static void Reflect(queen::ComponentReflector<>& r) {
+        static void Reflect(queen::ComponentReflector<>& r)
+        {
             r.Field("name", &WithFixedString::name);
             r.Field("id", &WithFixedString::id);
         }
@@ -126,7 +132,8 @@ namespace
         float values[4];
         int32_t count;
 
-        static void Reflect(queen::ComponentReflector<>& r) {
+        static void Reflect(queen::ComponentReflector<>& r)
+        {
             r.Field("values", &WithFixedArray::values);
             r.Field("count", &WithFixedArray::count);
         }
@@ -139,7 +146,8 @@ namespace
         float rotation;
         RenderMode mode;
 
-        static void Reflect(queen::ComponentReflector<>& r) {
+        static void Reflect(queen::ComponentReflector<>& r)
+        {
             r.Field("speed", &WithAnnotations::speed)
                 .Range(0.f, 100.f, 0.5f)
                 .Tooltip("Movement speed in units/sec")

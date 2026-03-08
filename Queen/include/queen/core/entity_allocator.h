@@ -53,12 +53,14 @@ namespace queen
         explicit EntityAllocator(Allocator& allocator, size_t initialCapacity = 1000)
             : m_generations{allocator}
             , m_freeList{allocator}
-            , m_nextIndex{0} {
+            , m_nextIndex{0}
+        {
             m_generations.Reserve(initialCapacity);
             m_freeList.Reserve(initialCapacity / 4);
         }
 
-        Entity Allocate() {
+        Entity Allocate()
+        {
             if (!m_freeList.IsEmpty())
             {
                 uint32_t index = m_freeList.Back();
@@ -79,7 +81,8 @@ namespace queen
             return Entity{index, 0, Entity::Flags::kAlive};
         }
 
-        void Deallocate(Entity entity) {
+        void Deallocate(Entity entity)
+        {
             if (!IsAlive(entity))
             {
                 return;
@@ -93,7 +96,8 @@ namespace queen
             m_freeList.PushBack(index);
         }
 
-        [[nodiscard]] bool IsAlive(Entity entity) const noexcept {
+        [[nodiscard]] bool IsAlive(Entity entity) const noexcept
+        {
             if (entity.IsNull())
             {
                 return false;
@@ -108,15 +112,28 @@ namespace queen
             return m_generations[index] == entity.Generation();
         }
 
-        [[nodiscard]] size_t AliveCount() const noexcept { return m_nextIndex - m_freeList.Size(); }
+        [[nodiscard]] size_t AliveCount() const noexcept
+        {
+            return m_nextIndex - m_freeList.Size();
+        }
 
-        [[nodiscard]] size_t Capacity() const noexcept { return m_generations.Capacity(); }
+        [[nodiscard]] size_t Capacity() const noexcept
+        {
+            return m_generations.Capacity();
+        }
 
-        [[nodiscard]] size_t TotalAllocated() const noexcept { return m_nextIndex; }
+        [[nodiscard]] size_t TotalAllocated() const noexcept
+        {
+            return m_nextIndex;
+        }
 
-        [[nodiscard]] size_t FreeListSize() const noexcept { return m_freeList.Size(); }
+        [[nodiscard]] size_t FreeListSize() const noexcept
+        {
+            return m_freeList.Size();
+        }
 
-        void Clear() {
+        void Clear()
+        {
             m_generations.Clear();
             m_freeList.Clear();
             m_nextIndex = 0;

@@ -8,7 +8,8 @@
 namespace
 {
 
-    auto& GetWriterAlloc() {
+    auto& GetWriterAlloc()
+    {
         static comb::ModuleAllocator alloc{"TestHiveWriter", 4 * 1024 * 1024};
         return alloc.Get();
     }

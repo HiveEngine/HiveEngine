@@ -25,7 +25,8 @@ namespace comb::debug
      * - Windows: dbghelp.lib linked, symbols available (.pdb)
      * - Linux/macOS: Compile with -rdynamic for symbol resolution
      */
-    void PrintCallstack(void* const* frames, uint32_t depth) {
+    void PrintCallstack(void* const* frames, uint32_t depth)
+    {
         if (depth == 0 || frames == nullptr)
         {
             hive::LogInfo(comb::LogCombRoot, "    (no callstack available)");

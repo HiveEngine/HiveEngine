@@ -6,7 +6,8 @@ namespace nectar
 {
     namespace
     {
-        wax::StringView TrimWhitespace(wax::StringView line) {
+        wax::StringView TrimWhitespace(wax::StringView line)
+        {
             size_t start = 0;
             while (start < line.Size() && (line[start] == ' ' || line[start] == '\t'))
                 ++start;
@@ -18,12 +19,14 @@ namespace nectar
             return line.Substr(start, end - start);
         }
 
-        bool IsDigitOrSign(char c) {
+        bool IsDigitOrSign(char c)
+        {
             return (c >= '0' && c <= '9') || c == '-' || c == '+';
         }
 
         // Try to parse an integer. Returns false if it looks like a float.
-        bool TryParseInt(wax::StringView text, int64_t& out) {
+        bool TryParseInt(wax::StringView text, int64_t& out)
+        {
             if (text.IsEmpty())
                 return false;
 
@@ -49,7 +52,8 @@ namespace nectar
             return true;
         }
 
-        bool TryParseFloat(wax::StringView text, double& out) {
+        bool TryParseFloat(wax::StringView text, double& out)
+        {
             if (text.IsEmpty())
                 return false;
 
@@ -70,7 +74,8 @@ namespace nectar
 
         // Extract a quoted string from text starting at pos (which should be '"').
         // Returns the content without quotes, and advances pos past the closing quote.
-        bool ExtractQuotedString(wax::StringView text, size_t& pos, wax::String& out, comb::DefaultAllocator& alloc) {
+        bool ExtractQuotedString(wax::StringView text, size_t& pos, wax::String& out, comb::DefaultAllocator& alloc)
+        {
             if (pos >= text.Size() || text[pos] != '"')
                 return false;
             ++pos; // skip opening quote
@@ -116,7 +121,8 @@ namespace nectar
             return false; // unterminated string
         }
 
-        HiveValue ParseValue(wax::StringView text, comb::DefaultAllocator& alloc, bool& ok) {
+        HiveValue ParseValue(wax::StringView text, comb::DefaultAllocator& alloc, bool& ok)
+        {
             ok = true;
             auto trimmed = TrimWhitespace(text);
             if (trimmed.IsEmpty())
@@ -211,7 +217,8 @@ namespace nectar
         }
     } // namespace
 
-    HiveParseResult HiveParser::Parse(wax::StringView content, comb::DefaultAllocator& alloc) {
+    HiveParseResult HiveParser::Parse(wax::StringView content, comb::DefaultAllocator& alloc)
+    {
         HiveParseResult result{HiveDocument{alloc}, wax::Vector<HiveParseError>{alloc}};
 
         wax::String currentSection{alloc};

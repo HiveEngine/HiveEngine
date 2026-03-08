@@ -6,9 +6,12 @@ namespace nectar
 {
     PakMountSource::PakMountSource(PakReader* reader, comb::DefaultAllocator& alloc)
         : m_alloc{&alloc}
-        , m_reader{reader} {}
+        , m_reader{reader}
+    {
+    }
 
-    PakMountSource::~PakMountSource() {
+    PakMountSource::~PakMountSource()
+    {
         if (m_reader != nullptr)
         {
             m_reader->~PakReader();
@@ -16,7 +19,8 @@ namespace nectar
         }
     }
 
-    wax::ByteBuffer PakMountSource::ReadFile(wax::StringView path, comb::DefaultAllocator& alloc) {
+    wax::ByteBuffer PakMountSource::ReadFile(wax::StringView path, comb::DefaultAllocator& alloc)
+    {
         const auto* manifest = m_reader->GetManifest();
         if (manifest == nullptr)
         {
@@ -32,7 +36,8 @@ namespace nectar
         return m_reader->Read(*hash, alloc);
     }
 
-    bool PakMountSource::Exists(wax::StringView path) const {
+    bool PakMountSource::Exists(wax::StringView path) const
+    {
         const auto* manifest = m_reader->GetManifest();
         if (manifest == nullptr)
         {
@@ -42,7 +47,8 @@ namespace nectar
         return manifest->Find(path) != nullptr;
     }
 
-    FileInfo PakMountSource::Stat(wax::StringView path) const {
+    FileInfo PakMountSource::Stat(wax::StringView path) const
+    {
         const auto* manifest = m_reader->GetManifest();
         if (manifest == nullptr)
         {
@@ -60,7 +66,8 @@ namespace nectar
     }
 
     void PakMountSource::ListDirectory(wax::StringView path, wax::Vector<DirectoryEntry>& out,
-                                       comb::DefaultAllocator& alloc) const {
+                                       comb::DefaultAllocator& alloc) const
+    {
         const auto* manifest = m_reader->GetManifest();
         if (manifest == nullptr)
         {

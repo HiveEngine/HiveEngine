@@ -19,20 +19,23 @@ namespace
     class HandleTestLoader final : public nectar::AssetLoader<HandleTestAsset>
     {
     public:
-        HandleTestAsset* Load(wax::ByteSpan data, comb::DefaultAllocator& alloc) override {
+        HandleTestAsset* Load(wax::ByteSpan data, comb::DefaultAllocator& alloc) override
+        {
             if (data.Size() < sizeof(int))
                 return nullptr;
             auto* a = comb::New<HandleTestAsset>(alloc);
             a->val = data.Read<int>(0);
             return a;
         }
-        void Unload(HandleTestAsset* asset, comb::DefaultAllocator& alloc) override {
+        void Unload(HandleTestAsset* asset, comb::DefaultAllocator& alloc) override
+        {
             if (asset)
                 comb::Delete(alloc, asset);
         }
     };
 
-    auto& GetHandleTestAlloc() {
+    auto& GetHandleTestAlloc()
+    {
         static comb::ModuleAllocator alloc{"TestHandle", 4 * 1024 * 1024};
         return alloc.Get();
     }

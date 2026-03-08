@@ -39,7 +39,9 @@ namespace queen
     {
     public:
         explicit Scheduler(Allocator& allocator)
-            : m_graph{allocator} {}
+            : m_graph{allocator}
+        {
+        }
 
         Scheduler(const Scheduler&) = delete;
         Scheduler& operator=(const Scheduler&) = delete;
@@ -51,19 +53,28 @@ namespace queen
          *
          * Call this after registering new systems or when the graph is dirty.
          */
-        void Build(const SystemStorage<Allocator>& storage) { m_graph.Build(storage); }
+        void Build(const SystemStorage<Allocator>& storage)
+        {
+            m_graph.Build(storage);
+        }
 
         /**
          * Mark the graph as needing rebuild
          *
          * Call this when systems are added, removed, or modified.
          */
-        void Invalidate() noexcept { m_graph.MarkDirty(); }
+        void Invalidate() noexcept
+        {
+            m_graph.MarkDirty();
+        }
 
         /**
          * Check if the graph needs rebuild
          */
-        [[nodiscard]] bool NeedsRebuild() const noexcept { return m_graph.IsDirty(); }
+        [[nodiscard]] bool NeedsRebuild() const noexcept
+        {
+            return m_graph.IsDirty();
+        }
 
         /**
          * Run all systems in dependency order
@@ -80,19 +91,31 @@ namespace queen
         /**
          * Get the dependency graph
          */
-        [[nodiscard]] const DependencyGraph<Allocator>& Graph() const noexcept { return m_graph; }
+        [[nodiscard]] const DependencyGraph<Allocator>& Graph() const noexcept
+        {
+            return m_graph;
+        }
 
-        [[nodiscard]] DependencyGraph<Allocator>& Graph() noexcept { return m_graph; }
+        [[nodiscard]] DependencyGraph<Allocator>& Graph() noexcept
+        {
+            return m_graph;
+        }
 
         /**
          * Get the execution order (for debugging/visualization)
          */
-        [[nodiscard]] const wax::Vector<uint32_t>& ExecutionOrder() const noexcept { return m_graph.ExecutionOrder(); }
+        [[nodiscard]] const wax::Vector<uint32_t>& ExecutionOrder() const noexcept
+        {
+            return m_graph.ExecutionOrder();
+        }
 
         /**
          * Check if the dependency graph has cycles
          */
-        [[nodiscard]] bool HasCycle() const noexcept { return m_graph.HasCycle(); }
+        [[nodiscard]] bool HasCycle() const noexcept
+        {
+            return m_graph.HasCycle();
+        }
 
     private:
         DependencyGraph<Allocator> m_graph;

@@ -281,7 +281,9 @@ namespace
 
             TestStruct(int v, float d)
                 : value{v}
-                , data{d} {}
+                , data{d}
+            {
+            }
         };
 
         TestStruct* obj = comb::New<TestStruct>(slabs, 42, 3.14f);

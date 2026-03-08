@@ -14,6 +14,9 @@ namespace larvae
         const char* file;
         std::uint_least32_t line;
 
-        [[nodiscard]] std::string GetFullName() const { return suite_name + "." + test_name; }
+        [[nodiscard]] std::string GetFullName() const
+        {
+            return suite_name + "." + test_name;
+        }
     };
 } // namespace larvae

@@ -26,7 +26,10 @@ namespace larvae
         explicit TestRunner(const TestRunnerConfig& config = TestRunnerConfig{});
 
         int Run();
-        const std::vector<TestResult>& GetResults() const { return results_; }
+        const std::vector<TestResult>& GetResults() const
+        {
+            return results_;
+        }
 
         int GetTotalTests() const;
         int GetPassedTests() const;

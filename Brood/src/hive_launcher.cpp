@@ -33,13 +33,13 @@
 #include <imgui_internal.h>
 #endif
 
+#include <brood/process_runtime.h>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <filesystem>
 #include <iostream>
 #include <memory>
-#include <brood/process_runtime.h>
 #include <string>
 
 namespace
@@ -79,11 +79,13 @@ namespace
         bool m_exitAfterSetup{false};
     };
 
-    void PrintUsage() {
+    void PrintUsage()
+    {
         std::fprintf(stderr, "Usage: hive_launcher [--headless] [--exit-after-setup] [path/to/project.hive]\n");
     }
 
-    bool TryParseCommandLine(int argc, char* argv[], LauncherCommandLine* commandLine) {
+    bool TryParseCommandLine(int argc, char* argv[], LauncherCommandLine* commandLine)
+    {
         for (int i = 1; i < argc; ++i)
         {
             const char* arg = argv[i];
@@ -119,7 +121,8 @@ namespace
         return true;
     }
 
-    std::string BuildWindowTitle(const std::string& projectPath) {
+    std::string BuildWindowTitle(const std::string& projectPath)
+    {
         std::string windowTitle = "HiveEngine";
         comb::ModuleAllocator tmpAlloc{"TmpProjectParse", size_t{4} * 1024 * 1024};
         nectar::ProjectFile projectFile{tmpAlloc.Get()};
@@ -136,7 +139,8 @@ namespace
     class LauncherProcessSession
     {
     public:
-        int Run(int argc, char* argv[]) {
+        int Run(int argc, char* argv[])
+        {
             LauncherCommandLine commandLine{};
             if (!TryParseCommandLine(argc, argv, &commandLine))
             {
@@ -147,7 +151,8 @@ namespace
         }
 
     private:
-        int Run(const LauncherCommandLine& commandLine) {
+        int Run(const LauncherCommandLine& commandLine)
+        {
             std::error_code ec;
             std::filesystem::path projectPath = commandLine.m_projectPath;
             if (projectPath.empty())
@@ -332,7 +337,8 @@ namespace
     };
 
 #if HIVE_MODE_EDITOR
-    void SetupDefaultDockLayout(ImGuiID dockspaceId) {
+    void SetupDefaultDockLayout(ImGuiID dockspaceId)
+    {
         ImGui::DockBuilderRemoveNode(dockspaceId);
         ImGui::DockBuilderAddNode(dockspaceId, ImGuiDockNodeFlags_DockSpace);
         ImGui::DockBuilderSetNodeSize(dockspaceId, ImGui::GetMainViewport()->Size);
@@ -350,7 +356,8 @@ namespace
         ImGui::DockBuilderFinish(dockspaceId);
     }
 
-    void DrawEditor(waggle::EngineContext& ctx, LauncherState& state) {
+    void DrawEditor(waggle::EngineContext& ctx, LauncherState& state)
+    {
         // Fullscreen dockspace
         const ImGuiWindowFlags windowFlags = ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoDocking |
                                              ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse |
@@ -442,7 +449,8 @@ namespace
 
 } // anonymous namespace
 
-int main(int argc, char* argv[]) {
+int main(int argc, char* argv[])
+{
     brood::ProcessRuntime runtime{};
     int result = 1;
     {

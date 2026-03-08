@@ -19,14 +19,16 @@ namespace
     class EvtLoader final : public nectar::AssetLoader<EvtAsset>
     {
     public:
-        EvtAsset* Load(wax::ByteSpan data, comb::DefaultAllocator& alloc) override {
+        EvtAsset* Load(wax::ByteSpan data, comb::DefaultAllocator& alloc) override
+        {
             if (data.Size() < sizeof(int))
                 return nullptr;
             auto* a = comb::New<EvtAsset>(alloc);
             a->value = data.Read<int>(0);
             return a;
         }
-        void Unload(EvtAsset* asset, comb::DefaultAllocator& alloc) override {
+        void Unload(EvtAsset* asset, comb::DefaultAllocator& alloc) override
+        {
             if (asset)
                 comb::Delete(alloc, asset);
         }
@@ -40,30 +42,35 @@ namespace
     class EvtLoaderB final : public nectar::AssetLoader<EvtAssetB>
     {
     public:
-        EvtAssetB* Load(wax::ByteSpan data, comb::DefaultAllocator& alloc) override {
+        EvtAssetB* Load(wax::ByteSpan data, comb::DefaultAllocator& alloc) override
+        {
             if (data.Size() < sizeof(float))
                 return nullptr;
             auto* a = comb::New<EvtAssetB>(alloc);
             a->x = data.Read<float>(0);
             return a;
         }
-        void Unload(EvtAssetB* asset, comb::DefaultAllocator& alloc) override {
+        void Unload(EvtAssetB* asset, comb::DefaultAllocator& alloc) override
+        {
             if (asset)
                 comb::Delete(alloc, asset);
         }
     };
 
-    auto& GetEvtAlloc() {
+    auto& GetEvtAlloc()
+    {
         static comb::ModuleAllocator alloc{"TestEvt", 4 * 1024 * 1024};
         return alloc.Get();
     }
 
-    wax::ByteSpan IntSpan(uint8_t* buf, int v) {
+    wax::ByteSpan IntSpan(uint8_t* buf, int v)
+    {
         std::memcpy(buf, &v, sizeof(int));
         return wax::ByteSpan{buf, sizeof(int)};
     }
 
-    wax::ByteSpan FloatSpan(uint8_t* buf, float v) {
+    wax::ByteSpan FloatSpan(uint8_t* buf, float v)
+    {
         std::memcpy(buf, &v, sizeof(float));
         return wax::ByteSpan{buf, sizeof(float)};
     }

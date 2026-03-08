@@ -69,23 +69,29 @@ namespace wax
 
         constexpr Box() noexcept
             : ptr_{nullptr}
-            , allocator_{nullptr} {}
+            , allocator_{nullptr}
+        {
+        }
 
         constexpr Box(Allocator& allocator, T* ptr) noexcept
             : ptr_{ptr}
-            , allocator_{&allocator} {}
+            , allocator_{&allocator}
+        {
+        }
 
         Box(const Box&) = delete;
         Box& operator=(const Box&) = delete;
 
         constexpr Box(Box&& other) noexcept
             : ptr_{other.ptr_}
-            , allocator_{other.allocator_} {
+            , allocator_{other.allocator_}
+        {
             other.ptr_ = nullptr;
             other.allocator_ = nullptr;
         }
 
-        constexpr Box& operator=(Box&& other) noexcept {
+        constexpr Box& operator=(Box&& other) noexcept
+        {
             if (this != &other)
             {
                 Reset();
@@ -99,36 +105,58 @@ namespace wax
             return *this;
         }
 
-        ~Box() noexcept { Reset(); }
+        ~Box() noexcept
+        {
+            Reset();
+        }
 
-        [[nodiscard]] constexpr T& operator*() const noexcept {
+        [[nodiscard]] constexpr T& operator*() const noexcept
+        {
             hive::Assert(ptr_ != nullptr, "Dereferencing null Box");
             return *ptr_;
         }
 
-        [[nodiscard]] constexpr T* operator->() const noexcept {
+        [[nodiscard]] constexpr T* operator->() const noexcept
+        {
             hive::Assert(ptr_ != nullptr, "Dereferencing null Box");
             return ptr_;
         }
 
-        [[nodiscard]] constexpr T* Get() const noexcept { return ptr_; }
+        [[nodiscard]] constexpr T* Get() const noexcept
+        {
+            return ptr_;
+        }
 
-        [[nodiscard]] constexpr Allocator* GetAllocator() const noexcept { return allocator_; }
+        [[nodiscard]] constexpr Allocator* GetAllocator() const noexcept
+        {
+            return allocator_;
+        }
 
-        [[nodiscard]] constexpr explicit operator bool() const noexcept { return ptr_ != nullptr; }
+        [[nodiscard]] constexpr explicit operator bool() const noexcept
+        {
+            return ptr_ != nullptr;
+        }
 
-        [[nodiscard]] constexpr bool IsNull() const noexcept { return ptr_ == nullptr; }
+        [[nodiscard]] constexpr bool IsNull() const noexcept
+        {
+            return ptr_ == nullptr;
+        }
 
-        [[nodiscard]] constexpr bool IsValid() const noexcept { return ptr_ != nullptr; }
+        [[nodiscard]] constexpr bool IsValid() const noexcept
+        {
+            return ptr_ != nullptr;
+        }
 
-        [[nodiscard]] constexpr T* Release() noexcept {
+        [[nodiscard]] constexpr T* Release() noexcept
+        {
             T* temp = ptr_;
             ptr_ = nullptr;
             allocator_ = nullptr;
             return temp;
         }
 
-        constexpr void Reset() noexcept {
+        constexpr void Reset() noexcept
+        {
             if (ptr_ && allocator_)
             {
                 comb::Delete(*allocator_, ptr_);
@@ -137,7 +165,8 @@ namespace wax
             allocator_ = nullptr;
         }
 
-        constexpr void Reset(Allocator& allocator, T* ptr) noexcept {
+        constexpr void Reset(Allocator& allocator, T* ptr) noexcept
+        {
             if (ptr_ && allocator_)
             {
                 comb::Delete(*allocator_, ptr_);
@@ -146,9 +175,15 @@ namespace wax
             allocator_ = &allocator;
         }
 
-        [[nodiscard]] constexpr bool operator==(const Box& other) const noexcept { return ptr_ == other.ptr_; }
+        [[nodiscard]] constexpr bool operator==(const Box& other) const noexcept
+        {
+            return ptr_ == other.ptr_;
+        }
 
-        [[nodiscard]] constexpr bool operator==(std::nullptr_t) const noexcept { return ptr_ == nullptr; }
+        [[nodiscard]] constexpr bool operator==(std::nullptr_t) const noexcept
+        {
+            return ptr_ == nullptr;
+        }
 
     private:
         T* ptr_;
@@ -156,13 +191,15 @@ namespace wax
     };
 
     template <typename T, comb::Allocator Allocator, typename... Args>
-    [[nodiscard]] Box<T, Allocator> MakeBox(Allocator& allocator, Args&&... args) {
+    [[nodiscard]] Box<T, Allocator> MakeBox(Allocator& allocator, Args&&... args)
+    {
         T* ptr = comb::New<T>(allocator, std::forward<Args>(args)...);
         return Box<T, Allocator>{allocator, ptr};
     }
 
     // Default allocator overload
-    template <typename T, typename... Args> [[nodiscard]] Box<T, comb::DefaultAllocator> MakeBox(Args&&... args) {
+    template <typename T, typename... Args> [[nodiscard]] Box<T, comb::DefaultAllocator> MakeBox(Args&&... args)
+    {
         auto& allocator = comb::GetDefaultAllocator();
         T* ptr = comb::New<T>(allocator, std::forward<Args>(args)...);
         return Box<T, comb::DefaultAllocator>{allocator, ptr};

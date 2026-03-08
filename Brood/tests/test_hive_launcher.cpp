@@ -11,7 +11,8 @@
 namespace
 {
 #if HIVE_PLATFORM_WINDOWS
-    std::filesystem::path GetCurrentExecutablePath() {
+    std::filesystem::path GetCurrentExecutablePath()
+    {
         std::wstring buffer(static_cast<size_t>(MAX_PATH), L'\0');
 
         while (true)
@@ -29,7 +30,8 @@ namespace
         }
     }
 
-    std::filesystem::path FindRepoRoot() {
+    std::filesystem::path FindRepoRoot()
+    {
         auto current = GetCurrentExecutablePath().parent_path();
         for (int i = 0; i < 8; ++i)
         {
@@ -44,7 +46,8 @@ namespace
         return {};
     }
 
-    std::wstring QuoteArgument(const std::wstring& arg) {
+    std::wstring QuoteArgument(const std::wstring& arg)
+    {
         std::wstring quoted = L"\"";
         for (wchar_t ch : arg)
         {
@@ -59,7 +62,8 @@ namespace
     }
 
     int RunProcess(const std::filesystem::path& executable, const std::vector<std::wstring>& arguments,
-                   const std::filesystem::path& workingDirectory, DWORD timeoutMs) {
+                   const std::filesystem::path& workingDirectory, DWORD timeoutMs)
+    {
         std::wstring commandLine = QuoteArgument(executable.native());
         for (const auto& arg : arguments)
         {

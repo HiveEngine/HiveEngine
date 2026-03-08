@@ -10,7 +10,8 @@
 namespace queen
 {
     template <comb::Allocator Allocator>
-    void ParallelScheduler<Allocator>::RunAll(World& world, SystemStorage<Allocator>& storage) {
+    void ParallelScheduler<Allocator>::RunAll(World& world, SystemStorage<Allocator>& storage)
+    {
         if (m_graph.IsDirty())
         {
             Build(storage);

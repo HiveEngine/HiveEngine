@@ -6,7 +6,8 @@ namespace hive
 {
     const LogCategory LOG_HIVE_ROOT{"Hive"};
 
-    void LogManager::UnregisterLogger(LoggerId id) {
+    void LogManager::UnregisterLogger(LoggerId id)
+    {
         const auto isLoggerWithId = [id](const auto& loggerPair) {
             return loggerPair.first == id;
         };
@@ -21,7 +22,8 @@ namespace hive
         }
     }
 
-    void LogManager::Log(const LogCategory& cat, LogSeverity sev, const char* msg) {
+    void LogManager::Log(const LogCategory& cat, LogSeverity sev, const char* msg)
+    {
         const auto callLoggerFunc = [&](auto& loggerPair) {
             loggerPair.second(cat, sev, msg);
         };
@@ -31,13 +33,17 @@ namespace hive
 
     ConsoleLogger::ConsoleLogger(LogManager& manager)
         : m_manager{manager}
-        , m_loggerId{m_manager.RegisterLogger(this, &ConsoleLogger::Log)} {}
+        , m_loggerId{m_manager.RegisterLogger(this, &ConsoleLogger::Log)}
+    {
+    }
 
-    ConsoleLogger::~ConsoleLogger() {
+    ConsoleLogger::~ConsoleLogger()
+    {
         m_manager.UnregisterLogger(m_loggerId);
     }
 
-    void ConsoleLogger::Log(const LogCategory& category, LogSeverity severity, const char* message) {
+    void ConsoleLogger::Log(const LogCategory& category, LogSeverity severity, const char* message)
+    {
         // TODO use array instead for better performance
         static const std::unordered_map<LogSeverity, const char*> SEVERITY_LABELS = {{LogSeverity::TRACE, "[TRACE] "},
                                                                                      {LogSeverity::INFO, "[INFO] "},

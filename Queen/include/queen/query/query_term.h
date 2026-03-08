@@ -57,23 +57,45 @@ namespace queen
         TermOperator m_op = TermOperator::WITH;
         TermAccess m_access = TermAccess::READ;
 
-        [[nodiscard]] constexpr bool IsValid() const noexcept { return m_typeId != 0; }
+        [[nodiscard]] constexpr bool IsValid() const noexcept
+        {
+            return m_typeId != 0;
+        }
 
-        [[nodiscard]] constexpr bool IsRequired() const noexcept { return m_op == TermOperator::WITH; }
+        [[nodiscard]] constexpr bool IsRequired() const noexcept
+        {
+            return m_op == TermOperator::WITH;
+        }
 
-        [[nodiscard]] constexpr bool IsExcluded() const noexcept { return m_op == TermOperator::WITHOUT; }
+        [[nodiscard]] constexpr bool IsExcluded() const noexcept
+        {
+            return m_op == TermOperator::WITHOUT;
+        }
 
-        [[nodiscard]] constexpr bool IsOptional() const noexcept { return m_op == TermOperator::Optional; }
+        [[nodiscard]] constexpr bool IsOptional() const noexcept
+        {
+            return m_op == TermOperator::Optional;
+        }
 
-        [[nodiscard]] constexpr bool IsReadOnly() const noexcept { return m_access == TermAccess::READ; }
+        [[nodiscard]] constexpr bool IsReadOnly() const noexcept
+        {
+            return m_access == TermAccess::READ;
+        }
 
-        [[nodiscard]] constexpr bool IsWritable() const noexcept { return m_access == TermAccess::WRITE; }
+        [[nodiscard]] constexpr bool IsWritable() const noexcept
+        {
+            return m_access == TermAccess::WRITE;
+        }
 
-        [[nodiscard]] constexpr bool HasDataAccess() const noexcept { return m_access != TermAccess::NONE; }
+        [[nodiscard]] constexpr bool HasDataAccess() const noexcept
+        {
+            return m_access != TermAccess::NONE;
+        }
 
         template <typename T>
         [[nodiscard]] static constexpr Term Create(TermOperator op = TermOperator::WITH,
-                                                   TermAccess access = TermAccess::READ) noexcept {
+                                                   TermAccess access = TermAccess::READ) noexcept
+        {
             return Term{TypeIdOf<T>(), op, access};
         }
     };
@@ -100,7 +122,10 @@ namespace queen
         static constexpr TermAccess access = TermAccess::READ;
         static constexpr TypeId typeId = TypeIdOf<T>();
 
-        [[nodiscard]] static constexpr Term ToTerm() noexcept { return Term{typeId, op, access}; }
+        [[nodiscard]] static constexpr Term ToTerm() noexcept
+        {
+            return Term{typeId, op, access};
+        }
     };
 
     /**
@@ -124,7 +149,10 @@ namespace queen
         static constexpr TermAccess access = TermAccess::WRITE;
         static constexpr TypeId typeId = TypeIdOf<T>();
 
-        [[nodiscard]] static constexpr Term ToTerm() noexcept { return Term{typeId, op, access}; }
+        [[nodiscard]] static constexpr Term ToTerm() noexcept
+        {
+            return Term{typeId, op, access};
+        }
     };
 
     /**
@@ -148,7 +176,10 @@ namespace queen
         static constexpr TermAccess access = TermAccess::NONE;
         static constexpr TypeId typeId = TypeIdOf<T>();
 
-        [[nodiscard]] static constexpr Term ToTerm() noexcept { return Term{typeId, op, access}; }
+        [[nodiscard]] static constexpr Term ToTerm() noexcept
+        {
+            return Term{typeId, op, access};
+        }
     };
 
     /**
@@ -171,7 +202,10 @@ namespace queen
         static constexpr TermAccess access = TermAccess::NONE;
         static constexpr TypeId typeId = TypeIdOf<T>();
 
-        [[nodiscard]] static constexpr Term ToTerm() noexcept { return Term{typeId, op, access}; }
+        [[nodiscard]] static constexpr Term ToTerm() noexcept
+        {
+            return Term{typeId, op, access};
+        }
     };
 
     /**
@@ -196,7 +230,10 @@ namespace queen
         static constexpr TermAccess access = TermAccess::READ;
         static constexpr TypeId typeId = TypeIdOf<T>();
 
-        [[nodiscard]] static constexpr Term ToTerm() noexcept { return Term{typeId, op, access}; }
+        [[nodiscard]] static constexpr Term ToTerm() noexcept
+        {
+            return Term{typeId, op, access};
+        }
     };
 
     /**
@@ -211,7 +248,10 @@ namespace queen
         static constexpr TermAccess access = TermAccess::WRITE;
         static constexpr TypeId typeId = TypeIdOf<T>();
 
-        [[nodiscard]] static constexpr Term ToTerm() noexcept { return Term{typeId, op, access}; }
+        [[nodiscard]] static constexpr Term ToTerm() noexcept
+        {
+            return Term{typeId, op, access};
+        }
     };
 
     // ─────────────────────────────────────────────────────────────

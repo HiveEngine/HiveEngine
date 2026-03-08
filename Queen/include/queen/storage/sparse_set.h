@@ -72,7 +72,8 @@ namespace queen
             : m_allocator{&allocator}
             , m_sparseCapacity{sparseCapacity}
             , m_denseCapacity{denseCapacity}
-            , m_count{0} {
+            , m_count{0}
+        {
             hive::Assert(sparseCapacity > 0, "Sparse capacity must be > 0");
             hive::Assert(denseCapacity > 0, "Dense capacity must be > 0");
 
@@ -91,7 +92,8 @@ namespace queen
             }
         }
 
-        ~SparseSet() {
+        ~SparseSet()
+        {
             Clear();
 
             if (m_sparse && m_allocator)
@@ -118,7 +120,8 @@ namespace queen
             , m_data{other.m_data}
             , m_sparseCapacity{other.m_sparseCapacity}
             , m_denseCapacity{other.m_denseCapacity}
-            , m_count{other.m_count} {
+            , m_count{other.m_count}
+        {
             other.m_allocator = nullptr;
             other.m_sparse = nullptr;
             other.m_dense = nullptr;
@@ -126,7 +129,8 @@ namespace queen
             other.m_count = 0;
         }
 
-        SparseSet& operator=(SparseSet&& other) noexcept {
+        SparseSet& operator=(SparseSet&& other) noexcept
+        {
             if (this != &other)
             {
                 Clear();
@@ -154,7 +158,8 @@ namespace queen
             return *this;
         }
 
-        bool Insert(Entity entity, const T& value) {
+        bool Insert(Entity entity, const T& value)
+        {
             if (Contains(entity))
             {
                 return false;
@@ -172,7 +177,8 @@ namespace queen
             return true;
         }
 
-        bool Insert(Entity entity, T&& value) {
+        bool Insert(Entity entity, T&& value)
+        {
             if (Contains(entity))
             {
                 return false;
@@ -190,7 +196,8 @@ namespace queen
             return true;
         }
 
-        template <typename... Args> bool Emplace(Entity entity, Args&&... args) {
+        template <typename... Args> bool Emplace(Entity entity, Args&&... args)
+        {
             if (Contains(entity))
             {
                 return false;
@@ -208,7 +215,8 @@ namespace queen
             return true;
         }
 
-        bool Remove(Entity entity) {
+        bool Remove(Entity entity)
+        {
             if (!Contains(entity))
             {
                 return false;
@@ -235,7 +243,8 @@ namespace queen
             return true;
         }
 
-        [[nodiscard]] bool Contains(Entity entity) const noexcept {
+        [[nodiscard]] bool Contains(Entity entity) const noexcept
+        {
             uint32_t index = entity.Index();
             if (index >= m_sparseCapacity)
             {
@@ -251,7 +260,8 @@ namespace queen
             return m_dense[denseIndex] == entity;
         }
 
-        [[nodiscard]] T* Get(Entity entity) noexcept {
+        [[nodiscard]] T* Get(Entity entity) noexcept
+        {
             if (!Contains(entity))
             {
                 return nullptr;
@@ -261,7 +271,8 @@ namespace queen
             return &m_data[denseIndex];
         }
 
-        [[nodiscard]] const T* Get(Entity entity) const noexcept {
+        [[nodiscard]] const T* Get(Entity entity) const noexcept
+        {
             if (!Contains(entity))
             {
                 return nullptr;
@@ -271,19 +282,22 @@ namespace queen
             return &m_data[denseIndex];
         }
 
-        [[nodiscard]] T& GetUnchecked(Entity entity) noexcept {
+        [[nodiscard]] T& GetUnchecked(Entity entity) noexcept
+        {
             hive::Assert(Contains(entity), "Entity not in sparse set");
             uint32_t denseIndex = m_sparse[entity.Index()];
             return m_data[denseIndex];
         }
 
-        [[nodiscard]] const T& GetUnchecked(Entity entity) const noexcept {
+        [[nodiscard]] const T& GetUnchecked(Entity entity) const noexcept
+        {
             hive::Assert(Contains(entity), "Entity not in sparse set");
             uint32_t denseIndex = m_sparse[entity.Index()];
             return m_data[denseIndex];
         }
 
-        void Clear() {
+        void Clear()
+        {
             if constexpr (!std::is_trivially_destructible_v<T>)
             {
                 for (size_t i = 0; i < m_count; ++i)
@@ -300,33 +314,75 @@ namespace queen
             m_count = 0;
         }
 
-        [[nodiscard]] size_t Count() const noexcept { return m_count; }
-        [[nodiscard]] size_t DenseCapacity() const noexcept { return m_denseCapacity; }
-        [[nodiscard]] size_t SparseCapacity() const noexcept { return m_sparseCapacity; }
-        [[nodiscard]] bool IsEmpty() const noexcept { return m_count == 0; }
-        [[nodiscard]] bool IsFull() const noexcept { return m_count >= m_denseCapacity; }
+        [[nodiscard]] size_t Count() const noexcept
+        {
+            return m_count;
+        }
+        [[nodiscard]] size_t DenseCapacity() const noexcept
+        {
+            return m_denseCapacity;
+        }
+        [[nodiscard]] size_t SparseCapacity() const noexcept
+        {
+            return m_sparseCapacity;
+        }
+        [[nodiscard]] bool IsEmpty() const noexcept
+        {
+            return m_count == 0;
+        }
+        [[nodiscard]] bool IsFull() const noexcept
+        {
+            return m_count >= m_denseCapacity;
+        }
 
-        [[nodiscard]] Entity* DenseBegin() noexcept { return m_dense; }
-        [[nodiscard]] Entity* DenseEnd() noexcept { return m_dense + m_count; }
-        [[nodiscard]] const Entity* DenseBegin() const noexcept { return m_dense; }
-        [[nodiscard]] const Entity* DenseEnd() const noexcept { return m_dense + m_count; }
+        [[nodiscard]] Entity* DenseBegin() noexcept
+        {
+            return m_dense;
+        }
+        [[nodiscard]] Entity* DenseEnd() noexcept
+        {
+            return m_dense + m_count;
+        }
+        [[nodiscard]] const Entity* DenseBegin() const noexcept
+        {
+            return m_dense;
+        }
+        [[nodiscard]] const Entity* DenseEnd() const noexcept
+        {
+            return m_dense + m_count;
+        }
 
-        [[nodiscard]] T* DataBegin() noexcept { return m_data; }
-        [[nodiscard]] T* DataEnd() noexcept { return m_data + m_count; }
-        [[nodiscard]] const T* DataBegin() const noexcept { return m_data; }
-        [[nodiscard]] const T* DataEnd() const noexcept { return m_data + m_count; }
+        [[nodiscard]] T* DataBegin() noexcept
+        {
+            return m_data;
+        }
+        [[nodiscard]] T* DataEnd() noexcept
+        {
+            return m_data + m_count;
+        }
+        [[nodiscard]] const T* DataBegin() const noexcept
+        {
+            return m_data;
+        }
+        [[nodiscard]] const T* DataEnd() const noexcept
+        {
+            return m_data + m_count;
+        }
 
-        [[nodiscard]] Entity EntityAt(size_t denseIndex) const noexcept {
+        [[nodiscard]] Entity EntityAt(size_t denseIndex) const noexcept
+        {
             hive::Assert(denseIndex < m_count, "Dense index out of bounds");
             return m_dense[denseIndex];
         }
 
-        [[nodiscard]] T& DataAt(size_t denseIndex) noexcept {
+        [[nodiscard]] T& DataAt(size_t denseIndex) noexcept
+        {
             hive::Assert(denseIndex < m_count, "Dense index out of bounds");
             return m_data[denseIndex];
         }
 
-        [[nodiscard]] const T& DataAt(size_t denseIndex) const noexcept {
+        [[nodiscard]] const T& DataAt(size_t denseIndex) const noexcept
+        {
             hive::Assert(denseIndex < m_count, "Dense index out of bounds");
             return m_data[denseIndex];
         }

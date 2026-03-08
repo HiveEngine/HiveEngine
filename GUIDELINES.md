@@ -90,8 +90,7 @@ Additional naming rules:
 
 - 4-space indentation, no tabs.
 - `#pragma once`, always.
-- Classes, structs, enums, and namespaces use Allman braces.
-- Functions and methods keep the opening brace on the same line.
+- Classes, structs, enums, namespaces, functions, and methods use Allman braces.
 - Control statements always use braces. Do not rely on single-line implicit blocks.
 
 Example:
@@ -102,11 +101,13 @@ namespace queen
     class Entity
     {
     public:
-        [[nodiscard]] constexpr bool IsAlive() const noexcept {
+        [[nodiscard]] constexpr bool IsAlive() const noexcept
+        {
             return HasFlag(Flags::ALIVE);
         }
 
-        constexpr void SetFlag(Flags flag) noexcept {
+        constexpr void SetFlag(Flags flag) noexcept
+        {
             m_flags |= flag;
         }
 
@@ -216,7 +217,8 @@ Const correctness is part of the style, not an optional cleanup pass.
 Typical signature:
 
 ```cpp
-[[nodiscard]] constexpr bool IsEmpty() const noexcept {
+[[nodiscard]] constexpr bool IsEmpty() const noexcept
+{
     return m_size == 0;
 }
 ```

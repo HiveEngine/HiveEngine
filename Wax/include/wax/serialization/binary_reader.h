@@ -51,20 +51,27 @@ namespace wax
     public:
         constexpr BinaryReader() noexcept
             : m_view{}
-            , m_position{0} {}
+            , m_position{0}
+        {
+        }
 
         constexpr BinaryReader(const void* data, size_t size) noexcept
             : m_view{static_cast<const uint8_t*>(data), size}
-            , m_position{0} {}
+            , m_position{0}
+        {
+        }
 
         constexpr BinaryReader(ByteSpan view) noexcept
             : m_view{view}
-            , m_position{0} {}
+            , m_position{0}
+        {
+        }
 
         /**
          * Read a primitive type in little-endian format
          */
-        template <typename T> [[nodiscard]] T Read() noexcept {
+        template <typename T> [[nodiscard]] T Read() noexcept
+        {
             static_assert(std::is_trivially_copyable_v<T>, "T must be trivially copyable");
             hive::Assert(m_position + sizeof(T) <= m_view.Size(), "BinaryReader read out of bounds");
 
@@ -74,9 +81,13 @@ namespace wax
             return value;
         }
 
-        template <typename T> void Read(T& out) noexcept { out = Read<T>(); }
+        template <typename T> void Read(T& out) noexcept
+        {
+            out = Read<T>();
+        }
 
-        template <typename T> [[nodiscard]] bool TryRead(T& out) noexcept {
+        template <typename T> [[nodiscard]] bool TryRead(T& out) noexcept
+        {
             static_assert(std::is_trivially_copyable_v<T>, "T must be trivially copyable");
 
             if (m_position + sizeof(T) > m_view.Size())
@@ -89,21 +100,24 @@ namespace wax
             return true;
         }
 
-        void ReadBytes(void* dest, size_t count) noexcept {
+        void ReadBytes(void* dest, size_t count) noexcept
+        {
             hive::Assert(m_position + count <= m_view.Size(), "BinaryReader read out of bounds");
             std::memcpy(dest, m_view.Data() + m_position, count);
             m_position += count;
         }
 
         /** Zero-copy */
-        [[nodiscard]] ByteSpan ReadBytes(size_t count) noexcept {
+        [[nodiscard]] ByteSpan ReadBytes(size_t count) noexcept
+        {
             hive::Assert(m_position + count <= m_view.Size(), "BinaryReader read out of bounds");
             ByteSpan result{m_view.Data() + m_position, count};
             m_position += count;
             return result;
         }
 
-        [[nodiscard]] bool TryReadBytes(size_t count, ByteSpan& out) noexcept {
+        [[nodiscard]] bool TryReadBytes(size_t count, ByteSpan& out) noexcept
+        {
             if (m_position + count > m_view.Size())
             {
                 out = ByteSpan{};
@@ -120,7 +134,8 @@ namespace wax
          *
          * Returns a view into the original buffer (zero-copy).
          */
-        [[nodiscard]] ByteSpan ReadString() noexcept {
+        [[nodiscard]] ByteSpan ReadString() noexcept
+        {
             uint32_t length = Read<uint32_t>();
             return ReadBytes(length);
         }
@@ -130,7 +145,8 @@ namespace wax
          *
          * Returns a view including the null terminator.
          */
-        [[nodiscard]] ByteSpan ReadStringZ() noexcept {
+        [[nodiscard]] ByteSpan ReadStringZ() noexcept
+        {
             size_t start = m_position;
             while (m_position < m_view.Size() && m_view[m_position] != 0)
             {
@@ -150,7 +166,8 @@ namespace wax
         /**
          * Read variable-length integer (LEB128 unsigned)
          */
-        [[nodiscard]] uint64_t ReadVarInt() noexcept {
+        [[nodiscard]] uint64_t ReadVarInt() noexcept
+        {
             uint64_t result = 0;
             int shift = 0;
 
@@ -171,7 +188,8 @@ namespace wax
             return result;
         }
 
-        [[nodiscard]] bool TryReadVarInt(uint64_t& out) noexcept {
+        [[nodiscard]] bool TryReadVarInt(uint64_t& out) noexcept
+        {
             size_t startPos = m_position;
             uint64_t result = 0;
             int shift = 0;
@@ -202,18 +220,21 @@ namespace wax
         /**
          * Read signed variable-length integer (ZigZag + LEB128)
          */
-        [[nodiscard]] int64_t ReadVarIntSigned() noexcept {
+        [[nodiscard]] int64_t ReadVarIntSigned() noexcept
+        {
             uint64_t encoded = ReadVarInt();
             // ZigZag decoding: (n >> 1) ^ -(n & 1)
             return static_cast<int64_t>((encoded >> 1) ^ -(encoded & 1));
         }
 
-        void Skip(size_t count) noexcept {
+        void Skip(size_t count) noexcept
+        {
             hive::Assert(m_position + count <= m_view.Size(), "BinaryReader skip out of bounds");
             m_position += count;
         }
 
-        [[nodiscard]] bool TrySkip(size_t count) noexcept {
+        [[nodiscard]] bool TrySkip(size_t count) noexcept
+        {
             if (m_position + count > m_view.Size())
             {
                 return false;
@@ -222,30 +243,51 @@ namespace wax
             return true;
         }
 
-        void Seek(size_t position) noexcept {
+        void Seek(size_t position) noexcept
+        {
             hive::Assert(position <= m_view.Size(), "BinaryReader seek out of bounds");
             m_position = position;
         }
 
-        [[nodiscard]] constexpr size_t Position() const noexcept { return m_position; }
+        [[nodiscard]] constexpr size_t Position() const noexcept
+        {
+            return m_position;
+        }
 
-        [[nodiscard]] constexpr size_t Remaining() const noexcept { return m_view.Size() - m_position; }
+        [[nodiscard]] constexpr size_t Remaining() const noexcept
+        {
+            return m_view.Size() - m_position;
+        }
 
-        [[nodiscard]] constexpr size_t Size() const noexcept { return m_view.Size(); }
+        [[nodiscard]] constexpr size_t Size() const noexcept
+        {
+            return m_view.Size();
+        }
 
-        [[nodiscard]] constexpr bool IsEof() const noexcept { return m_position >= m_view.Size(); }
+        [[nodiscard]] constexpr bool IsEof() const noexcept
+        {
+            return m_position >= m_view.Size();
+        }
 
-        [[nodiscard]] constexpr ByteSpan View() const noexcept { return m_view; }
+        [[nodiscard]] constexpr ByteSpan View() const noexcept
+        {
+            return m_view;
+        }
 
-        [[nodiscard]] constexpr ByteSpan RemainingView() const noexcept { return m_view.Subspan(m_position); }
+        [[nodiscard]] constexpr ByteSpan RemainingView() const noexcept
+        {
+            return m_view.Subspan(m_position);
+        }
 
         /** Does not advance position */
-        [[nodiscard]] uint8_t Peek() const noexcept {
+        [[nodiscard]] uint8_t Peek() const noexcept
+        {
             hive::Assert(!IsEof(), "BinaryReader peek at EOF");
             return m_view[m_position];
         }
 
-        [[nodiscard]] bool TryPeek(uint8_t& out) const noexcept {
+        [[nodiscard]] bool TryPeek(uint8_t& out) const noexcept
+        {
             if (IsEof())
             {
                 return false;
