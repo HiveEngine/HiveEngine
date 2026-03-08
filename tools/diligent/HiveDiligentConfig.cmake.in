@@ -1,0 +1,31 @@
+include_guard(GLOBAL)
+
+include(CMakeFindDependencyMacro)
+
+set(HiveDiligent_FOUND TRUE)
+set(HIVE_DILIGENT_SOURCE_DIR "@HIVE_DILIGENT_SOURCE_DIR@")
+set(HIVE_DILIGENT_BUILD_DIR "@CMAKE_BINARY_DIR@")
+
+if(NOT TARGET Threads::Threads)
+    find_dependency(Threads)
+endif()
+
+include("${CMAKE_CURRENT_LIST_DIR}/HiveDiligentTargets.cmake")
+
+function(_hive_diligent_create_shim alias_name target_name)
+    if(TARGET "${target_name}" AND NOT TARGET "${alias_name}")
+        add_library("${alias_name}" INTERFACE IMPORTED GLOBAL)
+        set_property(TARGET "${alias_name}" PROPERTY INTERFACE_LINK_LIBRARIES "${target_name}")
+    endif()
+endfunction()
+
+_hive_diligent_create_shim("Vulkan::Headers" "Vulkan-Headers")
+_hive_diligent_create_shim("volk::volk" "volk")
+_hive_diligent_create_shim("volk::volk_headers" "volk_headers")
+_hive_diligent_create_shim("glslang::glslang" "glslang")
+_hive_diligent_create_shim("glslang::glslang-default-resource-limits" "glslang-default-resource-limits")
+_hive_diligent_create_shim("glslang::SPIRV" "SPIRV")
+
+if(UNIX AND TARGET Diligent-Primitives AND TARGET Diligent-LinuxPlatform)
+    set_property(TARGET Diligent-Primitives APPEND PROPERTY INTERFACE_LINK_LIBRARIES Diligent-LinuxPlatform)
+endif()

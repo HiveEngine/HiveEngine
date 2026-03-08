@@ -99,6 +99,11 @@ target_include_directories(Forge
         ${imguizmo_SOURCE_DIR}
 )
 
+target_precompile_headers(Forge
+    PRIVATE
+        include/forge/precomp.h
+)
+
 target_link_libraries(Forge
     PUBLIC
         Queen

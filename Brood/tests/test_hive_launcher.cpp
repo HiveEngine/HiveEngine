@@ -131,4 +131,20 @@ namespace
             larvae::AssertTrue(true);
 #endif
         });
+
+    auto t_launcher_headless_without_project_returns_1 =
+        larvae::RegisterTest("HiveLauncher", "headless_without_project_returns_1", []() {
+#if HIVE_PLATFORM_WINDOWS
+            const auto repoRoot = FindRepoRoot();
+            larvae::AssertTrue(!repoRoot.empty());
+
+            const auto launcherPath = GetCurrentExecutablePath().parent_path() / "hive_launcher.exe";
+            larvae::AssertTrue(std::filesystem::exists(launcherPath));
+
+            const int exitCode = RunProcess(launcherPath, {L"--headless"}, repoRoot, 10000);
+            larvae::AssertEqual(exitCode, 1);
+#else
+            larvae::AssertTrue(true);
+#endif
+        });
 } // namespace

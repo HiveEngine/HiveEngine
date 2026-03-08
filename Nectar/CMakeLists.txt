@@ -20,6 +20,11 @@ target_include_directories(Nectar
         include
 )
 
+target_precompile_headers(Nectar
+    PRIVATE
+        include/nectar/precomp.h
+)
+
 target_include_directories(Nectar
     SYSTEM PRIVATE
         extern/cgltf

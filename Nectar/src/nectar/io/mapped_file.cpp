@@ -116,20 +116,20 @@ namespace nectar
             return result;
         }
 
-        result.data_ = addr;
-        result.size_ = static_cast<size_t>(st.st_size);
+        result.m_data = addr;
+        result.m_size = static_cast<size_t>(st.st_size);
         result.fd_ = fd;
         return result;
     }
 
     void MappedFile::Close() noexcept
     {
-        if (data_)
-            ::munmap(data_, size_);
+        if (m_data)
+            ::munmap(m_data, m_size);
         if (fd_ >= 0)
             ::close(fd_);
-        data_ = nullptr;
-        size_ = 0;
+        m_data = nullptr;
+        m_size = 0;
         fd_ = -1;
     }
 
