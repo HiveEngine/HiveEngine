@@ -3,6 +3,9 @@
 cmake-build-debug/
 cmake-build-debug-clang/
 build/
+.gradle/
+.kotlin/
+.intellijPlatform/
 
 compile_commands.json
 CMakeUserPresets.json

@@ -6,6 +6,8 @@ add_library(Forge STATIC)
 
 hive_configure_target(Forge RTTI ON EXCEPTIONS ON)
 
+hive_get_vendor_warning_compile_options(FORGE_VENDOR_WARNING_COMPILE_OPTIONS)
+
 # ============================================================================
 # ImGui core + backends
 # ============================================================================
@@ -42,7 +44,7 @@ set_source_files_properties(
     ${imgui_SOURCE_DIR}/imgui_widgets.cpp
     ${imgui_SOURCE_DIR}/backends/imgui_impl_glfw.cpp
     PROPERTIES
-        COMPILE_OPTIONS "-Wno-old-style-cast;-Wno-sign-conversion;-Wno-conversion;-Wno-unused-parameter;-Wno-missing-field-initializers;-Wno-double-promotion"
+        COMPILE_OPTIONS "${FORGE_VENDOR_WARNING_COMPILE_OPTIONS}"
 )
 
 # ============================================================================
@@ -55,7 +57,7 @@ if(HIVE_FEATURE_VULKAN)
     set_source_files_properties(
         ${imgui_SOURCE_DIR}/backends/imgui_impl_vulkan.cpp
         PROPERTIES
-            COMPILE_OPTIONS "-Wno-old-style-cast;-Wno-sign-conversion;-Wno-conversion;-Wno-unused-parameter;-Wno-missing-field-initializers;-Wno-double-promotion"
+            COMPILE_OPTIONS "${FORGE_VENDOR_WARNING_COMPILE_OPTIONS}"
     )
 endif()
 
@@ -66,7 +68,7 @@ endif()
 set_source_files_properties(
     ${imguizmo_SOURCE_DIR}/ImGuizmo.cpp
     PROPERTIES
-        COMPILE_OPTIONS "-Wno-old-style-cast;-Wno-sign-conversion;-Wno-conversion;-Wno-unused-parameter;-Wno-missing-field-initializers;-Wno-double-promotion;-Wno-shadow;-Wno-float-equal"
+        COMPILE_OPTIONS "${FORGE_VENDOR_WARNING_COMPILE_OPTIONS}"
 )
 
 target_sources(Forge
@@ -118,4 +120,3 @@ if(HIVE_FEATURE_VULKAN)
     endif()
 endif()
 
-target_compile_features(Forge PUBLIC cxx_std_20)

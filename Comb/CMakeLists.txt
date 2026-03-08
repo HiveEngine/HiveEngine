@@ -31,24 +31,14 @@ target_link_libraries(Comb
 # Memory Debugging Options
 # ============================================================================
 
-# Auto-enable memory debugging for Debug/MemDebug builds, disable for Release
-if(CMAKE_BUILD_TYPE STREQUAL "Debug" OR CMAKE_BUILD_TYPE STREQUAL "MemDebug")
-    set(COMB_ENABLE_MEM_DEBUG_DEFAULT ON)
-else()
-    set(COMB_ENABLE_MEM_DEBUG_DEFAULT OFF)
-endif()
+option(COMB_ENABLE_CALLSTACKS "Enable callstack capture for Comb allocators (VERY SLOW! 100x overhead)" OFF)
 
-option(COMB_ENABLE_MEM_DEBUG "Enable comprehensive memory debugging (SLOW! 10-100x overhead)" ${COMB_ENABLE_MEM_DEBUG_DEFAULT})
-
-if(COMB_ENABLE_MEM_DEBUG)
+if(HIVE_FEATURE_MEM_DEBUG)
     target_compile_definitions(Comb
         PUBLIC
             COMB_MEM_DEBUG=1
     )
     message(STATUS "Comb: Memory debugging ENABLED (slow! Use only for debugging sessions)")
-
-    # Platform-specific callstack capture (optional, very expensive)
-    option(COMB_ENABLE_CALLSTACKS "Enable callstack capture (VERY SLOW! 100x overhead)" OFF)
 
     if(COMB_ENABLE_CALLSTACKS)
         target_compile_definitions(Comb
@@ -83,7 +73,7 @@ endif()
 # Sources
 # ============================================================================
 
-file(GLOB_RECURSE COMB_SOURCES src/comb/*.cpp)
+file(GLOB_RECURSE COMB_SOURCES CONFIGURE_DEPENDS src/comb/*.cpp)
 
 target_sources(Comb
     PRIVATE

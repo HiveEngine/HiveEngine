@@ -14,11 +14,7 @@ add_subdirectory(extern/fmt EXCLUDE_FROM_ALL SYSTEM)
 
 # Silence warnings from fmt (external library)
 if(TARGET fmt)
-    target_compile_options(fmt PRIVATE
-        $<$<CXX_COMPILER_ID:Clang>:-w>
-        $<$<CXX_COMPILER_ID:GNU>:-w>
-        $<$<CXX_COMPILER_ID:MSVC>:/w>
-    )
+    hive_silence_target_warnings(fmt)
 endif()
 
 # Tracy profiler (on-demand: only active when viewer connects)
@@ -36,11 +32,7 @@ if(HIVE_FEATURE_PROFILER)
 
     # Silence warnings from Tracy
     if(TARGET TracyClient)
-        target_compile_options(TracyClient PRIVATE
-            $<$<CXX_COMPILER_ID:Clang>:-w>
-            $<$<CXX_COMPILER_ID:GNU>:-w>
-            $<$<CXX_COMPILER_ID:MSVC>:/w>
-        )
+        hive_silence_target_warnings(TracyClient)
     endif()
 endif()
 
@@ -58,11 +50,6 @@ target_include_directories(Hive
         extern/hmm
     PRIVATE
         src
-)
-
-target_include_directories(Hive
-    SYSTEM PUBLIC
-        ${CMAKE_CURRENT_SOURCE_DIR}/extern/fmt/include
 )
 
 target_precompile_headers(Hive

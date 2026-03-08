@@ -6,7 +6,9 @@ add_library(Nectar STATIC)
 
 hive_configure_target(Nectar)
 
-file(GLOB_RECURSE NECTAR_SOURCES src/nectar/*.cpp)
+hive_get_vendor_warning_compile_options(NECTAR_VENDOR_WARNING_COMPILE_OPTIONS)
+
+file(GLOB_RECURSE NECTAR_SOURCES CONFIGURE_DEPENDS src/nectar/*.cpp)
 
 target_sources(Nectar
     PRIVATE
@@ -34,11 +36,6 @@ target_link_libraries(Nectar
         Wax
 )
 
-target_compile_features(Nectar
-    PUBLIC
-        cxx_std_20
-)
-
 if(MSVC)
     target_compile_definitions(Nectar PRIVATE _CRT_SECURE_NO_WARNINGS)
 endif()
@@ -49,9 +46,5 @@ set(NECTAR_EXTERN_SOURCES
     extern/zstd/zstd.c
 )
 set_source_files_properties(${NECTAR_EXTERN_SOURCES} PROPERTIES LANGUAGE CXX)
-if(MSVC)
-    set_source_files_properties(${NECTAR_EXTERN_SOURCES} PROPERTIES COMPILE_OPTIONS "/w")
-else()
-    set_source_files_properties(${NECTAR_EXTERN_SOURCES} PROPERTIES COMPILE_OPTIONS "-w")
-endif()
+set_source_files_properties(${NECTAR_EXTERN_SOURCES} PROPERTIES COMPILE_OPTIONS "${NECTAR_VENDOR_WARNING_COMPILE_OPTIONS}")
 target_sources(Nectar PRIVATE ${NECTAR_EXTERN_SOURCES})

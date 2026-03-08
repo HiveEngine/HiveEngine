@@ -261,28 +261,28 @@ namespace comb
 
             hive::Assert(alignment <= alignof(std::max_align_t), "BuddyAllocator alignment limited to max_align_t");
 
-            size_t totalSize = size + HeaderPrefix;
+            size_t totalSize = size + headerPrefix;
             size_t blockSize = NextPowerOfTwo(totalSize);
-            if (blockSize < MinBlockSize)
+            if (blockSize < minBlockSize)
             {
-                blockSize = MinBlockSize;
+                blockSize = minBlockSize;
             }
 
             size_t level = GetLevel(blockSize);
 
             size_t currentLevel = level;
-            while (currentLevel < MaxLevels && free_lists_[currentLevel] == nullptr)
+            while (currentLevel < maxLevels && m_freeLists[currentLevel] == nullptr)
             {
                 ++currentLevel;
             }
 
-            if (currentLevel >= MaxLevels)
+            if (currentLevel >= maxLevels)
             {
                 return nullptr;
             }
 
-            FreeBlock* block = free_lists_[currentLevel];
-            free_lists_[currentLevel] = block->next;
+            FreeBlock* block = m_freeLists[currentLevel];
+            m_freeLists[currentLevel] = block->m_next;
 
             while (currentLevel > level)
             {
@@ -292,16 +292,16 @@ namespace comb
 
                 auto* buddy = reinterpret_cast<FreeBlock*>(reinterpret_cast<std::byte*>(block) + splitSize);
 
-                buddy->next = free_lists_[currentLevel];
-                free_lists_[currentLevel] = buddy;
+                buddy->m_next = m_freeLists[currentLevel];
+                m_freeLists[currentLevel] = buddy;
             }
 
             auto* header = reinterpret_cast<AllocationHeader*>(block);
-            header->size = blockSize;
+            header->m_size = blockSize;
 
-            used_memory_ += blockSize;
+            m_usedMemory += blockSize;
 
-            void* ptr = reinterpret_cast<std::byte*>(block) + HeaderPrefix;
+            void* ptr = reinterpret_cast<std::byte*>(block) + headerPrefix;
 #endif
 
             if (ptr)
@@ -329,12 +329,12 @@ namespace comb
 #if COMB_MEM_DEBUG
             DeallocateDebug(ptr);
 #else
-            auto* header = reinterpret_cast<AllocationHeader*>(static_cast<std::byte*>(ptr) - HeaderPrefix);
+            auto* header = reinterpret_cast<AllocationHeader*>(static_cast<std::byte*>(ptr) - headerPrefix);
 
-            size_t blockSize = header->size;
+            size_t blockSize = header->m_size;
             size_t level = GetLevel(blockSize);
 
-            used_memory_ -= blockSize;
+            m_usedMemory -= blockSize;
 
             void* blockPtr = header;
             CoalesceAndInsert(blockPtr, blockSize, level);
@@ -374,8 +374,8 @@ namespace comb
                 reinterpret_cast<const AllocationHeader*>(static_cast<const std::byte*>(ptr) - debugHeaderPrefix);
             return header->m_size - debugHeaderPrefix;
 #else
-            auto* header = reinterpret_cast<const AllocationHeader*>(static_cast<const std::byte*>(ptr) - HeaderPrefix);
-            return header->size - HeaderPrefix;
+            auto* header = reinterpret_cast<const AllocationHeader*>(static_cast<const std::byte*>(ptr) - headerPrefix);
+            return header->m_size - headerPrefix;
 #endif
         }
 

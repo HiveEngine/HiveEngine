@@ -25,8 +25,6 @@ endif()
 
 project(HiveEngine_Redo LANGUAGES CXX)
 
-include(CMakeParseArguments)
-
 # ============================================================================
 # Thread Configuration (must be before any subdirectory that uses Threads)
 # ============================================================================
@@ -69,22 +67,39 @@ set_property(CACHE HIVE_ENGINE_MODE PROPERTY STRINGS "Editor" "Game" "Headless")
 # ============================================================================
 # Feature Toggles
 # ============================================================================
-# These can be overridden individually. Default values depend on mode/config.
+# These can be overridden individually. Headless mode is the only mode that
+# forcibly disables graphics; other modes preserve explicit preset/user values.
+set(HIVE_DEFAULT_FEATURE_IMGUI OFF)
+set(HIVE_DEFAULT_FEATURE_VULKAN ON)
+set(HIVE_DEFAULT_FEATURE_D3D12 OFF)
+set(HIVE_DEFAULT_FEATURE_GLFW ON)
 
-option(HIVE_FEATURE_IMGUI "Enable ImGui integration" OFF)
-option(HIVE_FEATURE_VULKAN "Enable Vulkan renderer" ON)
-option(HIVE_FEATURE_D3D12 "Enable D3D12 renderer (Windows only)" OFF)
-option(HIVE_FEATURE_GLFW "Enable GLFW windowing" ON)
+option(HIVE_FEATURE_IMGUI "Enable ImGui integration" ${HIVE_DEFAULT_FEATURE_IMGUI})
+option(HIVE_FEATURE_VULKAN "Enable Vulkan renderer" ${HIVE_DEFAULT_FEATURE_VULKAN})
+option(HIVE_FEATURE_D3D12 "Enable D3D12 renderer (Windows only)" ${HIVE_DEFAULT_FEATURE_D3D12})
+option(HIVE_FEATURE_GLFW "Enable GLFW windowing" ${HIVE_DEFAULT_FEATURE_GLFW})
 
-# Headless mode forces graphics off; non-headless restores defaults
+# Headless mode forces graphics off.
 if(HIVE_ENGINE_MODE STREQUAL "Headless")
     set(HIVE_FEATURE_VULKAN OFF CACHE BOOL "Enable Vulkan renderer" FORCE)
     set(HIVE_FEATURE_D3D12 OFF CACHE BOOL "Enable D3D12 renderer" FORCE)
     set(HIVE_FEATURE_GLFW OFF CACHE BOOL "Enable GLFW windowing" FORCE)
     set(HIVE_FEATURE_IMGUI OFF CACHE BOOL "Enable ImGui integration" FORCE)
-elseif(NOT HIVE_FEATURE_D3D12)
-    set(HIVE_FEATURE_VULKAN ON CACHE BOOL "Enable Vulkan renderer" FORCE)
-    set(HIVE_FEATURE_GLFW ON CACHE BOOL "Enable GLFW windowing" FORCE)
+endif()
+
+set(HIVE_HAS_RENDER_BACKEND OFF)
+if(HIVE_FEATURE_VULKAN OR HIVE_FEATURE_D3D12)
+    set(HIVE_HAS_RENDER_BACKEND ON)
+endif()
+
+set(HIVE_HAS_WINDOW_SYSTEM OFF)
+if(HIVE_FEATURE_GLFW)
+    set(HIVE_HAS_WINDOW_SYSTEM ON)
+endif()
+
+set(HIVE_HAS_INTERACTIVE_GRAPHICS OFF)
+if(HIVE_HAS_RENDER_BACKEND AND HIVE_HAS_WINDOW_SYSTEM)
+    set(HIVE_HAS_INTERACTIVE_GRAPHICS ON)
 endif()
 
 # Mutual exclusion: Vulkan and D3D12
@@ -122,316 +137,14 @@ if(WIN32 AND CMAKE_BUILD_TYPE STREQUAL "Debug" AND HIVE_ENABLE_SANITIZERS)
     set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded" CACHE STRING "" FORCE)
 endif()
 
-# Legacy compatibility
-set(swarm_use_vulkan ${HIVE_FEATURE_VULKAN} CACHE BOOL "Enable Vulkan GPU allocator" FORCE)
-set(terra_use_glfw ${HIVE_FEATURE_GLFW} CACHE BOOL "Enable GLFW windowing" FORCE)
-
-# ============================================================================
-# Toolchain Policy
-# ============================================================================
-
-add_library(HiveToolchain_Base INTERFACE)
-add_library(HiveToolchain_Warnings INTERFACE)
-add_library(HiveToolchain_Config INTERFACE)
-add_library(HiveToolchain_FastMath INTERFACE)
-add_library(HiveToolchain_SIMD INTERFACE)
-add_library(HiveToolchain_Sanitizers INTERFACE)
-add_library(HiveToolchain_LTO INTERFACE)
-
-add_library(HiveFeature_Exception_On INTERFACE)
-add_library(HiveFeature_Exception_Off INTERFACE)
-add_library(HiveFeature_RTTI_On INTERFACE)
-add_library(HiveFeature_RTTI_Off INTERFACE)
-add_library(HiveFeature_WError INTERFACE)
-
-set(HIVE_COMPILER_IS_CLANG_CL OFF)
-if(MSVC AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-    set(HIVE_COMPILER_IS_CLANG_CL ON)
-endif()
-
-if(MSVC)
-    target_compile_options(HiveToolchain_Base INTERFACE /permissive- /Zc:__cplusplus /Zc:inline /utf-8)
-    if(NOT HIVE_COMPILER_IS_CLANG_CL)
-        target_compile_options(HiveToolchain_Base INTERFACE /MP /external:W0)
-    endif()
-
-    target_compile_options(HiveToolchain_Warnings INTERFACE
-        /W4
-        /w14242
-        /w14254
-        /w14263
-        /w14265
-        /w14287
-        /w14296
-        /w14640
-        /wd4100
-        /wd4530
-    )
-
-    if(HIVE_COMPILER_IS_CLANG_CL)
-        target_compile_options(HiveToolchain_Warnings INTERFACE
-            -Wno-unsafe-buffer-usage
-            -Wno-unsafe-buffer-usage-in-libc-call
-            -Wno-c++98-compat
-        )
-    endif()
-
-    target_compile_options(HiveToolchain_Config INTERFACE
-        "$<$<CONFIG:Debug>:/Od;/MDd;/Zi>"
-        "$<$<CONFIG:Release>:/O2;/Oi;/MD;/GS-;/Gy>"
-        "$<$<CONFIG:RelWithDebInfo>:/O2;/Zi;/MD>"
-        "$<$<CONFIG:Profile>:/O2;/Zi;/MD;/GS-;/Gy>"
-        "$<$<CONFIG:Retail>:/O2;/Oi;/MD;/GS-;/Gy>"
-    )
-
-    target_compile_definitions(HiveToolchain_Config INTERFACE
-        "$<$<CONFIG:Debug>:_DEBUG;_ITERATOR_DEBUG_LEVEL=2>"
-        "$<$<CONFIG:Release>:NDEBUG;_ITERATOR_DEBUG_LEVEL=0>"
-        "$<$<CONFIG:RelWithDebInfo>:NDEBUG;_ITERATOR_DEBUG_LEVEL=1>"
-        "$<$<CONFIG:Profile>:NDEBUG;_ITERATOR_DEBUG_LEVEL=0>"
-        "$<$<CONFIG:Retail>:NDEBUG;_ITERATOR_DEBUG_LEVEL=0>"
-    )
-
-    target_compile_options(HiveFeature_Exception_Off INTERFACE /EHs-c-)
-    target_compile_options(HiveFeature_Exception_On INTERFACE /EHsc)
-    target_compile_options(HiveFeature_RTTI_Off INTERFACE /GR-)
-    target_compile_options(HiveFeature_RTTI_On INTERFACE /GR)
-    target_compile_options(HiveFeature_WError INTERFACE /WX)
-
-    if(HIVE_ENABLE_FAST_MATH)
-        target_compile_options(HiveToolchain_FastMath INTERFACE /fp:fast)
-    endif()
-
-    if(HIVE_ENABLE_SIMD AND CMAKE_SIZEOF_VOID_P EQUAL 4)
-        target_compile_options(HiveToolchain_SIMD INTERFACE /arch:SSE2)
-    endif()
-else()
-    target_compile_options(HiveToolchain_Warnings INTERFACE
-        -Wall
-        -Wextra
-        -Wpedantic
-        -Wshadow
-        -Wnon-virtual-dtor
-        -Wold-style-cast
-        -Wcast-align
-        -Wunused
-        -Woverloaded-virtual
-        -Wconversion
-        -Wsign-conversion
-        -Wdouble-promotion
-    )
-
-    target_compile_options(HiveToolchain_Config INTERFACE
-        "$<$<CONFIG:Debug>:-O0;-g3>"
-        "$<$<CONFIG:Release>:-O3;-ffunction-sections;-fdata-sections>"
-        "$<$<CONFIG:RelWithDebInfo>:-O2;-g>"
-        "$<$<CONFIG:Profile>:-O2;-g;-fno-omit-frame-pointer>"
-        "$<$<CONFIG:Retail>:-O3;-ffunction-sections;-fdata-sections>"
-    )
-
-    target_compile_definitions(HiveToolchain_Config INTERFACE
-        "$<$<CONFIG:Debug>:_GLIBCXX_DEBUG>"
-    )
-
-    if(NOT WIN32)
-        target_link_options(HiveToolchain_Config INTERFACE
-            "$<$<OR:$<CONFIG:Release>,$<CONFIG:Retail>>:-Wl,--gc-sections>"
-        )
-    endif()
-
-    target_compile_options(HiveFeature_Exception_Off INTERFACE -fno-exceptions)
-    target_compile_options(HiveFeature_Exception_On INTERFACE -fexceptions)
-    target_compile_options(HiveFeature_RTTI_Off INTERFACE -fno-rtti)
-    target_compile_options(HiveFeature_RTTI_On INTERFACE -frtti)
-    target_compile_options(HiveFeature_WError INTERFACE -Werror)
-
-    if(HIVE_ENABLE_FAST_MATH)
-        target_compile_options(HiveToolchain_FastMath INTERFACE -ffast-math)
-    endif()
-
-    if(HIVE_ENABLE_SIMD)
-        target_compile_options(HiveToolchain_SIMD INTERFACE -msse2)
-    endif()
-
-    if(HIVE_ENABLE_SANITIZERS)
-        target_compile_options(HiveToolchain_Sanitizers INTERFACE
-            "$<$<CONFIG:Debug>:-fno-omit-frame-pointer;-fno-optimize-sibling-calls>"
-        )
-
-        if(HIVE_SANITIZER_TYPE STREQUAL "Address")
-            target_compile_options(HiveToolchain_Sanitizers INTERFACE "$<$<CONFIG:Debug>:-fsanitize=address>")
-            target_link_options(HiveToolchain_Sanitizers INTERFACE "$<$<CONFIG:Debug>:-fsanitize=address>")
-            message(STATUS "AddressSanitizer enabled for Debug builds")
-        elseif(HIVE_SANITIZER_TYPE STREQUAL "UndefinedBehavior")
-            if(WIN32)
-                target_compile_options(HiveToolchain_Sanitizers INTERFACE
-                    "$<$<CONFIG:Debug>:-fsanitize=undefined;-fno-sanitize=alignment,function,vptr>"
-                )
-                target_link_options(HiveToolchain_Sanitizers INTERFACE
-                    "$<$<CONFIG:Debug>:-fsanitize=undefined;-fno-sanitize=alignment,function,vptr>"
-                )
-            else()
-                target_compile_options(HiveToolchain_Sanitizers INTERFACE "$<$<CONFIG:Debug>:-fsanitize=undefined>")
-                target_link_options(HiveToolchain_Sanitizers INTERFACE "$<$<CONFIG:Debug>:-fsanitize=undefined>")
-            endif()
-            message(STATUS "UndefinedBehaviorSanitizer enabled for Debug builds")
-        elseif(HIVE_SANITIZER_TYPE STREQUAL "Thread")
-            target_compile_options(HiveToolchain_Sanitizers INTERFACE "$<$<CONFIG:Debug>:-fsanitize=thread>")
-            target_link_options(HiveToolchain_Sanitizers INTERFACE "$<$<CONFIG:Debug>:-fsanitize=thread>")
-            message(STATUS "ThreadSanitizer enabled for Debug builds")
-        elseif(HIVE_SANITIZER_TYPE STREQUAL "Memory")
-            if(CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND NOT WIN32)
-                target_compile_options(HiveToolchain_Sanitizers INTERFACE
-                    "$<$<CONFIG:Debug>:-fsanitize=memory;-fsanitize-memory-track-origins>"
-                )
-                target_link_options(HiveToolchain_Sanitizers INTERFACE "$<$<CONFIG:Debug>:-fsanitize=memory>")
-                message(STATUS "MemorySanitizer enabled for Debug builds")
-            else()
-                message(WARNING "MemorySanitizer only available with Clang on Linux/macOS")
-            endif()
-        endif()
-    endif()
-endif()
-
-set(HIVE_IPO_SUPPORTED OFF)
-if(HIVE_ENABLE_LTO)
-    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND WIN32)
-        target_compile_options(HiveToolchain_LTO INTERFACE
-            "$<$<OR:$<CONFIG:Release>,$<CONFIG:RelWithDebInfo>,$<CONFIG:Profile>,$<CONFIG:Retail>>:-flto=thin>"
-        )
-        target_link_options(HiveToolchain_LTO INTERFACE
-            "$<$<OR:$<CONFIG:Release>,$<CONFIG:RelWithDebInfo>,$<CONFIG:Profile>,$<CONFIG:Retail>>:-flto=thin>"
-        )
-        message(STATUS "LTO enabled for optimized builds (Clang thin LTO)")
-    else()
-        include(CheckIPOSupported)
-        check_ipo_supported(RESULT HIVE_IPO_SUPPORTED OUTPUT HIVE_IPO_OUTPUT)
-        if(HIVE_IPO_SUPPORTED)
-            message(STATUS "LTO/IPO enabled for optimized builds")
-        else()
-            message(WARNING "LTO/IPO not supported: ${HIVE_IPO_OUTPUT}")
-        endif()
-    endif()
-endif()
-
-function(hive_get_target_scope out_var target)
-    if(NOT TARGET ${target})
-        message(FATAL_ERROR "Unknown target '${target}'")
-    endif()
-
-    get_target_property(_type ${target} TYPE)
-    if(_type STREQUAL "INTERFACE_LIBRARY")
-        set(${out_var} INTERFACE PARENT_SCOPE)
-    else()
-        set(${out_var} PRIVATE PARENT_SCOPE)
-    endif()
-endfunction()
-
-function(hive_configure_target target)
-    set(options NO_WARNINGS)
-    set(oneValueArgs RTTI EXCEPTIONS)
-    cmake_parse_arguments(HIVE_CFG "${options}" "${oneValueArgs}" "" ${ARGN})
-
-    if(NOT HIVE_CFG_RTTI)
-        set(HIVE_CFG_RTTI OFF)
-    endif()
-
-    if(NOT HIVE_CFG_EXCEPTIONS)
-        set(HIVE_CFG_EXCEPTIONS OFF)
-    endif()
-
-    hive_get_target_scope(_scope ${target})
-
-    target_link_libraries(${target} ${_scope}
-        HiveToolchain_Base
-        HiveToolchain_Config
-    )
-
-    if(NOT HIVE_CFG_NO_WARNINGS)
-        target_link_libraries(${target} ${_scope} HiveToolchain_Warnings)
-        if(HIVE_WARNINGS_AS_ERRORS)
-            target_link_libraries(${target} ${_scope} HiveFeature_WError)
-        endif()
-    endif()
-
-    if(HIVE_ENABLE_FAST_MATH)
-        target_link_libraries(${target} ${_scope} HiveToolchain_FastMath)
-    endif()
-
-    if(HIVE_ENABLE_SIMD)
-        target_link_libraries(${target} ${_scope} HiveToolchain_SIMD)
-    endif()
-
-    if(HIVE_ENABLE_SANITIZERS)
-        target_link_libraries(${target} ${_scope} HiveToolchain_Sanitizers)
-    endif()
-
-    if(HIVE_ENABLE_LTO AND CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND WIN32)
-        target_link_libraries(${target} ${_scope} HiveToolchain_LTO)
-    endif()
-
-    if(HIVE_CFG_EXCEPTIONS STREQUAL "ON")
-        target_link_libraries(${target} ${_scope} HiveFeature_Exception_On)
-    elseif(HIVE_CFG_EXCEPTIONS STREQUAL "OFF")
-        target_link_libraries(${target} ${_scope} HiveFeature_Exception_Off)
-    else()
-        message(FATAL_ERROR "hive_configure_target(${target}): EXCEPTIONS must be ON or OFF")
-    endif()
-
-    if(HIVE_CFG_RTTI STREQUAL "ON")
-        target_link_libraries(${target} ${_scope} HiveFeature_RTTI_On)
-    elseif(HIVE_CFG_RTTI STREQUAL "OFF")
-        target_link_libraries(${target} ${_scope} HiveFeature_RTTI_Off)
-    else()
-        message(FATAL_ERROR "hive_configure_target(${target}): RTTI must be ON or OFF")
-    endif()
-
-    get_target_property(_type ${target} TYPE)
-    if(HIVE_ENABLE_LTO AND HIVE_IPO_SUPPORTED AND NOT _type STREQUAL "INTERFACE_LIBRARY")
-        set_property(TARGET ${target} PROPERTY INTERPROCEDURAL_OPTIMIZATION_RELEASE ON)
-        set_property(TARGET ${target} PROPERTY INTERPROCEDURAL_OPTIMIZATION_RELWITHDEBINFO ON)
-        set_property(TARGET ${target} PROPERTY INTERPROCEDURAL_OPTIMIZATION_PROFILE ON)
-        set_property(TARGET ${target} PROPERTY INTERPROCEDURAL_OPTIMIZATION_RETAIL ON)
-    endif()
-endfunction()
-
-# Platform detection
-if(WIN32)
-    add_compile_definitions(HIVE_PLATFORM_WINDOWS=1)
-elseif(UNIX AND NOT APPLE)
-    add_compile_definitions(HIVE_PLATFORM_LINUX=1)
-elseif(APPLE)
-    add_compile_definitions(HIVE_PLATFORM_MACOS=1)
-endif()
-
-# ============================================================================
-# HiveConfig.h Definitions (passed to compiler)
-# ============================================================================
-
-# Build configuration
-add_compile_definitions(
-    $<$<CONFIG:Debug>:HIVE_CONFIG_DEBUG=1>
-    $<$<CONFIG:Release>:HIVE_CONFIG_RELEASE=1>
-    $<$<CONFIG:RelWithDebInfo>:HIVE_CONFIG_RELEASE=1>
-    $<$<CONFIG:Profile>:HIVE_CONFIG_PROFILE=1>
-    $<$<CONFIG:Retail>:HIVE_CONFIG_RETAIL=1>
-)
-
-# Engine mode
-if(HIVE_ENGINE_MODE STREQUAL "Editor")
-    add_compile_definitions(HIVE_MODE_EDITOR=1)
-elseif(HIVE_ENGINE_MODE STREQUAL "Game")
-    add_compile_definitions(HIVE_MODE_GAME=1)
-elseif(HIVE_ENGINE_MODE STREQUAL "Headless")
-    add_compile_definitions(HIVE_MODE_HEADLESS=1)
-endif()
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/HiveToolchain.cmake)
 
 # Feature toggles — always define so C++ never falls back to HiveConfig.h guesses
 macro(hive_define_feature name)
     if(${name})
-        add_compile_definitions(${name}=1)
+        target_compile_definitions(HiveDefines_Features INTERFACE ${name}=1)
     else()
-        add_compile_definitions(${name}=0)
+        target_compile_definitions(HiveDefines_Features INTERFACE ${name}=0)
     endif()
 endmacro()
 
@@ -470,12 +183,16 @@ add_subdirectory(Waggle)
 if(HIVE_FEATURE_GLFW)
     add_subdirectory(Antennae)
 endif()
-add_subdirectory(Swarm)
-if(HIVE_ENGINE_MODE STREQUAL "Editor")
+if(HIVE_HAS_RENDER_BACKEND)
+    add_subdirectory(Swarm)
+endif()
+if(HIVE_ENGINE_MODE STREQUAL "Editor" AND HIVE_FEATURE_IMGUI AND HIVE_HAS_INTERACTIVE_GRAPHICS)
     add_subdirectory(Forge)
 endif()
 add_subdirectory(Brood)
-add_subdirectory(Testbed)
+if(HIVE_HAS_INTERACTIVE_GRAPHICS)
+    add_subdirectory(Testbed)
+endif()
 add_subdirectory(projects)
 
 message(STATUS "")
