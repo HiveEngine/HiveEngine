@@ -3,7 +3,9 @@
 #include <hive/core/log.h>
 #include <hive/profiling/profiler.h>
 
+#if HIVE_FEATURE_MEM_DEBUG
 #include <comb/debug/global_memory_tracker.h>
+#endif
 
 #include <cstdio>
 #include <cstdlib>
@@ -25,7 +27,9 @@ namespace brood
                 return;
             }
 
+#if HIVE_FEATURE_MEM_DEBUG
             comb::debug::ReportLiveAllocatorLeaks();
+#endif
             hive::ShutdownProfiler();
             std::cout.flush();
             std::cerr.flush();

@@ -31,7 +31,7 @@ endif()
 # Glob all test_*.cpp files from specified directories (recursive)
 set(LARVAE_TEST_SOURCES src/larvae_runner_main.cpp)
 foreach (TEST_DIR ${LARVAE_TEST_DIRS})
-    file(GLOB_RECURSE DIR_TESTS ${TEST_DIR}/test_*.cpp)
+    file(GLOB_RECURSE DIR_TESTS CONFIGURE_DEPENDS ${TEST_DIR}/test_*.cpp)
     list(APPEND LARVAE_TEST_SOURCES ${DIR_TESTS})
 endforeach ()
 
@@ -69,24 +69,6 @@ endif()
 target_include_directories(larvae_runner
     PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/include
-        ${CMAKE_SOURCE_DIR}/Comb/include
-        ${CMAKE_SOURCE_DIR}/Wax/include
-        ${CMAKE_SOURCE_DIR}/Queen/include
-        ${CMAKE_SOURCE_DIR}/Waggle/include
-        ${CMAKE_SOURCE_DIR}/Nectar/include
-)
-
-if(TARGET Antennae)
-    target_include_directories(larvae_runner PRIVATE ${CMAKE_SOURCE_DIR}/Antennae/include)
-endif()
-
-if(TARGET Swarm)
-    target_include_directories(larvae_runner PRIVATE ${CMAKE_SOURCE_DIR}/Swarm/include)
-endif()
-
-set_target_properties(larvae_runner
-        PROPERTIES
-        RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
 )
 
 # ============================================================================
@@ -103,7 +85,7 @@ add_test(NAME AllTests COMMAND larvae_runner)
 # Glob all benchmark_*.cpp files from specified directories (recursive)
 set(LARVAE_BENCHMARK_SOURCES src/larvae_benchmark_main.cpp)
 foreach (TEST_DIR ${LARVAE_TEST_DIRS})
-    file(GLOB_RECURSE DIR_BENCHMARKS ${TEST_DIR}/benchmark_*.cpp)
+    file(GLOB_RECURSE DIR_BENCHMARKS CONFIGURE_DEPENDS ${TEST_DIR}/benchmark_*.cpp)
     list(APPEND LARVAE_BENCHMARK_SOURCES ${DIR_BENCHMARKS})
 endforeach ()
 
@@ -141,20 +123,6 @@ endif()
 target_include_directories(larvae_benchmark
     PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/include
-        ${CMAKE_SOURCE_DIR}/Comb/include
-        ${CMAKE_SOURCE_DIR}/Wax/include
-        ${CMAKE_SOURCE_DIR}/Queen/include
-        ${CMAKE_SOURCE_DIR}/Waggle/include
-        ${CMAKE_SOURCE_DIR}/Nectar/include
-)
-
-if(TARGET Antennae)
-    target_include_directories(larvae_benchmark PRIVATE ${CMAKE_SOURCE_DIR}/Antennae/include)
-endif()
-
-set_target_properties(larvae_benchmark
-        PROPERTIES
-        RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
 )
 
 # ============================================================================
@@ -181,11 +149,6 @@ target_include_directories(hive_launcher
 if (TARGET Forge)
     target_link_libraries(hive_launcher PRIVATE Forge)
 endif ()
-
-set_target_properties(hive_launcher
-        PROPERTIES
-        RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
-)
 
 add_dependencies(larvae_runner hive_launcher)
 
@@ -252,7 +215,7 @@ if (HIVE_BUILD_GUI_TESTS AND HIVE_FEATURE_GLFW)
     # GUI Test sources (include all test files like console runner)
     set(LARVAE_GUI_SOURCES src/larvae_runner_gui_main.cpp)
     foreach (TEST_DIR ${LARVAE_TEST_DIRS})
-        file(GLOB_RECURSE DIR_TESTS ${TEST_DIR}/test_*.cpp)
+        file(GLOB_RECURSE DIR_TESTS CONFIGURE_DEPENDS ${TEST_DIR}/test_*.cpp)
         list(APPEND LARVAE_GUI_SOURCES ${DIR_TESTS})
     endforeach ()
 
@@ -287,17 +250,7 @@ if (HIVE_BUILD_GUI_TESTS AND HIVE_FEATURE_GLFW)
 
     target_include_directories(larvae_runner_gui
             PRIVATE
-            ${CMAKE_SOURCE_DIR}/Comb/include
-            ${CMAKE_SOURCE_DIR}/Wax/include
-            ${CMAKE_SOURCE_DIR}/Queen/include
-            ${CMAKE_SOURCE_DIR}/Waggle/include
-            ${CMAKE_SOURCE_DIR}/Nectar/include
             ${CMAKE_CURRENT_SOURCE_DIR}/include
-    )
-
-    set_target_properties(larvae_runner_gui
-            PROPERTIES
-            RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
     )
 
     # On Windows, set WIN32 subsystem to avoid console window

@@ -12,7 +12,7 @@
  * Usage:
  * @code
  *   // CMake
- *   option(COMB_ENABLE_MEM_DEBUG "Enable memory debugging" OFF)
+ *   option(HIVE_FEATURE_MEM_DEBUG "Enable memory debugging" OFF)
  *   option(COMB_ENABLE_CALLSTACKS "Enable callstack capture" OFF)
  *
  *   // Code

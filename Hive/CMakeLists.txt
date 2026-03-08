@@ -60,11 +60,6 @@ target_include_directories(Hive
         src
 )
 
-target_include_directories(Hive
-    SYSTEM PUBLIC
-        ${CMAKE_CURRENT_SOURCE_DIR}/extern/fmt/include
-)
-
 target_precompile_headers(Hive
     PRIVATE
         include/hive/precomp.h

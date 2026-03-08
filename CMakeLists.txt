@@ -137,10 +137,6 @@ if(WIN32 AND CMAKE_BUILD_TYPE STREQUAL "Debug" AND HIVE_ENABLE_SANITIZERS)
     set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded" CACHE STRING "" FORCE)
 endif()
 
-# Legacy compatibility
-set(swarm_use_vulkan ${HIVE_FEATURE_VULKAN} CACHE BOOL "Enable Vulkan GPU allocator" FORCE)
-set(terra_use_glfw ${HIVE_FEATURE_GLFW} CACHE BOOL "Enable GLFW windowing" FORCE)
-
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/HiveToolchain.cmake)
 
 # Feature toggles — always define so C++ never falls back to HiveConfig.h guesses

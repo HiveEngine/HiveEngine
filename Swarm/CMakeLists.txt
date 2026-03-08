@@ -98,10 +98,6 @@ target_link_libraries(Swarm
 		Diligent-BuildSettings
 )
 
-if(TARGET Terra)
-    target_link_libraries(Swarm PUBLIC Terra)
-endif()
-
 target_compile_features(Swarm
         PUBLIC
         cxx_std_20

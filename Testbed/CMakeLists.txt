@@ -2,14 +2,6 @@
 # Testbed - Application Test Executable
 # ============================================================================
 
-# ============================================================================
-# Executable Configuration
-# ============================================================================
-
-if(NOT (HIVE_FEATURE_GLFW AND (HIVE_FEATURE_VULKAN OR HIVE_FEATURE_D3D12)))
-    return()
-endif()
-
 if(WIN32)
     add_executable(Testbed src/win32_main.cpp)
 elseif(UNIX)

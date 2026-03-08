@@ -23,6 +23,30 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(imgui imguizmo)
 
+if(MSVC AND NOT CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    set(FORGE_IMGUI_VENDOR_COMPILE_OPTIONS /w)
+    set(FORGE_IMGUIZMO_VENDOR_COMPILE_OPTIONS /w)
+else()
+    set(FORGE_IMGUI_VENDOR_COMPILE_OPTIONS
+        -Wno-old-style-cast
+        -Wno-sign-conversion
+        -Wno-conversion
+        -Wno-unused-parameter
+        -Wno-missing-field-initializers
+        -Wno-double-promotion
+    )
+    set(FORGE_IMGUIZMO_VENDOR_COMPILE_OPTIONS
+        -Wno-old-style-cast
+        -Wno-sign-conversion
+        -Wno-conversion
+        -Wno-unused-parameter
+        -Wno-missing-field-initializers
+        -Wno-double-promotion
+        -Wno-shadow
+        -Wno-float-equal
+    )
+endif()
+
 # Core ImGui sources (compiled into Forge)
 set(FORGE_IMGUI_SOURCES
     ${imgui_SOURCE_DIR}/imgui.cpp
@@ -42,7 +66,7 @@ set_source_files_properties(
     ${imgui_SOURCE_DIR}/imgui_widgets.cpp
     ${imgui_SOURCE_DIR}/backends/imgui_impl_glfw.cpp
     PROPERTIES
-        COMPILE_OPTIONS "-Wno-old-style-cast;-Wno-sign-conversion;-Wno-conversion;-Wno-unused-parameter;-Wno-missing-field-initializers;-Wno-double-promotion"
+        COMPILE_OPTIONS "${FORGE_IMGUI_VENDOR_COMPILE_OPTIONS}"
 )
 
 # ============================================================================
@@ -55,7 +79,7 @@ if(HIVE_FEATURE_VULKAN)
     set_source_files_properties(
         ${imgui_SOURCE_DIR}/backends/imgui_impl_vulkan.cpp
         PROPERTIES
-            COMPILE_OPTIONS "-Wno-old-style-cast;-Wno-sign-conversion;-Wno-conversion;-Wno-unused-parameter;-Wno-missing-field-initializers;-Wno-double-promotion"
+            COMPILE_OPTIONS "${FORGE_IMGUI_VENDOR_COMPILE_OPTIONS}"
     )
 endif()
 
@@ -66,7 +90,7 @@ endif()
 set_source_files_properties(
     ${imguizmo_SOURCE_DIR}/ImGuizmo.cpp
     PROPERTIES
-        COMPILE_OPTIONS "-Wno-old-style-cast;-Wno-sign-conversion;-Wno-conversion;-Wno-unused-parameter;-Wno-missing-field-initializers;-Wno-double-promotion;-Wno-shadow;-Wno-float-equal"
+        COMPILE_OPTIONS "${FORGE_IMGUIZMO_VENDOR_COMPILE_OPTIONS}"
 )
 
 target_sources(Forge

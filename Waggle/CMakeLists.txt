@@ -28,7 +28,7 @@ target_link_libraries(Waggle
         Nectar
 )
 
-if(HIVE_FEATURE_VULKAN OR HIVE_FEATURE_D3D12)
+if(HIVE_HAS_RENDER_BACKEND)
     target_link_libraries(Waggle PUBLIC Swarm)
 endif()
 
@@ -36,7 +36,7 @@ if(HIVE_FEATURE_GLFW)
     target_link_libraries(Waggle PUBLIC Terra Antennae)
 endif()
 
-if(HIVE_FEATURE_IMGUI)
+if(HIVE_ENGINE_MODE STREQUAL "Editor" AND HIVE_FEATURE_IMGUI AND HIVE_HAS_INTERACTIVE_GRAPHICS)
     target_link_libraries(Waggle PRIVATE Forge)
 endif()
 

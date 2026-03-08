@@ -6,7 +6,7 @@ add_library(Nectar STATIC)
 
 hive_configure_target(Nectar)
 
-file(GLOB_RECURSE NECTAR_SOURCES src/nectar/*.cpp)
+file(GLOB_RECURSE NECTAR_SOURCES CONFIGURE_DEPENDS src/nectar/*.cpp)
 
 target_sources(Nectar
     PRIVATE
