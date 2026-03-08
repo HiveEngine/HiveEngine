@@ -1,60 +1,49 @@
-#include <waggle/app.h>
-#include <waggle/time.h>
 #include <hive/core/clock.h>
 #include <hive/profiling/profiler.h>
+
+#include <waggle/app.h>
+#include <waggle/time.h>
+
 #include <algorithm>
 
 namespace waggle
 {
     App::App(const AppConfig& config)
-        : world_{config.world}
-        , config_{config}
-    {
-        world_.InsertResource(Time{
-            hive::Clock::SecondsF(config_.fixed_dt_ns),
-            0.f,
-            config_.fixed_dt_ns,
-            0,
-            0
-        });
+        : m_world{config.m_world}
+        , m_config{config} {
+        m_world.InsertResource(Time{hive::Clock::SecondsF(config.m_fixedDtNs), 0.f, config.m_fixedDtNs, 0, 0});
 
-        world_.InsertResource(FrameInfo{
-            0.f, 0.f,
-            0, 0,
-            0,
-            0.f
-        });
+        m_world.InsertResource(FrameInfo{0.f, 0.f, 0, 0, 0, 0.f});
     }
 
     App::~App() = default;
 
-    int32_t App::Tick()
-    {
+    int32_t App::Tick() {
         HIVE_PROFILE_SCOPE_N("Waggle::Tick");
 
         // First tick: just reset the clock so the next Tick() has a valid delta
-        if (first_tick_)
+        if (m_firstTick)
         {
-            frame_clock_.Reset();
-            first_tick_ = false;
+            m_frameClock.Reset();
+            m_firstTick = false;
             UpdateFrameInfoResource();
             return 0;
         }
 
-        frame_clock_.Tick();
-        int64_t frame_time = (std::min)(frame_clock_.delta_ns, config_.max_frame_time_ns);
-        accumulator_ += frame_time;
+        m_frameClock.Tick();
+        int64_t frameTime = (std::min)(m_frameClock.m_deltaNs, m_config.m_maxFrameTimeNs);
+        m_accumulator += frameTime;
 
         // Fixed-rate simulation steps
         int32_t steps = 0;
-        while (accumulator_ >= config_.fixed_dt_ns && steps < config_.max_substeps)
+        while (m_accumulator >= m_config.m_fixedDtNs && steps < m_config.m_maxSubsteps)
         {
             UpdateTimeResource();
-            world_.Advance();
+            m_world.Advance();
 
-            accumulator_ -= config_.fixed_dt_ns;
-            sim_time_ += config_.fixed_dt_ns;
-            ++sim_tick_;
+            m_accumulator -= m_config.m_fixedDtNs;
+            m_simTime += m_config.m_fixedDtNs;
+            ++m_simTick;
             ++steps;
         }
 
@@ -65,26 +54,25 @@ namespace waggle
         return steps;
     }
 
-    void App::UpdateTimeResource()
-    {
-        Time* time = world_.Resource<Time>();
+    void App::UpdateTimeResource() {
+        Time* time = m_world.Resource<Time>();
         // dt is constant (set at construction)
         // elapsed/tick reflect the state AFTER this step completes
-        time->elapsed_ns = sim_time_ + config_.fixed_dt_ns;
-        time->elapsed = hive::Clock::SecondsF(time->elapsed_ns);
-        time->tick = sim_tick_ + 1;
+        time->m_elapsedNs = m_simTime + m_config.m_fixedDtNs;
+        time->m_elapsed = hive::Clock::SecondsF(time->m_elapsedNs);
+        time->m_tick = m_simTick + 1;
     }
 
-    void App::UpdateFrameInfoResource()
-    {
-        FrameInfo* fi = world_.Resource<FrameInfo>();
-        fi->real_dt_ns = frame_clock_.delta_ns;
-        fi->real_dt = hive::Clock::SecondsF(frame_clock_.delta_ns);
-        fi->real_elapsed_ns = frame_clock_.elapsed_ns;
-        fi->real_elapsed = hive::Clock::SecondsF(frame_clock_.elapsed_ns);
-        fi->frame_count = frame_clock_.frame_count;
-        fi->alpha = config_.fixed_dt_ns > 0
-            ? static_cast<float>(static_cast<double>(accumulator_) / static_cast<double>(config_.fixed_dt_ns))
-            : 0.f;
+    void App::UpdateFrameInfoResource() {
+        FrameInfo* fi = m_world.Resource<FrameInfo>();
+        fi->m_realDtNs = m_frameClock.m_deltaNs;
+        fi->m_realDt = hive::Clock::SecondsF(m_frameClock.m_deltaNs);
+        fi->m_realElapsedNs = m_frameClock.m_elapsedNs;
+        fi->m_realElapsed = hive::Clock::SecondsF(m_frameClock.m_elapsedNs);
+        fi->m_frameCount = m_frameClock.m_frameCount;
+        fi->m_alpha =
+            m_config.m_fixedDtNs > 0
+                ? static_cast<float>(static_cast<double>(m_accumulator) / static_cast<double>(m_config.m_fixedDtNs))
+                : 0.f;
     }
-}
+} // namespace waggle

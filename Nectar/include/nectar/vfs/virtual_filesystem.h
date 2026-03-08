@@ -1,12 +1,14 @@
 #pragma once
 
-#include <nectar/vfs/mount_source.h>
-#include <nectar/vfs/file_info.h>
-#include <wax/containers/vector.h>
+#include <comb/default_allocator.h>
+
 #include <wax/containers/string.h>
 #include <wax/containers/string_view.h>
+#include <wax/containers/vector.h>
 #include <wax/serialization/byte_buffer.h>
-#include <comb/default_allocator.h>
+
+#include <nectar/vfs/file_info.h>
+#include <nectar/vfs/mount_source.h>
 
 namespace nectar
 {
@@ -19,10 +21,10 @@ namespace nectar
         /// Higher priority wins when multiple mounts match.
         /// Empty mount_point = root mount (matches all paths).
         /// Does NOT take ownership of source.
-        void Mount(wax::StringView mount_point, MountSource* source, int priority = 0);
+        void Mount(wax::StringView mountPoint, MountSource* source, int priority = 0);
 
         /// Unmount a specific source at a specific mount point.
-        void Unmount(wax::StringView mount_point, MountSource* source);
+        void Unmount(wax::StringView mountPoint, MountSource* source);
 
         /// Read a file through the VFS. Returns empty buffer if not found.
         [[nodiscard]] wax::ByteBuffer ReadSync(wax::StringView path);
@@ -42,17 +44,16 @@ namespace nectar
     private:
         struct MountEntry
         {
-            wax::String prefix;   // normalized mount point
-            MountSource* source;
-            int priority;
+            wax::String m_prefix; // normalized mount point
+            MountSource* m_source;
+            int m_priority;
         };
 
         /// Resolve path to a mount source + relative path.
         /// Returns nullptr if no mount matches.
-        MountSource* Resolve(wax::StringView normalized_path,
-                             wax::String& out_relative) const;
+        MountSource* Resolve(wax::StringView normalizedPath, wax::String& outRelative) const;
 
-        comb::DefaultAllocator* alloc_;
-        wax::Vector<MountEntry> mounts_;  // sorted by priority descending
+        comb::DefaultAllocator* m_alloc;
+        wax::Vector<MountEntry> m_mounts; // sorted by priority descending
     };
-}
+} // namespace nectar

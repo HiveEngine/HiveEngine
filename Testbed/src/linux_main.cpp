@@ -1,30 +1,29 @@
-#include <testbed/precomp.h>
-#include <terra/terra.h>
 #include <terra/platform/glfw_terra.h>
+#include <terra/terra.h>
+
+#include <testbed/precomp.h>
 
 #define TERRA_NATIVE_LINUX
-#include <terra/terra_native.h>
-
-#include <swarm/swarm.h>
-#include <swarm/platform/linux_swarm.h>
-#include <swarm/platform/diligent_swarm.h>
-
-
-#include <iostream>
 #include <hive/core/log.h>
 
+#include <swarm/platform/diligent_swarm.h>
+#include <swarm/platform/linux_swarm.h>
+#include <swarm/swarm.h>
+
+#include <terra/terra_native.h>
+
+#include <iostream>
 
 struct PlatformContext
 {
-    swarm::RenderContext *renderContext_;
-    terra::WindowContext *windowContext_;
+    swarm::RenderContext* renderContext_;
+    terra::WindowContext* windowContext_;
 };
 
-void GameLogic(PlatformContext &context)
-{
-    terra::InputState *currentInput = terra::GetWindowInputState(context.windowContext_);
+void GameLogic(PlatformContext& context) {
+    terra::InputState* currentInput = terra::GetWindowInputState(context.windowContext_);
 
-    if (currentInput->keys_[GLFW_KEY_A]) //TODO don't use direct GLFW ID
+    if (currentInput->keys_[GLFW_KEY_A]) // TODO don't use direct GLFW ID
     {
         std::cout << "A" << std::endl;
     }
@@ -46,7 +45,6 @@ private:
 
     void Loop();
 
-
     hive::LogManager logManager_;
     hive::ConsoleLogger consoleLogger_;
 
@@ -54,12 +52,10 @@ private:
     swarm::RenderContext renderContext_;
 };
 
-Engine::Engine() : consoleLogger_(logManager_)
-{
-}
+Engine::Engine()
+    : consoleLogger_(logManager_) {}
 
-void Engine::Run()
-{
+void Engine::Run() {
     if (!Init())
     {
         return;
@@ -70,8 +66,7 @@ void Engine::Run()
     Shutdown();
 }
 
-bool Engine::Init()
-{
+bool Engine::Init() {
     if (!terra::InitSystem() || !terra::InitWindowContext(&windowContext_))
     {
         return false;
@@ -85,16 +80,14 @@ bool Engine::Init()
     terra::NativeWindow nativeWindow = terra::GetNativeWindow(&windowContext_);
     switch (nativeWindow.type_)
     {
-        case terra::NativeWindowType::X11:
-        {
+        case terra::NativeWindowType::X11: {
             if (!swarm::InitRenderContextX11(renderContext_, nativeWindow.x11Display_, nativeWindow.x11Window_))
             {
                 return false;
             }
             break;
         }
-        case terra::NativeWindowType::WAYLAND:
-        {
+        case terra::NativeWindowType::WAYLAND: {
             if (!swarm::InitRenderContextWayland(renderContext_, nativeWindow.wlDisplay_, nativeWindow.wlSurface_))
             {
                 return false;
@@ -103,13 +96,11 @@ bool Engine::Init()
         }
     }
 
-
     swarm::SetupGraphicPipeline(renderContext_);
     return true;
 }
 
-void Engine::Shutdown()
-{
+void Engine::Shutdown() {
     swarm::ShutdownRenderContext(renderContext_);
     swarm::ShutdownSystem();
 
@@ -117,22 +108,19 @@ void Engine::Shutdown()
     terra::ShutdownSystem();
 }
 
-void Engine::Loop()
-{
+void Engine::Loop() {
     PlatformContext platformContext{&renderContext_, &windowContext_};
     while (!terra::ShouldWindowClose(platformContext.windowContext_))
     {
         terra::PollEvents();
         GameLogic(platformContext);
 
-        //TODO remove this
+        // TODO remove this
         glfwSwapBuffers(platformContext.windowContext_->window_);
     }
 }
 
-
-int main()
-{
+int main() {
     Engine engine;
     engine.Run();
 }

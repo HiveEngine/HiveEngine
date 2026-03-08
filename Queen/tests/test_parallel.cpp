@@ -1,6 +1,9 @@
-#include <larvae/larvae.h>
-#include <queen/scheduler/parallel.h>
 #include <comb/linear_allocator.h>
+
+#include <queen/scheduler/parallel.h>
+
+#include <larvae/larvae.h>
+
 #include <atomic>
 #include <vector>
 
@@ -34,7 +37,7 @@ namespace
 
     auto test3 = larvae::RegisterTest("QueenWaitGroup", "WaitReturnsImmediatelyWhenDone", []() {
         queen::WaitGroup wg;
-        wg.Wait();  // Should return immediately since count is 0
+        wg.Wait(); // Should return immediately since count is 0
         larvae::AssertTrue(wg.IsDone());
     });
 
@@ -65,11 +68,13 @@ namespace
             td.counter = &counter;
             td.wg = &wg;
 
-            pool.Submit([](void* data) {
-                auto* td = static_cast<TaskData*>(data);
-                td->counter->fetch_add(1);
-                td->wg->Done();
-            }, &td);
+            pool.Submit(
+                [](void* data) {
+                    auto* td = static_cast<TaskData*>(data);
+                    td->counter->fetch_add(1);
+                    td->wg->Done();
+                },
+                &td);
         }
 
         wg.Wait();
@@ -92,10 +97,8 @@ namespace
 
         std::atomic<int> counter{0};
 
-        queen::parallel_for(pool, 0, 0,
-            [](size_t, void* data) {
-                static_cast<std::atomic<int>*>(data)->fetch_add(1);
-            }, &counter);
+        queen::ParallelFor(
+            pool, 0, 0, [](size_t, void* data) { static_cast<std::atomic<int>*>(data)->fetch_add(1); }, &counter);
 
         larvae::AssertEqual(counter.load(), 0);
 
@@ -110,10 +113,8 @@ namespace
 
         std::atomic<int> counter{0};
 
-        queen::parallel_for(pool, 0, 1,
-            [](size_t, void* data) {
-                static_cast<std::atomic<int>*>(data)->fetch_add(1);
-            }, &counter);
+        queen::ParallelFor(
+            pool, 0, 1, [](size_t, void* data) { static_cast<std::atomic<int>*>(data)->fetch_add(1); }, &counter);
 
         larvae::AssertEqual(counter.load(), 1);
 
@@ -129,10 +130,8 @@ namespace
         constexpr size_t kCount = 100;
         std::atomic<int> counter{0};
 
-        queen::parallel_for(pool, 0, kCount,
-            [](size_t, void* data) {
-                static_cast<std::atomic<int>*>(data)->fetch_add(1);
-            }, &counter);
+        queen::ParallelFor(
+            pool, 0, kCount, [](size_t, void* data) { static_cast<std::atomic<int>*>(data)->fetch_add(1); }, &counter);
 
         larvae::AssertEqual(counter.load(), static_cast<int>(kCount));
 
@@ -149,10 +148,9 @@ namespace
         std::atomic<int> counter{0};
 
         // Use chunk size of 10
-        queen::parallel_for(pool, 0, kCount,
-            [](size_t, void* data) {
-                static_cast<std::atomic<int>*>(data)->fetch_add(1);
-            }, &counter, 10);
+        queen::ParallelFor(
+            pool, 0, kCount, [](size_t, void* data) { static_cast<std::atomic<int>*>(data)->fetch_add(1); }, &counter,
+            10);
 
         larvae::AssertEqual(counter.load(), static_cast<int>(kCount));
 
@@ -168,10 +166,9 @@ namespace
         std::atomic<size_t> sum{0};
 
         // Sum indices from 10 to 20
-        queen::parallel_for(pool, 10, 20,
-            [](size_t idx, void* data) {
-                static_cast<std::atomic<size_t>*>(data)->fetch_add(idx);
-            }, &sum);
+        queen::ParallelFor(
+            pool, 10, 20, [](size_t idx, void* data) { static_cast<std::atomic<size_t>*>(data)->fetch_add(idx); },
+            &sum);
 
         // Sum of 10+11+12+...+19 = 145
         larvae::AssertEqual(sum.load(), size_t{145});
@@ -188,10 +185,8 @@ namespace
         constexpr size_t kCount = 10000;
         std::atomic<int> counter{0};
 
-        queen::parallel_for(pool, 0, kCount,
-            [](size_t, void* data) {
-                static_cast<std::atomic<int>*>(data)->fetch_add(1);
-            }, &counter);
+        queen::ParallelFor(
+            pool, 0, kCount, [](size_t, void* data) { static_cast<std::atomic<int>*>(data)->fetch_add(1); }, &counter);
 
         larvae::AssertEqual(counter.load(), static_cast<int>(kCount));
 
@@ -207,11 +202,13 @@ namespace
         constexpr size_t kCount = 100;
         int data[kCount] = {0};
 
-        queen::parallel_for(pool, 0, kCount,
+        queen::ParallelFor(
+            pool, 0, kCount,
             [](size_t idx, void* ud) {
                 auto* arr = static_cast<int*>(ud);
                 arr[idx] = static_cast<int>(idx * 2);
-            }, data);
+            },
+            data);
 
         // Verify results
         for (size_t i = 0; i < kCount; ++i)
@@ -235,10 +232,8 @@ namespace
         constexpr size_t kCount = 50;
         std::atomic<int> counter{0};
 
-        queen::parallel_for_each(pool, 0, kCount,
-            [](size_t, void* data) {
-                static_cast<std::atomic<int>*>(data)->fetch_add(1);
-            }, &counter);
+        queen::ParallelForEach(
+            pool, 0, kCount, [](size_t, void* data) { static_cast<std::atomic<int>*>(data)->fetch_add(1); }, &counter);
 
         larvae::AssertEqual(counter.load(), static_cast<int>(kCount));
 
@@ -266,9 +261,7 @@ namespace
 
         for (int i = 0; i < 5; ++i)
         {
-            batch.Submit(pool, [](void* data) {
-                static_cast<std::atomic<int>*>(data)->fetch_add(1);
-            }, &counter);
+            batch.Submit(pool, [](void* data) { static_cast<std::atomic<int>*>(data)->fetch_add(1); }, &counter);
         }
 
         batch.Wait();
@@ -293,16 +286,12 @@ namespace
 
         for (int i = 0; i < 3; ++i)
         {
-            batch1.Submit(pool, [](void* data) {
-                static_cast<std::atomic<int>*>(data)->fetch_add(1);
-            }, &counter1);
+            batch1.Submit(pool, [](void* data) { static_cast<std::atomic<int>*>(data)->fetch_add(1); }, &counter1);
         }
 
         for (int i = 0; i < 5; ++i)
         {
-            batch2.Submit(pool, [](void* data) {
-                static_cast<std::atomic<int>*>(data)->fetch_add(1);
-            }, &counter2);
+            batch2.Submit(pool, [](void* data) { static_cast<std::atomic<int>*>(data)->fetch_add(1); }, &counter2);
         }
 
         batch1.Wait();
@@ -327,9 +316,7 @@ namespace
 
         for (int i = 0; i < kNumTasks; ++i)
         {
-            batch.Submit(pool, [](void* data) {
-                static_cast<std::atomic<int>*>(data)->fetch_add(1);
-            }, &counter);
+            batch.Submit(pool, [](void* data) { static_cast<std::atomic<int>*>(data)->fetch_add(1); }, &counter);
         }
 
         batch.Wait();
@@ -338,4 +325,4 @@ namespace
 
         pool.Stop();
     });
-}
+} // namespace

@@ -1,8 +1,9 @@
 #pragma once
 
+#include <hive/core/assert.h>
+
 #include <cstddef>
 #include <cstring>
-#include <hive/core/assert.h>
 
 namespace wax
 {
@@ -59,122 +60,92 @@ namespace wax
         static constexpr size_t npos = static_cast<size_t>(-1);
 
         constexpr StringView() noexcept
-            : data_{nullptr}
-            , size_{0}
-        {}
+            : m_data{nullptr}
+            , m_size{0} {}
 
         constexpr StringView(const char* data, size_t size) noexcept
-            : data_{data}
-            , size_{size}
-        {}
+            : m_data{data}
+            , m_size{size} {}
 
         constexpr StringView(const char* str) noexcept
-            : data_{str}
-            , size_{str ? StrLen(str) : 0}
-        {}
+            : m_data{str}
+            , m_size{str ? StrLen(str) : 0} {}
 
-        template<size_t N>
+        template <size_t N>
         constexpr StringView(const char (&str)[N]) noexcept
-            : data_{str}
-            , size_{N - 1}
-        {}
+            : m_data{str}
+            , m_size{N - 1} {}
 
         constexpr StringView(const StringView&) noexcept = default;
         constexpr StringView& operator=(const StringView&) noexcept = default;
 
-        [[nodiscard]] constexpr char operator[](size_t index) const noexcept
-        {
-            hive::Assert(index < size_, "StringView index out of bounds");
-            return data_[index];
+        [[nodiscard]] constexpr char operator[](size_t index) const noexcept {
+            hive::Assert(index < m_size, "StringView index out of bounds");
+            return m_data[index];
         }
 
-        [[nodiscard]] constexpr char At(size_t index) const
-        {
-            hive::Check(index < size_, "StringView index out of bounds");
-            return data_[index];
+        [[nodiscard]] constexpr char At(size_t index) const {
+            hive::Check(index < m_size, "StringView index out of bounds");
+            return m_data[index];
         }
 
-        [[nodiscard]] constexpr char Front() const noexcept
-        {
-            hive::Assert(size_ > 0, "StringView is empty");
-            return data_[0];
+        [[nodiscard]] constexpr char Front() const noexcept {
+            hive::Assert(m_size > 0, "StringView is empty");
+            return m_data[0];
         }
 
-        [[nodiscard]] constexpr char Back() const noexcept
-        {
-            hive::Assert(size_ > 0, "StringView is empty");
-            return data_[size_ - 1];
+        [[nodiscard]] constexpr char Back() const noexcept {
+            hive::Assert(m_size > 0, "StringView is empty");
+            return m_data[m_size - 1];
         }
 
-        [[nodiscard]] constexpr const char* Data() const noexcept
-        {
-            return data_;
+        [[nodiscard]] constexpr const char* Data() const noexcept { return m_data; }
+
+        [[nodiscard]] constexpr size_t Size() const noexcept { return m_size; }
+
+        [[nodiscard]] constexpr size_t Length() const noexcept { return m_size; }
+
+        [[nodiscard]] constexpr bool IsEmpty() const noexcept { return m_size == 0; }
+
+        [[nodiscard]] constexpr ConstIterator Begin() const noexcept { return m_data; }
+
+        [[nodiscard]] constexpr ConstIterator End() const noexcept { return m_data + m_size; }
+
+        [[nodiscard]] constexpr StringView Substr(size_t pos = 0, size_t count = npos) const noexcept {
+            hive::Assert(pos <= m_size, "Substr position out of bounds");
+            size_t actualCount = (count == npos || pos + count > m_size) ? m_size - pos : count;
+            return StringView{m_data + pos, actualCount};
         }
 
-        [[nodiscard]] constexpr size_t Size() const noexcept
-        {
-            return size_;
+        [[nodiscard]] constexpr StringView RemovePrefix(size_t n) const noexcept {
+            hive::Assert(n <= m_size, "RemovePrefix count exceeds size");
+            return StringView{m_data + n, m_size - n};
         }
 
-        [[nodiscard]] constexpr size_t Length() const noexcept
-        {
-            return size_;
+        [[nodiscard]] constexpr StringView RemoveSuffix(size_t n) const noexcept {
+            hive::Assert(n <= m_size, "RemoveSuffix count exceeds size");
+            return StringView{m_data, m_size - n};
         }
 
-        [[nodiscard]] constexpr bool IsEmpty() const noexcept
-        {
-            return size_ == 0;
-        }
-
-        [[nodiscard]] constexpr ConstIterator begin() const noexcept
-        {
-            return data_;
-        }
-
-        [[nodiscard]] constexpr ConstIterator end() const noexcept
-        {
-            return data_ + size_;
-        }
-
-        [[nodiscard]] constexpr StringView Substr(size_t pos = 0, size_t count = npos) const noexcept
-        {
-            hive::Assert(pos <= size_, "Substr position out of bounds");
-            size_t actual_count = (count == npos || pos + count > size_) ? size_ - pos : count;
-            return StringView{data_ + pos, actual_count};
-        }
-
-        [[nodiscard]] constexpr StringView RemovePrefix(size_t n) const noexcept
-        {
-            hive::Assert(n <= size_, "RemovePrefix count exceeds size");
-            return StringView{data_ + n, size_ - n};
-        }
-
-        [[nodiscard]] constexpr StringView RemoveSuffix(size_t n) const noexcept
-        {
-            hive::Assert(n <= size_, "RemoveSuffix count exceeds size");
-            return StringView{data_, size_ - n};
-        }
-
-        [[nodiscard]] constexpr size_t Find(char ch, size_t pos = 0) const noexcept
-        {
-            if (pos >= size_)
+        [[nodiscard]] constexpr size_t Find(char ch, size_t pos = 0) const noexcept {
+            if (pos >= m_size)
             {
                 return npos;
             }
 
             if (!std::is_constant_evaluated())
             {
-                const void* result = std::memchr(data_ + pos, ch, size_ - pos);
+                const void* result = std::memchr(m_data + pos, ch, m_size - pos);
                 if (result)
                 {
-                    return static_cast<size_t>(static_cast<const char*>(result) - data_);
+                    return static_cast<size_t>(static_cast<const char*>(result) - m_data);
                 }
                 return npos;
             }
 
-            for (size_t i = pos; i < size_; ++i)
+            for (size_t i = pos; i < m_size; ++i)
             {
-                if (data_[i] == ch)
+                if (m_data[i] == ch)
                 {
                     return i;
                 }
@@ -183,24 +154,23 @@ namespace wax
             return npos;
         }
 
-        [[nodiscard]] constexpr size_t Find(StringView sv, size_t pos = 0) const noexcept
-        {
-            if (sv.size_ == 0)
+        [[nodiscard]] constexpr size_t Find(StringView sv, size_t pos = 0) const noexcept {
+            if (sv.m_size == 0)
             {
-                return pos <= size_ ? pos : npos;
+                return pos <= m_size ? pos : npos;
             }
 
-            if (pos + sv.size_ > size_)
+            if (pos + sv.m_size > m_size)
             {
                 return npos;
             }
 
-            for (size_t i = pos; i <= size_ - sv.size_; ++i)
+            for (size_t i = pos; i <= m_size - sv.m_size; ++i)
             {
                 bool match = true;
-                for (size_t j = 0; j < sv.size_; ++j)
+                for (size_t j = 0; j < sv.m_size; ++j)
                 {
-                    if (data_[i + j] != sv.data_[j])
+                    if (m_data[i + j] != sv.m_data[j])
                     {
                         match = false;
                         break;
@@ -215,18 +185,17 @@ namespace wax
             return npos;
         }
 
-        [[nodiscard]] constexpr size_t RFind(char ch, size_t pos = npos) const noexcept
-        {
-            if (size_ == 0)
+        [[nodiscard]] constexpr size_t RFind(char ch, size_t pos = npos) const noexcept {
+            if (m_size == 0)
             {
                 return npos;
             }
 
-            size_t start = (pos == npos || pos >= size_) ? size_ - 1 : pos;
+            size_t start = (pos == npos || pos >= m_size) ? m_size - 1 : pos;
 
             for (size_t i = start + 1; i > 0; --i)
             {
-                if (data_[i - 1] == ch)
+                if (m_data[i - 1] == ch)
                 {
                     return i - 1;
                 }
@@ -235,31 +204,21 @@ namespace wax
             return npos;
         }
 
-        [[nodiscard]] constexpr bool Contains(char ch) const noexcept
-        {
-            return Find(ch) != npos;
-        }
+        [[nodiscard]] constexpr bool Contains(char ch) const noexcept { return Find(ch) != npos; }
 
-        [[nodiscard]] constexpr bool Contains(StringView sv) const noexcept
-        {
-            return Find(sv) != npos;
-        }
+        [[nodiscard]] constexpr bool Contains(StringView sv) const noexcept { return Find(sv) != npos; }
 
-        [[nodiscard]] constexpr bool StartsWith(char ch) const noexcept
-        {
-            return size_ > 0 && data_[0] == ch;
-        }
+        [[nodiscard]] constexpr bool StartsWith(char ch) const noexcept { return m_size > 0 && m_data[0] == ch; }
 
-        [[nodiscard]] constexpr bool StartsWith(StringView sv) const noexcept
-        {
-            if (sv.size_ > size_)
+        [[nodiscard]] constexpr bool StartsWith(StringView sv) const noexcept {
+            if (sv.m_size > m_size)
             {
                 return false;
             }
 
-            for (size_t i = 0; i < sv.size_; ++i)
+            for (size_t i = 0; i < sv.m_size; ++i)
             {
-                if (data_[i] != sv.data_[i])
+                if (m_data[i] != sv.m_data[i])
                 {
                     return false;
                 }
@@ -268,22 +227,18 @@ namespace wax
             return true;
         }
 
-        [[nodiscard]] constexpr bool EndsWith(char ch) const noexcept
-        {
-            return size_ > 0 && data_[size_ - 1] == ch;
-        }
+        [[nodiscard]] constexpr bool EndsWith(char ch) const noexcept { return m_size > 0 && m_data[m_size - 1] == ch; }
 
-        [[nodiscard]] constexpr bool EndsWith(StringView sv) const noexcept
-        {
-            if (sv.size_ > size_)
+        [[nodiscard]] constexpr bool EndsWith(StringView sv) const noexcept {
+            if (sv.m_size > m_size)
             {
                 return false;
             }
 
-            size_t offset = size_ - sv.size_;
-            for (size_t i = 0; i < sv.size_; ++i)
+            size_t offset = m_size - sv.m_size;
+            for (size_t i = 0; i < sv.m_size; ++i)
             {
-                if (data_[offset + i] != sv.data_[i])
+                if (m_data[offset + i] != sv.m_data[i])
                 {
                     return false;
                 }
@@ -292,27 +247,26 @@ namespace wax
             return true;
         }
 
-        [[nodiscard]] constexpr int Compare(StringView other) const noexcept
-        {
-            size_t min_size = size_ < other.size_ ? size_ : other.size_;
+        [[nodiscard]] constexpr int Compare(StringView other) const noexcept {
+            size_t minSize = m_size < other.m_size ? m_size : other.m_size;
 
-            for (size_t i = 0; i < min_size; ++i)
+            for (size_t i = 0; i < minSize; ++i)
             {
-                if (data_[i] < other.data_[i])
+                if (m_data[i] < other.m_data[i])
                 {
                     return -1;
                 }
-                if (data_[i] > other.data_[i])
+                if (m_data[i] > other.m_data[i])
                 {
                     return 1;
                 }
             }
 
-            if (size_ < other.size_)
+            if (m_size < other.m_size)
             {
                 return -1;
             }
-            if (size_ > other.size_)
+            if (m_size > other.m_size)
             {
                 return 1;
             }
@@ -320,16 +274,15 @@ namespace wax
             return 0;
         }
 
-        [[nodiscard]] constexpr bool Equals(StringView other) const noexcept
-        {
-            if (size_ != other.size_)
+        [[nodiscard]] constexpr bool Equals(StringView other) const noexcept {
+            if (m_size != other.m_size)
             {
                 return false;
             }
 
-            for (size_t i = 0; i < size_; ++i)
+            for (size_t i = 0; i < m_size; ++i)
             {
-                if (data_[i] != other.data_[i])
+                if (m_data[i] != other.m_data[i])
                 {
                     return false;
                 }
@@ -339,8 +292,7 @@ namespace wax
         }
 
     private:
-        static constexpr size_t StrLen(const char* str) noexcept
-        {
+        static constexpr size_t StrLen(const char* str) noexcept {
             if (str == nullptr)
             {
                 return 0;
@@ -354,37 +306,31 @@ namespace wax
             return len;
         }
 
-        const char* data_;
-        size_t size_;
+        const char* m_data;
+        size_t m_size;
     };
 
-    [[nodiscard]] constexpr bool operator==(StringView lhs, StringView rhs) noexcept
-    {
+    [[nodiscard]] constexpr bool operator==(StringView lhs, StringView rhs) noexcept {
         return lhs.Equals(rhs);
     }
 
-    [[nodiscard]] constexpr bool operator!=(StringView lhs, StringView rhs) noexcept
-    {
+    [[nodiscard]] constexpr bool operator!=(StringView lhs, StringView rhs) noexcept {
         return !lhs.Equals(rhs);
     }
 
-    [[nodiscard]] constexpr bool operator<(StringView lhs, StringView rhs) noexcept
-    {
+    [[nodiscard]] constexpr bool operator<(StringView lhs, StringView rhs) noexcept {
         return lhs.Compare(rhs) < 0;
     }
 
-    [[nodiscard]] constexpr bool operator<=(StringView lhs, StringView rhs) noexcept
-    {
+    [[nodiscard]] constexpr bool operator<=(StringView lhs, StringView rhs) noexcept {
         return lhs.Compare(rhs) <= 0;
     }
 
-    [[nodiscard]] constexpr bool operator>(StringView lhs, StringView rhs) noexcept
-    {
+    [[nodiscard]] constexpr bool operator>(StringView lhs, StringView rhs) noexcept {
         return lhs.Compare(rhs) > 0;
     }
 
-    [[nodiscard]] constexpr bool operator>=(StringView lhs, StringView rhs) noexcept
-    {
+    [[nodiscard]] constexpr bool operator>=(StringView lhs, StringView rhs) noexcept {
         return lhs.Compare(rhs) >= 0;
     }
-}
+} // namespace wax

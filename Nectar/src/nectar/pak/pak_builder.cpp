@@ -1,89 +1,87 @@
-#define _CRT_SECURE_NO_WARNINGS
-#include <nectar/pak/pak_builder.h>
+#define CRT_SECURE_NO_WARNINGS
+#include <hive/profiling/profiler.h>
+
 #include <nectar/pak/compression.h>
 #include <nectar/pak/crc32.h>
-#include <hive/profiling/profiler.h>
+#include <nectar/pak/pak_builder.h>
+
+#include <algorithm>
 #include <cstdio>
 #include <cstring>
-#include <algorithm>
 
 namespace nectar
 {
     PakBuilder::PakBuilder(comb::DefaultAllocator& alloc)
-        : alloc_{&alloc}
-        , entries_{alloc}
-    {}
+        : m_alloc{&alloc}
+        , m_entries{alloc} {}
 
-    void PakBuilder::AddBlob(ContentHash hash, wax::ByteSpan data,
-                              CompressionMethod compression)
-    {
+    void PakBuilder::AddBlob(ContentHash hash, wax::ByteSpan data, CompressionMethod compression) {
         BuildEntry entry;
-        entry.hash = hash;
-        entry.data = wax::ByteBuffer{*alloc_};
-        entry.data.Append(data);
-        entry.compression = compression;
-        entries_.PushBack(static_cast<BuildEntry&&>(entry));
+        entry.m_hash = hash;
+        entry.m_data = wax::ByteBuffer{*m_alloc};
+        entry.m_data.Append(data);
+        entry.m_compression = compression;
+        m_entries.PushBack(static_cast<BuildEntry&&>(entry));
     }
 
-    void PakBuilder::SetManifest(const AssetManifest& manifest)
-    {
-        manifest_ = &manifest;
+    void PakBuilder::SetManifest(const AssetManifest& manifest) {
+        m_manifest = &manifest;
     }
 
-    bool PakBuilder::Build(wax::StringView output_path)
-    {
+    bool PakBuilder::Build(wax::StringView outputPath) {
         HIVE_PROFILE_SCOPE_N("PakBuilder::Build");
         // Build path string with null terminator
-        wax::String path{*alloc_};
-        path.Append(output_path.Data(), output_path.Size());
+        wax::String path{*m_alloc};
+        path.Append(outputPath.Data(), outputPath.Size());
 
         FILE* file = std::fopen(path.CStr(), "wb");
-        if (!file) return false;
+        if (!file)
+            return false;
 
         // Write placeholder header
         NpakHeader header{};
-        header.magic = kNpakMagic;
-        header.version = kNpakVersion;
-        header.flags = 0;
+        header.m_magic = kNpakMagic;
+        header.m_version = kNpakVersion;
+        header.m_flags = 0;
         std::fwrite(&header, sizeof(NpakHeader), 1, file);
 
         // If manifest is set, add it as a blob at sentinel hash
-        wax::ByteBuffer manifest_data{*alloc_};
-        if (manifest_)
+        wax::ByteBuffer manifestData{*m_alloc};
+        if (m_manifest)
         {
-            manifest_data = manifest_->Serialize(*alloc_);
+            manifestData = m_manifest->Serialize(*m_alloc);
             BuildEntry me;
-            me.hash = kManifestSentinel;
-            me.data = wax::ByteBuffer{*alloc_};
-            me.data.Append(manifest_data.View());
-            me.compression = CompressionMethod::None;
-            entries_.PushBack(static_cast<BuildEntry&&>(me));
+            me.m_hash = kManifestSentinel;
+            me.m_data = wax::ByteBuffer{*m_alloc};
+            me.m_data.Append(manifestData.View());
+            me.m_compression = CompressionMethod::NONE;
+            m_entries.PushBack(static_cast<BuildEntry&&>(me));
         }
 
         // Collect TOC data as we write blocks
-        wax::Vector<NpakAssetEntry> asset_entries{*alloc_};
-        wax::Vector<NpakBlockEntry> block_entries{*alloc_};
+        wax::Vector<NpakAssetEntry> assetEntries{*m_alloc};
+        wax::Vector<NpakBlockEntry> blockEntries{*m_alloc};
 
-        for (size_t i = 0; i < entries_.Size(); ++i)
+        for (size_t i = 0; i < m_entries.Size(); ++i)
         {
-            auto& entry = entries_[i];
-            const uint8_t* src = entry.data.Data();
-            size_t remaining = entry.data.Size();
+            auto& entry = m_entries[i];
+            const uint8_t* src = entry.m_data.Data();
+            size_t remaining = entry.m_data.Size();
 
             NpakAssetEntry ae{};
-            ae.content_hash = entry.hash;
-            ae.first_block = static_cast<uint32_t>(block_entries.Size());
-            ae.uncompressed_size = static_cast<uint32_t>(remaining);
+            ae.m_contentHash = entry.m_hash;
+            ae.m_firstBlock = static_cast<uint32_t>(blockEntries.Size());
+            ae.m_uncompressedSize = static_cast<uint32_t>(remaining);
 
             // For the first block of this asset, compute offset_in_block.
             // Each asset starts at the beginning of its first block (offset 0).
-            ae.offset_in_block = 0;
+            ae.m_offsetInBlock = 0;
 
             // Split data into 64KB chunks and compress each
             while (remaining > 0)
             {
-                size_t chunk_size = remaining < kBlockSize ? remaining : kBlockSize;
-                wax::ByteSpan chunk{src, chunk_size};
+                size_t chunkSize = remaining < kBlockSize ? remaining : kBlockSize;
+                wax::ByteSpan chunk{src, chunkSize};
 
                 // Pad file position to 4KB alignment
                 long pos = std::ftell(file);
@@ -95,92 +93,92 @@ namespace nectar
                     uint8_t zeros[4096]{};
                     while (padding > 0)
                     {
-                        size_t to_write = padding < sizeof(zeros) ? padding : sizeof(zeros);
-                        std::fwrite(zeros, 1, to_write, file);
-                        padding -= to_write;
+                        size_t toWrite = padding < sizeof(zeros) ? padding : sizeof(zeros);
+                        std::fwrite(zeros, 1, toWrite, file);
+                        padding -= toWrite;
                     }
                 }
 
-                uint64_t block_offset = static_cast<uint64_t>(std::ftell(file));
+                uint64_t blockOffset = static_cast<uint64_t>(std::ftell(file));
 
                 // Try to compress
-                auto compressed = Compress(chunk, entry.compression, *alloc_);
+                auto compressed = Compress(chunk, entry.m_compression, *m_alloc);
 
                 NpakBlockEntry be{};
-                be.file_offset = block_offset;
+                be.m_fileOffset = blockOffset;
 
                 if (compressed.Size() > 0)
                 {
                     // Compression succeeded and was beneficial
-                    be.compressed_size = static_cast<uint32_t>(compressed.Size());
-                    be.compression = entry.compression;
+                    be.m_compressedSize = static_cast<uint32_t>(compressed.Size());
+                    be.m_compression = entry.m_compression;
                     std::fwrite(compressed.Data(), 1, compressed.Size(), file);
                 }
                 else
                 {
-                    be.compressed_size = static_cast<uint32_t>(chunk_size);
-                    be.compression = CompressionMethod::None;
-                    std::fwrite(chunk.Data(), 1, chunk_size, file);
+                    be.m_compressedSize = static_cast<uint32_t>(chunkSize);
+                    be.m_compression = CompressionMethod::NONE;
+                    std::fwrite(chunk.Data(), 1, chunkSize, file);
                 }
 
-                block_entries.PushBack(be);
-                src += chunk_size;
-                remaining -= chunk_size;
+                blockEntries.PushBack(be);
+                src += chunkSize;
+                remaining -= chunkSize;
             }
 
-            asset_entries.PushBack(ae);
+            assetEntries.PushBack(ae);
         }
 
         // Sort asset entries by ContentHash for binary search
         // Simple insertion sort (sufficient for archive building)
-        for (size_t i = 1; i < asset_entries.Size(); ++i)
+        for (size_t i = 1; i < assetEntries.Size(); ++i)
         {
-            NpakAssetEntry tmp = asset_entries[i];
+            NpakAssetEntry tmp = assetEntries[i];
             size_t j = i;
-            while (j > 0 && tmp.content_hash < asset_entries[j - 1].content_hash)
+            while (j > 0 && tmp.m_contentHash < assetEntries[j - 1].m_contentHash)
             {
-                asset_entries[j] = asset_entries[j - 1];
+                assetEntries[j] = assetEntries[j - 1];
                 --j;
             }
-            asset_entries[j] = tmp;
+            assetEntries[j] = tmp;
         }
 
         // Write TOC
-        uint64_t toc_offset = static_cast<uint64_t>(std::ftell(file));
+        uint64_t tocOffset = static_cast<uint64_t>(std::ftell(file));
 
         // TOC layout: [asset_count u32] [asset entries...] [block_count u32] [block entries...]
-        uint32_t asset_count = static_cast<uint32_t>(asset_entries.Size());
-        uint32_t block_count = static_cast<uint32_t>(block_entries.Size());
+        uint32_t assetCount = static_cast<uint32_t>(assetEntries.Size());
+        uint32_t blockCount = static_cast<uint32_t>(blockEntries.Size());
 
         // Build TOC buffer for CRC32
-        size_t toc_size = sizeof(uint32_t) + asset_count * sizeof(NpakAssetEntry)
-                        + sizeof(uint32_t) + block_count * sizeof(NpakBlockEntry);
-        wax::ByteBuffer toc_buf{*alloc_};
-        toc_buf.Resize(toc_size);
-        uint8_t* toc_ptr = toc_buf.Data();
+        size_t tocSize = sizeof(uint32_t) + assetCount * sizeof(NpakAssetEntry) + sizeof(uint32_t) +
+                         blockCount * sizeof(NpakBlockEntry);
+        wax::ByteBuffer tocBuf{*m_alloc};
+        tocBuf.Resize(tocSize);
+        uint8_t* tocPtr = tocBuf.Data();
 
-        std::memcpy(toc_ptr, &asset_count, sizeof(uint32_t));
-        toc_ptr += sizeof(uint32_t);
-        if (asset_count > 0)
+        std::memcpy(tocPtr, &assetCount, sizeof(uint32_t));
+        tocPtr += sizeof(uint32_t);
+        if (assetCount > 0)
         {
-            std::memcpy(toc_ptr, &asset_entries[0], asset_count * sizeof(NpakAssetEntry));
-            toc_ptr += asset_count * sizeof(NpakAssetEntry);
+            std::memcpy(tocPtr, &assetEntries[0], assetCount * sizeof(NpakAssetEntry));
+            tocPtr += assetCount * sizeof(NpakAssetEntry);
         }
 
-        std::memcpy(toc_ptr, &block_count, sizeof(uint32_t));
-        toc_ptr += sizeof(uint32_t);
-        if (block_count > 0)
+        std::memcpy(tocPtr, &blockCount, sizeof(uint32_t));
+        tocPtr += sizeof(uint32_t);
+        if (blockCount > 0)
         {
-            std::memcpy(toc_ptr, &block_entries[0], block_count * sizeof(NpakBlockEntry));
+            std::memcpy(tocPtr, &blockEntries[0], blockCount * sizeof(NpakBlockEntry));
         }
 
-        std::fwrite(toc_buf.Data(), 1, toc_size, file);
+        std::fwrite(tocBuf.Data(), 1, tocSize, file);
 
         // Finalize header
-        header.block_count = block_count;
-        header.toc_offset = toc_offset;
-        header.toc_size = static_cast<uint32_t>(toc_size);
-        header.toc_crc32 = Crc32(toc_buf.Data(), toc_size);
+        header.m_blockCount = blockCount;
+        header.m_tocOffset = tocOffset;
+        header.m_tocSize = static_cast<uint32_t>(tocSize);
+        header.m_tocCrc32 = Crc32(tocBuf.Data(), tocSize);
 
         std::fseek(file, 0, SEEK_SET);
         std::fwrite(&header, sizeof(NpakHeader), 1, file);
@@ -188,4 +186,4 @@ namespace nectar
         std::fclose(file);
         return true;
     }
-}
+} // namespace nectar

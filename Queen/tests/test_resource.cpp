@@ -1,6 +1,8 @@
-#include <larvae/larvae.h>
-#include <queen/world/world.h>
 #include <comb/linear_allocator.h>
+
+#include <queen/world/world.h>
+
+#include <larvae/larvae.h>
 
 namespace
 {
@@ -26,30 +28,30 @@ namespace
     {
         int* counter;
 
-        ResourceWithDestructor() : counter{nullptr} {}
-        ResourceWithDestructor(int* c) : counter{c} {}
+        ResourceWithDestructor()
+            : counter{nullptr} {}
+        ResourceWithDestructor(int* c)
+            : counter{c} {}
 
-        ~ResourceWithDestructor()
-        {
+        ~ResourceWithDestructor() {
             if (counter != nullptr)
             {
                 ++(*counter);
             }
         }
 
-        ResourceWithDestructor(const ResourceWithDestructor& other) : counter{other.counter} {}
-        ResourceWithDestructor& operator=(const ResourceWithDestructor& other)
-        {
+        ResourceWithDestructor(const ResourceWithDestructor& other)
+            : counter{other.counter} {}
+        ResourceWithDestructor& operator=(const ResourceWithDestructor& other) {
             counter = other.counter;
             return *this;
         }
 
-        ResourceWithDestructor(ResourceWithDestructor&& other) noexcept : counter{other.counter}
-        {
+        ResourceWithDestructor(ResourceWithDestructor&& other) noexcept
+            : counter{other.counter} {
             other.counter = nullptr;
         }
-        ResourceWithDestructor& operator=(ResourceWithDestructor&& other) noexcept
-        {
+        ResourceWithDestructor& operator=(ResourceWithDestructor&& other) noexcept {
             counter = other.counter;
             other.counter = nullptr;
             return *this;
@@ -228,8 +230,14 @@ namespace
 
         world.InsertResource(Time{0.0f, 0.016f});
 
-        struct Position { float x, y, z; };
-        struct Velocity { float dx, dy, dz; };
+        struct Position
+        {
+            float x, y, z;
+        };
+        struct Velocity
+        {
+            float dx, dy, dz;
+        };
 
         queen::Entity e1 = world.Spawn(Position{0.0f, 0.0f, 0.0f}, Velocity{1.0f, 0.0f, 0.0f});
         queen::Entity e2 = world.Spawn(Position{10.0f, 0.0f, 0.0f}, Velocity{-1.0f, 0.0f, 0.0f});
@@ -251,4 +259,4 @@ namespace
         larvae::AssertEqual(world.EntityCount(), size_t{0});
         larvae::AssertEqual(world.ResourceCount(), size_t{1});
     });
-}
+} // namespace

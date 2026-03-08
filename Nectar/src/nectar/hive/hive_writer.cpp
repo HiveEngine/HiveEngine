@@ -1,66 +1,81 @@
-#include <nectar/hive/hive_writer.h>
 #include <wax/containers/vector.h>
+
+#include <nectar/hive/hive_writer.h>
 
 namespace nectar
 {
     namespace
     {
-        void WriteValue(const HiveValue& value, wax::String& out)
-        {
-            switch (value.type)
+        void WriteValue(const HiveValue& value, wax::String& out) {
+            switch (value.m_type)
             {
-                case HiveValue::Type::String:
+                case HiveValue::Type::STRING:
                     out.Append('"');
                     // Escape special characters
-                    for (size_t i = 0; i < value.str.Size(); ++i)
+                    for (size_t i = 0; i < value.m_str.Size(); ++i)
                     {
-                        char c = value.str[i];
+                        char c = value.m_str[i];
                         switch (c)
                         {
-                            case '"':  out.Append("\\\"", 2); break;
-                            case '\\': out.Append("\\\\", 2); break;
-                            case '\n': out.Append("\\n", 2); break;
-                            case '\t': out.Append("\\t", 2); break;
-                            default:   out.Append(c); break;
+                            case '"':
+                                out.Append("\\\"", 2);
+                                break;
+                            case '\\':
+                                out.Append("\\\\", 2);
+                                break;
+                            case '\n':
+                                out.Append("\\n", 2);
+                                break;
+                            case '\t':
+                                out.Append("\\t", 2);
+                                break;
+                            default:
+                                out.Append(c);
+                                break;
                         }
                     }
                     out.Append('"');
                     break;
 
-                case HiveValue::Type::Bool:
-                    out.Append(value.bool_val ? "true" : "false");
+                case HiveValue::Type::BOOL:
+                    out.Append(value.m_boolVal ? "true" : "false");
                     break;
 
-                case HiveValue::Type::Int:
-                {
+                case HiveValue::Type::INT: {
                     char buf[32];
-                    int len = std::snprintf(buf, sizeof(buf), "%lld", static_cast<long long>(value.int_val));
+                    int len = std::snprintf(buf, sizeof(buf), "%lld", static_cast<long long>(value.m_intVal));
                     out.Append(buf, static_cast<size_t>(len));
                     break;
                 }
 
-                case HiveValue::Type::Float:
-                {
+                case HiveValue::Type::FLOAT: {
                     char buf[64];
-                    int len = std::snprintf(buf, sizeof(buf), "%g", value.float_val);
+                    int len = std::snprintf(buf, sizeof(buf), "%g", value.m_floatVal);
                     out.Append(buf, static_cast<size_t>(len));
                     break;
                 }
 
-                case HiveValue::Type::StringArray:
+                case HiveValue::Type::STRING_ARRAY:
                     out.Append('[');
-                    for (size_t i = 0; i < value.array.Size(); ++i)
+                    for (size_t i = 0; i < value.m_array.Size(); ++i)
                     {
-                        if (i > 0) out.Append(", ", 2);
+                        if (i > 0)
+                            out.Append(", ", 2);
                         out.Append('"');
-                        for (size_t j = 0; j < value.array[i].Size(); ++j)
+                        for (size_t j = 0; j < value.m_array[i].Size(); ++j)
                         {
-                            char c = value.array[i][j];
+                            char c = value.m_array[i][j];
                             switch (c)
                             {
-                                case '"':  out.Append("\\\"", 2); break;
-                                case '\\': out.Append("\\\\", 2); break;
-                                default:   out.Append(c); break;
+                                case '"':
+                                    out.Append("\\\"", 2);
+                                    break;
+                                case '\\':
+                                    out.Append("\\\\", 2);
+                                    break;
+                                default:
+                                    out.Append(c);
+                                    break;
                             }
                         }
                         out.Append('"');
@@ -69,49 +84,50 @@ namespace nectar
                     break;
             }
         }
-    }
+    } // namespace
 
-    wax::String HiveWriter::Write(const HiveDocument& doc, comb::DefaultAllocator& alloc)
-    {
+    wax::String HiveWriter::Write(const HiveDocument& doc, comb::DefaultAllocator& alloc) {
         wax::String out{alloc};
         out.Append("# Auto-generated by Nectar\n");
 
         // Collect and sort section names for deterministic output
-        wax::Vector<wax::StringView> section_names{alloc};
-        for (auto it = doc.Sections().begin(); it != doc.Sections().end(); ++it)
+        wax::Vector<wax::StringView> sectionNames{alloc};
+        for (auto it = doc.Sections().Begin(); it != doc.Sections().End(); ++it)
         {
-            section_names.PushBack(it.Key().View());
+            sectionNames.PushBack(it.Key().View());
         }
 
         // Simple insertion sort (small number of sections)
-        for (size_t i = 1; i < section_names.Size(); ++i)
+        for (size_t i = 1; i < sectionNames.Size(); ++i)
         {
-            auto key = section_names[i];
+            auto key = sectionNames[i];
             size_t j = i;
-            while (j > 0 && section_names[j - 1].Compare(key) > 0)
+            while (j > 0 && sectionNames[j - 1].Compare(key) > 0)
             {
-                section_names[j] = section_names[j - 1];
+                sectionNames[j] = sectionNames[j - 1];
                 --j;
             }
-            section_names[j] = key;
+            sectionNames[j] = key;
         }
 
-        for (size_t s = 0; s < section_names.Size(); ++s)
+        for (size_t s = 0; s < sectionNames.Size(); ++s)
         {
-            if (s > 0 || out.Size() > 0) out.Append('\n');
+            if (s > 0 || out.Size() > 0)
+                out.Append('\n');
 
             out.Append('[');
-            out.Append(section_names[s].Data(), section_names[s].Size());
+            out.Append(sectionNames[s].Data(), sectionNames[s].Size());
             out.Append("]\n", 2);
 
             // Find the section
-            wax::String sec_key{alloc, section_names[s]};
-            auto* section = doc.Sections().Find(sec_key);
-            if (!section) continue;
+            wax::String secKey{alloc, sectionNames[s]};
+            auto* section = doc.Sections().Find(secKey);
+            if (!section)
+                continue;
 
             // Collect and sort keys for deterministic output
             wax::Vector<wax::StringView> keys{alloc};
-            for (auto it = section->begin(); it != section->end(); ++it)
+            for (auto it = section->Begin(); it != section->End(); ++it)
             {
                 keys.PushBack(it.Key().View());
             }
@@ -133,8 +149,8 @@ namespace nectar
                 out.Append(keys[k].Data(), keys[k].Size());
                 out.Append(" = ", 3);
 
-                wax::String val_key{alloc, keys[k]};
-                auto* value = section->Find(val_key);
+                wax::String valKey{alloc, keys[k]};
+                auto* value = section->Find(valKey);
                 if (value)
                 {
                     WriteValue(*value, out);
@@ -145,4 +161,4 @@ namespace nectar
 
         return out;
     }
-}
+} // namespace nectar

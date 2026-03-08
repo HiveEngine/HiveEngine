@@ -1,6 +1,7 @@
 #pragma once
 
 #include <queen/core/type_id.h>
+
 #include <cstdint>
 
 namespace queen
@@ -15,9 +16,9 @@ namespace queen
      */
     enum class TermOperator : uint8_t
     {
-        With,       // Must have component (default)
-        Without,    // Must not have component
-        Optional    // May have component (access via pointer, nullptr if absent)
+        WITH,    // Must have component (default)
+        WITHOUT, // Must not have component
+        Optional // May have component (access via pointer, nullptr if absent)
     };
 
     /**
@@ -29,9 +30,9 @@ namespace queen
      */
     enum class TermAccess : uint8_t
     {
-        Read,   // Immutable access (const T&)
-        Write,  // Mutable access (T&)
-        None    // No data access, just filter (With<Tag>, Without<Tag>)
+        READ,  // Immutable access (const T&)
+        WRITE, // Mutable access (T&)
+        NONE   // No data access, just filter (With<Tag>, Without<Tag>)
     };
 
     /**
@@ -52,50 +53,27 @@ namespace queen
      */
     struct Term
     {
-        TypeId type_id = 0;
-        TermOperator op = TermOperator::With;
-        TermAccess access = TermAccess::Read;
+        TypeId m_typeId = 0;
+        TermOperator m_op = TermOperator::WITH;
+        TermAccess m_access = TermAccess::READ;
 
-        [[nodiscard]] constexpr bool IsValid() const noexcept
-        {
-            return type_id != 0;
-        }
+        [[nodiscard]] constexpr bool IsValid() const noexcept { return m_typeId != 0; }
 
-        [[nodiscard]] constexpr bool IsRequired() const noexcept
-        {
-            return op == TermOperator::With;
-        }
+        [[nodiscard]] constexpr bool IsRequired() const noexcept { return m_op == TermOperator::WITH; }
 
-        [[nodiscard]] constexpr bool IsExcluded() const noexcept
-        {
-            return op == TermOperator::Without;
-        }
+        [[nodiscard]] constexpr bool IsExcluded() const noexcept { return m_op == TermOperator::WITHOUT; }
 
-        [[nodiscard]] constexpr bool IsOptional() const noexcept
-        {
-            return op == TermOperator::Optional;
-        }
+        [[nodiscard]] constexpr bool IsOptional() const noexcept { return m_op == TermOperator::Optional; }
 
-        [[nodiscard]] constexpr bool IsReadOnly() const noexcept
-        {
-            return access == TermAccess::Read;
-        }
+        [[nodiscard]] constexpr bool IsReadOnly() const noexcept { return m_access == TermAccess::READ; }
 
-        [[nodiscard]] constexpr bool IsWritable() const noexcept
-        {
-            return access == TermAccess::Write;
-        }
+        [[nodiscard]] constexpr bool IsWritable() const noexcept { return m_access == TermAccess::WRITE; }
 
-        [[nodiscard]] constexpr bool HasDataAccess() const noexcept
-        {
-            return access != TermAccess::None;
-        }
+        [[nodiscard]] constexpr bool HasDataAccess() const noexcept { return m_access != TermAccess::NONE; }
 
-        template<typename T>
-        [[nodiscard]] static constexpr Term Create(
-            TermOperator op = TermOperator::With,
-            TermAccess access = TermAccess::Read) noexcept
-        {
+        template <typename T>
+        [[nodiscard]] static constexpr Term Create(TermOperator op = TermOperator::WITH,
+                                                   TermAccess access = TermAccess::READ) noexcept {
             return Term{TypeIdOf<T>(), op, access};
         }
     };
@@ -115,18 +93,14 @@ namespace queen
      *   world.Query<Read<Position>, Read<Velocity>>().Each(...);
      * @endcode
      */
-    template<typename T>
-    struct Read
+    template <typename T> struct Read
     {
         using ComponentType = T;
-        static constexpr TermOperator op = TermOperator::With;
-        static constexpr TermAccess access = TermAccess::Read;
-        static constexpr TypeId type_id = TypeIdOf<T>();
+        static constexpr TermOperator op = TermOperator::WITH;
+        static constexpr TermAccess access = TermAccess::READ;
+        static constexpr TypeId typeId = TypeIdOf<T>();
 
-        [[nodiscard]] static constexpr Term ToTerm() noexcept
-        {
-            return Term{type_id, op, access};
-        }
+        [[nodiscard]] static constexpr Term ToTerm() noexcept { return Term{typeId, op, access}; }
     };
 
     /**
@@ -143,18 +117,14 @@ namespace queen
      *   });
      * @endcode
      */
-    template<typename T>
-    struct Write
+    template <typename T> struct Write
     {
         using ComponentType = T;
-        static constexpr TermOperator op = TermOperator::With;
-        static constexpr TermAccess access = TermAccess::Write;
-        static constexpr TypeId type_id = TypeIdOf<T>();
+        static constexpr TermOperator op = TermOperator::WITH;
+        static constexpr TermAccess access = TermAccess::WRITE;
+        static constexpr TypeId typeId = TypeIdOf<T>();
 
-        [[nodiscard]] static constexpr Term ToTerm() noexcept
-        {
-            return Term{type_id, op, access};
-        }
+        [[nodiscard]] static constexpr Term ToTerm() noexcept { return Term{typeId, op, access}; }
     };
 
     /**
@@ -171,18 +141,14 @@ namespace queen
      *   });
      * @endcode
      */
-    template<typename T>
-    struct With
+    template <typename T> struct With
     {
         using ComponentType = T;
-        static constexpr TermOperator op = TermOperator::With;
-        static constexpr TermAccess access = TermAccess::None;
-        static constexpr TypeId type_id = TypeIdOf<T>();
+        static constexpr TermOperator op = TermOperator::WITH;
+        static constexpr TermAccess access = TermAccess::NONE;
+        static constexpr TypeId typeId = TypeIdOf<T>();
 
-        [[nodiscard]] static constexpr Term ToTerm() noexcept
-        {
-            return Term{type_id, op, access};
-        }
+        [[nodiscard]] static constexpr Term ToTerm() noexcept { return Term{typeId, op, access}; }
     };
 
     /**
@@ -198,18 +164,14 @@ namespace queen
      *   });
      * @endcode
      */
-    template<typename T>
-    struct Without
+    template <typename T> struct Without
     {
         using ComponentType = T;
-        static constexpr TermOperator op = TermOperator::Without;
-        static constexpr TermAccess access = TermAccess::None;
-        static constexpr TypeId type_id = TypeIdOf<T>();
+        static constexpr TermOperator op = TermOperator::WITHOUT;
+        static constexpr TermAccess access = TermAccess::NONE;
+        static constexpr TypeId typeId = TypeIdOf<T>();
 
-        [[nodiscard]] static constexpr Term ToTerm() noexcept
-        {
-            return Term{type_id, op, access};
-        }
+        [[nodiscard]] static constexpr Term ToTerm() noexcept { return Term{typeId, op, access}; }
     };
 
     /**
@@ -227,18 +189,14 @@ namespace queen
      *   });
      * @endcode
      */
-    template<typename T>
-    struct Maybe
+    template <typename T> struct Maybe
     {
         using ComponentType = T;
         static constexpr TermOperator op = TermOperator::Optional;
-        static constexpr TermAccess access = TermAccess::Read;
-        static constexpr TypeId type_id = TypeIdOf<T>();
+        static constexpr TermAccess access = TermAccess::READ;
+        static constexpr TypeId typeId = TypeIdOf<T>();
 
-        [[nodiscard]] static constexpr Term ToTerm() noexcept
-        {
-            return Term{type_id, op, access};
-        }
+        [[nodiscard]] static constexpr Term ToTerm() noexcept { return Term{typeId, op, access}; }
     };
 
     /**
@@ -246,18 +204,14 @@ namespace queen
      *
      * Like Maybe<T> but with write access.
      */
-    template<typename T>
-    struct MaybeWrite
+    template <typename T> struct MaybeWrite
     {
         using ComponentType = T;
         static constexpr TermOperator op = TermOperator::Optional;
-        static constexpr TermAccess access = TermAccess::Write;
-        static constexpr TypeId type_id = TypeIdOf<T>();
+        static constexpr TermAccess access = TermAccess::WRITE;
+        static constexpr TypeId typeId = TypeIdOf<T>();
 
-        [[nodiscard]] static constexpr Term ToTerm() noexcept
-        {
-            return Term{type_id, op, access};
-        }
+        [[nodiscard]] static constexpr Term ToTerm() noexcept { return Term{typeId, op, access}; }
     };
 
     // ─────────────────────────────────────────────────────────────
@@ -266,40 +220,46 @@ namespace queen
 
     namespace detail
     {
-        template<typename T>
-        struct IsQueryTerm : std::false_type {};
+        template <typename T> struct IsQueryTerm : std::false_type
+        {
+        };
 
-        template<typename T>
-        struct IsQueryTerm<Read<T>> : std::true_type {};
+        template <typename T> struct IsQueryTerm<Read<T>> : std::true_type
+        {
+        };
 
-        template<typename T>
-        struct IsQueryTerm<Write<T>> : std::true_type {};
+        template <typename T> struct IsQueryTerm<Write<T>> : std::true_type
+        {
+        };
 
-        template<typename T>
-        struct IsQueryTerm<With<T>> : std::true_type {};
+        template <typename T> struct IsQueryTerm<With<T>> : std::true_type
+        {
+        };
 
-        template<typename T>
-        struct IsQueryTerm<Without<T>> : std::true_type {};
+        template <typename T> struct IsQueryTerm<Without<T>> : std::true_type
+        {
+        };
 
-        template<typename T>
-        struct IsQueryTerm<Maybe<T>> : std::true_type {};
+        template <typename T> struct IsQueryTerm<Maybe<T>> : std::true_type
+        {
+        };
 
-        template<typename T>
-        struct IsQueryTerm<MaybeWrite<T>> : std::true_type {};
+        template <typename T> struct IsQueryTerm<MaybeWrite<T>> : std::true_type
+        {
+        };
 
-        template<typename T>
-        constexpr bool IsQueryTermV = IsQueryTerm<T>::value;
+        template <typename T> constexpr bool isQueryTermV = IsQueryTerm<T>::value;
 
-        template<typename T>
-        struct HasDataAccess : std::bool_constant<T::access != TermAccess::None> {};
+        template <typename T> struct HasDataAccess : std::bool_constant<T::access != TermAccess::NONE>
+        {
+        };
 
-        template<typename T>
-        constexpr bool HasDataAccessV = HasDataAccess<T>::value;
+        template <typename T> constexpr bool hasDataAccessV = HasDataAccess<T>::value;
 
-        template<typename T>
-        struct IsOptionalTerm : std::bool_constant<T::op == TermOperator::Optional> {};
+        template <typename T> struct IsOptionalTerm : std::bool_constant<T::op == TermOperator::Optional>
+        {
+        };
 
-        template<typename T>
-        constexpr bool IsOptionalTermV = IsOptionalTerm<T>::value;
-    }
-}
+        template <typename T> constexpr bool isOptionalTermV = IsOptionalTerm<T>::value;
+    } // namespace detail
+} // namespace queen

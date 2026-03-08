@@ -1,10 +1,13 @@
 #pragma once
 
-#include <queen/core/entity.h>
-#include <comb/allocator_concepts.h>
 #include <hive/core/assert.h>
-#include <cstdint>
+
+#include <comb/allocator_concepts.h>
+
+#include <queen/core/entity.h>
+
 #include <cstddef>
+#include <cstdint>
 
 namespace queen
 {
@@ -60,57 +63,48 @@ namespace queen
      *   positions.Remove(e);
      * @endcode
      */
-    template<typename T, comb::Allocator Allocator>
-    class SparseSet
+    template <typename T, comb::Allocator Allocator> class SparseSet
     {
     public:
         static constexpr uint32_t kInvalidIndex = UINT32_MAX;
 
-        SparseSet(Allocator& allocator, size_t sparse_capacity, size_t dense_capacity)
-            : allocator_{&allocator}
-            , sparse_capacity_{sparse_capacity}
-            , dense_capacity_{dense_capacity}
-            , count_{0}
-        {
-            hive::Assert(sparse_capacity > 0, "Sparse capacity must be > 0");
-            hive::Assert(dense_capacity > 0, "Dense capacity must be > 0");
+        SparseSet(Allocator& allocator, size_t sparseCapacity, size_t denseCapacity)
+            : m_allocator{&allocator}
+            , m_sparseCapacity{sparseCapacity}
+            , m_denseCapacity{denseCapacity}
+            , m_count{0} {
+            hive::Assert(sparseCapacity > 0, "Sparse capacity must be > 0");
+            hive::Assert(denseCapacity > 0, "Dense capacity must be > 0");
 
-            sparse_ = static_cast<uint32_t*>(
-                allocator.Allocate(sizeof(uint32_t) * sparse_capacity, alignof(uint32_t))
-            );
-            hive::Assert(sparse_ != nullptr, "Failed to allocate sparse array");
+            m_sparse = static_cast<uint32_t*>(allocator.Allocate(sizeof(uint32_t) * sparseCapacity, alignof(uint32_t)));
+            hive::Assert(m_sparse != nullptr, "Failed to allocate sparse array");
 
-            dense_ = static_cast<Entity*>(
-                allocator.Allocate(sizeof(Entity) * dense_capacity, alignof(Entity))
-            );
-            hive::Assert(dense_ != nullptr, "Failed to allocate dense array");
+            m_dense = static_cast<Entity*>(allocator.Allocate(sizeof(Entity) * denseCapacity, alignof(Entity)));
+            hive::Assert(m_dense != nullptr, "Failed to allocate dense array");
 
-            data_ = static_cast<T*>(
-                allocator.Allocate(sizeof(T) * dense_capacity, alignof(T))
-            );
-            hive::Assert(data_ != nullptr, "Failed to allocate data array");
+            m_data = static_cast<T*>(allocator.Allocate(sizeof(T) * denseCapacity, alignof(T)));
+            hive::Assert(m_data != nullptr, "Failed to allocate data array");
 
-            for (size_t i = 0; i < sparse_capacity; ++i)
+            for (size_t i = 0; i < sparseCapacity; ++i)
             {
-                sparse_[i] = kInvalidIndex;
+                m_sparse[i] = kInvalidIndex;
             }
         }
 
-        ~SparseSet()
-        {
+        ~SparseSet() {
             Clear();
 
-            if (sparse_ && allocator_)
+            if (m_sparse && m_allocator)
             {
-                allocator_->Deallocate(sparse_);
+                m_allocator->Deallocate(m_sparse);
             }
-            if (dense_ && allocator_)
+            if (m_dense && m_allocator)
             {
-                allocator_->Deallocate(dense_);
+                m_allocator->Deallocate(m_dense);
             }
-            if (data_ && allocator_)
+            if (m_data && m_allocator)
             {
-                allocator_->Deallocate(data_);
+                m_allocator->Deallocate(m_data);
             }
         }
 
@@ -118,245 +112,232 @@ namespace queen
         SparseSet& operator=(const SparseSet&) = delete;
 
         SparseSet(SparseSet&& other) noexcept
-            : allocator_{other.allocator_}
-            , sparse_{other.sparse_}
-            , dense_{other.dense_}
-            , data_{other.data_}
-            , sparse_capacity_{other.sparse_capacity_}
-            , dense_capacity_{other.dense_capacity_}
-            , count_{other.count_}
-        {
-            other.allocator_ = nullptr;
-            other.sparse_ = nullptr;
-            other.dense_ = nullptr;
-            other.data_ = nullptr;
-            other.count_ = 0;
+            : m_allocator{other.m_allocator}
+            , m_sparse{other.m_sparse}
+            , m_dense{other.m_dense}
+            , m_data{other.m_data}
+            , m_sparseCapacity{other.m_sparseCapacity}
+            , m_denseCapacity{other.m_denseCapacity}
+            , m_count{other.m_count} {
+            other.m_allocator = nullptr;
+            other.m_sparse = nullptr;
+            other.m_dense = nullptr;
+            other.m_data = nullptr;
+            other.m_count = 0;
         }
 
-        SparseSet& operator=(SparseSet&& other) noexcept
-        {
+        SparseSet& operator=(SparseSet&& other) noexcept {
             if (this != &other)
             {
                 Clear();
-                if (sparse_) allocator_->Deallocate(sparse_);
-                if (dense_) allocator_->Deallocate(dense_);
-                if (data_) allocator_->Deallocate(data_);
+                if (m_sparse)
+                    m_allocator->Deallocate(m_sparse);
+                if (m_dense)
+                    m_allocator->Deallocate(m_dense);
+                if (m_data)
+                    m_allocator->Deallocate(m_data);
 
-                allocator_ = other.allocator_;
-                sparse_ = other.sparse_;
-                dense_ = other.dense_;
-                data_ = other.data_;
-                sparse_capacity_ = other.sparse_capacity_;
-                dense_capacity_ = other.dense_capacity_;
-                count_ = other.count_;
+                m_allocator = other.m_allocator;
+                m_sparse = other.m_sparse;
+                m_dense = other.m_dense;
+                m_data = other.m_data;
+                m_sparseCapacity = other.m_sparseCapacity;
+                m_denseCapacity = other.m_denseCapacity;
+                m_count = other.m_count;
 
-                other.allocator_ = nullptr;
-                other.sparse_ = nullptr;
-                other.dense_ = nullptr;
-                other.data_ = nullptr;
-                other.count_ = 0;
+                other.m_allocator = nullptr;
+                other.m_sparse = nullptr;
+                other.m_dense = nullptr;
+                other.m_data = nullptr;
+                other.m_count = 0;
             }
             return *this;
         }
 
-        bool Insert(Entity entity, const T& value)
-        {
+        bool Insert(Entity entity, const T& value) {
             if (Contains(entity))
             {
                 return false;
             }
 
             uint32_t index = entity.Index();
-            hive::Assert(index < sparse_capacity_, "Entity index exceeds sparse capacity");
-            hive::Assert(count_ < dense_capacity_, "Dense array is full");
+            hive::Assert(index < m_sparseCapacity, "Entity index exceeds sparse capacity");
+            hive::Assert(m_count < m_denseCapacity, "Dense array is full");
 
-            sparse_[index] = static_cast<uint32_t>(count_);
-            dense_[count_] = entity;
-            new (&data_[count_]) T{value};
-            ++count_;
+            m_sparse[index] = static_cast<uint32_t>(m_count);
+            m_dense[m_count] = entity;
+            new (&m_data[m_count]) T{value};
+            ++m_count;
 
             return true;
         }
 
-        bool Insert(Entity entity, T&& value)
-        {
+        bool Insert(Entity entity, T&& value) {
             if (Contains(entity))
             {
                 return false;
             }
 
             uint32_t index = entity.Index();
-            hive::Assert(index < sparse_capacity_, "Entity index exceeds sparse capacity");
-            hive::Assert(count_ < dense_capacity_, "Dense array is full");
+            hive::Assert(index < m_sparseCapacity, "Entity index exceeds sparse capacity");
+            hive::Assert(m_count < m_denseCapacity, "Dense array is full");
 
-            sparse_[index] = static_cast<uint32_t>(count_);
-            dense_[count_] = entity;
-            new (&data_[count_]) T{static_cast<T&&>(value)};
-            ++count_;
+            m_sparse[index] = static_cast<uint32_t>(m_count);
+            m_dense[m_count] = entity;
+            new (&m_data[m_count]) T{static_cast<T&&>(value)};
+            ++m_count;
 
             return true;
         }
 
-        template<typename... Args>
-        bool Emplace(Entity entity, Args&&... args)
-        {
+        template <typename... Args> bool Emplace(Entity entity, Args&&... args) {
             if (Contains(entity))
             {
                 return false;
             }
 
             uint32_t index = entity.Index();
-            hive::Assert(index < sparse_capacity_, "Entity index exceeds sparse capacity");
-            hive::Assert(count_ < dense_capacity_, "Dense array is full");
+            hive::Assert(index < m_sparseCapacity, "Entity index exceeds sparse capacity");
+            hive::Assert(m_count < m_denseCapacity, "Dense array is full");
 
-            sparse_[index] = static_cast<uint32_t>(count_);
-            dense_[count_] = entity;
-            new (&data_[count_]) T{static_cast<Args&&>(args)...};
-            ++count_;
+            m_sparse[index] = static_cast<uint32_t>(m_count);
+            m_dense[m_count] = entity;
+            new (&m_data[m_count]) T{static_cast<Args&&>(args)...};
+            ++m_count;
 
             return true;
         }
 
-        bool Remove(Entity entity)
-        {
+        bool Remove(Entity entity) {
             if (!Contains(entity))
             {
                 return false;
             }
 
             uint32_t index = entity.Index();
-            uint32_t dense_index = sparse_[index];
+            uint32_t denseIndex = m_sparse[index];
 
-            data_[dense_index].~T();
+            m_data[denseIndex].~T();
 
-            if (dense_index < count_ - 1)
+            if (denseIndex < m_count - 1)
             {
-                Entity last_entity = dense_[count_ - 1];
-                dense_[dense_index] = last_entity;
-                new (&data_[dense_index]) T{static_cast<T&&>(data_[count_ - 1])};
-                data_[count_ - 1].~T();
+                Entity lastEntity = m_dense[m_count - 1];
+                m_dense[denseIndex] = lastEntity;
+                new (&m_data[denseIndex]) T{static_cast<T&&>(m_data[m_count - 1])};
+                m_data[m_count - 1].~T();
 
-                sparse_[last_entity.Index()] = dense_index;
+                m_sparse[lastEntity.Index()] = denseIndex;
             }
 
-            sparse_[index] = kInvalidIndex;
-            --count_;
+            m_sparse[index] = kInvalidIndex;
+            --m_count;
 
             return true;
         }
 
-        [[nodiscard]] bool Contains(Entity entity) const noexcept
-        {
+        [[nodiscard]] bool Contains(Entity entity) const noexcept {
             uint32_t index = entity.Index();
-            if (index >= sparse_capacity_)
+            if (index >= m_sparseCapacity)
             {
                 return false;
             }
 
-            uint32_t dense_index = sparse_[index];
-            if (dense_index >= count_)
+            uint32_t denseIndex = m_sparse[index];
+            if (denseIndex >= m_count)
             {
                 return false;
             }
 
-            return dense_[dense_index] == entity;
+            return m_dense[denseIndex] == entity;
         }
 
-        [[nodiscard]] T* Get(Entity entity) noexcept
-        {
+        [[nodiscard]] T* Get(Entity entity) noexcept {
             if (!Contains(entity))
             {
                 return nullptr;
             }
 
-            uint32_t dense_index = sparse_[entity.Index()];
-            return &data_[dense_index];
+            uint32_t denseIndex = m_sparse[entity.Index()];
+            return &m_data[denseIndex];
         }
 
-        [[nodiscard]] const T* Get(Entity entity) const noexcept
-        {
+        [[nodiscard]] const T* Get(Entity entity) const noexcept {
             if (!Contains(entity))
             {
                 return nullptr;
             }
 
-            uint32_t dense_index = sparse_[entity.Index()];
-            return &data_[dense_index];
+            uint32_t denseIndex = m_sparse[entity.Index()];
+            return &m_data[denseIndex];
         }
 
-        [[nodiscard]] T& GetUnchecked(Entity entity) noexcept
-        {
+        [[nodiscard]] T& GetUnchecked(Entity entity) noexcept {
             hive::Assert(Contains(entity), "Entity not in sparse set");
-            uint32_t dense_index = sparse_[entity.Index()];
-            return data_[dense_index];
+            uint32_t denseIndex = m_sparse[entity.Index()];
+            return m_data[denseIndex];
         }
 
-        [[nodiscard]] const T& GetUnchecked(Entity entity) const noexcept
-        {
+        [[nodiscard]] const T& GetUnchecked(Entity entity) const noexcept {
             hive::Assert(Contains(entity), "Entity not in sparse set");
-            uint32_t dense_index = sparse_[entity.Index()];
-            return data_[dense_index];
+            uint32_t denseIndex = m_sparse[entity.Index()];
+            return m_data[denseIndex];
         }
 
-        void Clear()
-        {
+        void Clear() {
             if constexpr (!std::is_trivially_destructible_v<T>)
             {
-                for (size_t i = 0; i < count_; ++i)
+                for (size_t i = 0; i < m_count; ++i)
                 {
-                    data_[i].~T();
+                    m_data[i].~T();
                 }
             }
 
-            for (size_t i = 0; i < count_; ++i)
+            for (size_t i = 0; i < m_count; ++i)
             {
-                sparse_[dense_[i].Index()] = kInvalidIndex;
+                m_sparse[m_dense[i].Index()] = kInvalidIndex;
             }
 
-            count_ = 0;
+            m_count = 0;
         }
 
-        [[nodiscard]] size_t Count() const noexcept { return count_; }
-        [[nodiscard]] size_t DenseCapacity() const noexcept { return dense_capacity_; }
-        [[nodiscard]] size_t SparseCapacity() const noexcept { return sparse_capacity_; }
-        [[nodiscard]] bool IsEmpty() const noexcept { return count_ == 0; }
-        [[nodiscard]] bool IsFull() const noexcept { return count_ >= dense_capacity_; }
+        [[nodiscard]] size_t Count() const noexcept { return m_count; }
+        [[nodiscard]] size_t DenseCapacity() const noexcept { return m_denseCapacity; }
+        [[nodiscard]] size_t SparseCapacity() const noexcept { return m_sparseCapacity; }
+        [[nodiscard]] bool IsEmpty() const noexcept { return m_count == 0; }
+        [[nodiscard]] bool IsFull() const noexcept { return m_count >= m_denseCapacity; }
 
-        [[nodiscard]] Entity* DenseBegin() noexcept { return dense_; }
-        [[nodiscard]] Entity* DenseEnd() noexcept { return dense_ + count_; }
-        [[nodiscard]] const Entity* DenseBegin() const noexcept { return dense_; }
-        [[nodiscard]] const Entity* DenseEnd() const noexcept { return dense_ + count_; }
+        [[nodiscard]] Entity* DenseBegin() noexcept { return m_dense; }
+        [[nodiscard]] Entity* DenseEnd() noexcept { return m_dense + m_count; }
+        [[nodiscard]] const Entity* DenseBegin() const noexcept { return m_dense; }
+        [[nodiscard]] const Entity* DenseEnd() const noexcept { return m_dense + m_count; }
 
-        [[nodiscard]] T* DataBegin() noexcept { return data_; }
-        [[nodiscard]] T* DataEnd() noexcept { return data_ + count_; }
-        [[nodiscard]] const T* DataBegin() const noexcept { return data_; }
-        [[nodiscard]] const T* DataEnd() const noexcept { return data_ + count_; }
+        [[nodiscard]] T* DataBegin() noexcept { return m_data; }
+        [[nodiscard]] T* DataEnd() noexcept { return m_data + m_count; }
+        [[nodiscard]] const T* DataBegin() const noexcept { return m_data; }
+        [[nodiscard]] const T* DataEnd() const noexcept { return m_data + m_count; }
 
-        [[nodiscard]] Entity EntityAt(size_t dense_index) const noexcept
-        {
-            hive::Assert(dense_index < count_, "Dense index out of bounds");
-            return dense_[dense_index];
+        [[nodiscard]] Entity EntityAt(size_t denseIndex) const noexcept {
+            hive::Assert(denseIndex < m_count, "Dense index out of bounds");
+            return m_dense[denseIndex];
         }
 
-        [[nodiscard]] T& DataAt(size_t dense_index) noexcept
-        {
-            hive::Assert(dense_index < count_, "Dense index out of bounds");
-            return data_[dense_index];
+        [[nodiscard]] T& DataAt(size_t denseIndex) noexcept {
+            hive::Assert(denseIndex < m_count, "Dense index out of bounds");
+            return m_data[denseIndex];
         }
 
-        [[nodiscard]] const T& DataAt(size_t dense_index) const noexcept
-        {
-            hive::Assert(dense_index < count_, "Dense index out of bounds");
-            return data_[dense_index];
+        [[nodiscard]] const T& DataAt(size_t denseIndex) const noexcept {
+            hive::Assert(denseIndex < m_count, "Dense index out of bounds");
+            return m_data[denseIndex];
         }
 
     private:
-        Allocator* allocator_;
-        uint32_t* sparse_;
-        Entity* dense_;
-        T* data_;
-        size_t sparse_capacity_;
-        size_t dense_capacity_;
-        size_t count_;
+        Allocator* m_allocator;
+        uint32_t* m_sparse;
+        Entity* m_dense;
+        T* m_data;
+        size_t m_sparseCapacity;
+        size_t m_denseCapacity;
+        size_t m_count;
     };
-}
+} // namespace queen

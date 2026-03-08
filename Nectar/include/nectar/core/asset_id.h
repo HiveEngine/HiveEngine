@@ -1,8 +1,9 @@
 #pragma once
 
+#include <hive/core/assert.h>
+
 #include <cstdint>
 #include <functional>
-#include <hive/core/assert.h>
 
 namespace nectar
 {
@@ -22,22 +23,16 @@ namespace nectar
         static constexpr size_t kByteSize = 16;
 
         constexpr AssetId() noexcept
-            : high_{0}
-            , low_{0}
-        {}
+            : m_high{0}
+            , m_low{0} {}
 
         constexpr AssetId(uint64_t high, uint64_t low) noexcept
-            : high_{high}
-            , low_{low}
-        {}
+            : m_high{high}
+            , m_low{low} {}
 
-        [[nodiscard]] static constexpr AssetId Invalid() noexcept
-        {
-            return AssetId{0, 0};
-        }
+        [[nodiscard]] static constexpr AssetId Invalid() noexcept { return AssetId{0, 0}; }
 
-        [[nodiscard]] static AssetId FromBytes(const uint8_t* bytes) noexcept
-        {
+        [[nodiscard]] static AssetId FromBytes(const uint8_t* bytes) noexcept {
             hive::Assert(bytes != nullptr, "Bytes cannot be null");
 
             uint64_t high = 0;
@@ -55,73 +50,43 @@ namespace nectar
             return AssetId{high, low};
         }
 
-        [[nodiscard]] constexpr bool IsValid() const noexcept
-        {
-            return high_ != 0 || low_ != 0;
+        [[nodiscard]] constexpr bool IsValid() const noexcept { return m_high != 0 || m_low != 0; }
+
+        [[nodiscard]] constexpr uint64_t High() const noexcept { return m_high; }
+
+        [[nodiscard]] constexpr uint64_t Low() const noexcept { return m_low; }
+
+        [[nodiscard]] constexpr size_t Hash() const noexcept { return static_cast<size_t>(m_high ^ m_low); }
+
+        [[nodiscard]] constexpr bool operator==(const AssetId& other) const noexcept {
+            return m_high == other.m_high && m_low == other.m_low;
         }
 
-        [[nodiscard]] constexpr uint64_t High() const noexcept
-        {
-            return high_;
-        }
+        [[nodiscard]] constexpr bool operator!=(const AssetId& other) const noexcept { return !(*this == other); }
 
-        [[nodiscard]] constexpr uint64_t Low() const noexcept
-        {
-            return low_;
-        }
-
-        [[nodiscard]] constexpr size_t Hash() const noexcept
-        {
-            return static_cast<size_t>(high_ ^ low_);
-        }
-
-        [[nodiscard]] constexpr bool operator==(const AssetId& other) const noexcept
-        {
-            return high_ == other.high_ && low_ == other.low_;
-        }
-
-        [[nodiscard]] constexpr bool operator!=(const AssetId& other) const noexcept
-        {
-            return !(*this == other);
-        }
-
-        [[nodiscard]] constexpr bool operator<(const AssetId& other) const noexcept
-        {
-            if (high_ != other.high_)
+        [[nodiscard]] constexpr bool operator<(const AssetId& other) const noexcept {
+            if (m_high != other.m_high)
             {
-                return high_ < other.high_;
+                return m_high < other.m_high;
             }
-            return low_ < other.low_;
+            return m_low < other.m_low;
         }
 
-        [[nodiscard]] constexpr bool operator<=(const AssetId& other) const noexcept
-        {
-            return !(other < *this);
-        }
+        [[nodiscard]] constexpr bool operator<=(const AssetId& other) const noexcept { return !(other < *this); }
 
-        [[nodiscard]] constexpr bool operator>(const AssetId& other) const noexcept
-        {
-            return other < *this;
-        }
+        [[nodiscard]] constexpr bool operator>(const AssetId& other) const noexcept { return other < *this; }
 
-        [[nodiscard]] constexpr bool operator>=(const AssetId& other) const noexcept
-        {
-            return !(*this < other);
-        }
+        [[nodiscard]] constexpr bool operator>=(const AssetId& other) const noexcept { return !(*this < other); }
 
     private:
-        uint64_t high_;
-        uint64_t low_;
+        uint64_t m_high;
+        uint64_t m_low;
     };
 
-}
+} // namespace nectar
 
 // Hash specialization for wax::HashMap/HashSet
-template<>
-struct std::hash<nectar::AssetId>
+template <> struct std::hash<nectar::AssetId>
 {
-    size_t operator()(const nectar::AssetId& id) const noexcept
-    {
-        return id.Hash();
-    }
+    size_t operator()(const nectar::AssetId& id) const noexcept { return id.Hash(); }
 };

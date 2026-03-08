@@ -1,22 +1,26 @@
 #pragma once
 
-#include <comb/allocator_concepts.h>
 #include <hive/core/assert.h>
-#include <comb/utils.h>
+
+#include <comb/allocator_concepts.h>
 #include <comb/platform.h>
+#include <comb/utils.h>
+
 #include <cstddef>
 #include <memory>
 
 // Memory debugging (zero overhead when disabled)
 #if COMB_MEM_DEBUG
-    #include <comb/debug/mem_debug_config.h>
-    #include <comb/debug/allocation_registry.h>
-    #include <comb/debug/allocation_history.h>
-    #include <comb/debug/global_memory_tracker.h>
-    #include <comb/debug/platform_utils.h>
-    #include <hive/core/log.h>
-    #include <comb/combmodule.h>
-    #include <cstring>  // For memset
+#include <hive/core/log.h>
+
+#include <comb/combmodule.h>
+#include <comb/debug/allocation_history.h>
+#include <comb/debug/allocation_registry.h>
+#include <comb/debug/global_memory_tracker.h>
+#include <comb/debug/mem_debug_config.h>
+#include <comb/debug/platform_utils.h>
+
+#include <cstring> // For memset
 #endif
 
 namespace comb
@@ -106,8 +110,7 @@ namespace comb
          */
         explicit StackAllocator(size_t capacity)
             : capacity_{capacity}
-            , current_{0}
-        {
+            , current_{0} {
             hive::Assert(capacity > 0, "Stack capacity must be > 0");
 
             memory_block_ = AllocatePages(capacity);
@@ -121,8 +124,7 @@ namespace comb
 #endif
         }
 
-        ~StackAllocator()
-        {
+        ~StackAllocator() {
 #if COMB_MEM_DEBUG
             if (registry_)
             {
@@ -161,8 +163,7 @@ namespace comb
 #endif
         }
 
-        StackAllocator& operator=(StackAllocator&& other) noexcept
-        {
+        StackAllocator& operator=(StackAllocator&& other) noexcept {
             if (this != &other)
             {
 #if COMB_MEM_DEBUG
@@ -215,12 +216,11 @@ namespace comb
          * IMPORTANT: Does NOT support individual deallocation.
          * Use GetMarker() + FreeToMarker() for scoped cleanup.
          */
-        [[nodiscard]] void* Allocate(size_t size, size_t alignment, const char* tag = nullptr)
-        {
+        [[nodiscard]] void* Allocate(size_t size, size_t alignment, const char* tag = nullptr) {
 #if COMB_MEM_DEBUG
             void* result = AllocateDebug(size, alignment, tag);
 #else
-            (void)tag;  // Suppress unused warning
+            (void)tag; // Suppress unused warning
 
             hive::Assert(size > 0, "Cannot allocate 0 bytes");
             hive::Assert(IsPowerOfTwo(alignment), "Alignment must be power of 2");
@@ -241,7 +241,7 @@ namespace comb
 
             if (required > remaining)
             {
-                return nullptr;  // Out of memory
+                return nullptr; // Out of memory
             }
 
             // Allocate
@@ -261,8 +261,7 @@ namespace comb
          * Use GetMarker() + FreeToMarker() for scoped cleanup,
          * or Reset() to free all memory.
          */
-        void Deallocate(void* ptr)
-        {
+        void Deallocate(void* ptr) {
 #if COMB_MEM_DEBUG
             DeallocateDebug(ptr);
 #else
@@ -276,10 +275,7 @@ namespace comb
          *
          * @return Marker representing current allocation position
          */
-        [[nodiscard]] Marker GetMarker() const
-        {
-            return current_;
-        }
+        [[nodiscard]] Marker GetMarker() const { return current_; }
 
         /**
          * Free all allocations back to a saved marker
@@ -291,8 +287,7 @@ namespace comb
          * Passing invalid marker is undefined behavior.
          * Markers must be freed in LIFO order (stack discipline).
          */
-        void FreeToMarker(Marker marker)
-        {
+        void FreeToMarker(Marker marker) {
             hive::Assert(marker <= current_, "Invalid marker (beyond current position)");
             hive::Assert(marker <= capacity_, "Invalid marker (beyond capacity)");
 
@@ -312,8 +307,7 @@ namespace comb
          * Reset allocator - frees all allocations
          * Equivalent to FreeToMarker(0)
          */
-        void Reset()
-        {
+        void Reset() {
             current_ = 0;
 
 #if COMB_MEM_DEBUG
@@ -329,8 +323,7 @@ namespace comb
          * Get number of bytes currently allocated
          * @return Bytes used
          */
-        [[nodiscard]] size_t GetUsedMemory() const
-        {
+        [[nodiscard]] size_t GetUsedMemory() const {
 #if COMB_MEM_DEBUG
             return release_current_;
 #else
@@ -342,26 +335,19 @@ namespace comb
          * Get total capacity of allocator
          * @return Total bytes available
          */
-        [[nodiscard]] size_t GetTotalMemory() const
-        {
-            return capacity_;
-        }
+        [[nodiscard]] size_t GetTotalMemory() const { return capacity_; }
 
         /**
          * Get allocator name for debugging
          * @return "StackAllocator"
          */
-        [[nodiscard]] const char* GetName() const
-        {
-            return "StackAllocator";
-        }
+        [[nodiscard]] const char* GetName() const { return "StackAllocator"; }
 
         /**
          * Get number of free bytes remaining
          * @return Bytes available for allocation
          */
-        [[nodiscard]] size_t GetFreeMemory() const
-        {
+        [[nodiscard]] size_t GetFreeMemory() const {
 #if COMB_MEM_DEBUG
             return capacity_ - release_current_;
 #else
@@ -395,8 +381,7 @@ namespace comb
     // Debug Implementation (Inline methods - must be in header)
     // ========================================================================
 
-    inline void* StackAllocator::AllocateDebug(size_t size, size_t alignment, const char* tag)
-    {
+    inline void* StackAllocator::AllocateDebug(size_t size, size_t alignment, const char* tag) {
         using namespace debug;
 
         hive::Assert(IsPowerOfTwo(alignment), "Alignment must be power of 2");
@@ -420,8 +405,7 @@ namespace comb
 
         if (required > remaining)
         {
-            hive::LogError(comb::LogCombRoot,
-                           "[MEM_DEBUG] [{}] Allocation failed: size={}, alignment={}, tag={}",
+            hive::LogError(comb::LOG_COMB_ROOT, "[MEM_DEBUG] [{}] Allocation failed: size={}, alignment={}, tag={}",
                            GetName(), size, alignment, tag ? tag : "<no tag>");
             return nullptr;
         }
@@ -443,18 +427,18 @@ namespace comb
         // 4. Initialize memory with pattern (detect uninitialized reads)
         if constexpr (kMemDebugEnabled)
         {
-            std::memset(userPtr, AllocatedMemoryPattern, size);
+            std::memset(userPtr, allocatedMemoryPattern, size);
         }
 
         // 5. Register allocation
         AllocationInfo info{};
-        info.address = userPtr;
-        info.size = size;
-        info.alignment = alignment;
-        info.timestamp = GetTimestamp();
-        info.tag = tag;
-        info.allocationId = registry_->GetNextAllocationId();
-        info.threadId = GetThreadId();
+        info.m_address = userPtr;
+        info.m_size = size;
+        info.m_alignment = alignment;
+        info.m_timestamp = GetTimestamp();
+        info.m_tag = tag;
+        info.m_allocationId = registry_->GetNextAllocationId();
+        info.m_threadId = GetThreadId();
 
 #if COMB_MEM_DEBUG_CALLSTACKS
         CaptureCallstack(info.callstack, info.callstackDepth);
@@ -470,21 +454,20 @@ namespace comb
         return userPtr;
     }
 
-    inline void StackAllocator::DeallocateDebug(void* ptr)
-    {
+    inline void StackAllocator::DeallocateDebug(void* ptr) {
         using namespace debug;
 
         // StackAllocator doesn't support individual deallocation
         // But we still track it for debugging purposes
 
-        if (!ptr) return;
+        if (!ptr)
+            return;
 
         // 1. Find allocation info
         auto* info = registry_->FindAllocation(ptr);
         if (!info)
         {
-            hive::LogWarning(comb::LogCombRoot,
-                             "[MEM_DEBUG] [{}] Deallocate called on unknown pointer: {}",
+            hive::LogWarning(comb::LOG_COMB_ROOT, "[MEM_DEBUG] [{}] Deallocate called on unknown pointer: {}",
                              GetName(), ptr);
             return;
         }
@@ -494,19 +477,19 @@ namespace comb
         {
             if (!info->CheckGuards())
             {
-                if (info->ReadGuardFront() != GuardMagic)
+                if (info->ReadGuardFront() != guardMagic)
                 {
-                    hive::LogError(comb::LogCombRoot,
+                    hive::LogError(comb::LOG_COMB_ROOT,
                                    "[MEM_DEBUG] [{}] Buffer UNDERRUN detected! Address: {}, Size: {}, Tag: {}",
-                                   GetName(), ptr, info->size, info->GetTagOrDefault());
+                                   GetName(), ptr, info->m_size, info->GetTagOrDefault());
                     hive::Assert(false, "Buffer underrun detected");
                 }
 
-                if (info->ReadGuardBack() != GuardMagic)
+                if (info->ReadGuardBack() != guardMagic)
                 {
-                    hive::LogError(comb::LogCombRoot,
+                    hive::LogError(comb::LOG_COMB_ROOT,
                                    "[MEM_DEBUG] [{}] Buffer OVERRUN detected! Address: {}, Size: {}, Tag: {}",
-                                   GetName(), ptr, info->size, info->GetTagOrDefault());
+                                   GetName(), ptr, info->m_size, info->GetTagOrDefault());
                     hive::Assert(false, "Buffer overrun detected");
                 }
             }
@@ -514,12 +497,12 @@ namespace comb
 
         // 3. Fill with freed pattern (detect use-after-free)
 #if COMB_MEM_DEBUG_USE_AFTER_FREE
-        std::memset(ptr, FreedMemoryPattern, info->size);
+        std::memset(ptr, freedMemoryPattern, info->m_size);
 #endif
 
         // 4. Record deallocation in history
 #if COMB_MEM_DEBUG_HISTORY
-        history_->RecordDeallocation(ptr, info->size);
+        history_->RecordDeallocation(ptr, info->m_size);
 #endif
 
         // 5. Unregister allocation
@@ -530,4 +513,4 @@ namespace comb
     }
 
 #endif // COMB_MEM_DEBUG
-}
+} // namespace comb

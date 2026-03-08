@@ -33,119 +33,112 @@
 #pragma once
 
 #include <comb/allocator_concepts.h>
-#include <new>           // For placement new
-#include <utility>       // For std::forward
-#include <type_traits>   // For is_trivially_destructible_v
+
+#include <new>         // For placement new
+#include <type_traits> // For is_trivially_destructible_v
+#include <utility>     // For std::forward
 
 namespace comb
 {
 
-/**
- * Allocate and construct an object using allocator
- *
- * @tparam T Object type to construct
- * @tparam Alloc Allocator type (must satisfy comb::Allocator concept)
- * @tparam Args Constructor argument types
- * @param allocator Allocator to use
- * @param args Constructor arguments
- * @return Pointer to constructed object, or nullptr if allocation failed
- */
-template<typename T, Allocator Alloc, typename... Args>
-[[nodiscard]] T* New(Alloc& allocator, Args&&... args)
-{
-    void* memory = allocator.Allocate(sizeof(T), alignof(T));
+    /**
+     * Allocate and construct an object using allocator
+     *
+     * @tparam T Object type to construct
+     * @tparam Alloc Allocator type (must satisfy comb::Allocator concept)
+     * @tparam Args Constructor argument types
+     * @param allocator Allocator to use
+     * @param args Constructor arguments
+     * @return Pointer to constructed object, or nullptr if allocation failed
+     */
+    template <typename T, Allocator Alloc, typename... Args> [[nodiscard]] T* New(Alloc& allocator, Args&&... args) {
+        void* memory = allocator.Allocate(sizeof(T), alignof(T));
 
-    if (memory == nullptr)
-    {
-        return nullptr;
-    }
-
-    return new (memory) T(std::forward<Args>(args)...);
-}
-
-/**
- * Destruct and deallocate an object using allocator
- *
- * @tparam T Object type
- * @tparam Alloc Allocator type (must satisfy comb::Allocator concept)
- * @param allocator Allocator to use (must be same as used for New)
- * @param ptr Pointer to object (nullptr is a no-op)
- */
-template<typename T, Allocator Alloc>
-void Delete(Alloc& allocator, T* ptr)
-{
-    if (ptr == nullptr)
-    {
-        return;
-    }
-
-    if constexpr (!std::is_trivially_destructible_v<T>)
-    {
-        ptr->~T();
-    }
-
-    allocator.Deallocate(ptr);
-}
-
-/**
- * Allocate and default-construct an array of objects using allocator
- *
- * @tparam T Element type
- * @tparam Alloc Allocator type (must satisfy comb::Allocator concept)
- * @param allocator Allocator to use
- * @param count Number of elements to allocate
- * @return Pointer to first element, or nullptr if allocation failed
- */
-template<typename T, Allocator Alloc>
-[[nodiscard]] T* NewArray(Alloc& allocator, size_t count)
-{
-    if (count == 0)
-    {
-        return nullptr;
-    }
-
-    void* memory = allocator.Allocate(sizeof(T) * count, alignof(T));
-
-    if (memory == nullptr)
-    {
-        return nullptr;
-    }
-
-    T* array = static_cast<T*>(memory);
-    for (size_t i = 0; i < count; ++i)
-    {
-        new (&array[i]) T();
-    }
-
-    return array;
-}
-
-/**
- * Destruct and deallocate an array of objects
- *
- * @tparam T Element type
- * @tparam Alloc Allocator type (must satisfy comb::Allocator concept)
- * @param allocator Allocator to use
- * @param ptr Pointer to first element (nullptr is a no-op)
- * @param count Number of elements in array
- */
-template<typename T, Allocator Alloc>
-void DeleteArray(Alloc& allocator, T* ptr, size_t count)
-{
-    if (ptr == nullptr)
-    {
-        return;
-    }
-
-    if constexpr (!std::is_trivially_destructible_v<T>)
-    {
-        for (size_t i = count; i > 0; --i)
+        if (memory == nullptr)
         {
-            ptr[i - 1].~T();
+            return nullptr;
         }
+
+        return new (memory) T(std::forward<Args>(args)...);
     }
 
-    allocator.Deallocate(ptr);
-}
+    /**
+     * Destruct and deallocate an object using allocator
+     *
+     * @tparam T Object type
+     * @tparam Alloc Allocator type (must satisfy comb::Allocator concept)
+     * @param allocator Allocator to use (must be same as used for New)
+     * @param ptr Pointer to object (nullptr is a no-op)
+     */
+    template <typename T, Allocator Alloc> void Delete(Alloc& allocator, T* ptr) {
+        if (ptr == nullptr)
+        {
+            return;
+        }
+
+        if constexpr (!std::is_trivially_destructible_v<T>)
+        {
+            ptr->~T();
+        }
+
+        allocator.Deallocate(ptr);
+    }
+
+    /**
+     * Allocate and default-construct an array of objects using allocator
+     *
+     * @tparam T Element type
+     * @tparam Alloc Allocator type (must satisfy comb::Allocator concept)
+     * @param allocator Allocator to use
+     * @param count Number of elements to allocate
+     * @return Pointer to first element, or nullptr if allocation failed
+     */
+    template <typename T, Allocator Alloc> [[nodiscard]] T* NewArray(Alloc& allocator, size_t count) {
+        if (count == 0)
+        {
+            return nullptr;
+        }
+
+        void* memory = allocator.Allocate(sizeof(T) * count, alignof(T));
+
+        if (memory == nullptr)
+        {
+            return nullptr;
+        }
+
+        T* array = static_cast<T*>(memory);
+        for (size_t i = 0; i < count; ++i)
+        {
+            new (&array[i]) T();
+        }
+
+        return array;
+    }
+
+    /**
+     * Destruct and deallocate an array of objects
+     *
+     * @tparam T Element type
+     * @tparam Alloc Allocator type (must satisfy comb::Allocator concept)
+     * @param allocator Allocator to use
+     * @param ptr Pointer to first element (nullptr is a no-op)
+     * @param count Number of elements in array
+     */
+    template <typename T, Allocator Alloc> void DeleteArray(Alloc& allocator, T* ptr, size_t count) {
+        if (ptr == nullptr)
+        {
+            return;
+        }
+
+        if constexpr (!std::is_trivially_destructible_v<T>)
+        {
+            for (size_t i = count; i > 0; --i)
+            {
+                ptr[i - 1].~T();
+            }
+        }
+
+        allocator.Deallocate(ptr);
+    }
 
 } // namespace comb

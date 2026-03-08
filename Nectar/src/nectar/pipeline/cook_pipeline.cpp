@@ -1,64 +1,62 @@
-#include <nectar/pipeline/cook_pipeline.h>
-#include <nectar/pipeline/cooker_registry.h>
-#include <nectar/pipeline/cook_cache.h>
+#include <hive/profiling/profiler.h>
+
+#include <wax/containers/hash_set.h>
+
 #include <nectar/cas/cas_store.h>
 #include <nectar/database/asset_database.h>
 #include <nectar/database/dependency_graph.h>
-#include <hive/profiling/profiler.h>
-#include <wax/containers/hash_set.h>
-#include <thread>
-#include <mutex>
+#include <nectar/pipeline/cook_cache.h>
+#include <nectar/pipeline/cook_pipeline.h>
+#include <nectar/pipeline/cooker_registry.h>
+
 #include <atomic>
+#include <mutex>
+#include <thread>
 #include <vector>
 
 namespace nectar
 {
-    CookPipeline::CookPipeline(comb::DefaultAllocator& alloc,
-                               CookerRegistry& registry,
-                               CasStore& cas,
-                               AssetDatabase& db,
-                               CookCache& cache)
-        : alloc_{&alloc}
-        , registry_{&registry}
-        , cas_{&cas}
-        , db_{&db}
-        , cache_{&cache}
-    {}
+    CookPipeline::CookPipeline(comb::DefaultAllocator& alloc, CookerRegistry& registry, CasStore& cas,
+                               AssetDatabase& db, CookCache& cache)
+        : m_alloc{&alloc}
+        , m_registry{&registry}
+        , m_cas{&cas}
+        , m_db{&db}
+        , m_cache{&cache} {}
 
-    CookOutput CookPipeline::CookAll(const CookRequest& request)
-    {
+    CookOutput CookPipeline::CookAll(const CookRequest& request) {
         HIVE_PROFILE_SCOPE_N("CookPipeline::CookAll");
         CookOutput output{};
-        output.failed_assets = wax::Vector<AssetId>{*alloc_};
-        output.total = request.assets.Size();
+        output.m_failedAssets = wax::Vector<AssetId>{*m_alloc};
+        output.m_total = request.m_assets.Size();
 
-        if (request.assets.IsEmpty())
+        if (request.m_assets.IsEmpty())
             return output;
 
         // Build sub-graph for requested assets and sort by levels
-        auto& graph = db_->GetDependencyGraph();
-        wax::Vector<wax::Vector<AssetId>> levels{*alloc_};
+        auto& graph = m_db->GetDependencyGraph();
+        wax::Vector<wax::Vector<AssetId>> levels{*m_alloc};
 
         // Filter to only assets that exist in the graph
         // If no edges exist, each asset is its own level-0 node
-        bool has_graph = graph.TopologicalSortLevels(levels);
-        if (!has_graph)
+        bool hasGraph = graph.TopologicalSortLevels(levels);
+        if (!hasGraph)
         {
             // Cycle detected — cook all sequentially as fallback
-            for (size_t i = 0; i < request.assets.Size(); ++i)
-                CookAsset(request.assets[i], request.platform, output);
+            for (size_t i = 0; i < request.m_assets.Size(); ++i)
+                CookAsset(request.m_assets[i], request.m_platform, output);
             return output;
         }
 
         // Build a set of requested asset IDs for filtering
-        wax::HashSet<AssetId> requested{*alloc_};
-        for (size_t i = 0; i < request.assets.Size(); ++i)
-            requested.Insert(request.assets[i]);
+        wax::HashSet<AssetId> requested{*m_alloc};
+        for (size_t i = 0; i < request.m_assets.Size(); ++i)
+            requested.Insert(request.m_assets[i]);
 
         // Cook level by level, filtering to only requested assets
         for (size_t lvl = 0; lvl < levels.Size(); ++lvl)
         {
-            wax::Vector<AssetId> filtered{*alloc_};
+            wax::Vector<AssetId> filtered{*m_alloc};
             for (size_t i = 0; i < levels[lvl].Size(); ++i)
             {
                 if (requested.Contains(levels[lvl][i]))
@@ -66,143 +64,139 @@ namespace nectar
             }
 
             if (!filtered.IsEmpty())
-                CookLevel(filtered, request.platform, request.worker_count, output);
+                CookLevel(filtered, request.m_platform, request.m_workerCount, output);
         }
 
         // Handle assets not in the graph (no dependencies registered)
-        for (size_t i = 0; i < request.assets.Size(); ++i)
+        for (size_t i = 0; i < request.m_assets.Size(); ++i)
         {
-            if (!graph.HasNode(request.assets[i]))
-                CookAsset(request.assets[i], request.platform, output);
+            if (!graph.HasNode(request.m_assets[i]))
+                CookAsset(request.m_assets[i], request.m_platform, output);
         }
 
         return output;
     }
 
-    CookResult CookPipeline::CookSingle(AssetId id, wax::StringView platform)
-    {
+    CookResult CookPipeline::CookSingle(AssetId id, wax::StringView platform) {
         HIVE_PROFILE_SCOPE_N("CookPipeline::CookSingle");
         CookResult result{};
-        result.error_message = wax::String{*alloc_};
+        result.m_errorMessage = wax::String{*m_alloc};
 
-        auto* record = db_->FindByUuid(id);
+        auto* record = m_db->FindByUuid(id);
         if (!record)
         {
-            result.error_message.Append("Asset not found in database");
+            result.m_errorMessage.Append("Asset not found in database");
             return result;
         }
 
-        IAssetCooker* cooker = registry_->FindByType(record->type.View());
+        IAssetCooker* cooker = m_registry->FindByType(record->m_type.View());
         if (!cooker)
         {
-            result.error_message.Append("No cooker for type: ");
-            result.error_message.Append(record->type.View().Data(), record->type.View().Size());
+            result.m_errorMessage.Append("No cooker for type: ");
+            result.m_errorMessage.Append(record->m_type.View().Data(), record->m_type.View().Size());
             return result;
         }
 
-        if (!record->intermediate_hash.IsValid())
+        if (!record->m_intermediateHash.IsValid())
         {
-            result.error_message.Append("No intermediate data (asset not imported)");
+            result.m_errorMessage.Append("No intermediate data (asset not imported)");
             return result;
         }
 
-        ContentHash cook_key = ComputeCookKey(id, platform);
-        auto* cached = cache_->Find(id, platform);
-        if (cached && cached->cook_key == cook_key)
+        ContentHash cookKey = ComputeCookKey(id, platform);
+        auto* cached = m_cache->Find(id, platform);
+        if (cached && cached->m_cookKey == cookKey)
         {
-            result.success = true;
-            result.cooked_data = cas_->Load(cached->cooked_hash);
+            result.m_success = true;
+            result.m_cookedData = m_cas->Load(cached->m_cookedHash);
             return result;
         }
 
         // Load intermediate from CAS
-        auto intermediate = cas_->Load(record->intermediate_hash);
+        auto intermediate = m_cas->Load(record->m_intermediateHash);
         if (intermediate.Size() == 0)
         {
-            result.error_message.Append("Failed to load intermediate blob from CAS");
+            result.m_errorMessage.Append("Failed to load intermediate blob from CAS");
             return result;
         }
 
         // Cook
-        CookContext ctx{platform, alloc_};
+        CookContext ctx{platform, m_alloc};
         result = cooker->Cook(intermediate.View(), ctx);
 
-        if (result.success)
+        if (result.m_success)
         {
-            ContentHash cooked_hash = ContentHash::FromData(result.cooked_data.View());
-            (void)cas_->Store(result.cooked_data.View());
+            ContentHash cookedHash = ContentHash::FromData(result.m_cookedData.View());
+            (void)m_cas->Store(result.m_cookedData.View());
 
             CookCacheEntry entry{};
-            entry.cook_key = cook_key;
-            entry.cooked_hash = cooked_hash;
-            entry.cooker_version = cooker->Version();
-            cache_->Store(id, platform, entry);
+            entry.m_cookKey = cookKey;
+            entry.m_cookedHash = cookedHash;
+            entry.m_cookerVersion = cooker->Version();
+            m_cache->Store(id, platform, entry);
         }
 
         return result;
     }
 
-    void CookPipeline::InvalidateCascade(AssetId changed)
-    {
+    void CookPipeline::InvalidateCascade(AssetId changed) {
         HIVE_PROFILE_SCOPE_N("CookPipeline::InvalidateCascade");
-        auto& graph = db_->GetDependencyGraph();
-        wax::Vector<AssetId> dependents{*alloc_};
-        graph.GetTransitiveDependents(changed, DepKind::Hard | DepKind::Build, dependents);
+        auto& graph = m_db->GetDependencyGraph();
+        wax::Vector<AssetId> dependents{*m_alloc};
+        graph.GetTransitiveDependents(changed, DepKind::HARD | DepKind::BUILD, dependents);
 
-        cache_->Invalidate(changed);
+        m_cache->Invalidate(changed);
 
         for (size_t i = 0; i < dependents.Size(); ++i)
-            cache_->Invalidate(dependents[i]);
+            m_cache->Invalidate(dependents[i]);
     }
 
-    void CookPipeline::CookLevel(const wax::Vector<AssetId>& level,
-                                  wax::StringView platform,
-                                  size_t worker_count,
-                                  CookOutput& output)
-    {
+    void CookPipeline::CookLevel(const wax::Vector<AssetId>& level, wax::StringView platform, size_t workerCount,
+                                 CookOutput& output) {
         HIVE_PROFILE_SCOPE_N("CookPipeline::CookLevel");
-        if (worker_count <= 1 || level.Size() <= 1)
+        if (workerCount <= 1 || level.Size() <= 1)
         {
             for (size_t i = 0; i < level.Size(); ++i)
                 CookAsset(level[i], platform, output);
             return;
         }
 
-        std::atomic<size_t> next_index{0};
-        std::mutex output_mutex;
+        std::atomic<size_t> nextIndex{0};
+        std::mutex outputMutex;
 
         // Each worker accumulates locally, then merges
         auto worker = [&]() {
-            size_t local_cooked = 0;
-            size_t local_skipped = 0;
-            size_t local_failed = 0;
-            wax::Vector<AssetId> local_failed_assets{*alloc_};
+            size_t localCooked = 0;
+            size_t localSkipped = 0;
+            size_t localFailed = 0;
+            wax::Vector<AssetId> localFailedAssets{*m_alloc};
 
             while (true)
             {
-                size_t idx = next_index.fetch_add(1);
-                if (idx >= level.Size()) break;
+                size_t idx = nextIndex.fetch_add(1);
+                if (idx >= level.Size())
+                    break;
 
-                CookOutput local_out{};
-                local_out.failed_assets = wax::Vector<AssetId>{*alloc_};
-                CookAsset(level[idx], platform, local_out);
+                CookOutput localOut{};
+                localOut.m_failedAssets = wax::Vector<AssetId>{*m_alloc};
+                CookAsset(level[idx], platform, localOut);
 
-                local_cooked += local_out.cooked;
-                local_skipped += local_out.skipped;
-                local_failed += local_out.failed;
-                for (size_t i = 0; i < local_out.failed_assets.Size(); ++i)
-                    local_failed_assets.PushBack(local_out.failed_assets[i]);
+                localCooked += localOut.m_cooked;
+                localSkipped += localOut.m_skipped;
+                localFailed += localOut.m_failed;
+                for (size_t i = 0; i < localOut.m_failedAssets.Size(); ++i)
+                    localFailedAssets.PushBack(localOut.m_failedAssets[i]);
             }
 
-            std::lock_guard lock{output_mutex};
-            output.cooked += local_cooked;
-            output.skipped += local_skipped;
-            output.failed += local_failed;
-            for (size_t i = 0; i < local_failed_assets.Size(); ++i)
-                output.failed_assets.PushBack(local_failed_assets[i]);
+            std::lock_guard lock{outputMutex};
+            output.m_cooked += localCooked;
+            output.m_skipped += localSkipped;
+            output.m_failed += localFailed;
+            for (size_t i = 0; i < localFailedAssets.Size(); ++i)
+                output.m_failedAssets.PushBack(localFailedAssets[i]);
         };
 
-        size_t actual = worker_count < level.Size() ? worker_count : level.Size();
+        size_t actual = workerCount < level.Size() ? workerCount : level.Size();
         std::vector<std::thread> threads;
         threads.reserve(actual);
         for (size_t i = 0; i < actual; ++i)
@@ -211,92 +205,88 @@ namespace nectar
             t.join();
     }
 
-    ContentHash CookPipeline::ComputeCookKey(AssetId id, wax::StringView platform)
-    {
-        auto* record = db_->FindByUuid(id);
-        if (!record) return ContentHash::Invalid();
+    ContentHash CookPipeline::ComputeCookKey(AssetId id, wax::StringView platform) {
+        auto* record = m_db->FindByUuid(id);
+        if (!record)
+            return ContentHash::Invalid();
 
-        IAssetCooker* cooker = registry_->FindByType(record->type.View());
-        if (!cooker) return ContentHash::Invalid();
+        IAssetCooker* cooker = m_registry->FindByType(record->m_type.View());
+        if (!cooker)
+            return ContentHash::Invalid();
 
         // Gather cooked hashes of hard dependencies
-        auto& graph = db_->GetDependencyGraph();
-        wax::Vector<AssetId> deps{*alloc_};
-        graph.GetDependencies(id, DepKind::Hard | DepKind::Build, deps);
+        auto& graph = m_db->GetDependencyGraph();
+        wax::Vector<AssetId> deps{*m_alloc};
+        graph.GetDependencies(id, DepKind::HARD | DepKind::BUILD, deps);
 
-        wax::Vector<ContentHash> dep_hashes{*alloc_};
+        wax::Vector<ContentHash> depHashes{*m_alloc};
         for (size_t i = 0; i < deps.Size(); ++i)
         {
-            auto* cached = cache_->Find(deps[i], platform);
+            auto* cached = m_cache->Find(deps[i], platform);
             if (cached)
-                dep_hashes.PushBack(cached->cooked_hash);
+                depHashes.PushBack(cached->m_cookedHash);
             else
-                dep_hashes.PushBack(ContentHash::Invalid());
+                depHashes.PushBack(ContentHash::Invalid());
         }
 
-        wax::Span<const ContentHash> dep_span{dep_hashes.Data(), dep_hashes.Size()};
-        return CookCache::BuildCookKey(
-            record->intermediate_hash,
-            cooker->Version(),
-            platform,
-            dep_span);
+        wax::Span<const ContentHash> depSpan{depHashes.Data(), depHashes.Size()};
+        return CookCache::BuildCookKey(record->m_intermediateHash, cooker->Version(), platform, depSpan);
     }
 
-    void CookPipeline::CookAsset(AssetId id, wax::StringView platform, CookOutput& output)
-    {
+    void CookPipeline::CookAsset(AssetId id, wax::StringView platform, CookOutput& output) {
         HIVE_PROFILE_SCOPE_N("CookPipeline::CookAsset");
-        auto* record = db_->FindByUuid(id);
-        if (!record || !record->intermediate_hash.IsValid())
+        auto* record = m_db->FindByUuid(id);
+        if (!record || !record->m_intermediateHash.IsValid())
         {
-            ++output.failed;
-            output.failed_assets.PushBack(id);
+            ++output.m_failed;
+            output.m_failedAssets.PushBack(id);
             return;
         }
 
-        IAssetCooker* cooker = registry_->FindByType(record->type.View());
+        IAssetCooker* cooker = m_registry->FindByType(record->m_type.View());
         if (!cooker)
         {
-            ++output.failed;
-            output.failed_assets.PushBack(id);
+            ++output.m_failed;
+            output.m_failedAssets.PushBack(id);
             return;
         }
 
-        ContentHash cook_key = ComputeCookKey(id, platform);
-        auto* cached = cache_->Find(id, platform);
-        if (cached && cached->cook_key == cook_key)
+        ContentHash cookKey = ComputeCookKey(id, platform);
+        auto* cached = m_cache->Find(id, platform);
+        if (cached && cached->m_cookKey == cookKey)
         {
-            ++output.skipped;
+            ++output.m_skipped;
             return;
         }
 
         // Load intermediate
-        auto intermediate = cas_->Load(record->intermediate_hash);
+        auto intermediate = m_cas->Load(record->m_intermediateHash);
         if (intermediate.Size() == 0)
         {
-            ++output.failed;
-            output.failed_assets.PushBack(id);
+            ++output.m_failed;
+            output.m_failedAssets.PushBack(id);
             return;
         }
 
         // Cook
-        CookContext ctx{platform, alloc_};
+        CookContext ctx{platform, m_alloc};
         auto result = cooker->Cook(intermediate.View(), ctx);
-        if (!result.success)
+        if (!result.m_success)
         {
-            ++output.failed;
-            output.failed_assets.PushBack(id);
+            ++output.m_failed;
+            output.m_failedAssets.PushBack(id);
             return;
         }
 
-        ContentHash cooked_hash = ContentHash::FromData(result.cooked_data.View());
-        (void)cas_->Store(result.cooked_data.View());
+        ContentHash cookedHash = ContentHash::FromData(result.m_cookedData.View());
+        (void)m_cas->Store(result.m_cookedData.View());
 
         CookCacheEntry entry{};
-        entry.cook_key = cook_key;
-        entry.cooked_hash = cooked_hash;
-        entry.cooker_version = cooker->Version();
-        cache_->Store(id, platform, entry);
+        entry.m_cookKey = cookKey;
+        entry.m_cookedHash = cookedHash;
+        entry.m_cookerVersion = cooker->Version();
+        m_cache->Store(id, platform, entry);
 
-        ++output.cooked;
+        ++output.m_cooked;
     }
-}
+} // namespace nectar

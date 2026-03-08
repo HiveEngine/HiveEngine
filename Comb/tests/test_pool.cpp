@@ -1,7 +1,9 @@
-#include <larvae/larvae.h>
-#include <comb/pool_allocator.h>
 #include <comb/allocator_concepts.h>
 #include <comb/new.h>
+#include <comb/pool_allocator.h>
+
+#include <larvae/larvae.h>
+
 #include <cstring>
 
 namespace
@@ -11,7 +13,9 @@ namespace
         int value;
         float data;
 
-        TestObject(int v = 0, float d = 0.0f) : value{v}, data{d} {}
+        TestObject(int v = 0, float d = 0.0f)
+            : value{v}
+            , data{d} {}
     };
 
     struct LargeObject
@@ -407,4 +411,4 @@ namespace
         pool.Deallocate(ptr2);
         larvae::AssertEqual(pool.GetUsedMemory(), 0u);
     });
-}
+} // namespace

@@ -1,9 +1,11 @@
-#include <larvae/larvae.h>
-#include <queen/reflect/world_serializer.h>
-#include <queen/reflect/world_deserializer.h>
 #include <queen/reflect/component_registry.h>
 #include <queen/reflect/reflectable.h>
+#include <queen/reflect/world_deserializer.h>
+#include <queen/reflect/world_serializer.h>
 #include <queen/world/world.h>
+
+#include <larvae/larvae.h>
+
 #include <cstring>
 
 namespace
@@ -18,8 +20,7 @@ namespace
         float y = 0.f;
         float z = 0.f;
 
-        static void Reflect(queen::ComponentReflector<>& r)
-        {
+        static void Reflect(queen::ComponentReflector<>& r) {
             r.Field("x", &Pos::x);
             r.Field("y", &Pos::y);
             r.Field("z", &Pos::z);
@@ -32,8 +33,7 @@ namespace
         float dy = 0.f;
         float dz = 0.f;
 
-        static void Reflect(queen::ComponentReflector<>& r)
-        {
+        static void Reflect(queen::ComponentReflector<>& r) {
             r.Field("dx", &Vel::dx);
             r.Field("dy", &Vel::dy);
             r.Field("dz", &Vel::dz);
@@ -45,8 +45,7 @@ namespace
         queen::Entity target;
         int32_t priority = 0;
 
-        static void Reflect(queen::ComponentReflector<>& r)
-        {
+        static void Reflect(queen::ComponentReflector<>& r) {
             r.Field("target", &Targeting::target);
             r.Field("priority", &Targeting::priority);
         }
@@ -57,8 +56,7 @@ namespace
         int32_t current = 100;
         int32_t max = 100;
 
-        static void Reflect(queen::ComponentReflector<>& r)
-        {
+        static void Reflect(queen::ComponentReflector<>& r) {
             r.Field("current", &Health::current);
             r.Field("max", &Health::max);
         }
@@ -68,11 +66,11 @@ namespace
     // Helpers
     // ============================================================
 
-    bool HasEntityWithPos(queen::World& world, float ex, float ey, float ez)
-    {
+    bool HasEntityWithPos(queen::World& world, float ex, float ey, float ez) {
         bool found = false;
         world.ForEachArchetype([&](queen::Archetype<queen::ComponentAllocator>& arch) {
-            if (!arch.template HasComponent<Pos>()) return;
+            if (!arch.template HasComponent<Pos>())
+                return;
             for (uint32_t row = 0; row < arch.EntityCount(); ++row)
             {
                 auto* p = arch.template GetComponent<Pos>(row);
@@ -85,11 +83,11 @@ namespace
         return found;
     }
 
-    queen::Entity FindEntityWithPos(queen::World& world, float ex, float ey, float ez)
-    {
+    queen::Entity FindEntityWithPos(queen::World& world, float ex, float ey, float ez) {
         queen::Entity result;
         world.ForEachArchetype([&](queen::Archetype<queen::ComponentAllocator>& arch) {
-            if (!arch.template HasComponent<Pos>()) return;
+            if (!arch.template HasComponent<Pos>())
+                return;
             for (uint32_t row = 0; row < arch.EntityCount(); ++row)
             {
                 auto* p = arch.template GetComponent<Pos>(row);
@@ -115,8 +113,8 @@ namespace
         queen::WorldSerializer<4096> serializer;
         auto result = serializer.Serialize(world, registry);
 
-        larvae::AssertTrue(result.success);
-        larvae::AssertEqual(result.entities_written, size_t{0});
+        larvae::AssertTrue(result.m_success);
+        larvae::AssertEqual(result.m_entitiesWritten, size_t{0});
         larvae::AssertTrue(std::strstr(serializer.CStr(), "\"version\":1") != nullptr);
         larvae::AssertTrue(std::strstr(serializer.CStr(), "\"entities\":[]") != nullptr);
     });
@@ -133,26 +131,27 @@ namespace
         queen::WorldSerializer<8192> serializer;
         auto result = serializer.Serialize(world, registry);
 
-        larvae::AssertTrue(result.success);
-        larvae::AssertEqual(result.entities_written, size_t{2});
-        larvae::AssertEqual(result.components_written, size_t{3}); // Pos + Pos + Vel
+        larvae::AssertTrue(result.m_success);
+        larvae::AssertEqual(result.m_entitiesWritten, size_t{2});
+        larvae::AssertEqual(result.m_componentsWritten, size_t{3}); // Pos + Pos + Vel
     });
 
-    auto test_serialize_skips_unregistered = larvae::RegisterTest("QueenWorldSerialization", "SerializeSkipsUnregistered", []() {
-        queen::ComponentRegistry<32> registry;
-        registry.Register<Pos>();
-        // Vel is NOT registered
+    auto test_serialize_skips_unregistered =
+        larvae::RegisterTest("QueenWorldSerialization", "SerializeSkipsUnregistered", []() {
+            queen::ComponentRegistry<32> registry;
+            registry.Register<Pos>();
+            // Vel is NOT registered
 
-        queen::World world;
-        world.Spawn(Pos{1.f, 0.f, 0.f}, Vel{0.1f, 0.f, 0.f});
+            queen::World world;
+            world.Spawn(Pos{1.f, 0.f, 0.f}, Vel{0.1f, 0.f, 0.f});
 
-        queen::WorldSerializer<4096> serializer;
-        auto result = serializer.Serialize(world, registry);
+            queen::WorldSerializer<4096> serializer;
+            auto result = serializer.Serialize(world, registry);
 
-        larvae::AssertTrue(result.success);
-        larvae::AssertEqual(result.entities_written, size_t{1});
-        larvae::AssertEqual(result.components_written, size_t{1}); // Only Pos
-    });
+            larvae::AssertTrue(result.m_success);
+            larvae::AssertEqual(result.m_entitiesWritten, size_t{1});
+            larvae::AssertEqual(result.m_componentsWritten, size_t{1}); // Only Pos
+        });
 
     auto test_serialize_parent_field = larvae::RegisterTest("QueenWorldSerialization", "SerializeParentField", []() {
         queen::ComponentRegistry<32> registry;
@@ -166,7 +165,7 @@ namespace
         queen::WorldSerializer<8192> serializer;
         auto result = serializer.Serialize(world, registry);
 
-        larvae::AssertTrue(result.success);
+        larvae::AssertTrue(result.m_success);
         // Parent field should appear in the JSON
         larvae::AssertTrue(std::strstr(serializer.CStr(), "\"parent\":") != nullptr);
     });
@@ -187,8 +186,8 @@ namespace
         queen::World dst;
         auto result = queen::WorldDeserializer::Deserialize(dst, registry, serializer.CStr());
 
-        larvae::AssertTrue(result.success);
-        larvae::AssertEqual(result.entities_loaded, size_t{0});
+        larvae::AssertTrue(result.m_success);
+        larvae::AssertEqual(result.m_entitiesLoaded, size_t{0});
         larvae::AssertEqual(dst.EntityCount(), size_t{0});
     });
 
@@ -205,7 +204,7 @@ namespace
         queen::World dst;
         auto result = queen::WorldDeserializer::Deserialize(dst, registry, serializer.CStr());
 
-        larvae::AssertTrue(result.success);
+        larvae::AssertTrue(result.m_success);
         larvae::AssertEqual(dst.EntityCount(), size_t{1});
         larvae::AssertTrue(HasEntityWithPos(dst, 1.5f, -2.5f, 3.0f));
     });
@@ -225,64 +224,66 @@ namespace
         queen::World dst;
         auto result = queen::WorldDeserializer::Deserialize(dst, registry, serializer.CStr());
 
-        larvae::AssertTrue(result.success);
+        larvae::AssertTrue(result.m_success);
         larvae::AssertEqual(dst.EntityCount(), size_t{3});
         larvae::AssertTrue(HasEntityWithPos(dst, 1.f, 0.f, 0.f));
         larvae::AssertTrue(HasEntityWithPos(dst, 2.f, 0.f, 0.f));
         larvae::AssertTrue(HasEntityWithPos(dst, 3.f, 0.f, 0.f));
     });
 
-    auto test_roundtrip_multi_archetype = larvae::RegisterTest("QueenWorldSerialization", "RoundtripMultiArchetype", []() {
-        queen::ComponentRegistry<32> registry;
-        registry.Register<Pos>();
-        registry.Register<Vel>();
+    auto test_roundtrip_multi_archetype =
+        larvae::RegisterTest("QueenWorldSerialization", "RoundtripMultiArchetype", []() {
+            queen::ComponentRegistry<32> registry;
+            registry.Register<Pos>();
+            registry.Register<Vel>();
 
-        queen::World src;
-        src.Spawn(Pos{1.f, 0.f, 0.f});                              // archetype: [Pos]
-        src.Spawn(Pos{2.f, 0.f, 0.f}, Vel{0.5f, 0.f, 0.f});        // archetype: [Pos, Vel]
+            queen::World src;
+            src.Spawn(Pos{1.f, 0.f, 0.f});                      // archetype: [Pos]
+            src.Spawn(Pos{2.f, 0.f, 0.f}, Vel{0.5f, 0.f, 0.f}); // archetype: [Pos, Vel]
 
-        queen::WorldSerializer<8192> serializer;
-        serializer.Serialize(src, registry);
+            queen::WorldSerializer<8192> serializer;
+            serializer.Serialize(src, registry);
 
-        queen::World dst;
-        auto result = queen::WorldDeserializer::Deserialize(dst, registry, serializer.CStr());
+            queen::World dst;
+            auto result = queen::WorldDeserializer::Deserialize(dst, registry, serializer.CStr());
 
-        larvae::AssertTrue(result.success);
-        larvae::AssertEqual(dst.EntityCount(), size_t{2});
-        larvae::AssertEqual(result.components_loaded, size_t{3});
+            larvae::AssertTrue(result.m_success);
+            larvae::AssertEqual(dst.EntityCount(), size_t{2});
+            larvae::AssertEqual(result.m_componentsLoaded, size_t{3});
 
-        // Check entity with only Pos
-        larvae::AssertTrue(HasEntityWithPos(dst, 1.f, 0.f, 0.f));
+            // Check entity with only Pos
+            larvae::AssertTrue(HasEntityWithPos(dst, 1.f, 0.f, 0.f));
 
-        // Check entity with Pos + Vel
-        queen::Entity e = FindEntityWithPos(dst, 2.f, 0.f, 0.f);
-        larvae::AssertTrue(dst.IsAlive(e));
-        auto* vel = dst.Get<Vel>(e);
-        larvae::AssertNotNull(vel);
-        larvae::AssertEqual(vel->dx, 0.5f);
-    });
+            // Check entity with Pos + Vel
+            queen::Entity e = FindEntityWithPos(dst, 2.f, 0.f, 0.f);
+            larvae::AssertTrue(dst.IsAlive(e));
+            auto* vel = dst.Get<Vel>(e);
+            larvae::AssertNotNull(vel);
+            larvae::AssertEqual(vel->dx, 0.5f);
+        });
 
-    auto test_roundtrip_multi_component = larvae::RegisterTest("QueenWorldSerialization", "RoundtripMultiComponent", []() {
-        queen::ComponentRegistry<32> registry;
-        registry.Register<Pos>();
-        registry.Register<Health>();
+    auto test_roundtrip_multi_component =
+        larvae::RegisterTest("QueenWorldSerialization", "RoundtripMultiComponent", []() {
+            queen::ComponentRegistry<32> registry;
+            registry.Register<Pos>();
+            registry.Register<Health>();
 
-        queen::World src;
-        src.Spawn(Pos{5.f, 10.f, 15.f}, Health{75, 100});
+            queen::World src;
+            src.Spawn(Pos{5.f, 10.f, 15.f}, Health{75, 100});
 
-        queen::WorldSerializer<4096> serializer;
-        serializer.Serialize(src, registry);
+            queen::WorldSerializer<4096> serializer;
+            serializer.Serialize(src, registry);
 
-        queen::World dst;
-        queen::WorldDeserializer::Deserialize(dst, registry, serializer.CStr());
+            queen::World dst;
+            queen::WorldDeserializer::Deserialize(dst, registry, serializer.CStr());
 
-        queen::Entity e = FindEntityWithPos(dst, 5.f, 10.f, 15.f);
-        larvae::AssertTrue(dst.IsAlive(e));
-        auto* hp = dst.Get<Health>(e);
-        larvae::AssertNotNull(hp);
-        larvae::AssertEqual(hp->current, int32_t{75});
-        larvae::AssertEqual(hp->max, int32_t{100});
-    });
+            queen::Entity e = FindEntityWithPos(dst, 5.f, 10.f, 15.f);
+            larvae::AssertTrue(dst.IsAlive(e));
+            auto* hp = dst.Get<Health>(e);
+            larvae::AssertNotNull(hp);
+            larvae::AssertEqual(hp->current, int32_t{75});
+            larvae::AssertEqual(hp->max, int32_t{100});
+        });
 
     // ============================================================
     // Entity remapping tests
@@ -303,13 +304,14 @@ namespace
         queen::World dst;
         auto result = queen::WorldDeserializer::Deserialize(dst, registry, serializer.CStr());
 
-        larvae::AssertTrue(result.success);
+        larvae::AssertTrue(result.m_success);
         larvae::AssertEqual(dst.EntityCount(), size_t{2});
 
         // Find the targeting entity and verify Entity reference was remapped
         bool found = false;
         dst.ForEachArchetype([&](queen::Archetype<queen::ComponentAllocator>& arch) {
-            if (!arch.template HasComponent<Targeting>()) return;
+            if (!arch.template HasComponent<Targeting>())
+                return;
             for (uint32_t row = 0; row < arch.EntityCount(); ++row)
             {
                 auto* t = arch.template GetComponent<Targeting>(row);
@@ -350,7 +352,7 @@ namespace
         queen::World dst;
         auto result = queen::WorldDeserializer::Deserialize(dst, registry, serializer.CStr());
 
-        larvae::AssertTrue(result.success);
+        larvae::AssertTrue(result.m_success);
         larvae::AssertEqual(dst.EntityCount(), size_t{2});
 
         queen::Entity dst_child = FindEntityWithPos(dst, 2.f, 0.f, 0.f);
@@ -393,31 +395,32 @@ namespace
     // Forward-compatibility tests
     // ============================================================
 
-    auto test_unknown_component_skipped = larvae::RegisterTest("QueenWorldSerialization", "UnknownComponentSkipped", []() {
-        // Serialize with full registry
-        queen::ComponentRegistry<32> full_registry;
-        full_registry.Register<Pos>();
-        full_registry.Register<Vel>();
+    auto test_unknown_component_skipped =
+        larvae::RegisterTest("QueenWorldSerialization", "UnknownComponentSkipped", []() {
+            // Serialize with full registry
+            queen::ComponentRegistry<32> full_registry;
+            full_registry.Register<Pos>();
+            full_registry.Register<Vel>();
 
-        queen::World src;
-        src.Spawn(Pos{1.f, 2.f, 3.f}, Vel{0.1f, 0.2f, 0.3f});
+            queen::World src;
+            src.Spawn(Pos{1.f, 2.f, 3.f}, Vel{0.1f, 0.2f, 0.3f});
 
-        queen::WorldSerializer<8192> serializer;
-        serializer.Serialize(src, full_registry);
+            queen::WorldSerializer<8192> serializer;
+            serializer.Serialize(src, full_registry);
 
-        // Deserialize with partial registry (no Vel)
-        queen::ComponentRegistry<32> partial_registry;
-        partial_registry.Register<Pos>();
+            // Deserialize with partial registry (no Vel)
+            queen::ComponentRegistry<32> partial_registry;
+            partial_registry.Register<Pos>();
 
-        queen::World dst;
-        auto result = queen::WorldDeserializer::Deserialize(dst, partial_registry, serializer.CStr());
+            queen::World dst;
+            auto result = queen::WorldDeserializer::Deserialize(dst, partial_registry, serializer.CStr());
 
-        larvae::AssertTrue(result.success);
-        larvae::AssertEqual(result.entities_loaded, size_t{1});
-        larvae::AssertEqual(result.components_loaded, size_t{1});
-        larvae::AssertEqual(result.components_skipped, size_t{1});
-        larvae::AssertTrue(HasEntityWithPos(dst, 1.f, 2.f, 3.f));
-    });
+            larvae::AssertTrue(result.m_success);
+            larvae::AssertEqual(result.m_entitiesLoaded, size_t{1});
+            larvae::AssertEqual(result.m_componentsLoaded, size_t{1});
+            larvae::AssertEqual(result.m_componentsSkipped, size_t{1});
+            larvae::AssertTrue(HasEntityWithPos(dst, 1.f, 2.f, 3.f));
+        });
 
     auto test_additive_load = larvae::RegisterTest("QueenWorldSerialization", "AdditiveLoad", []() {
         queen::ComponentRegistry<32> registry;
@@ -438,8 +441,8 @@ namespace
         // Load additively
         auto result = queen::WorldDeserializer::Deserialize(dst, registry, serializer.CStr());
 
-        larvae::AssertTrue(result.success);
-        larvae::AssertEqual(result.entities_loaded, size_t{1});
+        larvae::AssertTrue(result.m_success);
+        larvae::AssertEqual(result.m_entitiesLoaded, size_t{1});
         larvae::AssertEqual(dst.EntityCount(), size_t{2});
         larvae::AssertTrue(HasEntityWithPos(dst, 99.f, 99.f, 99.f)); // original preserved
         larvae::AssertTrue(HasEntityWithPos(dst, 1.f, 2.f, 3.f));    // loaded
@@ -459,29 +462,30 @@ namespace
         queen::WorldSerializer<4096> serializer;
         auto result = serializer.Serialize(src, registry);
 
-        larvae::AssertTrue(result.success);
-        larvae::AssertEqual(result.entities_written, size_t{1});
-        larvae::AssertEqual(result.components_written, size_t{0});
+        larvae::AssertTrue(result.m_success);
+        larvae::AssertEqual(result.m_entitiesWritten, size_t{1});
+        larvae::AssertEqual(result.m_componentsWritten, size_t{0});
     });
 
-    auto test_deserialize_result_counts = larvae::RegisterTest("QueenWorldSerialization", "DeserializeResultCounts", []() {
-        queen::ComponentRegistry<32> registry;
-        registry.Register<Pos>();
-        registry.Register<Health>();
+    auto test_deserialize_result_counts =
+        larvae::RegisterTest("QueenWorldSerialization", "DeserializeResultCounts", []() {
+            queen::ComponentRegistry<32> registry;
+            registry.Register<Pos>();
+            registry.Register<Health>();
 
-        queen::World src;
-        src.Spawn(Pos{1.f, 0.f, 0.f}, Health{50, 100});
-        src.Spawn(Pos{2.f, 0.f, 0.f});
+            queen::World src;
+            src.Spawn(Pos{1.f, 0.f, 0.f}, Health{50, 100});
+            src.Spawn(Pos{2.f, 0.f, 0.f});
 
-        queen::WorldSerializer<8192> serializer;
-        serializer.Serialize(src, registry);
+            queen::WorldSerializer<8192> serializer;
+            serializer.Serialize(src, registry);
 
-        queen::World dst;
-        auto result = queen::WorldDeserializer::Deserialize(dst, registry, serializer.CStr());
+            queen::World dst;
+            auto result = queen::WorldDeserializer::Deserialize(dst, registry, serializer.CStr());
 
-        larvae::AssertTrue(result.success);
-        larvae::AssertEqual(result.entities_loaded, size_t{2});
-        larvae::AssertEqual(result.components_loaded, size_t{3}); // Pos + Health + Pos
-        larvae::AssertEqual(result.components_skipped, size_t{0});
-    });
-}
+            larvae::AssertTrue(result.m_success);
+            larvae::AssertEqual(result.m_entitiesLoaded, size_t{2});
+            larvae::AssertEqual(result.m_componentsLoaded, size_t{3}); // Pos + Health + Pos
+            larvae::AssertEqual(result.m_componentsSkipped, size_t{0});
+        });
+} // namespace

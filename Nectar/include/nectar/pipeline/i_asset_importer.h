@@ -1,11 +1,12 @@
 #pragma once
 
-#include <nectar/pipeline/import_result.h>
-#include <nectar/pipeline/import_context.h>
-#include <nectar/hive/hive_document.h>
-#include <wax/serialization/byte_span.h>
 #include <wax/containers/span.h>
 #include <wax/containers/string_view.h>
+#include <wax/serialization/byte_span.h>
+
+#include <nectar/hive/hive_document.h>
+#include <nectar/pipeline/import_context.h>
+#include <nectar/pipeline/import_result.h>
 
 namespace nectar
 {
@@ -27,8 +28,6 @@ namespace nectar
         [[nodiscard]] virtual wax::StringView TypeName() const = 0;
 
         /// Import source bytes + .hive settings into intermediate format.
-        virtual ImportResult Import(wax::ByteSpan source_data,
-                                    const HiveDocument& settings,
-                                    ImportContext& context) = 0;
+        virtual ImportResult Import(wax::ByteSpan sourceData, const HiveDocument& settings, ImportContext& context) = 0;
     };
-}
+} // namespace nectar

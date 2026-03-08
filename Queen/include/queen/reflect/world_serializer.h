@@ -1,9 +1,10 @@
 #pragma once
 
-#include <queen/reflect/json_serializer.h>
-#include <queen/reflect/component_registry.h>
-#include <queen/world/world.h>
 #include <queen/hierarchy/hierarchy.h>
+#include <queen/reflect/component_registry.h>
+#include <queen/reflect/json_serializer.h>
+#include <queen/world/world.h>
+
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
@@ -15,9 +16,9 @@ namespace queen
      */
     struct WorldSerializeResult
     {
-        bool success = false;
-        size_t entities_written = 0;
-        size_t components_written = 0;
+        bool m_success = false;
+        size_t m_entitiesWritten = 0;
+        size_t m_componentsWritten = 0;
     };
 
     /**
@@ -46,22 +47,19 @@ namespace queen
      *
      * @tparam BufSize Maximum output buffer size in bytes
      */
-    template<size_t BufSize = 65536>
-    class WorldSerializer
+    template <size_t BufSize = 65536> class WorldSerializer
     {
     public:
         WorldSerializer() noexcept = default;
 
-        template<size_t MaxComponents>
-        WorldSerializeResult Serialize(World& world,
-                                       const ComponentRegistry<MaxComponents>& registry) noexcept
-        {
+        template <size_t MaxComponents>
+        WorldSerializeResult Serialize(World& world, const ComponentRegistry<MaxComponents>& registry) noexcept {
             WorldSerializeResult result{};
-            pos_ = 0;
+            m_pos = 0;
 
             WriteRaw("{\"version\":1,\"entities\":[");
 
-            bool first_entity = true;
+            bool firstEntity = true;
 
             world.ForEachArchetype([&](Archetype<ComponentAllocator>& archetype) {
                 const auto& types = archetype.GetComponentTypes();
@@ -71,8 +69,9 @@ namespace queen
                 {
                     Entity entity = archetype.GetEntity(row);
 
-                    if (!first_entity) Put(',');
-                    first_entity = false;
+                    if (!firstEntity)
+                        Put(',');
+                    firstEntity = false;
 
                     WriteRaw("{\"id\":");
                     WriteUint64(entity.ToU64());
@@ -87,77 +86,75 @@ namespace queen
 
                     WriteRaw(",\"components\":{");
 
-                    bool first_comp = true;
+                    bool firstComp = true;
                     for (size_t c = 0; c < types.Size(); ++c)
                     {
-                        TypeId type_id = types[c];
+                        TypeId typeId = types[c];
 
                         // Skip hierarchy components
-                        if (type_id == TypeIdOf<Parent>() || type_id == TypeIdOf<Children>())
+                        if (typeId == TypeIdOf<Parent>() || typeId == TypeIdOf<Children>())
                             continue;
 
-                        const RegisteredComponent* reg = registry.Find(type_id);
+                        const RegisteredComponent* reg = registry.Find(typeId);
                         if (reg == nullptr || !reg->HasReflection())
                             continue;
 
-                        if (!first_comp) Put(',');
-                        first_comp = false;
+                        if (!firstComp)
+                            Put(',');
+                        firstComp = false;
 
                         Put('"');
-                        WriteRaw(reg->reflection.name);
+                        WriteRaw(reg->m_reflection.m_name);
                         Put('"');
                         Put(':');
 
-                        const void* data = archetype.GetComponentRaw(row, type_id);
+                        const void* data = archetype.GetComponentRaw(row, typeId);
                         JsonSerializer<4096> json;
-                        json.SerializeComponent(data, reg->reflection);
+                        json.SerializeComponent(data, reg->m_reflection);
                         WriteRaw(json.CStr());
 
-                        ++result.components_written;
+                        ++result.m_componentsWritten;
                     }
 
                     WriteRaw("}}");
-                    ++result.entities_written;
+                    ++result.m_entitiesWritten;
                 }
             });
 
             WriteRaw("]}");
             Terminate();
-            result.success = true;
+            result.m_success = true;
             return result;
         }
 
-        [[nodiscard]] const char* CStr() const noexcept { return buf_; }
-        [[nodiscard]] size_t Size() const noexcept { return pos_; }
+        [[nodiscard]] const char* CStr() const noexcept { return m_buf; }
+        [[nodiscard]] size_t Size() const noexcept { return m_pos; }
 
     private:
-        void Put(char c) noexcept
-        {
-            if (pos_ < BufSize - 1) buf_[pos_++] = c;
+        void Put(char c) noexcept {
+            if (m_pos < BufSize - 1)
+                m_buf[m_pos++] = c;
         }
 
-        void WriteRaw(const char* s) noexcept
-        {
-            if (s == nullptr) return;
-            while (*s && pos_ < BufSize - 1)
+        void WriteRaw(const char* s) noexcept {
+            if (s == nullptr)
+                return;
+            while (*s && m_pos < BufSize - 1)
             {
-                buf_[pos_++] = *s++;
+                m_buf[m_pos++] = *s++;
             }
         }
 
-        void WriteUint64(uint64_t v) noexcept
-        {
+        void WriteUint64(uint64_t v) noexcept {
             char tmp[24];
             int n = std::snprintf(tmp, sizeof(tmp), "%llu", static_cast<unsigned long long>(v));
-            for (int i = 0; i < n; ++i) Put(tmp[i]);
+            for (int i = 0; i < n; ++i)
+                Put(tmp[i]);
         }
 
-        void Terminate() noexcept
-        {
-            buf_[pos_ < BufSize ? pos_ : BufSize - 1] = '\0';
-        }
+        void Terminate() noexcept { m_buf[m_pos < BufSize ? m_pos : BufSize - 1] = '\0'; }
 
-        char buf_[BufSize]{};
-        size_t pos_ = 0;
+        char m_buf[BufSize]{};
+        size_t m_pos = 0;
     };
-}
+} // namespace queen

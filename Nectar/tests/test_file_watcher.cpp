@@ -1,16 +1,19 @@
 #define _CRT_SECURE_NO_WARNINGS
-#include <larvae/larvae.h>
-#include <nectar/watcher/file_watcher.h>
 #include <comb/default_allocator.h>
+
+#include <nectar/watcher/file_watcher.h>
+
+#include <larvae/larvae.h>
+
+#include <chrono>
 #include <cstdio>
 #include <filesystem>
 #include <thread>
-#include <chrono>
 
-namespace {
+namespace
+{
 
-    auto& GetFwAlloc()
-    {
+    auto& GetFwAlloc() {
         static comb::ModuleAllocator alloc{"TestFW", 4 * 1024 * 1024};
         return alloc.Get();
     }
@@ -20,21 +23,18 @@ namespace {
     {
         std::filesystem::path path;
 
-        TempDir()
-        {
+        TempDir() {
             path = std::filesystem::temp_directory_path() / "hive_fw_test";
             std::filesystem::remove_all(path);
             std::filesystem::create_directories(path);
         }
 
-        ~TempDir()
-        {
+        ~TempDir() {
             std::error_code ec;
             std::filesystem::remove_all(path, ec);
         }
 
-        void WriteFile(const char* name, const char* content)
-        {
+        void WriteFile(const char* name, const char* content) {
             auto file_path = path / name;
             FILE* f = std::fopen(file_path.string().c_str(), "wb");
             if (f)
@@ -44,16 +44,16 @@ namespace {
             }
         }
 
-        void DeleteFile(const char* name)
-        {
+        void DeleteFile(const char* name) {
             auto file_path = path / name;
             std::filesystem::remove(file_path);
         }
 
-        std::string PathStr() const
-        {
+        std::string PathStr() const {
             auto s = path.string();
-            for (auto& c : s) if (c == '\\') c = '/';
+            for (auto& c : s)
+                if (c == '\\')
+                    c = '/';
             return s;
         }
     };
@@ -93,8 +93,7 @@ namespace {
         bool found = false;
         for (size_t i = 0; i < changes.Size(); ++i)
         {
-            if (static_cast<uint8_t>(changes[i].kind) ==
-                static_cast<uint8_t>(nectar::FileChangeKind::Created))
+            if (static_cast<uint8_t>(changes[i].m_kind) == static_cast<uint8_t>(nectar::FileChangeKind::CREATED))
             {
                 found = true;
                 break;
@@ -128,8 +127,7 @@ namespace {
         bool found_modified = false;
         for (size_t i = 0; i < changes.Size(); ++i)
         {
-            if (static_cast<uint8_t>(changes[i].kind) ==
-                static_cast<uint8_t>(nectar::FileChangeKind::Modified))
+            if (static_cast<uint8_t>(changes[i].m_kind) == static_cast<uint8_t>(nectar::FileChangeKind::MODIFIED))
             {
                 found_modified = true;
                 break;
@@ -164,8 +162,7 @@ namespace {
         bool found_deleted = false;
         for (size_t i = 0; i < changes.Size(); ++i)
         {
-            if (static_cast<uint8_t>(changes[i].kind) ==
-                static_cast<uint8_t>(nectar::FileChangeKind::Deleted))
+            if (static_cast<uint8_t>(changes[i].m_kind) == static_cast<uint8_t>(nectar::FileChangeKind::DELETED))
             {
                 found_deleted = true;
                 break;

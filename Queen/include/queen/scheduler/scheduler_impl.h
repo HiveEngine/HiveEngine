@@ -11,43 +11,42 @@
 
 namespace queen
 {
-    template<comb::Allocator Allocator>
-    void Scheduler<Allocator>::RunAll(World& world, SystemStorage<Allocator>& storage)
-    {
+    template <comb::Allocator Allocator>
+    void Scheduler<Allocator>::RunAll(World& world, SystemStorage<Allocator>& storage) {
         HIVE_PROFILE_SCOPE_N("Scheduler::RunAll");
 
-        if (graph_.IsDirty())
+        if (m_graph.IsDirty())
         {
-            graph_.Build(storage);
+            m_graph.Build(storage);
         }
 
-        graph_.Reset();
+        m_graph.Reset();
 
-        Tick current_tick = world.CurrentTick();
+        Tick currentTick = world.CurrentTick();
 
-        const auto& order = graph_.ExecutionOrder();
+        const auto& order = m_graph.ExecutionOrder();
         for (size_t i = 0; i < order.Size(); ++i)
         {
-            uint32_t node_index = order[i];
-            SystemNode* node = graph_.GetNode(node_index);
+            uint32_t nodeIndex = order[i];
+            SystemNode* node = m_graph.GetNode(nodeIndex);
 
             if (node != nullptr)
             {
-                node->SetState(SystemState::Running);
+                node->SetState(SystemState::RUNNING);
 
-                SystemDescriptor<Allocator>* system = storage.GetSystemByIndex(node_index);
+                SystemDescriptor<Allocator>* system = storage.GetSystemByIndex(nodeIndex);
                 if (system != nullptr)
                 {
                     HIVE_PROFILE_SCOPE_N("ExecuteSystem");
                     HIVE_PROFILE_ZONE_NAME(system->Name(), std::strlen(system->Name()));
-                    system->Execute(world, current_tick);
+                    system->Execute(world, currentTick);
                 }
 
-                node->SetState(SystemState::Complete);
+                node->SetState(SystemState::COMPLETE);
             }
         }
 
         // Sync point
         world.GetCommands().FlushAll(world);
     }
-}
+} // namespace queen

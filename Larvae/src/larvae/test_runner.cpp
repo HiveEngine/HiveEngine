@@ -1,21 +1,19 @@
-#include <larvae/precomp.h>
-#include <larvae/test_runner.h>
-#include <larvae/test_registry.h>
 #include <larvae/assertions.h>
-#include <iostream>
-#include <chrono>
+#include <larvae/precomp.h>
+#include <larvae/test_registry.h>
+#include <larvae/test_runner.h>
+
 #include <algorithm>
+#include <chrono>
+#include <iostream>
 #include <random>
 
 namespace larvae
 {
     TestRunner::TestRunner(const TestRunnerConfig& config)
-        : config_{config}
-    {
-    }
+        : config_{config} {}
 
-    int TestRunner::Run()
-    {
+    int TestRunner::Run() {
         std::vector<TestInfo> tests = TestRegistry::GetInstance().GetTests();
 
         if (tests.empty())
@@ -46,8 +44,7 @@ namespace larvae
             std::ranges::shuffle(filtered_tests, g);
         }
 
-        std::cout << "[==========] Running " << filtered_tests.size()
-                  << " test(s)\n";
+        std::cout << "[==========] Running " << filtered_tests.size() << " test(s)\n";
 
         std::string current_suite;
 
@@ -55,8 +52,7 @@ namespace larvae
         {
             if (config_.repeat_count > 1)
             {
-                std::cout << "\n[----------] Iteration " << (repeat + 1)
-                          << " of " << config_.repeat_count << "\n";
+                std::cout << "\n[----------] Iteration " << (repeat + 1) << " of " << config_.repeat_count << "\n";
             }
 
             for (const auto& test : filtered_tests)
@@ -68,8 +64,7 @@ namespace larvae
                         std::cout << "\n";
                     }
                     current_suite = test.suite_name;
-                    std::cout << "[----------] Running tests from "
-                              << current_suite << "\n";
+                    std::cout << "[----------] Running tests from " << current_suite << "\n";
                 }
 
                 TestResult result = RunTest(test);
@@ -90,8 +85,7 @@ namespace larvae
         return GetFailedTests() > 0 ? 1 : 0;
     }
 
-    TestResult TestRunner::RunTest(const TestInfo& test_info) const
-    {
+    TestResult TestRunner::RunTest(const TestInfo& test_info) const {
         TestResult result;
         result.suite_name = test_info.suite_name;
         result.test_name = test_info.test_name;
@@ -111,7 +105,8 @@ namespace larvae
         s_current_failed = &test_failed;
 
         SetAssertionFailureHandler([](const char* message) -> bool {
-            if (s_current_error && s_current_failed) {
+            if (s_current_error && s_current_failed)
+            {
                 *s_current_error = message;
                 *s_current_failed = true;
             }
@@ -125,27 +120,27 @@ namespace larvae
         s_current_error = nullptr;
         s_current_failed = nullptr;
 
-        if (test_failed) {
+        if (test_failed)
+        {
             result.status = TestStatus::Failed;
             result.error_message = assertion_error;
-        } else {
+        }
+        else
+        {
             result.status = TestStatus::Passed;
         }
 
         auto end_time = std::chrono::high_resolution_clock::now();
-        auto duration = std::chrono::duration_cast<std::chrono::microseconds>(
-            end_time - start_time);
+        auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time);
         result.duration_ms = static_cast<double>(duration.count()) / 1000.0;
 
         if (result.status == TestStatus::Passed)
         {
-            std::cout << "[    OK    ] " << test_info.GetFullName()
-                      << " (" << result.duration_ms << " ms)\n";
+            std::cout << "[    OK    ] " << test_info.GetFullName() << " (" << result.duration_ms << " ms)\n";
         }
         else
         {
-            std::cout << "[  FAILED  ] " << test_info.GetFullName()
-                      << " (" << result.duration_ms << " ms)\n";
+            std::cout << "[  FAILED  ] " << test_info.GetFullName() << " (" << result.duration_ms << " ms)\n";
 
             if (config_.verbose)
             {
@@ -156,8 +151,7 @@ namespace larvae
         return result;
     }
 
-    bool TestRunner::MatchesFilter(const TestInfo& test_info) const
-    {
+    bool TestRunner::MatchesFilter(const TestInfo& test_info) const {
         if (!config_.suite_filter.empty())
         {
             if (test_info.suite_name != config_.suite_filter)
@@ -198,10 +192,8 @@ namespace larvae
         return true;
     }
 
-    void TestRunner::PrintSummary() const
-    {
-        std::cout << "[==========] " << GetTotalTests() << " test(s) ran ("
-                  << GetTotalTime() << " ms total)\n";
+    void TestRunner::PrintSummary() const {
+        std::cout << "[==========] " << GetTotalTests() << " test(s) ran (" << GetTotalTime() << " ms total)\n";
         std::cout << "[  PASSED  ] " << GetPassedTests() << " test(s)\n";
 
         if (GetFailedTests() > 0)
@@ -213,8 +205,7 @@ namespace larvae
             {
                 if (result.status == TestStatus::Failed)
                 {
-                    std::cout << "  " << result.suite_name << "."
-                              << result.test_name << "\n";
+                    std::cout << "  " << result.suite_name << "." << result.test_name << "\n";
 
                     if (!result.error_message.empty())
                     {
@@ -235,13 +226,11 @@ namespace larvae
         }
     }
 
-    int TestRunner::GetTotalTests() const
-    {
+    int TestRunner::GetTotalTests() const {
         return static_cast<int>(results_.size());
     }
 
-    int TestRunner::GetPassedTests() const
-    {
+    int TestRunner::GetPassedTests() const {
         int count = 0;
         for (const auto& result : results_)
         {
@@ -251,8 +240,7 @@ namespace larvae
         return count;
     }
 
-    int TestRunner::GetFailedTests() const
-    {
+    int TestRunner::GetFailedTests() const {
         int count = 0;
         for (const auto& result : results_)
         {
@@ -262,8 +250,7 @@ namespace larvae
         return count;
     }
 
-    int TestRunner::GetSkippedTests() const
-    {
+    int TestRunner::GetSkippedTests() const {
         int count = 0;
         for (const auto& result : results_)
         {
@@ -273,8 +260,7 @@ namespace larvae
         return count;
     }
 
-    double TestRunner::GetTotalTime() const
-    {
+    double TestRunner::GetTotalTime() const {
         double total = 0.0;
         for (const auto& result : results_)
         {
@@ -283,8 +269,7 @@ namespace larvae
         return total;
     }
 
-    TestRunnerConfig ParseCommandLine(int argc, char** argv)
-    {
+    TestRunnerConfig ParseCommandLine(int argc, char** argv) {
         TestRunnerConfig config;
 
         for (int i = 1; i < argc; ++i)
@@ -319,4 +304,4 @@ namespace larvae
 
         return config;
     }
-}
+} // namespace larvae

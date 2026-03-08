@@ -9,38 +9,37 @@
 
 namespace queen
 {
-    template<comb::Allocator Allocator>
-    void ParallelScheduler<Allocator>::RunAll(World& world, SystemStorage<Allocator>& storage)
-    {
-        if (graph_.IsDirty())
+    template <comb::Allocator Allocator>
+    void ParallelScheduler<Allocator>::RunAll(World& world, SystemStorage<Allocator>& storage) {
+        if (m_graph.IsDirty())
         {
             Build(storage);
         }
 
-        const size_t node_count = graph_.NodeCount();
-        if (node_count == 0)
+        const size_t nodeCount = m_graph.NodeCount();
+        if (nodeCount == 0)
         {
             return;
         }
 
-        if (!pool_->IsRunning())
+        if (!m_pool->IsRunning())
         {
-            pool_->Start();
+            m_pool->Start();
         }
 
-        graph_.Reset();
+        m_graph.Reset();
         ResetRemainingCounts();
 
-        Tick current_tick = world.CurrentTick();
+        Tick currentTick = world.CurrentTick();
 
         WaitGroup wg;
-        wg.Add(static_cast<int64_t>(node_count));
+        wg.Add(static_cast<int64_t>(nodeCount));
 
-        const auto& roots = graph_.Roots();
+        const auto& roots = m_graph.Roots();
         for (size_t i = 0; i < roots.Size(); ++i)
         {
-            uint32_t root_idx = roots[i];
-            SubmitSystemTask(root_idx, world, storage, current_tick, wg);
+            uint32_t rootIdx = roots[i];
+            SubmitSystemTask(rootIdx, world, storage, currentTick, wg);
         }
 
         wg.Wait();
@@ -48,4 +47,4 @@ namespace queen
         // Sync point
         world.GetCommands().FlushAll(world);
     }
-}
+} // namespace queen

@@ -1,9 +1,10 @@
 #pragma once
 
-#include <queen/reflect/json_deserializer.h>
-#include <queen/reflect/component_registry.h>
-#include <queen/world/world.h>
 #include <queen/hierarchy/hierarchy.h>
+#include <queen/reflect/component_registry.h>
+#include <queen/reflect/json_deserializer.h>
+#include <queen/world/world.h>
+
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
@@ -15,11 +16,11 @@ namespace queen
      */
     struct WorldDeserializeResult
     {
-        bool success = false;
-        size_t entities_loaded = 0;
-        size_t components_loaded = 0;
-        size_t components_skipped = 0;
-        const char* error = nullptr;
+        bool m_success = false;
+        size_t m_entitiesLoaded = 0;
+        size_t m_componentsLoaded = 0;
+        size_t m_componentsSkipped = 0;
+        const char* m_error = nullptr;
     };
 
     /**
@@ -42,75 +43,95 @@ namespace queen
 
         struct Parser
         {
-            const char* data;
-            size_t pos = 0;
+            const char* m_data;
+            size_t m_pos = 0;
 
-            explicit Parser(const char* json) noexcept : data{json} {}
+            explicit Parser(const char* json) noexcept
+                : m_data{json} {}
 
-            [[nodiscard]] bool HasMore() const noexcept { return data[pos] != '\0'; }
-            [[nodiscard]] char Peek() const noexcept { return data[pos]; }
-            void Advance() noexcept { if (data[pos]) ++pos; }
+            [[nodiscard]] bool HasMore() const noexcept { return m_data[m_pos] != '\0'; }
+            [[nodiscard]] char Peek() const noexcept { return m_data[m_pos]; }
+            void Advance() noexcept {
+                if (m_data[m_pos])
+                    ++m_pos;
+            }
 
-            void SkipWhitespace() noexcept
-            {
-                while (data[pos] == ' ' || data[pos] == '\t' ||
-                       data[pos] == '\n' || data[pos] == '\r')
+            void SkipWhitespace() noexcept {
+                while (m_data[m_pos] == ' ' || m_data[m_pos] == '\t' || m_data[m_pos] == '\n' || m_data[m_pos] == '\r')
                 {
-                    ++pos;
+                    ++m_pos;
                 }
             }
 
-            bool Expect(char c) noexcept
-            {
+            bool Expect(char c) noexcept {
                 SkipWhitespace();
-                if (data[pos] == c) { ++pos; return true; }
+                if (m_data[m_pos] == c)
+                {
+                    ++m_pos;
+                    return true;
+                }
                 return false;
             }
 
-            bool ReadString(char* out, size_t out_size) noexcept
-            {
-                if (data[pos] != '"') return false;
-                ++pos;
+            bool ReadString(char* out, size_t outSize) noexcept {
+                if (m_data[m_pos] != '"')
+                    return false;
+                ++m_pos;
 
                 size_t written = 0;
-                while (data[pos] && data[pos] != '"')
+                while (m_data[m_pos] && m_data[m_pos] != '"')
                 {
-                    char c = data[pos++];
-                    if (c == '\\' && data[pos])
+                    char c = m_data[m_pos++];
+                    if (c == '\\' && m_data[m_pos])
                     {
-                        char esc = data[pos++];
+                        char esc = m_data[m_pos++];
                         switch (esc)
                         {
-                            case '"':  c = '"'; break;
-                            case '\\': c = '\\'; break;
-                            case 'n':  c = '\n'; break;
-                            case 't':  c = '\t'; break;
-                            case '/':  c = '/'; break;
-                            default:   c = esc; break;
+                            case '"':
+                                c = '"';
+                                break;
+                            case '\\':
+                                c = '\\';
+                                break;
+                            case 'n':
+                                c = '\n';
+                                break;
+                            case 't':
+                                c = '\t';
+                                break;
+                            case '/':
+                                c = '/';
+                                break;
+                            default:
+                                c = esc;
+                                break;
                         }
                     }
-                    if (written < out_size - 1)
+                    if (written < outSize - 1)
                     {
                         out[written++] = c;
                     }
                 }
                 out[written] = '\0';
-                if (data[pos] == '"') { ++pos; return true; }
+                if (m_data[m_pos] == '"')
+                {
+                    ++m_pos;
+                    return true;
+                }
                 return false;
             }
 
-            bool ReadNumber(double& out) noexcept
-            {
-                const char* start = data + pos;
+            bool ReadNumber(double& out) noexcept {
+                const char* start = m_data + m_pos;
                 char* end = nullptr;
                 out = std::strtod(start, &end);
-                if (end == start) return false;
-                pos = static_cast<size_t>(end - data);
+                if (end == start)
+                    return false;
+                m_pos = static_cast<size_t>(end - m_data);
                 return true;
             }
 
-            bool SkipValue() noexcept
-            {
+            bool SkipValue() noexcept {
                 SkipWhitespace();
                 char c = Peek();
                 if (c == '"')
@@ -118,77 +139,92 @@ namespace queen
                     char tmp[256];
                     return ReadString(tmp, sizeof(tmp));
                 }
-                if (c == '{') return SkipObject();
-                if (c == '[') return SkipArray();
+                if (c == '{')
+                    return SkipObject();
+                if (c == '[')
+                    return SkipArray();
                 if (c == 't' || c == 'f')
                 {
                     bool tmp;
                     return ReadBool(tmp);
                 }
-                if (c == 'n' && std::strncmp(data + pos, "null", 4) == 0)
+                if (c == 'n' && std::strncmp(m_data + m_pos, "null", 4) == 0)
                 {
-                    pos += 4;
+                    m_pos += 4;
                     return true;
                 }
                 double tmp;
                 return ReadNumber(tmp);
             }
 
-            bool ReadBool(bool& out) noexcept
-            {
-                if (std::strncmp(data + pos, "true", 4) == 0)
+            bool ReadBool(bool& out) noexcept {
+                if (std::strncmp(m_data + m_pos, "true", 4) == 0)
                 {
-                    out = true; pos += 4; return true;
+                    out = true;
+                    m_pos += 4;
+                    return true;
                 }
-                if (std::strncmp(data + pos, "false", 5) == 0)
+                if (std::strncmp(m_data + m_pos, "false", 5) == 0)
                 {
-                    out = false; pos += 5; return true;
+                    out = false;
+                    m_pos += 5;
+                    return true;
                 }
                 return false;
             }
 
-            bool SkipObject() noexcept
-            {
-                if (data[pos] != '{') return false;
-                ++pos;
+            bool SkipObject() noexcept {
+                if (m_data[m_pos] != '{')
+                    return false;
+                ++m_pos;
                 int depth = 1;
-                while (data[pos] && depth > 0)
+                while (m_data[m_pos] && depth > 0)
                 {
-                    if (data[pos] == '{') ++depth;
-                    else if (data[pos] == '}') --depth;
-                    else if (data[pos] == '"')
+                    if (m_data[m_pos] == '{')
+                        ++depth;
+                    else if (m_data[m_pos] == '}')
+                        --depth;
+                    else if (m_data[m_pos] == '"')
                     {
-                        ++pos;
-                        while (data[pos] && data[pos] != '"')
+                        ++m_pos;
+                        while (m_data[m_pos] && m_data[m_pos] != '"')
                         {
-                            if (data[pos] == '\\') ++pos;
-                            if (data[pos]) ++pos;
+                            if (m_data[m_pos] == '\\')
+                                ++m_pos;
+                            if (m_data[m_pos])
+                                ++m_pos;
                         }
                     }
-                    if (data[pos]) ++pos;
+                    if (m_data[m_pos])
+                        ++m_pos;
                 }
                 return depth == 0;
             }
 
-            bool SkipArray() noexcept
-            {
-                if (data[pos] != '[') return false;
-                ++pos;
+            bool SkipArray() noexcept {
+                if (m_data[m_pos] != '[')
+                    return false;
+                ++m_pos;
                 int depth = 1;
-                while (data[pos] && depth > 0)
+                while (m_data[m_pos] && depth > 0)
                 {
-                    if (data[pos] == '[') ++depth;
-                    else if (data[pos] == ']') --depth;
-                    else if (data[pos] == '"')
+                    if (m_data[m_pos] == '[')
+                        ++depth;
+                    else if (m_data[m_pos] == ']')
+                        --depth;
+                    else if (m_data[m_pos] == '"')
                     {
-                        ++pos;
-                        while (data[pos] && data[pos] != '"')
+                        ++m_pos;
+                        while (m_data[m_pos] && m_data[m_pos] != '"')
                         {
-                            if (data[pos] == '\\') ++pos;
-                            if (data[pos]) ++pos;
+                            if (m_data[m_pos] == '\\')
+                                ++m_pos;
+                            if (m_data[m_pos])
+                                ++m_pos;
                         }
                     }
-                    if (data[pos]) ++pos;
+                    if (m_data[m_pos])
+                        ++m_pos;
                 }
                 return depth == 0;
             }
@@ -196,64 +232,60 @@ namespace queen
 
         struct RemapEntry
         {
-            uint64_t serialized_id = 0;
-            Entity live_entity;
+            uint64_t m_serializedId = 0;
+            Entity m_liveEntity;
         };
 
         struct ParentLink
         {
-            size_t entity_index = 0;
-            uint64_t parent_id = 0;
+            size_t m_entityIndex = 0;
+            uint64_t m_parentId = 0;
         };
 
-        static Entity FindRemapped(const RemapEntry* table, size_t count, uint64_t serialized_id) noexcept
-        {
+        static Entity FindRemapped(const RemapEntry* table, size_t count, uint64_t serializedId) noexcept {
             for (size_t i = 0; i < count; ++i)
             {
-                if (table[i].serialized_id == serialized_id)
+                if (table[i].m_serializedId == serializedId)
                 {
-                    return table[i].live_entity;
+                    return table[i].m_liveEntity;
                 }
             }
             return Entity::Invalid();
         }
 
-        static void RemapFieldsRecursive(
-            void* base,
-            const FieldInfo* fields, size_t field_count,
-            const RemapEntry* remap_table, size_t remap_count) noexcept
-        {
-            for (size_t i = 0; i < field_count; ++i)
+        static void RemapFieldsRecursive(void* base, const FieldInfo* fields, size_t fieldCount,
+                                         const RemapEntry* remapTable, size_t remapCount) noexcept {
+            for (size_t i = 0; i < fieldCount; ++i)
             {
                 const FieldInfo& field = fields[i];
-                auto* field_ptr = static_cast<std::byte*>(base) + field.offset;
+                auto* fieldPtr = static_cast<std::byte*>(base) + field.m_offset;
 
-                if (field.type == FieldType::Entity)
+                if (field.m_type == FieldType::ENTITY)
                 {
-                    auto* entity_ref = reinterpret_cast<Entity*>(field_ptr);
-                    if (!entity_ref->IsNull())
+                    auto* entityRef = reinterpret_cast<Entity*>(fieldPtr);
+                    if (!entityRef->IsNull())
                     {
-                        Entity remapped = FindRemapped(remap_table, remap_count, entity_ref->ToU64());
+                        Entity remapped = FindRemapped(remapTable, remapCount, entityRef->ToU64());
                         if (!remapped.IsNull())
                         {
-                            *entity_ref = remapped;
+                            *entityRef = remapped;
                         }
                     }
                 }
-                else if (field.type == FieldType::Struct && field.nested_fields != nullptr)
+                else if (field.m_type == FieldType::STRUCT && field.m_nestedFields != nullptr)
                 {
-                    RemapFieldsRecursive(field_ptr, field.nested_fields, field.nested_field_count,
-                                        remap_table, remap_count);
+                    RemapFieldsRecursive(fieldPtr, field.m_nestedFields, field.m_nestedFieldCount, remapTable,
+                                         remapCount);
                 }
-                else if (field.type == FieldType::FixedArray && field.element_type == FieldType::Entity)
+                else if (field.m_type == FieldType::FIXED_ARRAY && field.m_elementType == FieldType::ENTITY)
                 {
-                    size_t elem_size = (field.element_count > 0) ? (field.size / field.element_count) : 0;
-                    for (size_t j = 0; j < field.element_count; ++j)
+                    size_t elemSize = (field.m_elementCount > 0) ? (field.m_size / field.m_elementCount) : 0;
+                    for (size_t j = 0; j < field.m_elementCount; ++j)
                     {
-                        auto* elem = reinterpret_cast<Entity*>(field_ptr + j * elem_size);
+                        auto* elem = reinterpret_cast<Entity*>(fieldPtr + j * elemSize);
                         if (!elem->IsNull())
                         {
-                            Entity remapped = FindRemapped(remap_table, remap_count, elem->ToU64());
+                            Entity remapped = FindRemapped(remapTable, remapCount, elem->ToU64());
                             if (!remapped.IsNull())
                             {
                                 *elem = remapped;
@@ -264,34 +296,31 @@ namespace queen
             }
         }
 
-        template<size_t MaxComponents>
-        static void RemapEntityFields(
-            World& world,
-            const ComponentRegistry<MaxComponents>& registry,
-            const RemapEntry* remap_table, size_t remap_count) noexcept
-        {
-            for (size_t e = 0; e < remap_count; ++e)
+        template <size_t MaxComponents>
+        static void RemapEntityFields(World& world, const ComponentRegistry<MaxComponents>& registry,
+                                      const RemapEntry* remapTable, size_t remapCount) noexcept {
+            for (size_t e = 0; e < remapCount; ++e)
             {
-                Entity live = remap_table[e].live_entity;
+                Entity live = remapTable[e].m_liveEntity;
 
                 for (size_t r = 0; r < registry.Count(); ++r)
                 {
                     const auto& reg = registry[r];
-                    if (!reg.HasReflection()) continue;
+                    if (!reg.HasReflection())
+                        continue;
 
-                    void* comp_data = world.GetComponentRaw(live, reg.meta.type_id);
-                    if (comp_data == nullptr) continue;
+                    void* compData = world.GetComponentRaw(live, reg.m_meta.m_typeId);
+                    if (compData == nullptr)
+                        continue;
 
-                    RemapFieldsRecursive(
-                        comp_data, reg.reflection.fields, reg.reflection.field_count,
-                        remap_table, remap_count);
+                    RemapFieldsRecursive(compData, reg.m_reflection.m_fields, reg.m_reflection.m_fieldCount, remapTable,
+                                         remapCount);
                 }
             }
         }
 
-        static WorldDeserializeResult Fail(WorldDeserializeResult& result, const char* error) noexcept
-        {
-            result.error = error;
+        static WorldDeserializeResult Fail(WorldDeserializeResult& result, const char* error) noexcept {
+            result.m_error = error;
             return result;
         }
 
@@ -299,95 +328,106 @@ namespace queen
         static constexpr size_t kMaxEntities = 4096;
         static constexpr size_t kMaxComponentSize = 512;
 
-        template<size_t MaxComponents>
-        static WorldDeserializeResult Deserialize(
-            World& world,
-            const ComponentRegistry<MaxComponents>& registry,
-            const char* json) noexcept
-        {
+        template <size_t MaxComponents>
+        static WorldDeserializeResult Deserialize(World& world, const ComponentRegistry<MaxComponents>& registry,
+                                                  const char* json) noexcept {
             WorldDeserializeResult result{};
             Parser p{json};
 
-            RemapEntry remap_table[kMaxEntities]{};
-            size_t remap_count = 0;
+            RemapEntry remapTable[kMaxEntities]{};
+            size_t remapCount = 0;
 
-            ParentLink parent_links[kMaxEntities]{};
-            size_t parent_count = 0;
+            ParentLink parentLinks[kMaxEntities]{};
+            size_t parentCount = 0;
 
             // Parse: {"version":1,"entities":[...]}
             p.SkipWhitespace();
-            if (!p.Expect('{')) return Fail(result, "Expected '{'");
+            if (!p.Expect('{'))
+                return Fail(result, "Expected '{'");
 
             p.SkipWhitespace();
             char key[64]{};
-            if (!p.ReadString(key, sizeof(key))) return Fail(result, "Expected key");
+            if (!p.ReadString(key, sizeof(key)))
+                return Fail(result, "Expected key");
             p.SkipWhitespace();
-            if (!p.Expect(':')) return Fail(result, "Expected ':'");
+            if (!p.Expect(':'))
+                return Fail(result, "Expected ':'");
             double version;
-            if (!p.ReadNumber(version)) return Fail(result, "Expected version number");
+            if (!p.ReadNumber(version))
+                return Fail(result, "Expected version number");
 
             p.SkipWhitespace();
-            if (!p.Expect(',')) return Fail(result, "Expected ','");
+            if (!p.Expect(','))
+                return Fail(result, "Expected ','");
 
             p.SkipWhitespace();
-            if (!p.ReadString(key, sizeof(key))) return Fail(result, "Expected 'entities' key");
+            if (!p.ReadString(key, sizeof(key)))
+                return Fail(result, "Expected 'entities' key");
             p.SkipWhitespace();
-            if (!p.Expect(':')) return Fail(result, "Expected ':'");
+            if (!p.Expect(':'))
+                return Fail(result, "Expected ':'");
 
             p.SkipWhitespace();
-            if (!p.Expect('[')) return Fail(result, "Expected '['");
+            if (!p.Expect('['))
+                return Fail(result, "Expected '['");
 
             p.SkipWhitespace();
             if (p.Peek() == ']')
             {
                 p.Advance();
                 p.SkipWhitespace();
-                if (p.Peek() == '}') p.Advance();
-                result.success = true;
+                if (p.Peek() == '}')
+                    p.Advance();
+                result.m_success = true;
                 return result;
             }
 
             while (p.HasMore())
             {
-                if (remap_count >= kMaxEntities)
+                if (remapCount >= kMaxEntities)
                     return Fail(result, "Too many entities");
 
                 p.SkipWhitespace();
-                if (!p.Expect('{')) return Fail(result, "Expected entity '{'");
+                if (!p.Expect('{'))
+                    return Fail(result, "Expected entity '{'");
 
-                uint64_t serialized_id = 0;
-                uint64_t parent_id = 0;
-                bool has_parent = false;
+                uint64_t serializedId = 0;
+                uint64_t parentId = 0;
+                bool hasParent = false;
 
                 auto builder = world.Spawn();
 
                 while (p.HasMore())
                 {
                     p.SkipWhitespace();
-                    char field_name[64]{};
-                    if (!p.ReadString(field_name, sizeof(field_name)))
+                    char fieldName[64]{};
+                    if (!p.ReadString(fieldName, sizeof(fieldName)))
                         return Fail(result, "Expected field name");
 
                     p.SkipWhitespace();
-                    if (!p.Expect(':')) return Fail(result, "Expected ':'");
+                    if (!p.Expect(':'))
+                        return Fail(result, "Expected ':'");
                     p.SkipWhitespace();
 
-                    if (detail::StringsEqual(field_name, "id"))
+                    if (detail::StringsEqual(fieldName, "id"))
                     {
                         double num;
-                        if (!p.ReadNumber(num)) return Fail(result, "Expected entity id");
-                        serialized_id = static_cast<uint64_t>(num);
+                        if (!p.ReadNumber(num))
+                            return Fail(result, "Expected entity id");
+                        serializedId = static_cast<uint64_t>(num);
                     }
-                    else if (detail::StringsEqual(field_name, "parent"))
+                    else if (detail::StringsEqual(fieldName, "parent"))
                     {
                         double num;
-                        if (!p.ReadNumber(num)) return Fail(result, "Expected parent id");
-                        parent_id = static_cast<uint64_t>(num);
-                        has_parent = true;
+                        if (!p.ReadNumber(num))
+                            return Fail(result, "Expected parent id");
+                        parentId = static_cast<uint64_t>(num);
+                        hasParent = true;
                     }
-                    else if (detail::StringsEqual(field_name, "components"))
+                    else if (detail::StringsEqual(fieldName, "components"))
                     {
-                        if (!p.Expect('{')) return Fail(result, "Expected components '{'");
+                        if (!p.Expect('{'))
+                            return Fail(result, "Expected components '{'");
 
                         p.SkipWhitespace();
                         if (p.Peek() != '}')
@@ -395,58 +435,67 @@ namespace queen
                             while (p.HasMore())
                             {
                                 p.SkipWhitespace();
-                                char comp_name[64]{};
-                                if (!p.ReadString(comp_name, sizeof(comp_name)))
+                                char compName[64]{};
+                                if (!p.ReadString(compName, sizeof(compName)))
                                     return Fail(result, "Expected component name");
 
                                 p.SkipWhitespace();
-                                if (!p.Expect(':')) return Fail(result, "Expected ':'");
+                                if (!p.Expect(':'))
+                                    return Fail(result, "Expected ':'");
                                 p.SkipWhitespace();
 
-                                const RegisteredComponent* reg = registry.FindByName(comp_name);
+                                const RegisteredComponent* reg = registry.FindByName(compName);
                                 if (reg != nullptr && reg->HasReflection())
                                 {
-                                    if (reg->meta.size > kMaxComponentSize)
+                                    if (reg->m_meta.m_size > kMaxComponentSize)
                                         return Fail(result, "Component too large");
 
                                     alignas(16) std::byte buffer[kMaxComponentSize]{};
-                                    if (reg->meta.construct != nullptr)
+                                    if (reg->m_meta.m_construct != nullptr)
                                     {
-                                        reg->meta.construct(buffer);
+                                        reg->m_meta.m_construct(buffer);
                                     }
 
-                                    auto comp_result = JsonDeserializer::DeserializeComponent(
-                                        buffer, reg->reflection, p.data + p.pos);
+                                    auto compResult = JsonDeserializer::DeserializeComponent(buffer, reg->m_reflection,
+                                                                                             p.m_data + p.m_pos);
 
-                                    if (!comp_result.success)
+                                    if (!compResult.m_success)
                                     {
-                                        if (reg->meta.destruct != nullptr)
-                                            reg->meta.destruct(buffer);
+                                        if (reg->m_meta.m_destruct != nullptr)
+                                            reg->m_meta.m_destruct(buffer);
                                         return Fail(result, "Failed to deserialize component");
                                     }
 
                                     // Advance parser past the component JSON object
                                     p.SkipValue();
 
-                                    builder.WithRaw(reg->meta, buffer);
+                                    builder.WithRaw(reg->m_meta, buffer);
 
-                                    if (reg->meta.destruct != nullptr)
+                                    if (reg->m_meta.m_destruct != nullptr)
                                     {
-                                        reg->meta.destruct(buffer);
+                                        reg->m_meta.m_destruct(buffer);
                                     }
 
-                                    ++result.components_loaded;
+                                    ++result.m_componentsLoaded;
                                 }
                                 else
                                 {
                                     p.SkipValue();
-                                    ++result.components_skipped;
+                                    ++result.m_componentsSkipped;
                                 }
 
                                 p.SkipWhitespace();
-                                if (p.Peek() == ',') { p.Advance(); }
-                                else if (p.Peek() == '}') { p.Advance(); break; }
-                                else return Fail(result, "Expected ',' or '}' in components");
+                                if (p.Peek() == ',')
+                                {
+                                    p.Advance();
+                                }
+                                else if (p.Peek() == '}')
+                                {
+                                    p.Advance();
+                                    break;
+                                }
+                                else
+                                    return Fail(result, "Expected ',' or '}' in components");
                             }
                         }
                         else
@@ -460,38 +509,54 @@ namespace queen
                     }
 
                     p.SkipWhitespace();
-                    if (p.Peek() == ',') { p.Advance(); }
-                    else if (p.Peek() == '}') { p.Advance(); break; }
-                    else return Fail(result, "Expected ',' or '}' in entity");
+                    if (p.Peek() == ',')
+                    {
+                        p.Advance();
+                    }
+                    else if (p.Peek() == '}')
+                    {
+                        p.Advance();
+                        break;
+                    }
+                    else
+                        return Fail(result, "Expected ',' or '}' in entity");
                 }
 
                 Entity live = builder.Build();
 
-                size_t entity_idx = remap_count;
-                remap_table[remap_count] = {serialized_id, live};
-                ++remap_count;
+                size_t entityIdx = remapCount;
+                remapTable[remapCount] = {serializedId, live};
+                ++remapCount;
 
-                if (has_parent)
+                if (hasParent)
                 {
-                    parent_links[parent_count++] = {entity_idx, parent_id};
+                    parentLinks[parentCount++] = {entityIdx, parentId};
                 }
 
-                ++result.entities_loaded;
+                ++result.m_entitiesLoaded;
 
                 p.SkipWhitespace();
-                if (p.Peek() == ',') { p.Advance(); }
-                else if (p.Peek() == ']') { p.Advance(); break; }
-                else return Fail(result, "Expected ',' or ']' in entities array");
+                if (p.Peek() == ',')
+                {
+                    p.Advance();
+                }
+                else if (p.Peek() == ']')
+                {
+                    p.Advance();
+                    break;
+                }
+                else
+                    return Fail(result, "Expected ',' or ']' in entities array");
             }
 
             // --- Post-processing: Entity field remapping ---
-            RemapEntityFields(world, registry, remap_table, remap_count);
+            RemapEntityFields(world, registry, remapTable, remapCount);
 
             // --- Post-processing: Rebuild hierarchy ---
-            for (size_t i = 0; i < parent_count; ++i)
+            for (size_t i = 0; i < parentCount; ++i)
             {
-                Entity child = remap_table[parent_links[i].entity_index].live_entity;
-                Entity parent = FindRemapped(remap_table, remap_count, parent_links[i].parent_id);
+                Entity child = remapTable[parentLinks[i].m_entityIndex].m_liveEntity;
+                Entity parent = FindRemapped(remapTable, remapCount, parentLinks[i].m_parentId);
                 if (!parent.IsNull() && world.IsAlive(parent) && world.IsAlive(child))
                 {
                     world.SetParent(child, parent);
@@ -499,10 +564,11 @@ namespace queen
             }
 
             p.SkipWhitespace();
-            if (p.Peek() == '}') p.Advance();
+            if (p.Peek() == '}')
+                p.Advance();
 
-            result.success = true;
+            result.m_success = true;
             return result;
         }
     };
-}
+} // namespace queen

@@ -1,8 +1,11 @@
 #pragma once
 
-#include <comb/allocator_concepts.h>
-#include <wax/containers/vector.h>
 #include <hive/core/assert.h>
+
+#include <comb/allocator_concepts.h>
+
+#include <wax/containers/vector.h>
+
 #include <cstdint>
 
 namespace queen
@@ -51,25 +54,21 @@ namespace queen
      *   }
      * @endcode
      */
-    template<comb::Allocator Allocator>
-    class ComponentMask
+    template <comb::Allocator Allocator> class ComponentMask
     {
     public:
         static constexpr size_t BitsPerBlock = 64;
 
         explicit ComponentMask(Allocator& allocator)
             : allocator_{&allocator}
-            , blocks_{allocator}
-        {
-        }
+            , blocks_{allocator} {}
 
         /**
          * Copy constructor - uses the same allocator as other
          */
         ComponentMask(const ComponentMask& other)
             : allocator_{other.allocator_}
-            , blocks_{*other.allocator_}
-        {
+            , blocks_{*other.allocator_} {
             blocks_.Reserve(other.blocks_.Size());
             for (size_t i = 0; i < other.blocks_.Size(); ++i)
             {
@@ -80,8 +79,7 @@ namespace queen
         /**
          * Copy assignment - uses own allocator
          */
-        ComponentMask& operator=(const ComponentMask& other)
-        {
+        ComponentMask& operator=(const ComponentMask& other) {
             if (this != &other)
             {
                 blocks_.Clear();
@@ -96,12 +94,9 @@ namespace queen
 
         ComponentMask(ComponentMask&& other) noexcept
             : allocator_{other.allocator_}
-            , blocks_{std::move(other.blocks_)}
-        {
-        }
+            , blocks_{std::move(other.blocks_)} {}
 
-        ComponentMask& operator=(ComponentMask&& other) noexcept
-        {
+        ComponentMask& operator=(ComponentMask&& other) noexcept {
             if (this != &other)
             {
                 allocator_ = other.allocator_;
@@ -113,8 +108,7 @@ namespace queen
         /**
          * Set a bit at the given index
          */
-        void Set(size_t index)
-        {
+        void Set(size_t index) {
             size_t block_index = index / BitsPerBlock;
             size_t bit_index = index % BitsPerBlock;
 
@@ -125,8 +119,7 @@ namespace queen
         /**
          * Clear a bit at the given index
          */
-        void Clear(size_t index)
-        {
+        void Clear(size_t index) {
             size_t block_index = index / BitsPerBlock;
             if (block_index >= blocks_.Size())
             {
@@ -140,8 +133,7 @@ namespace queen
         /**
          * Test if a bit is set
          */
-        [[nodiscard]] bool Test(size_t index) const noexcept
-        {
+        [[nodiscard]] bool Test(size_t index) const noexcept {
             size_t block_index = index / BitsPerBlock;
             if (block_index >= blocks_.Size())
             {
@@ -155,8 +147,7 @@ namespace queen
         /**
          * Toggle a bit at the given index
          */
-        void Toggle(size_t index)
-        {
+        void Toggle(size_t index) {
             size_t block_index = index / BitsPerBlock;
             size_t bit_index = index % BitsPerBlock;
 
@@ -167,8 +158,7 @@ namespace queen
         /**
          * Clear all bits
          */
-        void ClearAll()
-        {
+        void ClearAll() {
             for (size_t i = 0; i < blocks_.Size(); ++i)
             {
                 blocks_[i] = 0;
@@ -178,8 +168,7 @@ namespace queen
         /**
          * Set all bits up to count
          */
-        void SetAll(size_t count)
-        {
+        void SetAll(size_t count) {
             size_t block_count = (count + BitsPerBlock - 1) / BitsPerBlock;
             EnsureCapacity(block_count);
 
@@ -207,8 +196,7 @@ namespace queen
         /**
          * Check if any bit is set
          */
-        [[nodiscard]] bool Any() const noexcept
-        {
+        [[nodiscard]] bool Any() const noexcept {
             for (size_t i = 0; i < blocks_.Size(); ++i)
             {
                 if (blocks_[i] != 0)
@@ -222,16 +210,12 @@ namespace queen
         /**
          * Check if no bits are set
          */
-        [[nodiscard]] bool None() const noexcept
-        {
-            return !Any();
-        }
+        [[nodiscard]] bool None() const noexcept { return !Any(); }
 
         /**
          * Count the number of set bits
          */
-        [[nodiscard]] size_t Count() const noexcept
-        {
+        [[nodiscard]] size_t Count() const noexcept {
             size_t count = 0;
             for (size_t i = 0; i < blocks_.Size(); ++i)
             {
@@ -243,11 +227,8 @@ namespace queen
         /**
          * Check if this mask has any overlap with another
          */
-        [[nodiscard]] bool Intersects(const ComponentMask& other) const noexcept
-        {
-            size_t min_size = blocks_.Size() < other.blocks_.Size()
-                ? blocks_.Size()
-                : other.blocks_.Size();
+        [[nodiscard]] bool Intersects(const ComponentMask& other) const noexcept {
+            size_t min_size = blocks_.Size() < other.blocks_.Size() ? blocks_.Size() : other.blocks_.Size();
 
             for (size_t i = 0; i < min_size; ++i)
             {
@@ -262,8 +243,7 @@ namespace queen
         /**
          * Check if this mask contains all bits from another
          */
-        [[nodiscard]] bool ContainsAll(const ComponentMask& other) const noexcept
-        {
+        [[nodiscard]] bool ContainsAll(const ComponentMask& other) const noexcept {
             for (size_t i = 0; i < other.blocks_.Size(); ++i)
             {
                 uint64_t our_block = (i < blocks_.Size()) ? blocks_[i] : 0;
@@ -278,19 +258,13 @@ namespace queen
         /**
          * Check if this mask has no overlap with another
          */
-        [[nodiscard]] bool Disjoint(const ComponentMask& other) const noexcept
-        {
-            return !Intersects(other);
-        }
+        [[nodiscard]] bool Disjoint(const ComponentMask& other) const noexcept { return !Intersects(other); }
 
         /**
          * Bitwise AND with another mask (intersection)
          */
-        ComponentMask& operator&=(const ComponentMask& other)
-        {
-            size_t min_size = blocks_.Size() < other.blocks_.Size()
-                ? blocks_.Size()
-                : other.blocks_.Size();
+        ComponentMask& operator&=(const ComponentMask& other) {
+            size_t min_size = blocks_.Size() < other.blocks_.Size() ? blocks_.Size() : other.blocks_.Size();
 
             for (size_t i = 0; i < min_size; ++i)
             {
@@ -309,8 +283,7 @@ namespace queen
         /**
          * Bitwise OR with another mask (union)
          */
-        ComponentMask& operator|=(const ComponentMask& other)
-        {
+        ComponentMask& operator|=(const ComponentMask& other) {
             EnsureCapacity(other.blocks_.Size());
 
             for (size_t i = 0; i < other.blocks_.Size(); ++i)
@@ -324,8 +297,7 @@ namespace queen
         /**
          * Bitwise XOR with another mask (symmetric difference)
          */
-        ComponentMask& operator^=(const ComponentMask& other)
-        {
+        ComponentMask& operator^=(const ComponentMask& other) {
             EnsureCapacity(other.blocks_.Size());
 
             for (size_t i = 0; i < other.blocks_.Size(); ++i)
@@ -339,8 +311,7 @@ namespace queen
         /**
          * Bitwise NOT (complement)
          */
-        void Invert()
-        {
+        void Invert() {
             for (size_t i = 0; i < blocks_.Size(); ++i)
             {
                 blocks_[i] = ~blocks_[i];
@@ -350,11 +321,8 @@ namespace queen
         /**
          * Equality comparison
          */
-        [[nodiscard]] bool operator==(const ComponentMask& other) const noexcept
-        {
-            size_t max_size = blocks_.Size() > other.blocks_.Size()
-                ? blocks_.Size()
-                : other.blocks_.Size();
+        [[nodiscard]] bool operator==(const ComponentMask& other) const noexcept {
+            size_t max_size = blocks_.Size() > other.blocks_.Size() ? blocks_.Size() : other.blocks_.Size();
 
             for (size_t i = 0; i < max_size; ++i)
             {
@@ -369,16 +337,12 @@ namespace queen
             return true;
         }
 
-        [[nodiscard]] bool operator!=(const ComponentMask& other) const noexcept
-        {
-            return !(*this == other);
-        }
+        [[nodiscard]] bool operator!=(const ComponentMask& other) const noexcept { return !(*this == other); }
 
         /**
          * Get the index of the first set bit, or size_t(-1) if none
          */
-        [[nodiscard]] size_t FirstSetBit() const noexcept
-        {
+        [[nodiscard]] size_t FirstSetBit() const noexcept {
             for (size_t i = 0; i < blocks_.Size(); ++i)
             {
                 if (blocks_[i] != 0)
@@ -392,8 +356,7 @@ namespace queen
         /**
          * Get the index of the last set bit, or size_t(-1) if none
          */
-        [[nodiscard]] size_t LastSetBit() const noexcept
-        {
+        [[nodiscard]] size_t LastSetBit() const noexcept {
             for (size_t i = blocks_.Size(); i > 0; --i)
             {
                 if (blocks_[i - 1] != 0)
@@ -407,39 +370,30 @@ namespace queen
         /**
          * Get the number of blocks allocated
          */
-        [[nodiscard]] size_t BlockCount() const noexcept
-        {
-            return blocks_.Size();
-        }
+        [[nodiscard]] size_t BlockCount() const noexcept { return blocks_.Size(); }
 
         /**
          * Get the maximum bit index that can be stored without reallocation
          */
-        [[nodiscard]] size_t Capacity() const noexcept
-        {
-            return blocks_.Size() * BitsPerBlock;
-        }
+        [[nodiscard]] size_t Capacity() const noexcept { return blocks_.Size() * BitsPerBlock; }
 
         /**
          * Reserve space for at least n bits
          */
-        void Reserve(size_t bit_count)
-        {
+        void Reserve(size_t bit_count) {
             size_t block_count = (bit_count + BitsPerBlock - 1) / BitsPerBlock;
             blocks_.Reserve(block_count);
         }
 
     private:
-        void EnsureCapacity(size_t block_count)
-        {
+        void EnsureCapacity(size_t block_count) {
             while (blocks_.Size() < block_count)
             {
                 blocks_.PushBack(0);
             }
         }
 
-        static size_t PopCount(uint64_t x) noexcept
-        {
+        static size_t PopCount(uint64_t x) noexcept {
 #if defined(__GNUC__) || defined(__clang__)
             return static_cast<size_t>(__builtin_popcountll(x));
 #elif defined(_MSC_VER)
@@ -456,9 +410,9 @@ namespace queen
 #endif
         }
 
-        static size_t CountTrailingZeros(uint64_t x) noexcept
-        {
-            if (x == 0) return 64;
+        static size_t CountTrailingZeros(uint64_t x) noexcept {
+            if (x == 0)
+                return 64;
 #if defined(__GNUC__) || defined(__clang__)
             return static_cast<size_t>(__builtin_ctzll(x));
 #elif defined(_MSC_VER)
@@ -476,9 +430,9 @@ namespace queen
 #endif
         }
 
-        static size_t CountLeadingZeros(uint64_t x) noexcept
-        {
-            if (x == 0) return 64;
+        static size_t CountLeadingZeros(uint64_t x) noexcept {
+            if (x == 0)
+                return 64;
 #if defined(__GNUC__) || defined(__clang__)
             return static_cast<size_t>(__builtin_clzll(x));
 #elif defined(_MSC_VER)
@@ -504,9 +458,9 @@ namespace queen
     /**
      * Create intersection of two masks
      */
-    template<comb::Allocator Allocator>
-    [[nodiscard]] ComponentMask<Allocator> operator&(ComponentMask<Allocator> lhs, const ComponentMask<Allocator>& rhs)
-    {
+    template <comb::Allocator Allocator>
+    [[nodiscard]] ComponentMask<Allocator> operator&(ComponentMask<Allocator> lhs,
+                                                     const ComponentMask<Allocator>& rhs) {
         lhs &= rhs;
         return lhs;
     }
@@ -514,9 +468,9 @@ namespace queen
     /**
      * Create union of two masks
      */
-    template<comb::Allocator Allocator>
-    [[nodiscard]] ComponentMask<Allocator> operator|(ComponentMask<Allocator> lhs, const ComponentMask<Allocator>& rhs)
-    {
+    template <comb::Allocator Allocator>
+    [[nodiscard]] ComponentMask<Allocator> operator|(ComponentMask<Allocator> lhs,
+                                                     const ComponentMask<Allocator>& rhs) {
         lhs |= rhs;
         return lhs;
     }
@@ -524,10 +478,10 @@ namespace queen
     /**
      * Create symmetric difference of two masks
      */
-    template<comb::Allocator Allocator>
-    [[nodiscard]] ComponentMask<Allocator> operator^(ComponentMask<Allocator> lhs, const ComponentMask<Allocator>& rhs)
-    {
+    template <comb::Allocator Allocator>
+    [[nodiscard]] ComponentMask<Allocator> operator^(ComponentMask<Allocator> lhs,
+                                                     const ComponentMask<Allocator>& rhs) {
         lhs ^= rhs;
         return lhs;
     }
-}
+} // namespace queen

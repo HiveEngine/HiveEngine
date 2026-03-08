@@ -1,35 +1,32 @@
+#include <queen/hierarchy/children.h>
+#include <queen/hierarchy/parent.h>
+#include <queen/world/world.h>
+
 #include <forge/hierarchy_panel.h>
 #include <forge/selection.h>
 
-#include <queen/world/world.h>
-#include <queen/hierarchy/parent.h>
-#include <queen/hierarchy/children.h>
-
 #include <imgui.h>
 
+#include <algorithm>
 #include <cstdio>
 #include <vector>
-#include <algorithm>
 
 namespace forge
 {
-    static void DefaultEntityLabel(queen::World& /*world*/, queen::Entity entity,
-                                   char* buf, size_t buf_size)
-    {
-        snprintf(buf, buf_size, "Entity %u", entity.Index());
+    static void DefaultEntityLabel(queen::World& /*world*/, queen::Entity entity, char* buf, size_t bufSize) {
+        snprintf(buf, bufSize, "Entity %u", entity.Index());
     }
 
-    static void DrawEntityNode(queen::World& world, EditorSelection& selection,
-                               queen::Entity entity, EntityLabelFn label_fn)
-    {
+    static void DrawEntityNode(queen::World& world, EditorSelection& selection, queen::Entity entity,
+                               EntityLabelFn labelFn) {
         char label[64];
-        label_fn(world, entity, label, sizeof(label));
+        labelFn(world, entity, label, sizeof(label));
 
-        size_t child_count = world.ChildCount(entity);
-        bool has_children = child_count > 0;
+        size_t childCount = world.ChildCount(entity);
+        bool hasChildren = childCount > 0;
 
         ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth;
-        if (!has_children)
+        if (!hasChildren)
             flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
         if (selection.IsSelected(entity))
             flags |= ImGuiTreeNodeFlags_Selected;
@@ -58,38 +55,33 @@ namespace forge
             ImGui::EndPopup();
         }
 
-        if (open && has_children)
+        if (open && hasChildren)
         {
-            world.ForEachChild(entity, [&](queen::Entity child) {
-                DrawEntityNode(world, selection, child, label_fn);
-            });
+            world.ForEachChild(entity, [&](queen::Entity child) { DrawEntityNode(world, selection, child, labelFn); });
             ImGui::TreePop();
         }
 
         ImGui::PopID();
     }
 
-    void DrawHierarchyPanel(queen::World& world, EditorSelection& selection, EntityLabelFn label_fn)
-    {
-        if (!label_fn)
-            label_fn = DefaultEntityLabel;
+    void DrawHierarchyPanel(queen::World& world, EditorSelection& selection, EntityLabelFn labelFn) {
+        if (!labelFn)
+            labelFn = DefaultEntityLabel;
 
         // Collect root entities (no Parent component)
         std::vector<queen::Entity> roots;
         world.ForEachArchetype([&](auto& arch) {
-            if (arch.template HasComponent<queen::Parent>()) return;
+            if (arch.template HasComponent<queen::Parent>())
+                return;
             for (uint32_t row = 0; row < arch.EntityCount(); ++row)
                 roots.push_back(arch.GetEntity(row));
         });
 
         // Sort by entity index for stable ordering
-        std::sort(roots.begin(), roots.end(), [](queen::Entity a, queen::Entity b) {
-            return a.Index() < b.Index();
-        });
+        std::sort(roots.begin(), roots.end(), [](queen::Entity a, queen::Entity b) { return a.Index() < b.Index(); });
 
         // Click on empty space → deselect
-        if (ImGui::IsWindowHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Left)
-            && !ImGui::IsAnyItemHovered())
+        if (ImGui::IsWindowHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Left) && !ImGui::IsAnyItemHovered())
         {
             selection.Clear();
         }
@@ -108,7 +100,7 @@ namespace forge
         for (queen::Entity root : roots)
         {
             if (world.IsAlive(root))
-                DrawEntityNode(world, selection, root, label_fn);
+                DrawEntityNode(world, selection, root, labelFn);
         }
     }
-}
+} // namespace forge

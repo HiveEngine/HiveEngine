@@ -1,20 +1,22 @@
-#include <larvae/larvae.h>
-#include <nectar/database/dependency_graph.h>
-#include <nectar/core/asset_id.h>
 #include <comb/default_allocator.h>
+
+#include <nectar/core/asset_id.h>
+#include <nectar/database/dependency_graph.h>
+
+#include <larvae/larvae.h>
+
 #include <cstring>
 
-namespace {
+namespace
+{
 
-    auto& GetGraphAlloc()
-    {
+    auto& GetGraphAlloc() {
         static comb::ModuleAllocator alloc{"TestDepGraph", 4 * 1024 * 1024};
         return alloc.Get();
     }
 
     // Deterministic test IDs (avoid random UUIDs in tests)
-    nectar::AssetId MakeId(uint64_t v)
-    {
+    nectar::AssetId MakeId(uint64_t v) {
         uint8_t bytes[16] = {};
         std::memcpy(bytes, &v, sizeof(v));
         return nectar::AssetId::FromBytes(bytes);
@@ -36,7 +38,7 @@ namespace {
         nectar::DependencyGraph graph{alloc};
         auto a = MakeId(1);
         auto b = MakeId(2);
-        larvae::AssertTrue(graph.AddEdge(a, b, nectar::DepKind::Hard));
+        larvae::AssertTrue(graph.AddEdge(a, b, nectar::DepKind::HARD));
         larvae::AssertEqual(graph.NodeCount(), size_t{2});
         larvae::AssertEqual(graph.EdgeCount(), size_t{1});
         larvae::AssertTrue(graph.HasEdge(a, b));
@@ -47,8 +49,8 @@ namespace {
         nectar::DependencyGraph graph{alloc};
         auto a = MakeId(1);
         auto b = MakeId(2);
-        larvae::AssertTrue(graph.AddEdge(a, b, nectar::DepKind::Hard));
-        larvae::AssertFalse(graph.AddEdge(a, b, nectar::DepKind::Soft)); // same edge, different kind
+        larvae::AssertTrue(graph.AddEdge(a, b, nectar::DepKind::HARD));
+        larvae::AssertFalse(graph.AddEdge(a, b, nectar::DepKind::SOFT)); // same edge, different kind
         larvae::AssertEqual(graph.EdgeCount(), size_t{1});
     });
 
@@ -56,7 +58,7 @@ namespace {
         auto& alloc = GetGraphAlloc();
         nectar::DependencyGraph graph{alloc};
         auto a = MakeId(1);
-        larvae::AssertFalse(graph.AddEdge(a, a, nectar::DepKind::Hard));
+        larvae::AssertFalse(graph.AddEdge(a, a, nectar::DepKind::HARD));
         larvae::AssertEqual(graph.EdgeCount(), size_t{0});
     });
 
@@ -65,7 +67,7 @@ namespace {
         nectar::DependencyGraph graph{alloc};
         auto a = MakeId(1);
         auto b = MakeId(2);
-        graph.AddEdge(a, b, nectar::DepKind::Hard);
+        graph.AddEdge(a, b, nectar::DepKind::HARD);
         larvae::AssertTrue(graph.RemoveEdge(a, b));
         larvae::AssertFalse(graph.HasEdge(a, b));
         larvae::AssertEqual(graph.EdgeCount(), size_t{0});
@@ -85,8 +87,8 @@ namespace {
         auto a = MakeId(1);
         auto b = MakeId(2);
         auto c = MakeId(3);
-        graph.AddEdge(a, b, nectar::DepKind::Hard);
-        graph.AddEdge(b, c, nectar::DepKind::Hard);
+        graph.AddEdge(a, b, nectar::DepKind::HARD);
+        graph.AddEdge(b, c, nectar::DepKind::HARD);
 
         graph.RemoveNode(b);
         larvae::AssertFalse(graph.HasNode(b));
@@ -104,11 +106,11 @@ namespace {
         auto a = MakeId(1);
         auto b = MakeId(2);
         auto c = MakeId(3);
-        graph.AddEdge(a, b, nectar::DepKind::Hard);
-        graph.AddEdge(a, c, nectar::DepKind::Soft);
+        graph.AddEdge(a, b, nectar::DepKind::HARD);
+        graph.AddEdge(a, c, nectar::DepKind::SOFT);
 
         wax::Vector<nectar::AssetId> deps{alloc};
-        graph.GetDependencies(a, nectar::DepKind::All, deps);
+        graph.GetDependencies(a, nectar::DepKind::ALL, deps);
         larvae::AssertEqual(deps.Size(), size_t{2});
     });
 
@@ -118,16 +120,16 @@ namespace {
         auto a = MakeId(1);
         auto b = MakeId(2);
         auto c = MakeId(3);
-        graph.AddEdge(a, b, nectar::DepKind::Hard);
-        graph.AddEdge(a, c, nectar::DepKind::Soft);
+        graph.AddEdge(a, b, nectar::DepKind::HARD);
+        graph.AddEdge(a, c, nectar::DepKind::SOFT);
 
         wax::Vector<nectar::AssetId> hard_deps{alloc};
-        graph.GetDependencies(a, nectar::DepKind::Hard, hard_deps);
+        graph.GetDependencies(a, nectar::DepKind::HARD, hard_deps);
         larvae::AssertEqual(hard_deps.Size(), size_t{1});
         larvae::AssertTrue(hard_deps[0] == b);
 
         wax::Vector<nectar::AssetId> soft_deps{alloc};
-        graph.GetDependencies(a, nectar::DepKind::Soft, soft_deps);
+        graph.GetDependencies(a, nectar::DepKind::SOFT, soft_deps);
         larvae::AssertEqual(soft_deps.Size(), size_t{1});
         larvae::AssertTrue(soft_deps[0] == c);
     });
@@ -138,11 +140,11 @@ namespace {
         auto a = MakeId(1);
         auto b = MakeId(2);
         auto c = MakeId(3);
-        graph.AddEdge(a, c, nectar::DepKind::Hard);
-        graph.AddEdge(b, c, nectar::DepKind::Hard);
+        graph.AddEdge(a, c, nectar::DepKind::HARD);
+        graph.AddEdge(b, c, nectar::DepKind::HARD);
 
         wax::Vector<nectar::AssetId> dependents{alloc};
-        graph.GetDependents(c, nectar::DepKind::All, dependents);
+        graph.GetDependents(c, nectar::DepKind::ALL, dependents);
         larvae::AssertEqual(dependents.Size(), size_t{2});
     });
 
@@ -157,12 +159,12 @@ namespace {
         auto b = MakeId(2);
         auto c = MakeId(3);
         auto d = MakeId(4);
-        graph.AddEdge(a, b, nectar::DepKind::Hard);
-        graph.AddEdge(b, c, nectar::DepKind::Hard);
-        graph.AddEdge(c, d, nectar::DepKind::Hard);
+        graph.AddEdge(a, b, nectar::DepKind::HARD);
+        graph.AddEdge(b, c, nectar::DepKind::HARD);
+        graph.AddEdge(c, d, nectar::DepKind::HARD);
 
         wax::Vector<nectar::AssetId> deps{alloc};
-        graph.GetTransitiveDependencies(a, nectar::DepKind::All, deps);
+        graph.GetTransitiveDependencies(a, nectar::DepKind::ALL, deps);
         larvae::AssertEqual(deps.Size(), size_t{3}); // b, c, d
     });
 
@@ -178,13 +180,13 @@ namespace {
         auto b = MakeId(2);
         auto c = MakeId(3);
         auto d = MakeId(4);
-        graph.AddEdge(a, b, nectar::DepKind::Hard);
-        graph.AddEdge(a, c, nectar::DepKind::Hard);
-        graph.AddEdge(b, d, nectar::DepKind::Hard);
-        graph.AddEdge(c, d, nectar::DepKind::Hard);
+        graph.AddEdge(a, b, nectar::DepKind::HARD);
+        graph.AddEdge(a, c, nectar::DepKind::HARD);
+        graph.AddEdge(b, d, nectar::DepKind::HARD);
+        graph.AddEdge(c, d, nectar::DepKind::HARD);
 
         wax::Vector<nectar::AssetId> deps{alloc};
-        graph.GetTransitiveDependencies(a, nectar::DepKind::All, deps);
+        graph.GetTransitiveDependencies(a, nectar::DepKind::ALL, deps);
         larvae::AssertEqual(deps.Size(), size_t{3}); // b, c, d (no duplicates)
     });
 
@@ -194,11 +196,11 @@ namespace {
         auto a = MakeId(1);
         auto b = MakeId(2);
         auto c = MakeId(3);
-        graph.AddEdge(b, a, nectar::DepKind::Hard);
-        graph.AddEdge(c, b, nectar::DepKind::Hard);
+        graph.AddEdge(b, a, nectar::DepKind::HARD);
+        graph.AddEdge(c, b, nectar::DepKind::HARD);
 
         wax::Vector<nectar::AssetId> dependents{alloc};
-        graph.GetTransitiveDependents(a, nectar::DepKind::All, dependents);
+        graph.GetTransitiveDependents(a, nectar::DepKind::ALL, dependents);
         larvae::AssertEqual(dependents.Size(), size_t{2}); // b, c
     });
 
@@ -208,11 +210,11 @@ namespace {
         auto a = MakeId(1);
         auto b = MakeId(2);
         auto c = MakeId(3);
-        graph.AddEdge(a, b, nectar::DepKind::Hard);
-        graph.AddEdge(b, c, nectar::DepKind::Soft); // soft, won't follow with Hard filter
+        graph.AddEdge(a, b, nectar::DepKind::HARD);
+        graph.AddEdge(b, c, nectar::DepKind::SOFT); // soft, won't follow with Hard filter
 
         wax::Vector<nectar::AssetId> deps{alloc};
-        graph.GetTransitiveDependencies(a, nectar::DepKind::Hard, deps);
+        graph.GetTransitiveDependencies(a, nectar::DepKind::HARD, deps);
         larvae::AssertEqual(deps.Size(), size_t{1}); // only b
     });
 
@@ -225,8 +227,8 @@ namespace {
         nectar::DependencyGraph graph{alloc};
         auto a = MakeId(1);
         auto b = MakeId(2);
-        graph.AddEdge(a, b, nectar::DepKind::Hard);
-        larvae::AssertFalse(graph.AddEdge(b, a, nectar::DepKind::Hard)); // would create cycle
+        graph.AddEdge(a, b, nectar::DepKind::HARD);
+        larvae::AssertFalse(graph.AddEdge(b, a, nectar::DepKind::HARD)); // would create cycle
     });
 
     auto t16 = larvae::RegisterTest("NectarDepGraph", "TransitiveCycleRejected", []() {
@@ -235,9 +237,9 @@ namespace {
         auto a = MakeId(1);
         auto b = MakeId(2);
         auto c = MakeId(3);
-        graph.AddEdge(a, b, nectar::DepKind::Hard);
-        graph.AddEdge(b, c, nectar::DepKind::Hard);
-        larvae::AssertFalse(graph.AddEdge(c, a, nectar::DepKind::Hard)); // would create a->b->c->a
+        graph.AddEdge(a, b, nectar::DepKind::HARD);
+        graph.AddEdge(b, c, nectar::DepKind::HARD);
+        larvae::AssertFalse(graph.AddEdge(c, a, nectar::DepKind::HARD)); // would create a->b->c->a
     });
 
     auto t17 = larvae::RegisterTest("NectarDepGraph", "NoCycleNonFalsePositive", []() {
@@ -246,8 +248,8 @@ namespace {
         auto a = MakeId(1);
         auto b = MakeId(2);
         auto c = MakeId(3);
-        graph.AddEdge(a, c, nectar::DepKind::Hard);
-        graph.AddEdge(b, c, nectar::DepKind::Hard);
+        graph.AddEdge(a, c, nectar::DepKind::HARD);
+        graph.AddEdge(b, c, nectar::DepKind::HARD);
         // a -> c and b -> c is fine (diamond, not cycle)
         larvae::AssertFalse(graph.HasCycle());
     });
@@ -257,7 +259,7 @@ namespace {
         nectar::DependencyGraph graph{alloc};
         auto a = MakeId(1);
         auto b = MakeId(2);
-        graph.AddEdge(a, b, nectar::DepKind::Hard);
+        graph.AddEdge(a, b, nectar::DepKind::HARD);
         larvae::AssertFalse(graph.HasCycle());
     });
 
@@ -271,8 +273,8 @@ namespace {
         auto a = MakeId(1);
         auto b = MakeId(2);
         auto c = MakeId(3);
-        graph.AddEdge(a, b, nectar::DepKind::Hard);
-        graph.AddEdge(b, c, nectar::DepKind::Hard);
+        graph.AddEdge(a, b, nectar::DepKind::HARD);
+        graph.AddEdge(b, c, nectar::DepKind::HARD);
 
         wax::Vector<nectar::AssetId> order{alloc};
         larvae::AssertTrue(graph.TopologicalSort(order));
@@ -282,9 +284,12 @@ namespace {
         size_t pos_a = 0, pos_b = 0, pos_c = 0;
         for (size_t i = 0; i < order.Size(); ++i)
         {
-            if (order[i] == a) pos_a = i;
-            if (order[i] == b) pos_b = i;
-            if (order[i] == c) pos_c = i;
+            if (order[i] == a)
+                pos_a = i;
+            if (order[i] == b)
+                pos_b = i;
+            if (order[i] == c)
+                pos_c = i;
         }
         larvae::AssertTrue(pos_c < pos_b);
         larvae::AssertTrue(pos_b < pos_a);
@@ -297,10 +302,10 @@ namespace {
         auto b = MakeId(2);
         auto c = MakeId(3);
         auto d = MakeId(4);
-        graph.AddEdge(a, b, nectar::DepKind::Hard);
-        graph.AddEdge(a, c, nectar::DepKind::Hard);
-        graph.AddEdge(b, d, nectar::DepKind::Hard);
-        graph.AddEdge(c, d, nectar::DepKind::Hard);
+        graph.AddEdge(a, b, nectar::DepKind::HARD);
+        graph.AddEdge(a, c, nectar::DepKind::HARD);
+        graph.AddEdge(b, d, nectar::DepKind::HARD);
+        graph.AddEdge(c, d, nectar::DepKind::HARD);
 
         wax::Vector<nectar::AssetId> order{alloc};
         larvae::AssertTrue(graph.TopologicalSort(order));
@@ -310,10 +315,14 @@ namespace {
         size_t pos_a = 0, pos_b = 0, pos_c = 0, pos_d = 0;
         for (size_t i = 0; i < order.Size(); ++i)
         {
-            if (order[i] == a) pos_a = i;
-            if (order[i] == b) pos_b = i;
-            if (order[i] == c) pos_c = i;
-            if (order[i] == d) pos_d = i;
+            if (order[i] == a)
+                pos_a = i;
+            if (order[i] == b)
+                pos_b = i;
+            if (order[i] == c)
+                pos_c = i;
+            if (order[i] == d)
+                pos_d = i;
         }
         larvae::AssertTrue(pos_d < pos_b);
         larvae::AssertTrue(pos_d < pos_c);
@@ -329,8 +338,8 @@ namespace {
         auto c = MakeId(3);
         auto d = MakeId(4);
         // Two independent chains: a->b and c->d
-        graph.AddEdge(a, b, nectar::DepKind::Hard);
-        graph.AddEdge(c, d, nectar::DepKind::Hard);
+        graph.AddEdge(a, b, nectar::DepKind::HARD);
+        graph.AddEdge(c, d, nectar::DepKind::HARD);
 
         wax::Vector<nectar::AssetId> order{alloc};
         larvae::AssertTrue(graph.TopologicalSort(order));
@@ -354,7 +363,7 @@ namespace {
         nectar::DependencyGraph graph{alloc};
         auto a = MakeId(1);
         auto b = MakeId(2);
-        graph.AddEdge(a, b, nectar::DepKind::Hard);
+        graph.AddEdge(a, b, nectar::DepKind::HARD);
         larvae::AssertTrue(graph.HasNode(a));
         larvae::AssertTrue(graph.HasNode(b));
         larvae::AssertFalse(graph.HasNode(MakeId(99)));
@@ -366,9 +375,9 @@ namespace {
         auto a = MakeId(1);
         auto b = MakeId(2);
         auto c = MakeId(3);
-        graph.AddEdge(a, b, nectar::DepKind::Hard);
-        graph.AddEdge(a, c, nectar::DepKind::Hard);
-        graph.AddEdge(b, c, nectar::DepKind::Soft);
+        graph.AddEdge(a, b, nectar::DepKind::HARD);
+        graph.AddEdge(a, c, nectar::DepKind::HARD);
+        graph.AddEdge(b, c, nectar::DepKind::SOFT);
 
         larvae::AssertEqual(graph.EdgeCount(), size_t{3});
         larvae::AssertEqual(graph.NodeCount(), size_t{3});
@@ -383,7 +392,7 @@ namespace {
         nectar::DependencyGraph graph{alloc};
         auto a = MakeId(1);
         auto b = MakeId(2);
-        graph.AddEdge(a, b, nectar::DepKind::Hard);
+        graph.AddEdge(a, b, nectar::DepKind::HARD);
 
         wax::Vector<wax::Vector<nectar::AssetId>> levels{alloc};
         larvae::AssertTrue(graph.TopologicalSortLevels(levels));
@@ -400,8 +409,8 @@ namespace {
         auto b = MakeId(2);
         auto c = MakeId(3);
         // a -> b -> c
-        graph.AddEdge(a, b, nectar::DepKind::Hard);
-        graph.AddEdge(b, c, nectar::DepKind::Hard);
+        graph.AddEdge(a, b, nectar::DepKind::HARD);
+        graph.AddEdge(b, c, nectar::DepKind::HARD);
 
         wax::Vector<wax::Vector<nectar::AssetId>> levels{alloc};
         larvae::AssertTrue(graph.TopologicalSortLevels(levels));
@@ -419,10 +428,10 @@ namespace {
         auto c = MakeId(3);
         auto d = MakeId(4);
         // a -> b, a -> c, b -> d, c -> d (diamond)
-        graph.AddEdge(a, b, nectar::DepKind::Hard);
-        graph.AddEdge(a, c, nectar::DepKind::Hard);
-        graph.AddEdge(b, d, nectar::DepKind::Hard);
-        graph.AddEdge(c, d, nectar::DepKind::Hard);
+        graph.AddEdge(a, b, nectar::DepKind::HARD);
+        graph.AddEdge(a, c, nectar::DepKind::HARD);
+        graph.AddEdge(b, d, nectar::DepKind::HARD);
+        graph.AddEdge(c, d, nectar::DepKind::HARD);
 
         wax::Vector<wax::Vector<nectar::AssetId>> levels{alloc};
         larvae::AssertTrue(graph.TopologicalSortLevels(levels));
@@ -441,8 +450,8 @@ namespace {
         auto a = MakeId(1);
         auto b = MakeId(2);
         auto c = MakeId(3);
-        graph.AddEdge(a, b, nectar::DepKind::Hard);
-        graph.AddEdge(b, c, nectar::DepKind::Hard);
+        graph.AddEdge(a, b, nectar::DepKind::HARD);
+        graph.AddEdge(b, c, nectar::DepKind::HARD);
 
         graph.RemoveNode(b);
         // a and c still exist as isolated nodes, but b and its edges are gone
@@ -451,4 +460,4 @@ namespace {
         larvae::AssertEqual(graph.EdgeCount(), size_t{0});
     });
 
-}
+} // namespace

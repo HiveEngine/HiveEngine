@@ -1,9 +1,9 @@
 #pragma once
 
+#include <atomic>
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
-#include <atomic>
 
 #if defined(_MSC_VER)
 #include <intrin.h>
@@ -54,44 +54,39 @@ namespace larvae
         double items_per_second{0.0};
     };
 
-    template<typename T>
-    inline void DoNotOptimize(T const& value)
-    {
-    #if defined(_MSC_VER)
+    template <typename T> inline void DoNotOptimize(T const& value) {
+#if defined(_MSC_VER)
         const volatile void* volatile unused = &value;
         (void)unused;
-    #elif defined(__GNUC__) || defined(__clang__)
+#elif defined(__GNUC__) || defined(__clang__)
         asm volatile("" : : "r,m"(value) : "memory");
-    #else
+#else
         volatile auto unused = &value;
         (void)unused;
-    #endif
+#endif
     }
 
-    template<typename T>
-    inline void DoNotOptimize(T& value)
-    {
-    #if defined(_MSC_VER)
+    template <typename T> inline void DoNotOptimize(T& value) {
+#if defined(_MSC_VER)
         volatile void* volatile unused = &value;
         (void)unused;
-    #elif defined(__clang__)
+#elif defined(__clang__)
         asm volatile("" : "+r,m"(value) : : "memory");
-    #elif defined(__GNUC__)
+#elif defined(__GNUC__)
         asm volatile("" : "+m,r"(value) : : "memory");
-    #else
+#else
         volatile auto unused = &value;
         (void)unused;
-    #endif
+#endif
     }
 
-    inline void ClobberMemory()
-    {
-    #if defined(_MSC_VER)
+    inline void ClobberMemory() {
+#if defined(_MSC_VER)
         _ReadWriteBarrier();
-    #elif defined(__GNUC__) || defined(__clang__)
+#elif defined(__GNUC__) || defined(__clang__)
         asm volatile("" : : : "memory");
-    #else
+#else
         std::atomic_signal_fence(std::memory_order_acq_rel);
-    #endif
+#endif
     }
-}
+} // namespace larvae

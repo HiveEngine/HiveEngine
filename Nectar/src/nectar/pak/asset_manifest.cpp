@@ -1,62 +1,58 @@
 #include <nectar/pak/asset_manifest.h>
+
 #include <cstring>
 
 namespace nectar
 {
     AssetManifest::AssetManifest(comb::DefaultAllocator& alloc)
-        : alloc_{&alloc}
-        , entries_{alloc, 64}
-    {}
+        : m_alloc{&alloc}
+        , m_entries{alloc, 64} {}
 
-    void AssetManifest::Add(wax::StringView vfs_path, ContentHash hash)
-    {
-        wax::String key{*alloc_};
-        key.Append(vfs_path.Data(), vfs_path.Size());
+    void AssetManifest::Add(wax::StringView vfsPath, ContentHash hash) {
+        wax::String key{*m_alloc};
+        key.Append(vfsPath.Data(), vfsPath.Size());
 
-        auto* existing = entries_.Find(key);
+        auto* existing = m_entries.Find(key);
         if (existing)
             *existing = hash;
         else
-            entries_.Insert(static_cast<wax::String&&>(key), hash);
+            m_entries.Insert(static_cast<wax::String&&>(key), hash);
     }
 
-    const ContentHash* AssetManifest::Find(wax::StringView vfs_path) const
-    {
-        wax::String key{*alloc_};
-        key.Append(vfs_path.Data(), vfs_path.Size());
-        return entries_.Find(key);
+    const ContentHash* AssetManifest::Find(wax::StringView vfsPath) const {
+        wax::String key{*m_alloc};
+        key.Append(vfsPath.Data(), vfsPath.Size());
+        return m_entries.Find(key);
     }
 
-    size_t AssetManifest::Count() const noexcept
-    {
-        return entries_.Count();
+    size_t AssetManifest::Count() const noexcept {
+        return m_entries.Count();
     }
 
-    wax::ByteBuffer AssetManifest::Serialize(comb::DefaultAllocator& alloc) const
-    {
+    wax::ByteBuffer AssetManifest::Serialize(comb::DefaultAllocator& alloc) const {
         // Format: [count u32] [entry...]
         // Entry: [path_len u32] [path bytes] [hash_high u64] [hash_low u64]
         wax::ByteBuffer buf{alloc};
 
-        uint32_t count = static_cast<uint32_t>(entries_.Count());
+        uint32_t count = static_cast<uint32_t>(m_entries.Count());
         buf.Resize(sizeof(uint32_t));
         std::memcpy(buf.Data(), &count, sizeof(uint32_t));
 
-        for (auto it = entries_.begin(); it != entries_.end(); ++it)
+        for (auto it = m_entries.Begin(); it != m_entries.End(); ++it)
         {
             const auto& path = it.Key();
             const auto& hash = it.Value();
 
-            size_t old_size = buf.Size();
-            uint32_t path_len = static_cast<uint32_t>(path.Size());
-            size_t entry_size = sizeof(uint32_t) + path_len + sizeof(uint64_t) * 2;
-            buf.Resize(old_size + entry_size);
+            size_t oldSize = buf.Size();
+            uint32_t pathLen = static_cast<uint32_t>(path.Size());
+            size_t entrySize = sizeof(uint32_t) + pathLen + sizeof(uint64_t) * 2;
+            buf.Resize(oldSize + entrySize);
 
-            uint8_t* dst = buf.Data() + old_size;
-            std::memcpy(dst, &path_len, sizeof(uint32_t));
+            uint8_t* dst = buf.Data() + oldSize;
+            std::memcpy(dst, &pathLen, sizeof(uint32_t));
             dst += sizeof(uint32_t);
-            std::memcpy(dst, path.CStr(), path_len);
-            dst += path_len;
+            std::memcpy(dst, path.CStr(), pathLen);
+            dst += pathLen;
 
             uint64_t hi = hash.High();
             uint64_t lo = hash.Low();
@@ -68,8 +64,7 @@ namespace nectar
         return buf;
     }
 
-    AssetManifest AssetManifest::Deserialize(wax::ByteSpan data, comb::DefaultAllocator& alloc)
-    {
+    AssetManifest AssetManifest::Deserialize(wax::ByteSpan data, comb::DefaultAllocator& alloc) {
         AssetManifest manifest{alloc};
 
         if (data.Size() < sizeof(uint32_t))
@@ -84,15 +79,15 @@ namespace nectar
 
         for (uint32_t i = 0; i < count && ptr + sizeof(uint32_t) <= end; ++i)
         {
-            uint32_t path_len = 0;
-            std::memcpy(&path_len, ptr, sizeof(uint32_t));
+            uint32_t pathLen = 0;
+            std::memcpy(&pathLen, ptr, sizeof(uint32_t));
             ptr += sizeof(uint32_t);
 
-            if (ptr + path_len + sizeof(uint64_t) * 2 > end)
+            if (ptr + pathLen + sizeof(uint64_t) * 2 > end)
                 break;
 
-            wax::StringView path{reinterpret_cast<const char*>(ptr), path_len};
-            ptr += path_len;
+            wax::StringView path{reinterpret_cast<const char*>(ptr), pathLen};
+            ptr += pathLen;
 
             uint64_t hi = 0, lo = 0;
             std::memcpy(&hi, ptr, sizeof(uint64_t));
@@ -105,4 +100,4 @@ namespace nectar
 
         return manifest;
     }
-}
+} // namespace nectar

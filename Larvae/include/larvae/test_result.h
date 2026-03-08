@@ -25,8 +25,6 @@ namespace larvae
             : status{TestStatus::Passed}
             , duration_ms{0.0}
             , memory_allocated{0}
-            , memory_leaked{0}
-        {
-        }
+            , memory_leaked{0} {}
     };
-}
+} // namespace larvae

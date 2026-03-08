@@ -1,15 +1,19 @@
-#include <larvae/larvae.h>
+#include <comb/default_allocator.h>
+
+#include <wax/containers/vector.h>
+
 #include <nectar/cas/cas_store.h>
 #include <nectar/core/content_hash.h>
-#include <comb/default_allocator.h>
-#include <wax/containers/vector.h>
+
+#include <larvae/larvae.h>
+
 #include <cstring>
 #include <filesystem>
 
-namespace {
+namespace
+{
 
-    auto& GetCasAlloc()
-    {
+    auto& GetCasAlloc() {
         static comb::ModuleAllocator alloc{"TestCas", 4 * 1024 * 1024};
         return alloc.Get();
     }
@@ -19,20 +23,17 @@ namespace {
     {
         std::filesystem::path path;
 
-        explicit TempDir(const char* name)
-        {
+        explicit TempDir(const char* name) {
             path = std::filesystem::temp_directory_path() / name;
             std::filesystem::create_directories(path);
         }
 
-        ~TempDir()
-        {
+        ~TempDir() {
             std::error_code ec;
             std::filesystem::remove_all(path, ec);
         }
 
-        wax::StringView View() const
-        {
+        wax::StringView View() const {
             // store the string so it lives long enough
             static thread_local std::string s;
             s = path.string();
@@ -198,4 +199,4 @@ namespace {
         larvae::AssertTrue(cas.RootDir().Size() > 0);
     });
 
-}
+} // namespace

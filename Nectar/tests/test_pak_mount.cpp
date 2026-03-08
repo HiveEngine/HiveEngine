@@ -1,41 +1,39 @@
 #define _CRT_SECURE_NO_WARNINGS
-#include <larvae/larvae.h>
-#include <nectar/vfs/pak_mount.h>
-#include <nectar/vfs/virtual_filesystem.h>
+#include <comb/default_allocator.h>
+
+#include <nectar/core/content_hash.h>
+#include <nectar/pak/asset_manifest.h>
 #include <nectar/pak/pak_builder.h>
 #include <nectar/pak/pak_reader.h>
-#include <nectar/pak/asset_manifest.h>
-#include <nectar/core/content_hash.h>
-#include <comb/default_allocator.h>
-#include <cstring>
+#include <nectar/vfs/pak_mount.h>
+#include <nectar/vfs/virtual_filesystem.h>
+
+#include <larvae/larvae.h>
+
 #include <cstdio>
+#include <cstring>
 #include <filesystem>
 
-namespace {
+namespace
+{
 
-    auto& GetPakMountAlloc()
-    {
+    auto& GetPakMountAlloc() {
         static comb::ModuleAllocator alloc{"TestPakMount", 8 * 1024 * 1024};
         return alloc.Get();
     }
 
-    const char* TempMountPakPath()
-    {
-        static std::string path =
-            (std::filesystem::temp_directory_path() / "hive_test_mount.npak").string();
+    const char* TempMountPakPath() {
+        static std::string path = (std::filesystem::temp_directory_path() / "hive_test_mount.npak").string();
         return path.c_str();
     }
 
-    void CleanupMountPak()
-    {
+    void CleanupMountPak() {
         std::remove(TempMountPakPath());
     }
 
     // Helper: build a .npak with manifest from data pairs
-    nectar::PakReader* BuildTestPak(comb::DefaultAllocator& alloc,
-                                     const char* paths[], const char* datas[],
-                                     size_t count)
-    {
+    nectar::PakReader* BuildTestPak(comb::DefaultAllocator& alloc, const char* paths[], const char* datas[],
+                                    size_t count) {
         CleanupMountPak();
 
         nectar::PakBuilder builder{alloc};
@@ -45,17 +43,15 @@ namespace {
         {
             size_t len = std::strlen(datas[i]);
             auto hash = nectar::ContentHash::FromData(datas[i], len);
-            builder.AddBlob(hash,
-                wax::ByteSpan{reinterpret_cast<const uint8_t*>(datas[i]), len},
-                nectar::CompressionMethod::None);
+            builder.AddBlob(hash, wax::ByteSpan{reinterpret_cast<const uint8_t*>(datas[i]), len},
+                            nectar::CompressionMethod::NONE);
             manifest.Add(wax::StringView{paths[i], std::strlen(paths[i])}, hash);
         }
 
         builder.SetManifest(manifest);
         (void)builder.Build(TempMountPakPath());
 
-        return nectar::PakReader::Open(
-            wax::StringView{TempMountPakPath(), std::strlen(TempMountPakPath())}, alloc);
+        return nectar::PakReader::Open(wax::StringView{TempMountPakPath(), std::strlen(TempMountPakPath())}, alloc);
     }
 
     // =========================================================================
@@ -132,8 +128,8 @@ namespace {
         nectar::PakMountSource mount{reader, alloc};
 
         auto info = mount.Stat("data.bin");
-        larvae::AssertTrue(info.exists);
-        larvae::AssertEqual(info.size, size_t{10});
+        larvae::AssertTrue(info.m_exists);
+        larvae::AssertEqual(info.m_size, size_t{10});
 
         CleanupMountPak();
     });
@@ -149,19 +145,15 @@ namespace {
         nectar::PakMountSource mount{reader, alloc};
 
         auto info = mount.Stat("missing.txt");
-        larvae::AssertFalse(info.exists);
-        larvae::AssertEqual(info.size, size_t{0});
+        larvae::AssertFalse(info.m_exists);
+        larvae::AssertEqual(info.m_size, size_t{0});
 
         CleanupMountPak();
     });
 
     auto t7 = larvae::RegisterTest("NectarPakMount", "ListDirectoryBasic", []() {
         auto& alloc = GetPakMountAlloc();
-        const char* paths[] = {
-            "textures/hero.png",
-            "textures/metal.png",
-            "meshes/sword.glb"
-        };
+        const char* paths[] = {"textures/hero.png", "textures/metal.png", "meshes/sword.glb"};
         const char* datas[] = {"a", "bb", "ccc"};
 
         auto* reader = BuildTestPak(alloc, paths, datas, 3);

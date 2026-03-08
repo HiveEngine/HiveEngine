@@ -1,11 +1,16 @@
-#include <larvae/larvae.h>
-#include <nectar/server/asset_loader.h>
-#include <wax/serialization/byte_span.h>
 #include <comb/default_allocator.h>
 #include <comb/new.h>
+
+#include <wax/serialization/byte_span.h>
+
+#include <nectar/server/asset_loader.h>
+
+#include <larvae/larvae.h>
+
 #include <cstring>
 
-namespace {
+namespace
+{
 
     struct TestAsset
     {
@@ -16,9 +21,9 @@ namespace {
     class TestAssetLoader final : public nectar::AssetLoader<TestAsset>
     {
     public:
-        TestAsset* Load(wax::ByteSpan data, comb::DefaultAllocator& alloc) override
-        {
-            if (data.Size() < sizeof(int) + sizeof(float)) return nullptr;
+        TestAsset* Load(wax::ByteSpan data, comb::DefaultAllocator& alloc) override {
+            if (data.Size() < sizeof(int) + sizeof(float))
+                return nullptr;
 
             auto* asset = comb::New<TestAsset>(alloc);
             asset->value = data.Read<int>(0);
@@ -26,14 +31,13 @@ namespace {
             return asset;
         }
 
-        void Unload(TestAsset* asset, comb::DefaultAllocator& alloc) override
-        {
-            if (asset) comb::Delete(alloc, asset);
+        void Unload(TestAsset* asset, comb::DefaultAllocator& alloc) override {
+            if (asset)
+                comb::Delete(alloc, asset);
         }
     };
 
-    auto& GetTestAllocator()
-    {
+    auto& GetTestAllocator() {
         static comb::ModuleAllocator alloc{"TestLoader", 1 * 1024 * 1024};
         return alloc.Get();
     }
@@ -121,4 +125,4 @@ namespace {
         loader.Unload(asset, alloc);
     });
 
-}
+} // namespace

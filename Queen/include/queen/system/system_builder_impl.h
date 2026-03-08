@@ -13,14 +13,13 @@ namespace queen
     // SystemBuilder<Allocator, Terms...> implementations
     // ================================
 
-    template<comb::Allocator Allocator, typename... Terms>
-    template<typename F>
-    SystemId SystemBuilder<Allocator, Terms...>::Each(F&& func)
-    {
+    template <comb::Allocator Allocator, typename... Terms>
+    template <typename F>
+    SystemId SystemBuilder<Allocator, Terms...>::Each(F&& func) {
         using FuncType = std::decay_t<F>;
 
-        void* user_data = allocator_->Allocate(sizeof(FuncType), alignof(FuncType));
-        new (user_data) FuncType{std::forward<F>(func)};
+        void* userData = m_allocator->Allocate(sizeof(FuncType), alignof(FuncType));
+        new (userData) FuncType{std::forward<F>(func)};
 
         auto executor = [](World& world, void* data) {
             FuncType* fn = static_cast<FuncType*>(data);
@@ -33,18 +32,17 @@ namespace queen
             fn->~FuncType();
         };
 
-        descriptor_->SetExecutor(executor, user_data, destructor);
-        return descriptor_->Id();
+        m_descriptor->SetExecutor(executor, userData, destructor);
+        return m_descriptor->Id();
     }
 
-    template<comb::Allocator Allocator, typename... Terms>
-    template<typename F>
-    SystemId SystemBuilder<Allocator, Terms...>::EachWithEntity(F&& func)
-    {
+    template <comb::Allocator Allocator, typename... Terms>
+    template <typename F>
+    SystemId SystemBuilder<Allocator, Terms...>::EachWithEntity(F&& func) {
         using FuncType = std::decay_t<F>;
 
-        void* user_data = allocator_->Allocate(sizeof(FuncType), alignof(FuncType));
-        new (user_data) FuncType{std::forward<F>(func)};
+        void* userData = m_allocator->Allocate(sizeof(FuncType), alignof(FuncType));
+        new (userData) FuncType{std::forward<F>(func)};
 
         auto executor = [](World& world, void* data) {
             FuncType* fn = static_cast<FuncType*>(data);
@@ -57,18 +55,17 @@ namespace queen
             fn->~FuncType();
         };
 
-        descriptor_->SetExecutor(executor, user_data, destructor);
-        return descriptor_->Id();
+        m_descriptor->SetExecutor(executor, userData, destructor);
+        return m_descriptor->Id();
     }
 
-    template<comb::Allocator Allocator, typename... Terms>
-    template<typename F>
-    SystemId SystemBuilder<Allocator, Terms...>::EachWithCommands(F&& func)
-    {
+    template <comb::Allocator Allocator, typename... Terms>
+    template <typename F>
+    SystemId SystemBuilder<Allocator, Terms...>::EachWithCommands(F&& func) {
         using FuncType = std::decay_t<F>;
 
-        void* user_data = allocator_->Allocate(sizeof(FuncType), alignof(FuncType));
-        new (user_data) FuncType{std::forward<F>(func)};
+        void* userData = m_allocator->Allocate(sizeof(FuncType), alignof(FuncType));
+        new (userData) FuncType{std::forward<F>(func)};
 
         auto executor = [](World& world, void* data) {
             FuncType* fn = static_cast<FuncType*>(data);
@@ -87,26 +84,25 @@ namespace queen
             fn->~FuncType();
         };
 
-        descriptor_->SetExecutor(executor, user_data, destructor);
-        return descriptor_->Id();
+        m_descriptor->SetExecutor(executor, userData, destructor);
+        return m_descriptor->Id();
     }
 
-    template<comb::Allocator Allocator, typename... Terms>
-    template<typename R, typename F>
-    SystemId SystemBuilder<Allocator, Terms...>::EachWithRes(F&& func)
-    {
+    template <comb::Allocator Allocator, typename... Terms>
+    template <typename R, typename F>
+    SystemId SystemBuilder<Allocator, Terms...>::EachWithRes(F&& func) {
         using FuncType = std::decay_t<F>;
 
-        descriptor_->Access().template AddResourceRead<R>();
+        m_descriptor->Access().template AddResourceRead<R>();
 
-        void* user_data = allocator_->Allocate(sizeof(FuncType), alignof(FuncType));
-        new (user_data) FuncType{std::forward<F>(func)};
+        void* userData = m_allocator->Allocate(sizeof(FuncType), alignof(FuncType));
+        new (userData) FuncType{std::forward<F>(func)};
 
         auto executor = [](World& world, void* data) {
             FuncType* fn = static_cast<FuncType*>(data);
-            R* res_ptr = world.Resource<R>();
-            hive::Assert(res_ptr != nullptr, "Resource not found for Res<T>");
-            Res<R> res{res_ptr};
+            R* resPtr = world.Resource<R>();
+            hive::Assert(resPtr != nullptr, "Resource not found for Res<T>");
+            Res<R> res{resPtr};
 
             // Use locked version to protect Query lifetime (construction + destruction)
             world.template QueryEach<Terms...>([fn, res](auto& query) {
@@ -121,26 +117,25 @@ namespace queen
             fn->~FuncType();
         };
 
-        descriptor_->SetExecutor(executor, user_data, destructor);
-        return descriptor_->Id();
+        m_descriptor->SetExecutor(executor, userData, destructor);
+        return m_descriptor->Id();
     }
 
-    template<comb::Allocator Allocator, typename... Terms>
-    template<typename R, typename F>
-    SystemId SystemBuilder<Allocator, Terms...>::EachWithResMut(F&& func)
-    {
+    template <comb::Allocator Allocator, typename... Terms>
+    template <typename R, typename F>
+    SystemId SystemBuilder<Allocator, Terms...>::EachWithResMut(F&& func) {
         using FuncType = std::decay_t<F>;
 
-        descriptor_->Access().template AddResourceWrite<R>();
+        m_descriptor->Access().template AddResourceWrite<R>();
 
-        void* user_data = allocator_->Allocate(sizeof(FuncType), alignof(FuncType));
-        new (user_data) FuncType{std::forward<F>(func)};
+        void* userData = m_allocator->Allocate(sizeof(FuncType), alignof(FuncType));
+        new (userData) FuncType{std::forward<F>(func)};
 
         auto executor = [](World& world, void* data) {
             FuncType* fn = static_cast<FuncType*>(data);
-            R* res_ptr = world.Resource<R>();
-            hive::Assert(res_ptr != nullptr, "Resource not found for ResMut<T>");
-            ResMut<R> res{res_ptr};
+            R* resPtr = world.Resource<R>();
+            hive::Assert(resPtr != nullptr, "Resource not found for ResMut<T>");
+            ResMut<R> res{resPtr};
 
             // Use locked version to protect Query lifetime (construction + destruction)
             world.template QueryEach<Terms...>([fn, res](auto& query) {
@@ -155,30 +150,29 @@ namespace queen
             fn->~FuncType();
         };
 
-        descriptor_->SetExecutor(executor, user_data, destructor);
-        return descriptor_->Id();
+        m_descriptor->SetExecutor(executor, userData, destructor);
+        return m_descriptor->Id();
     }
 
     // ================================
     // SystemBuilder<Allocator> (no terms) implementations
     // ================================
 
-    template<comb::Allocator Allocator>
-    template<typename R, typename F>
-    SystemId SystemBuilder<Allocator>::RunWithRes(F&& func)
-    {
+    template <comb::Allocator Allocator>
+    template <typename R, typename F>
+    SystemId SystemBuilder<Allocator>::RunWithRes(F&& func) {
         using FuncType = std::decay_t<F>;
 
-        descriptor_->Access().template AddResourceRead<R>();
+        m_descriptor->Access().template AddResourceRead<R>();
 
-        void* user_data = allocator_->Allocate(sizeof(FuncType), alignof(FuncType));
-        new (user_data) FuncType{std::forward<F>(func)};
+        void* userData = m_allocator->Allocate(sizeof(FuncType), alignof(FuncType));
+        new (userData) FuncType{std::forward<F>(func)};
 
         auto executor = [](World& world, void* data) {
             FuncType* fn = static_cast<FuncType*>(data);
-            R* res_ptr = world.Resource<R>();
-            hive::Assert(res_ptr != nullptr, "Resource not found for Res<T>");
-            Res<R> res{res_ptr};
+            R* resPtr = world.Resource<R>();
+            hive::Assert(resPtr != nullptr, "Resource not found for Res<T>");
+            Res<R> res{resPtr};
             (*fn)(res);
         };
 
@@ -187,26 +181,25 @@ namespace queen
             fn->~FuncType();
         };
 
-        descriptor_->SetExecutor(executor, user_data, destructor);
-        return descriptor_->Id();
+        m_descriptor->SetExecutor(executor, userData, destructor);
+        return m_descriptor->Id();
     }
 
-    template<comb::Allocator Allocator>
-    template<typename R, typename F>
-    SystemId SystemBuilder<Allocator>::RunWithResMut(F&& func)
-    {
+    template <comb::Allocator Allocator>
+    template <typename R, typename F>
+    SystemId SystemBuilder<Allocator>::RunWithResMut(F&& func) {
         using FuncType = std::decay_t<F>;
 
-        descriptor_->Access().template AddResourceWrite<R>();
+        m_descriptor->Access().template AddResourceWrite<R>();
 
-        void* user_data = allocator_->Allocate(sizeof(FuncType), alignof(FuncType));
-        new (user_data) FuncType{std::forward<F>(func)};
+        void* userData = m_allocator->Allocate(sizeof(FuncType), alignof(FuncType));
+        new (userData) FuncType{std::forward<F>(func)};
 
         auto executor = [](World& world, void* data) {
             FuncType* fn = static_cast<FuncType*>(data);
-            R* res_ptr = world.Resource<R>();
-            hive::Assert(res_ptr != nullptr, "Resource not found for ResMut<T>");
-            ResMut<R> res{res_ptr};
+            R* resPtr = world.Resource<R>();
+            hive::Assert(resPtr != nullptr, "Resource not found for ResMut<T>");
+            ResMut<R> res{resPtr};
             (*fn)(res);
         };
 
@@ -215,7 +208,7 @@ namespace queen
             fn->~FuncType();
         };
 
-        descriptor_->SetExecutor(executor, user_data, destructor);
-        return descriptor_->Id();
+        m_descriptor->SetExecutor(executor, userData, destructor);
+        return m_descriptor->Id();
     }
-}
+} // namespace queen

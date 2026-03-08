@@ -1,8 +1,10 @@
-#include <larvae/larvae.h>
 #include <wax/containers/fixed_string.h>
 #include <wax/containers/string_view.h>
 
-namespace {
+#include <larvae/larvae.h>
+
+namespace
+{
     // =============================================================================
     // Construction
     // =============================================================================
@@ -162,7 +164,8 @@ namespace {
 
         char result[3];
         size_t i = 0;
-        for (char ch : str) {
+        for (char ch : str)
+        {
             result[i++] = ch;
         }
 
@@ -251,7 +254,7 @@ namespace {
     auto test25 = larvae::RegisterTest("WaxFixedString", "AppendToCapacity", []() {
         wax::FixedString str{"Hello"};
 
-        str.Append(" World12345678");  // 5 + 14 = 19
+        str.Append(" World12345678"); // 5 + 14 = 19
 
         larvae::AssertEqual(str.Size(), 19u);
         larvae::AssertFalse(str.IsFull());
@@ -424,7 +427,7 @@ namespace {
     auto test43 = larvae::RegisterTest("WaxFixedString", "ResizeBeyondCapacity", []() {
         wax::FixedString str{"Hello"};
 
-        str.Resize(30, 'x');  // Should clamp to MaxCapacity
+        str.Resize(30, 'x'); // Should clamp to MaxCapacity
 
         larvae::AssertEqual(str.Size(), wax::FixedString::MaxCapacity);
         larvae::AssertTrue(str.IsFull());
@@ -433,7 +436,7 @@ namespace {
     auto test44 = larvae::RegisterTest("WaxFixedString", "AppendTruncates", []() {
         wax::FixedString str{"Hello World"};
 
-        str.Append("12345678901234567890");  // Would exceed capacity
+        str.Append("12345678901234567890"); // Would exceed capacity
 
         // Should stop at MaxCapacity
         larvae::AssertEqual(str.Size(), wax::FixedString::MaxCapacity);
@@ -486,4 +489,4 @@ namespace {
         larvae::AssertTrue(str.StartsWith('A'));
         larvae::AssertTrue(str.EndsWith('A'));
     });
-}
+} // namespace

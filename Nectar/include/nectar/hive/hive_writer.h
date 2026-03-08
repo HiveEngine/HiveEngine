@@ -1,8 +1,10 @@
 #pragma once
 
-#include <nectar/hive/hive_document.h>
-#include <wax/containers/string.h>
 #include <comb/default_allocator.h>
+
+#include <wax/containers/string.h>
+
+#include <nectar/hive/hive_document.h>
 
 namespace nectar
 {
@@ -12,4 +14,4 @@ namespace nectar
     public:
         [[nodiscard]] static wax::String Write(const HiveDocument& doc, comb::DefaultAllocator& alloc);
     };
-}
+} // namespace nectar

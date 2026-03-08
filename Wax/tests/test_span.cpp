@@ -1,8 +1,10 @@
-#include <larvae/larvae.h>
-#include <wax/containers/span.h>
 #include <wax/containers/array.h>
+#include <wax/containers/span.h>
 
-namespace {
+#include <larvae/larvae.h>
+
+namespace
+{
     // =============================================================================
     // Construction and Basic Access
     // =============================================================================
@@ -154,7 +156,7 @@ namespace {
         int data[] = {10, 20, 30, 40};
         wax::Span<int> span{data};
 
-        auto it = span.begin();
+        auto it = span.Begin();
         larvae::AssertEqual(*it, 10);
 
         ++it;
@@ -167,7 +169,7 @@ namespace {
         larvae::AssertEqual(*it, 40);
 
         ++it;
-        larvae::AssertTrue(it == span.end());
+        larvae::AssertTrue(it == span.End());
     });
 
     auto test15 = larvae::RegisterTest("WaxSpan", "RangeForLoop", []() {
@@ -175,9 +177,9 @@ namespace {
         wax::Span<int> span{data};
 
         int sum = 0;
-        for (int val : span)
+        for (auto it = span.Begin(); it != span.End(); ++it)
         {
-            sum += val;
+            sum += *it;
         }
 
         larvae::AssertEqual(sum, 15);
@@ -187,9 +189,9 @@ namespace {
         int data[] = {1, 2, 3};
         wax::Span<int> span{data};
 
-        for (int& val : span)
+        for (auto it = span.Begin(); it != span.End(); ++it)
         {
-            val *= 2;
+            *it *= 2;
         }
 
         larvae::AssertEqual(data[0], 2);
@@ -289,9 +291,9 @@ namespace {
         larvae::AssertEqual(span[2], 3);
 
         int sum = 0;
-        for (int val : span)
+        for (auto it = span.Begin(); it != span.End(); ++it)
         {
-            sum += val;
+            sum += *it;
         }
         larvae::AssertEqual(sum, 6);
     });
@@ -319,7 +321,10 @@ namespace {
     });
 
     auto test26 = larvae::RegisterTest("WaxSpan", "StructSpan", []() {
-        struct Point { int x, y; };
+        struct Point
+        {
+            int x, y;
+        };
         Point data[] = {{1, 2}, {3, 4}, {5, 6}};
         wax::Span<Point> span{data};
 
@@ -371,4 +376,4 @@ namespace {
         larvae::AssertEqual(data[2], 30);
         larvae::AssertEqual(data[3], 40);
     });
-}
+} // namespace

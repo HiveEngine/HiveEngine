@@ -1,12 +1,15 @@
-#include <larvae/larvae.h>
-#include <queen/reflect/component_reflector.h>
-#include <queen/reflect/reflectable.h>
-#include <queen/reflect/component_serializer.h>
-#include <queen/reflect/component_registry.h>
-#include <queen/core/entity.h>
-#include <wax/serialization/binary_writer.h>
-#include <wax/serialization/binary_reader.h>
 #include <comb/linear_allocator.h>
+
+#include <wax/serialization/binary_reader.h>
+#include <wax/serialization/binary_writer.h>
+
+#include <queen/core/entity.h>
+#include <queen/reflect/component_reflector.h>
+#include <queen/reflect/component_registry.h>
+#include <queen/reflect/component_serializer.h>
+#include <queen/reflect/reflectable.h>
+
+#include <larvae/larvae.h>
 
 namespace
 {
@@ -16,8 +19,7 @@ namespace
     {
         float x, y, z;
 
-        static void Reflect(queen::ComponentReflector<>& r)
-        {
+        static void Reflect(queen::ComponentReflector<>& r) {
             r.Field("x", &Position::x);
             r.Field("y", &Position::y);
             r.Field("z", &Position::z);
@@ -28,8 +30,7 @@ namespace
     {
         float dx, dy, dz;
 
-        static void Reflect(queen::ComponentReflector<>& r)
-        {
+        static void Reflect(queen::ComponentReflector<>& r) {
             r.Field("dx", &Velocity::dx);
             r.Field("dy", &Velocity::dy);
             r.Field("dz", &Velocity::dz);
@@ -42,8 +43,7 @@ namespace
         int32_t maximum;
         bool is_dead;
 
-        static void Reflect(queen::ComponentReflector<>& r)
-        {
+        static void Reflect(queen::ComponentReflector<>& r) {
             r.Field("current", &Health::current);
             r.Field("maximum", &Health::maximum);
             r.Field("is_dead", &Health::is_dead);
@@ -64,8 +64,7 @@ namespace
         double f64;
         bool flag;
 
-        static void Reflect(queen::ComponentReflector<>& r)
-        {
+        static void Reflect(queen::ComponentReflector<>& r) {
             r.Field("i8", &AllTypes::i8);
             r.Field("i16", &AllTypes::i16);
             r.Field("i32", &AllTypes::i32);
@@ -85,23 +84,23 @@ namespace
         queen::Entity target;
         int32_t data;
 
-        static void Reflect(queen::ComponentReflector<>& r)
-        {
+        static void Reflect(queen::ComponentReflector<>& r) {
             r.Field("target", &WithEntity::target);
             r.Field("data", &WithEntity::data);
         }
     };
 
     // Non-reflectable component for testing
-    struct TagComponent {};
+    struct TagComponent
+    {
+    };
 
     // Nested reflectable struct
     struct Vec2
     {
         float x, y;
 
-        static void Reflect(queen::ComponentReflector<>& r)
-        {
+        static void Reflect(queen::ComponentReflector<>& r) {
             r.Field("x", &Vec2::x);
             r.Field("y", &Vec2::y);
         }
@@ -114,8 +113,7 @@ namespace
         Vec2 scale;
         float rotation;
 
-        static void Reflect(queen::ComponentReflector<>& r)
-        {
+        static void Reflect(queen::ComponentReflector<>& r) {
             r.Field("position", &Transform::position);
             r.Field("scale", &Transform::scale);
             r.Field("rotation", &Transform::rotation);
@@ -128,8 +126,7 @@ namespace
         queen::Entity entity;
         int32_t priority;
 
-        static void Reflect(queen::ComponentReflector<>& r)
-        {
+        static void Reflect(queen::ComponentReflector<>& r) {
             r.Field("entity", &TargetInfo::entity);
             r.Field("priority", &TargetInfo::priority);
         }
@@ -142,8 +139,7 @@ namespace
         TargetInfo secondary_target;
         float aggro_range;
 
-        static void Reflect(queen::ComponentReflector<>& r)
-        {
+        static void Reflect(queen::ComponentReflector<>& r) {
             r.Field("primary_target", &AIComponent::primary_target);
             r.Field("secondary_target", &AIComponent::secondary_target);
             r.Field("aggro_range", &AIComponent::aggro_range);
@@ -162,8 +158,7 @@ namespace
         Color tint;
         float opacity;
 
-        static void Reflect(queen::ComponentReflector<>& r)
-        {
+        static void Reflect(queen::ComponentReflector<>& r) {
             r.Field("tint", &Sprite::tint);
             r.Field("opacity", &Sprite::opacity);
         }
@@ -185,19 +180,19 @@ namespace
         Position::Reflect(reflector);
 
         const auto& field_x = reflector[0];
-        larvae::AssertTrue(field_x.name != nullptr);
-        larvae::AssertEqual(field_x.offset, size_t{0});
-        larvae::AssertEqual(field_x.size, sizeof(float));
-        larvae::AssertEqual(static_cast<int>(field_x.type), static_cast<int>(queen::FieldType::Float32));
+        larvae::AssertTrue(field_x.m_name != nullptr);
+        larvae::AssertEqual(field_x.m_offset, size_t{0});
+        larvae::AssertEqual(field_x.m_size, sizeof(float));
+        larvae::AssertEqual(static_cast<int>(field_x.m_type), static_cast<int>(queen::FieldType::FLOAT32));
     });
 
     auto test3 = larvae::RegisterTest("QueenReflection", "FieldOffsets", []() {
         queen::ComponentReflector<> reflector;
         Position::Reflect(reflector);
 
-        larvae::AssertEqual(reflector[0].offset, offsetof(Position, x));
-        larvae::AssertEqual(reflector[1].offset, offsetof(Position, y));
-        larvae::AssertEqual(reflector[2].offset, offsetof(Position, z));
+        larvae::AssertEqual(reflector[0].m_offset, offsetof(Position, x));
+        larvae::AssertEqual(reflector[1].m_offset, offsetof(Position, y));
+        larvae::AssertEqual(reflector[2].m_offset, offsetof(Position, z));
     });
 
     auto test4 = larvae::RegisterTest("QueenReflection", "FindFieldByName", []() {
@@ -206,7 +201,7 @@ namespace
 
         const queen::FieldInfo* field = reflector.FindField("y");
         larvae::AssertNotNull(field);
-        larvae::AssertEqual(field->offset, offsetof(Position, y));
+        larvae::AssertEqual(field->m_offset, offsetof(Position, y));
     });
 
     auto test5 = larvae::RegisterTest("QueenReflection", "FindFieldNotFound", []() {
@@ -236,9 +231,9 @@ namespace
         auto reflection = queen::GetReflectionData<Position>();
 
         larvae::AssertTrue(reflection.IsValid());
-        larvae::AssertEqual(reflection.field_count, size_t{3});
-        larvae::AssertNotNull(reflection.fields);
-        larvae::AssertEqual(reflection.type_id, queen::TypeIdOf<Position>());
+        larvae::AssertEqual(reflection.m_fieldCount, size_t{3});
+        larvae::AssertNotNull(reflection.m_fields);
+        larvae::AssertEqual(reflection.m_typeId, queen::TypeIdOf<Position>());
     });
 
     // ============================================================
@@ -280,12 +275,7 @@ namespace
     });
 
     auto test11 = larvae::RegisterTest("QueenReflection", "SerializeDeserializeAllTypes", []() {
-        AllTypes original{
-            -8, -16, -32, -64,
-            8, 16, 32, 64,
-            3.14f, 2.718281828,
-            true
-        };
+        AllTypes original{-8, -16, -32, -64, 8, 16, 32, 64, 3.14f, 2.718281828, true};
 
         comb::LinearAllocator alloc{4096};
         wax::BinaryWriter writer{alloc};
@@ -310,10 +300,7 @@ namespace
     });
 
     auto test12 = larvae::RegisterTest("QueenReflection", "SerializeDeserializeEntity", []() {
-        WithEntity original{
-            queen::Entity{42, 7, queen::Entity::Flags::kAlive},
-            12345
-        };
+        WithEntity original{queen::Entity{42, 7, queen::Entity::Flags::kAlive}, 12345};
 
         comb::LinearAllocator alloc{4096};
         wax::BinaryWriter writer{alloc};
@@ -353,7 +340,7 @@ namespace
         larvae::AssertNotNull(found);
         larvae::AssertTrue(found->IsValid());
         larvae::AssertTrue(found->HasReflection());
-        larvae::AssertEqual(found->meta.type_id, queen::TypeIdOf<Position>());
+        larvae::AssertEqual(found->m_meta.m_typeId, queen::TypeIdOf<Position>());
     });
 
     auto test15 = larvae::RegisterTest("QueenReflection", "RegistryFindNotRegistered", []() {
@@ -384,9 +371,9 @@ namespace
         registry.Register<Health>();
 
         size_t count = 0;
-        for (const auto& entry : registry)
+        for (auto it = registry.Begin(); it != registry.End(); ++it)
         {
-            larvae::AssertTrue(entry.IsValid());
+            larvae::AssertTrue(it->IsValid());
             ++count;
         }
 
@@ -405,11 +392,11 @@ namespace
         comb::LinearAllocator alloc{4096};
         wax::BinaryWriter writer{alloc};
 
-        queen::SerializeComponent(&original, info->reflection, writer);
+        queen::SerializeComponent(&original, info->m_reflection, writer);
 
         Position loaded{0.0f, 0.0f, 0.0f};
         wax::BinaryReader reader{writer.View()};
-        queen::DeserializeComponent(&loaded, info->reflection, reader);
+        queen::DeserializeComponent(&loaded, info->m_reflection, reader);
 
         larvae::AssertEqual(loaded.x, 5.0f);
         larvae::AssertEqual(loaded.y, 10.0f);
@@ -428,11 +415,11 @@ namespace
         larvae::AssertEqual(reflector.Count(), size_t{3});
 
         const auto& pos_field = reflector[0];
-        larvae::AssertEqual(static_cast<int>(pos_field.type), static_cast<int>(queen::FieldType::Struct));
-        larvae::AssertEqual(pos_field.size, sizeof(Vec2));
+        larvae::AssertEqual(static_cast<int>(pos_field.m_type), static_cast<int>(queen::FieldType::STRUCT));
+        larvae::AssertEqual(pos_field.m_size, sizeof(Vec2));
         // Nested reflectable should have nested field pointers
-        larvae::AssertNotNull(pos_field.nested_fields);
-        larvae::AssertEqual(pos_field.nested_field_count, size_t{2});
+        larvae::AssertNotNull(pos_field.m_nestedFields);
+        larvae::AssertEqual(pos_field.m_nestedFieldCount, size_t{2});
     });
 
     auto test20 = larvae::RegisterTest("QueenReflection", "NestedReflectableSerializeRoundtrip", []() {
@@ -513,10 +500,10 @@ namespace
         Sprite::Reflect(reflector);
 
         const auto& tint_field = reflector[0];
-        larvae::AssertEqual(static_cast<int>(tint_field.type), static_cast<int>(queen::FieldType::Struct));
+        larvae::AssertEqual(static_cast<int>(tint_field.m_type), static_cast<int>(queen::FieldType::STRUCT));
         // Non-reflectable nested type should have null nested_fields
-        larvae::AssertNull(tint_field.nested_fields);
-        larvae::AssertEqual(tint_field.nested_field_count, size_t{0});
+        larvae::AssertNull(tint_field.m_nestedFields);
+        larvae::AssertEqual(tint_field.m_nestedFieldCount, size_t{0});
     });
 
     auto test24 = larvae::RegisterTest("QueenReflection", "NestedReflectableViaRegistry", []() {
@@ -538,11 +525,11 @@ namespace
         comb::LinearAllocator alloc{4096};
         wax::BinaryWriter writer{alloc};
 
-        queen::SerializeComponent(&original, info->reflection, writer);
+        queen::SerializeComponent(&original, info->m_reflection, writer);
 
         AIComponent loaded{};
         wax::BinaryReader reader{writer.View()};
-        queen::DeserializeComponent(&loaded, info->reflection, reader);
+        queen::DeserializeComponent(&loaded, info->m_reflection, reader);
 
         larvae::AssertEqual(loaded.primary_target.entity.Index(), queen::Entity::IndexType{42});
         larvae::AssertEqual(loaded.primary_target.priority, int32_t{99});
@@ -561,10 +548,10 @@ namespace
 
         // GetReflectionData returns name from TypeNameOf<T>()
         auto reflection = queen::GetReflectionData<Position>();
-        const queen::RegisteredComponent* found = registry.FindByName(reflection.name);
+        const queen::RegisteredComponent* found = registry.FindByName(reflection.m_name);
 
         larvae::AssertNotNull(found);
-        larvae::AssertEqual(found->meta.type_id, queen::TypeIdOf<Position>());
+        larvae::AssertEqual(found->m_meta.m_typeId, queen::TypeIdOf<Position>());
     });
 
     auto test26 = larvae::RegisterTest("QueenReflection", "RegistryFindByNameNotFound", []() {
@@ -592,4 +579,4 @@ namespace
         const queen::RegisteredComponent* found = registry.FindByName("TagComponent");
         larvae::AssertNull(found);
     });
-}
+} // namespace

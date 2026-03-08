@@ -7,5 +7,5 @@ namespace hive
 
 namespace swarm
 {
-    extern const hive::LogCategory LogSwarm;
+    extern const hive::LogCategory LOG_SWARM;
 }

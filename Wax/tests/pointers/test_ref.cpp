@@ -1,12 +1,17 @@
-#include <larvae/larvae.h>
 #include <wax/pointers/ref.h>
 
-namespace {
-    struct TestStruct {
+#include <larvae/larvae.h>
+
+namespace
+{
+    struct TestStruct
+    {
         int value;
         float data;
 
-        TestStruct(int v = 0, float d = 0.0f) : value{v}, data{d} {}
+        TestStruct(int v = 0, float d = 0.0f)
+            : value{v}
+            , data{d} {}
     };
 
     // =============================================================================
@@ -39,7 +44,7 @@ namespace {
 
     auto test4 = larvae::RegisterTest("WaxRef", "DeductionGuide", []() {
         int x = 123;
-        wax::Ref ref{x};  // Type deduced as Ref<int>
+        wax::Ref ref{x}; // Type deduced as Ref<int>
 
         larvae::AssertEqual(*ref, 123);
     });
@@ -105,7 +110,7 @@ namespace {
         int x = 42;
         wax::Ref<int> ref{x};
 
-        int& y = ref;  // Implicit conversion
+        int& y = ref; // Implicit conversion
         larvae::AssertEqual(y, 42);
         larvae::AssertEqual(&y, &x);
     });
@@ -184,4 +189,4 @@ namespace {
         larvae::AssertEqual(ref->value, 10);
         // ref->value = 20;  // Should not compile (const)
     });
-}
+} // namespace

@@ -10,4 +10,4 @@ namespace nectar
 
     /// Incremental CRC32. Start with crc = 0xFFFFFFFF, finalize with ^ 0xFFFFFFFF.
     [[nodiscard]] uint32_t Crc32Update(uint32_t crc, const void* data, size_t size) noexcept;
-}
+} // namespace nectar

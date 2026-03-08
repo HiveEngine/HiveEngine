@@ -1,13 +1,16 @@
 #pragma once
 
-#include <queen/scheduler/dependency_graph.h>
-#include <queen/scheduler/thread_pool.h>
-#include <queen/scheduler/parallel.h>
-#include <queen/system/system_storage.h>
-#include <queen/core/tick.h>
-#include <comb/allocator_concepts.h>
 #include <hive/core/assert.h>
 #include <hive/profiling/profiler.h>
+
+#include <comb/allocator_concepts.h>
+
+#include <queen/core/tick.h>
+#include <queen/scheduler/dependency_graph.h>
+#include <queen/scheduler/parallel.h>
+#include <queen/scheduler/thread_pool.h>
+#include <queen/system/system_storage.h>
+
 #include <atomic>
 #include <cstring>
 
@@ -54,57 +57,50 @@ namespace queen
      * - Command buffers are flushed after all systems (sync point)
      * - Overhead from scheduling may not help for trivial systems
      */
-    template<comb::Allocator Allocator>
-    class ParallelScheduler
+    template <comb::Allocator Allocator> class ParallelScheduler
     {
     public:
         /**
          * Create a ParallelScheduler with an existing thread pool
          */
         explicit ParallelScheduler(Allocator& allocator, ThreadPool<Allocator>& pool)
-            : graph_{allocator}
-            , pool_{&pool}
-            , owns_pool_{false}
-            , remaining_{nullptr}
-            , remaining_count_{0}
-            , allocator_{&allocator}
-        {}
+            : m_graph{allocator}
+            , m_pool{&pool}
+            , m_ownsPool{false}
+            , m_remaining{nullptr}
+            , m_remainingCount{0}
+            , m_allocator{&allocator} {}
 
         /**
          * Create a ParallelScheduler with a new internal thread pool
          */
-        explicit ParallelScheduler(Allocator& allocator, size_t worker_count = 0)
-            : graph_{allocator}
-            , pool_{nullptr}
-            , owns_pool_{true}
-            , remaining_{nullptr}
-            , remaining_count_{0}
-            , allocator_{&allocator}
-        {
-            void* pool_mem = allocator_->Allocate(
-                sizeof(ThreadPool<Allocator>),
-                alignof(ThreadPool<Allocator>)
-            );
-            pool_ = new (pool_mem) ThreadPool<Allocator>{allocator, worker_count};
-            pool_->Start();
+        explicit ParallelScheduler(Allocator& allocator, size_t workerCount = 0)
+            : m_graph{allocator}
+            , m_pool{nullptr}
+            , m_ownsPool{true}
+            , m_remaining{nullptr}
+            , m_remainingCount{0}
+            , m_allocator{&allocator} {
+            void* poolMem = m_allocator->Allocate(sizeof(ThreadPool<Allocator>), alignof(ThreadPool<Allocator>));
+            m_pool = new (poolMem) ThreadPool<Allocator>{allocator, workerCount};
+            m_pool->Start();
         }
 
-        ~ParallelScheduler()
-        {
-            if (remaining_ != nullptr)
+        ~ParallelScheduler() {
+            if (m_remaining != nullptr)
             {
-                for (size_t i = 0; i < remaining_count_; ++i)
+                for (size_t i = 0; i < m_remainingCount; ++i)
                 {
-                    remaining_[i].~atomic<uint16_t>();
+                    m_remaining[i].~atomic<uint16_t>();
                 }
-                allocator_->Deallocate(remaining_);
+                m_allocator->Deallocate(m_remaining);
             }
 
-            if (owns_pool_ && pool_ != nullptr)
+            if (m_ownsPool && m_pool != nullptr)
             {
-                pool_->Stop();
-                pool_->~ThreadPool<Allocator>();
-                allocator_->Deallocate(pool_);
+                m_pool->Stop();
+                m_pool->~ThreadPool<Allocator>();
+                m_allocator->Deallocate(m_pool);
             }
         }
 
@@ -116,27 +112,20 @@ namespace queen
         /**
          * Build/rebuild the dependency graph from system storage
          */
-        void Build(const SystemStorage<Allocator>& storage)
-        {
-            graph_.Build(storage);
-            ReallocateRemaining(graph_.NodeCount());
+        void Build(const SystemStorage<Allocator>& storage) {
+            m_graph.Build(storage);
+            ReallocateRemaining(m_graph.NodeCount());
         }
 
         /**
          * Mark the graph as needing rebuild
          */
-        void Invalidate() noexcept
-        {
-            graph_.MarkDirty();
-        }
+        void Invalidate() noexcept { m_graph.MarkDirty(); }
 
         /**
          * Check if the graph needs rebuild
          */
-        [[nodiscard]] bool NeedsRebuild() const noexcept
-        {
-            return graph_.IsDirty();
-        }
+        [[nodiscard]] bool NeedsRebuild() const noexcept { return m_graph.IsDirty(); }
 
         /**
          * Run all systems in parallel where possible
@@ -144,151 +133,118 @@ namespace queen
          * Independent systems are executed concurrently. Dependent systems
          * wait for their dependencies to complete before executing.
          */
-        void RunAll(World& world, SystemStorage<Allocator>& storage);  // Implementation in parallel_scheduler_impl.h
+        void RunAll(World& world, SystemStorage<Allocator>& storage); // Implementation in parallel_scheduler_impl.h
 
         /**
          * Get the dependency graph
          */
-        [[nodiscard]] const DependencyGraph<Allocator>& Graph() const noexcept
-        {
-            return graph_;
-        }
+        [[nodiscard]] const DependencyGraph<Allocator>& Graph() const noexcept { return m_graph; }
 
-        [[nodiscard]] DependencyGraph<Allocator>& Graph() noexcept
-        {
-            return graph_;
-        }
+        [[nodiscard]] DependencyGraph<Allocator>& Graph() noexcept { return m_graph; }
 
         /**
          * Get the thread pool
          */
-        [[nodiscard]] ThreadPool<Allocator>* Pool() noexcept
-        {
-            return pool_;
-        }
+        [[nodiscard]] ThreadPool<Allocator>* Pool() noexcept { return m_pool; }
 
         /**
          * Get the execution order (for debugging/visualization)
          */
-        [[nodiscard]] const wax::Vector<uint32_t>& ExecutionOrder() const noexcept
-        {
-            return graph_.ExecutionOrder();
-        }
+        [[nodiscard]] const wax::Vector<uint32_t>& ExecutionOrder() const noexcept { return m_graph.ExecutionOrder(); }
 
         /**
          * Check if the dependency graph has cycles
          */
-        [[nodiscard]] bool HasCycle() const noexcept
-        {
-            return graph_.HasCycle();
-        }
+        [[nodiscard]] bool HasCycle() const noexcept { return m_graph.HasCycle(); }
 
     private:
-        void ReallocateRemaining(size_t count)
-        {
+        void ReallocateRemaining(size_t count) {
             // Clean up old array
-            if (remaining_ != nullptr)
+            if (m_remaining != nullptr)
             {
-                for (size_t i = 0; i < remaining_count_; ++i)
+                for (size_t i = 0; i < m_remainingCount; ++i)
                 {
-                    remaining_[i].~atomic<uint16_t>();
+                    m_remaining[i].~atomic<uint16_t>();
                 }
-                allocator_->Deallocate(remaining_);
-                remaining_ = nullptr;
+                m_allocator->Deallocate(m_remaining);
+                m_remaining = nullptr;
             }
 
-            remaining_count_ = count;
+            m_remainingCount = count;
             if (count == 0)
             {
                 return;
             }
 
-            void* mem = allocator_->Allocate(
-                sizeof(std::atomic<uint16_t>) * count,
-                alignof(std::atomic<uint16_t>)
-            );
-            remaining_ = static_cast<std::atomic<uint16_t>*>(mem);
+            void* mem = m_allocator->Allocate(sizeof(std::atomic<uint16_t>) * count, alignof(std::atomic<uint16_t>));
+            m_remaining = static_cast<std::atomic<uint16_t>*>(mem);
 
             for (size_t i = 0; i < count; ++i)
             {
-                new (&remaining_[i]) std::atomic<uint16_t>{0};
+                new (&m_remaining[i]) std::atomic<uint16_t>{0};
             }
         }
 
-        void ResetRemainingCounts()
-        {
-            for (size_t i = 0; i < remaining_count_; ++i)
+        void ResetRemainingCounts() {
+            for (size_t i = 0; i < m_remainingCount; ++i)
             {
-                const SystemNode* node = graph_.GetNode(static_cast<uint32_t>(i));
+                const SystemNode* node = m_graph.GetNode(static_cast<uint32_t>(i));
                 if (node != nullptr)
                 {
-                    remaining_[i].store(node->DependencyCount(), std::memory_order_relaxed);
+                    m_remaining[i].store(node->DependencyCount(), std::memory_order_relaxed);
                 }
             }
         }
 
-        void SubmitSystemTask(
-            uint32_t node_index,
-            World& world,
-            SystemStorage<Allocator>& storage,
-            Tick tick,
-            WaitGroup& wg)
-        {
+        void SubmitSystemTask(uint32_t nodeIndex, World& world, SystemStorage<Allocator>& storage, Tick tick,
+                              WaitGroup& wg) {
             // Pack context into task data
             struct TaskData
             {
-                ParallelScheduler* scheduler;
-                World* world;
-                SystemStorage<Allocator>* storage;
-                uint32_t node_index;
-                Tick tick;
-                WaitGroup* wg;
+                ParallelScheduler* m_scheduler;
+                World* m_world;
+                SystemStorage<Allocator>* m_storage;
+                uint32_t m_nodeIndex;
+                Tick m_tick;
+                WaitGroup* m_wg;
             };
 
             static constexpr size_t kMaxTasks = 256;
-            thread_local TaskData tasks[kMaxTasks];
-            thread_local size_t task_idx = 0;
+            thread_local TaskData s_tasks[kMaxTasks];
+            thread_local size_t s_taskIdx = 0;
 
-            hive::Assert(task_idx < kMaxTasks, "ParallelScheduler: too many concurrent tasks");
-            auto& td = tasks[task_idx % kMaxTasks];
-            task_idx++;
+            hive::Assert(s_taskIdx < kMaxTasks, "ParallelScheduler: too many concurrent tasks");
+            auto& td = s_tasks[s_taskIdx % kMaxTasks];
+            s_taskIdx++;
 
-            td.scheduler = this;
-            td.world = &world;
-            td.storage = &storage;
-            td.node_index = node_index;
-            td.tick = tick;
-            td.wg = &wg;
+            td.m_scheduler = this;
+            td.m_world = &world;
+            td.m_storage = &storage;
+            td.m_nodeIndex = nodeIndex;
+            td.m_tick = tick;
+            td.m_wg = &wg;
 
-            pool_->Submit([](void* data) {
-                auto* td = static_cast<TaskData*>(data);
-                td->scheduler->ExecuteSystem(
-                    td->node_index,
-                    *td->world,
-                    *td->storage,
-                    td->tick,
-                    *td->wg
-                );
-            }, &td);
+            m_pool->Submit(
+                [](void* data) {
+                    auto* td = static_cast<TaskData*>(data);
+                    td->m_scheduler->ExecuteSystem(td->m_nodeIndex, *td->m_world, *td->m_storage, td->m_tick,
+                                                   *td->m_wg);
+                },
+                &td);
         }
 
-        void ExecuteSystem(
-            uint32_t node_index,
-            World& world,
-            SystemStorage<Allocator>& storage,
-            Tick tick,
-            WaitGroup& wg)
-        {
-            SystemNode* node = graph_.GetNode(node_index);
+        void ExecuteSystem(uint32_t nodeIndex, World& world, SystemStorage<Allocator>& storage, Tick tick,
+                           WaitGroup& wg) {
+            SystemNode* node = m_graph.GetNode(nodeIndex);
             if (node == nullptr)
             {
                 wg.Done();
                 return;
             }
 
-            node->SetState(SystemState::Running);
+            node->SetState(SystemState::RUNNING);
 
-            SystemDescriptor<Allocator>* system = storage.GetSystemByIndex(node_index);
+            SystemDescriptor<Allocator>* system = storage.GetSystemByIndex(nodeIndex);
             if (system != nullptr)
             {
                 HIVE_PROFILE_SCOPE_N("ExecuteSystem");
@@ -296,21 +252,21 @@ namespace queen
                 system->Execute(world, tick);
             }
 
-            node->SetState(SystemState::Complete);
+            node->SetState(SystemState::COMPLETE);
 
-            const auto* dependents = graph_.GetDependents(node_index);
+            const auto* dependents = m_graph.GetDependents(nodeIndex);
             if (dependents != nullptr)
             {
                 for (size_t i = 0; i < dependents->Size(); ++i)
                 {
-                    uint32_t dep_idx = (*dependents)[i];
+                    uint32_t depIdx = (*dependents)[i];
 
-                    uint16_t prev = remaining_[dep_idx].fetch_sub(1, std::memory_order_acq_rel);
+                    uint16_t prev = m_remaining[depIdx].fetch_sub(1, std::memory_order_acq_rel);
 
                     // If we were the last dependency, submit the dependent
                     if (prev == 1)
                     {
-                        SubmitSystemTask(dep_idx, world, storage, tick, wg);
+                        SubmitSystemTask(depIdx, world, storage, tick, wg);
                     }
                 }
             }
@@ -318,11 +274,11 @@ namespace queen
             wg.Done();
         }
 
-        DependencyGraph<Allocator> graph_;
-        ThreadPool<Allocator>* pool_;
-        bool owns_pool_;
-        std::atomic<uint16_t>* remaining_;  // Remaining dependency count per node
-        size_t remaining_count_;
-        Allocator* allocator_;
+        DependencyGraph<Allocator> m_graph;
+        ThreadPool<Allocator>* m_pool;
+        bool m_ownsPool;
+        std::atomic<uint16_t>* m_remaining; // Remaining dependency count per node
+        size_t m_remainingCount;
+        Allocator* m_allocator;
     };
-}
+} // namespace queen

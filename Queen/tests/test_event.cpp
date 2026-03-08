@@ -1,11 +1,13 @@
 
-#include <larvae/larvae.h>
+#include <comb/buddy_allocator.h>
+
 #include <queen/event/event.h>
 #include <queen/event/event_queue.h>
-#include <queen/event/event_writer.h>
 #include <queen/event/event_reader.h>
+#include <queen/event/event_writer.h>
 #include <queen/event/events.h>
-#include <comb/buddy_allocator.h>
+
+#include <larvae/larvae.h>
 
 namespace
 {
@@ -43,7 +45,9 @@ namespace
         static_assert(queen::Event<SpawnEvent>);
 
         // Empty structs should not be events (no data to carry)
-        struct EmptyEvent {};
+        struct EmptyEvent
+        {
+        };
         static_assert(!queen::Event<EmptyEvent>);
     });
 
@@ -61,9 +65,9 @@ namespace
     auto test_event_3 = larvae::RegisterTest("QueenEvent", "EventMetaCorrect", []() {
         queen::EventMeta damage_meta = queen::EventMeta::Of<DamageEvent>();
 
-        larvae::AssertEqual(damage_meta.size, sizeof(DamageEvent));
-        larvae::AssertEqual(damage_meta.alignment, alignof(DamageEvent));
-        larvae::AssertTrue(damage_meta.id.IsValid());
+        larvae::AssertEqual(damage_meta.m_size, sizeof(DamageEvent));
+        larvae::AssertEqual(damage_meta.m_alignment, alignof(DamageEvent));
+        larvae::AssertTrue(damage_meta.m_id.IsValid());
     });
 
     // ─────────────────────────────────────────────────────────────
@@ -150,9 +154,9 @@ namespace
         // Should iterate: previous first (1, 2), then current (3)
         float total = 0.0f;
         size_t count = 0;
-        for (const auto& event : queue)
+        for (auto it = queue.Begin(); it != queue.End(); ++it)
         {
-            total += event.amount;
+            total += it->amount;
             ++count;
         }
 
@@ -220,9 +224,9 @@ namespace
         larvae::AssertFalse(reader.IsEmpty());
 
         float total = 0.0f;
-        for (const auto& event : reader)
+        for (auto it = reader.Begin(); it != reader.End(); ++it)
         {
-            total += event.amount;
+            total += it->amount;
         }
 
         larvae::AssertEqual(total, 30.0f);
@@ -238,12 +242,10 @@ namespace
         queen::EventReader<DamageEvent, comb::BuddyAllocator> reader{queue};
 
         float total = 0.0f;
-        reader.Read([&total](const DamageEvent& event) {
-            total += event.amount;
-        });
+        reader.Read([&total](const DamageEvent& event) { total += event.amount; });
 
         larvae::AssertEqual(total, 30.0f);
-        larvae::AssertTrue(reader.IsEmpty());  // Cursor advanced
+        larvae::AssertTrue(reader.IsEmpty()); // Cursor advanced
     });
 
     auto test_reader_3 = larvae::RegisterTest("QueenEvent", "EventReaderMarkRead", []() {
@@ -328,9 +330,9 @@ namespace
         larvae::AssertEqual(reader.TotalCount(), size_t{2});
 
         float total = 0.0f;
-        for (const auto& event : reader)
+        for (auto it = reader.Begin(); it != reader.End(); ++it)
         {
-            total += event.amount;
+            total += it->amount;
         }
 
         larvae::AssertEqual(total, 30.0f);
@@ -408,4 +410,4 @@ namespace
             larvae::AssertEqual(reader.TotalCount(), size_t{0});
         }
     });
-}
+} // namespace

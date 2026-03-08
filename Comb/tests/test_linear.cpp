@@ -1,12 +1,19 @@
-#include <larvae/larvae.h>
 #include <comb/linear_allocator.h>
 #include <comb/new.h>
+
+#include <larvae/larvae.h>
+
 #include <cstring>
 
-namespace {
+namespace
+{
     // Helper for readability
-    constexpr size_t operator""_KB(unsigned long long kb) { return kb * 1024; }
-    constexpr size_t operator""_MB(unsigned long long mb) { return mb * 1024 * 1024; }
+    constexpr size_t operator""_KB(unsigned long long kb) {
+        return kb * 1024;
+    }
+    constexpr size_t operator""_MB(unsigned long long mb) {
+        return mb * 1024 * 1024;
+    }
 
     // =============================================================================
     // Basic Functionality
@@ -224,7 +231,9 @@ namespace {
         volatile unsigned char v2 = byte_ptr[128];
         volatile unsigned char v3 = byte_ptr[255];
 
-        (void)v1; (void)v2; (void)v3;
+        (void)v1;
+        (void)v2;
+        (void)v3;
 
         larvae::AssertTrue(true);
     });
@@ -271,7 +280,8 @@ namespace {
         struct TestObject
         {
             int value;
-            TestObject(int v) : value{v} {}
+            TestObject(int v)
+                : value{v} {}
         };
 
         TestObject* obj = comb::New<TestObject>(allocator, 42);
@@ -286,7 +296,10 @@ namespace {
         struct TestObject
         {
             bool* destroyed;
-            TestObject(bool* d) : destroyed{d} { *destroyed = false; }
+            TestObject(bool* d)
+                : destroyed{d} {
+                *destroyed = false;
+            }
             ~TestObject() { *destroyed = true; }
         };
 
@@ -409,22 +422,15 @@ namespace {
     class LinearAllocatorFixture : public larvae::TestFixture
     {
     public:
-        void SetUp() override
-        {
-            allocator = new comb::LinearAllocator{4_KB};
-        }
+        void SetUp() override { allocator = new comb::LinearAllocator{4_KB}; }
 
-        void TearDown() override
-        {
-            delete allocator;
-        }
+        void TearDown() override { delete allocator; }
 
         comb::LinearAllocator* allocator{nullptr};
     };
 
     auto test26 = larvae::RegisterTestWithFixture<LinearAllocatorFixture>(
-        "LinearAllocatorFixture", "FixtureBasicAllocation",
-        [](LinearAllocatorFixture& f) {
+        "LinearAllocatorFixture", "FixtureBasicAllocation", [](LinearAllocatorFixture& f) {
             void* ptr = f.allocator->Allocate(256, 8);
 
             larvae::AssertNotNull(ptr);
@@ -432,12 +438,11 @@ namespace {
         });
 
     auto test27 = larvae::RegisterTestWithFixture<LinearAllocatorFixture>(
-        "LinearAllocatorFixture", "FixtureResetBetweenTests",
-        [](LinearAllocatorFixture& f) {
+        "LinearAllocatorFixture", "FixtureResetBetweenTests", [](LinearAllocatorFixture& f) {
             larvae::AssertEqual(f.allocator->GetUsedMemory(), 0u);
 
             static_cast<void>(f.allocator->Allocate(512, 8));
 
             larvae::AssertEqual(f.allocator->GetUsedMemory(), 512u);
         });
-}
+} // namespace

@@ -5,13 +5,12 @@
 
 namespace queen
 {
-    template<comb::Allocator Allocator>
-    void ObserverStorage<Allocator>::Trigger(TriggerType trigger, TypeId component_id,
-                                            World& world, Entity entity, const void* component)
-    {
-        ObserverKey key{trigger, component_id};
+    template <comb::Allocator Allocator>
+    void ObserverStorage<Allocator>::Trigger(TriggerType trigger, TypeId componentId, World& world, Entity entity,
+                                             const void* component) {
+        ObserverKey key{trigger, componentId};
 
-        auto* indices = lookup_.Find(key);
+        auto* indices = m_lookup.Find(key);
         if (indices == nullptr)
         {
             return;
@@ -20,9 +19,9 @@ namespace queen
         for (size_t i = 0; i < indices->Size(); ++i)
         {
             uint32_t idx = (*indices)[i];
-            if (idx < observers_.Size())
+            if (idx < m_observers.Size())
             {
-                auto& observer = observers_[idx];
+                auto& observer = m_observers[idx];
 
                 // Check filter components before invoking
                 if (observer.HasFilters())
@@ -36,11 +35,12 @@ namespace queen
                             break;
                         }
                     }
-                    if (!matches) continue;
+                    if (!matches)
+                        continue;
                 }
 
                 observer.Invoke(world, entity, component);
             }
         }
     }
-}
+} // namespace queen

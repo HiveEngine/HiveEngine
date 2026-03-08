@@ -1,192 +1,219 @@
 #pragma once
 
+#include <hive/core/assert.h>
+
+#include <queen/core/entity.h>
 #include <queen/reflect/component_reflector.h>
 #include <queen/reflect/enum_reflection.h>
-#include <queen/core/entity.h>
-#include <hive/core/assert.h>
+
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
-#include <cstring>
 
 namespace queen
 {
-    /**
-     * Minimal JSON serializer driven by reflection data
-     *
-     * Writes component fields as JSON using a fixed-size char buffer.
-     * No external dependencies. Supports all FieldTypes.
-     *
-     * Enums are written as string names when EnumReflectionBase is available,
-     * otherwise as integers.
-     *
-     * @tparam BufSize Maximum output buffer size in bytes
-     */
-    template<size_t BufSize = 4096>
-    class JsonSerializer
+    template <size_t BufSize = 4096> class JsonSerializer
     {
     public:
         JsonSerializer() noexcept = default;
 
-        /**
-         * Serialize a component to JSON object string
-         *
-         * Produces: {"field1": value1, "field2": value2, ...}
-         */
-        void SerializeComponent(const void* component,
-                                const ComponentReflection& reflection) noexcept
-        {
-            pos_ = 0;
+        void SerializeComponent(const void* component, const ComponentReflection& reflection) noexcept {
+            m_pos = 0;
             Put('{');
-            for (size_t i = 0; i < reflection.field_count; ++i)
+            for (size_t i = 0; i < reflection.m_fieldCount; ++i)
             {
-                if (i > 0) Put(',');
+                const FieldInfo& field = reflection.m_fields[i];
+                if (i > 0)
+                {
+                    Put(',');
+                }
+
                 Put('"');
-                WriteRaw(reflection.fields[i].name);
+                WriteRaw(field.m_name);
                 Put('"');
                 Put(':');
-                SerializeField(component, reflection.fields[i]);
+                SerializeField(component, field);
             }
             Put('}');
-            buf_[pos_ < BufSize ? pos_ : BufSize - 1] = '\0';
+            m_buf[m_pos < BufSize ? m_pos : BufSize - 1] = '\0';
         }
 
-        /**
-         * Serialize a single field value to JSON
-         */
-        void SerializeField(const void* base, const FieldInfo& field) noexcept
-        {
-            const auto* ptr = static_cast<const std::byte*>(base) + field.offset;
+        void SerializeField(const void* base, const FieldInfo& field) noexcept {
+            const auto* ptr = static_cast<const std::byte*>(base) + field.m_offset;
             SerializeValue(ptr, field);
         }
 
-        [[nodiscard]] const char* CStr() const noexcept { return buf_; }
-        [[nodiscard]] size_t Size() const noexcept { return pos_; }
+        [[nodiscard]] const char* CStr() const noexcept { return m_buf; }
+        [[nodiscard]] size_t Size() const noexcept { return m_pos; }
 
     private:
-        void SerializeValue(const void* ptr, const FieldInfo& field) noexcept
-        {
-            switch (field.type)
+        void SerializeValue(const void* ptr, const FieldInfo& field) noexcept {
+            switch (field.m_type)
             {
-                case FieldType::Int8:   WriteInt(*static_cast<const int8_t*>(ptr)); break;
-                case FieldType::Int16:  WriteInt(*static_cast<const int16_t*>(ptr)); break;
-                case FieldType::Int32:  WriteInt(*static_cast<const int32_t*>(ptr)); break;
-                case FieldType::Int64:  WriteInt64(*static_cast<const int64_t*>(ptr)); break;
-                case FieldType::Uint8:  WriteUint(*static_cast<const uint8_t*>(ptr)); break;
-                case FieldType::Uint16: WriteUint(*static_cast<const uint16_t*>(ptr)); break;
-                case FieldType::Uint32: WriteUint(*static_cast<const uint32_t*>(ptr)); break;
-                case FieldType::Uint64: WriteUint64(*static_cast<const uint64_t*>(ptr)); break;
-                case FieldType::Float32: WriteFloat(*static_cast<const float*>(ptr)); break;
-                case FieldType::Float64: WriteDouble(*static_cast<const double*>(ptr)); break;
-                case FieldType::Bool:
+                case FieldType::INT8:
+                    WriteInt(*static_cast<const int8_t*>(ptr));
+                    break;
+                case FieldType::INT16:
+                    WriteInt(*static_cast<const int16_t*>(ptr));
+                    break;
+                case FieldType::INT32:
+                    WriteInt(*static_cast<const int32_t*>(ptr));
+                    break;
+                case FieldType::INT64:
+                    WriteInt64(*static_cast<const int64_t*>(ptr));
+                    break;
+                case FieldType::UINT8:
+                    WriteUint(*static_cast<const uint8_t*>(ptr));
+                    break;
+                case FieldType::UINT16:
+                    WriteUint(*static_cast<const uint16_t*>(ptr));
+                    break;
+                case FieldType::UINT32:
+                    WriteUint(*static_cast<const uint32_t*>(ptr));
+                    break;
+                case FieldType::UINT64:
+                    WriteUint64(*static_cast<const uint64_t*>(ptr));
+                    break;
+                case FieldType::FLOAT32:
+                    WriteFloat(*static_cast<const float*>(ptr));
+                    break;
+                case FieldType::FLOAT64:
+                    WriteDouble(*static_cast<const double*>(ptr));
+                    break;
+                case FieldType::BOOL:
                     WriteRaw(*static_cast<const bool*>(ptr) ? "true" : "false");
                     break;
-                case FieldType::Entity:
+                case FieldType::ENTITY:
                     WriteUint64(static_cast<const Entity*>(ptr)->ToU64());
                     break;
-                case FieldType::Struct:
-                    if (field.nested_fields != nullptr)
-                    {
-                        Put('{');
-                        for (size_t i = 0; i < field.nested_field_count; ++i)
-                        {
-                            if (i > 0) Put(',');
-                            Put('"');
-                            WriteRaw(field.nested_fields[i].name);
-                            Put('"');
-                            Put(':');
-                            const auto* nested_ptr = static_cast<const std::byte*>(ptr) + field.nested_fields[i].offset;
-                            SerializeValue(nested_ptr, field.nested_fields[i]);
-                        }
-                        Put('}');
-                    }
-                    else
-                    {
-                        WriteRaw("null");
-                    }
+                case FieldType::STRUCT:
+                    SerializeStruct(ptr, field);
                     break;
-                case FieldType::Enum:
-                {
-                    int64_t val = ReadEnumValue(ptr, field);
-                    const char* name = (field.enum_info != nullptr) ? field.enum_info->NameOf(val) : nullptr;
-                    if (name != nullptr)
-                    {
-                        Put('"');
-                        WriteRaw(name);
-                        Put('"');
-                    }
-                    else
-                    {
-                        WriteInt64(val);
-                    }
+                case FieldType::ENUM:
+                    SerializeEnum(ptr, field);
                     break;
-                }
-                case FieldType::String:
-                {
-                    // FixedString layout: char buffer[23], uint8_t size (at offset field.size - 1)
-                    uint8_t len = *reinterpret_cast<const uint8_t*>(
-                        static_cast<const std::byte*>(ptr) + (field.size - 1));
-                    const char* str = static_cast<const char*>(ptr);
-                    Put('"');
-                    WriteEscaped(str, len);
-                    Put('"');
+                case FieldType::STRING:
+                    SerializeString(ptr, field);
                     break;
-                }
-                case FieldType::FixedArray:
-                {
-                    size_t elem_size = (field.element_count > 0) ? (field.size / field.element_count) : 0;
-                    Put('[');
-                    for (size_t i = 0; i < field.element_count; ++i)
-                    {
-                        if (i > 0) Put(',');
-                        const auto* elem_ptr = static_cast<const std::byte*>(ptr) + (i * elem_size);
-                        FieldInfo elem{};
-                        elem.type = field.element_type;
-                        elem.size = elem_size;
-                        elem.offset = 0;
-                        SerializeValue(elem_ptr, elem);
-                    }
-                    Put(']');
+                case FieldType::FIXED_ARRAY:
+                    SerializeFixedArray(ptr, field);
                     break;
-                }
-                case FieldType::Invalid:
+                case FieldType::INVALID:
                     WriteRaw("null");
                     break;
             }
         }
 
-        static int64_t ReadEnumValue(const void* ptr, const FieldInfo& field) noexcept
-        {
-            size_t sz = field.enum_info ? field.enum_info->underlying_size : field.size;
-            switch (sz)
+        void SerializeStruct(const void* ptr, const FieldInfo& field) noexcept {
+            if (field.m_nestedFields == nullptr)
             {
-                case 1: return static_cast<int64_t>(*static_cast<const int8_t*>(ptr));
-                case 2: return static_cast<int64_t>(*static_cast<const int16_t*>(ptr));
-                case 4: return static_cast<int64_t>(*static_cast<const int32_t*>(ptr));
-                case 8: return *static_cast<const int64_t*>(ptr);
-                default: return 0;
+                WriteRaw("null");
+                return;
+            }
+
+            Put('{');
+            for (size_t i = 0; i < field.m_nestedFieldCount; ++i)
+            {
+                const FieldInfo& nestedField = field.m_nestedFields[i];
+                if (i > 0)
+                {
+                    Put(',');
+                }
+
+                Put('"');
+                WriteRaw(nestedField.m_name);
+                Put('"');
+                Put(':');
+
+                const auto* nestedPtr = static_cast<const std::byte*>(ptr) + nestedField.m_offset;
+                SerializeValue(nestedPtr, nestedField);
+            }
+            Put('}');
+        }
+
+        void SerializeEnum(const void* ptr, const FieldInfo& field) noexcept {
+            const int64_t value = ReadEnumValue(ptr, field);
+            const char* name = field.m_enumInfo != nullptr ? field.m_enumInfo->NameOf(value) : nullptr;
+            if (name != nullptr)
+            {
+                Put('"');
+                WriteRaw(name);
+                Put('"');
+            }
+            else
+            {
+                WriteInt64(value);
             }
         }
 
-        void Put(char c) noexcept
-        {
-            if (pos_ < BufSize - 1) buf_[pos_++] = c;
+        void SerializeString(const void* ptr, const FieldInfo& field) noexcept {
+            const uint8_t len =
+                *reinterpret_cast<const uint8_t*>(static_cast<const std::byte*>(ptr) + (field.m_size - 1));
+            const char* str = static_cast<const char*>(ptr);
+            Put('"');
+            WriteEscaped(str, len);
+            Put('"');
         }
 
-        void WriteRaw(const char* s) noexcept
-        {
-            if (s == nullptr) return;
-            while (*s && pos_ < BufSize - 1)
+        void SerializeFixedArray(const void* ptr, const FieldInfo& field) noexcept {
+            const size_t elemSize = field.m_elementCount > 0 ? field.m_size / field.m_elementCount : 0;
+            Put('[');
+            for (size_t i = 0; i < field.m_elementCount; ++i)
             {
-                buf_[pos_++] = *s++;
+                if (i > 0)
+                {
+                    Put(',');
+                }
+
+                FieldInfo elemField{};
+                elemField.m_type = field.m_elementType;
+                elemField.m_size = elemSize;
+                const auto* elemPtr = static_cast<const std::byte*>(ptr) + (i * elemSize);
+                SerializeValue(elemPtr, elemField);
+            }
+            Put(']');
+        }
+
+        static int64_t ReadEnumValue(const void* ptr, const FieldInfo& field) noexcept {
+            const size_t size = field.m_enumInfo != nullptr ? field.m_enumInfo->m_underlyingSize : field.m_size;
+            switch (size)
+            {
+                case 1:
+                    return static_cast<int64_t>(*static_cast<const int8_t*>(ptr));
+                case 2:
+                    return static_cast<int64_t>(*static_cast<const int16_t*>(ptr));
+                case 4:
+                    return static_cast<int64_t>(*static_cast<const int32_t*>(ptr));
+                case 8:
+                    return *static_cast<const int64_t*>(ptr);
+                default:
+                    return 0;
             }
         }
 
-        void WriteEscaped(const char* s, size_t len) noexcept
-        {
-            for (size_t i = 0; i < len && pos_ < BufSize - 2; ++i)
+        void Put(char c) noexcept {
+            if (m_pos < BufSize - 1)
             {
-                char c = s[i];
+                m_buf[m_pos++] = c;
+            }
+        }
+
+        void WriteRaw(const char* s) noexcept {
+            if (s == nullptr)
+            {
+                return;
+            }
+
+            while (*s != '\0' && m_pos < BufSize - 1)
+            {
+                m_buf[m_pos++] = *s++;
+            }
+        }
+
+        void WriteEscaped(const char* s, size_t len) noexcept {
+            for (size_t i = 0; i < len && m_pos < BufSize - 2; ++i)
+            {
+                const char c = s[i];
                 if (c == '"' || c == '\\')
                 {
                     Put('\\');
@@ -209,49 +236,61 @@ namespace queen
             }
         }
 
-        void WriteInt(int32_t v) noexcept
-        {
+        void WriteInt(int32_t v) noexcept {
             char tmp[16];
-            int n = std::snprintf(tmp, sizeof(tmp), "%d", v);
-            for (int i = 0; i < n; ++i) Put(tmp[i]);
+            const int count = std::snprintf(tmp, sizeof(tmp), "%d", v);
+            for (int i = 0; i < count; ++i)
+            {
+                Put(tmp[i]);
+            }
         }
 
-        void WriteInt64(int64_t v) noexcept
-        {
+        void WriteInt64(int64_t v) noexcept {
             char tmp[24];
-            int n = std::snprintf(tmp, sizeof(tmp), "%lld", static_cast<long long>(v));
-            for (int i = 0; i < n; ++i) Put(tmp[i]);
+            const int count = std::snprintf(tmp, sizeof(tmp), "%lld", static_cast<long long>(v));
+            for (int i = 0; i < count; ++i)
+            {
+                Put(tmp[i]);
+            }
         }
 
-        void WriteUint(uint32_t v) noexcept
-        {
+        void WriteUint(uint32_t v) noexcept {
             char tmp[16];
-            int n = std::snprintf(tmp, sizeof(tmp), "%u", v);
-            for (int i = 0; i < n; ++i) Put(tmp[i]);
+            const int count = std::snprintf(tmp, sizeof(tmp), "%u", v);
+            for (int i = 0; i < count; ++i)
+            {
+                Put(tmp[i]);
+            }
         }
 
-        void WriteUint64(uint64_t v) noexcept
-        {
+        void WriteUint64(uint64_t v) noexcept {
             char tmp[24];
-            int n = std::snprintf(tmp, sizeof(tmp), "%llu", static_cast<unsigned long long>(v));
-            for (int i = 0; i < n; ++i) Put(tmp[i]);
+            const int count = std::snprintf(tmp, sizeof(tmp), "%llu", static_cast<unsigned long long>(v));
+            for (int i = 0; i < count; ++i)
+            {
+                Put(tmp[i]);
+            }
         }
 
-        void WriteFloat(float v) noexcept
-        {
+        void WriteFloat(float v) noexcept {
             char tmp[32];
-            int n = std::snprintf(tmp, sizeof(tmp), "%.9g", static_cast<double>(v));
-            for (int i = 0; i < n; ++i) Put(tmp[i]);
+            const int count = std::snprintf(tmp, sizeof(tmp), "%.9g", static_cast<double>(v));
+            for (int i = 0; i < count; ++i)
+            {
+                Put(tmp[i]);
+            }
         }
 
-        void WriteDouble(double v) noexcept
-        {
+        void WriteDouble(double v) noexcept {
             char tmp[32];
-            int n = std::snprintf(tmp, sizeof(tmp), "%.17g", v);
-            for (int i = 0; i < n; ++i) Put(tmp[i]);
+            const int count = std::snprintf(tmp, sizeof(tmp), "%.17g", v);
+            for (int i = 0; i < count; ++i)
+            {
+                Put(tmp[i]);
+            }
         }
 
-        char buf_[BufSize]{};
-        size_t pos_ = 0;
+        char m_buf[BufSize]{};
+        size_t m_pos = 0;
     };
-}
+} // namespace queen

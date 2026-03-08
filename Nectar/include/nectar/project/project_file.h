@@ -1,31 +1,33 @@
 #pragma once
 
-#include <nectar/hive/hive_document.h>
-#include <nectar/hive/hive_parser.h>
-#include <nectar/hive/hive_writer.h>
+#include <comb/default_allocator.h>
+
 #include <wax/containers/string.h>
 #include <wax/containers/string_view.h>
 #include <wax/containers/vector.h>
-#include <comb/default_allocator.h>
+
+#include <nectar/hive/hive_document.h>
+#include <nectar/hive/hive_parser.h>
+#include <nectar/hive/hive_writer.h>
 
 namespace nectar
 {
     struct ProjectPaths
     {
-        wax::String root;
-        wax::String assets;
-        wax::String cache;
-        wax::String cas;
-        wax::String source;
-        wax::String import_cache;
+        wax::String m_root;
+        wax::String m_assets;
+        wax::String m_cache;
+        wax::String m_cas;
+        wax::String m_source;
+        wax::String m_importCache;
     };
 
     struct ProjectDesc
     {
-        wax::StringView name;
-        wax::StringView version;
-        wax::StringView engine_path;
-        wax::StringView backend;
+        wax::StringView m_name;
+        wax::StringView m_version;
+        wax::StringView m_enginePath;
+        wax::StringView m_backend;
     };
 
     class ProjectFile
@@ -35,17 +37,17 @@ namespace nectar
 
         struct LoadResult
         {
-            bool success{false};
-            wax::Vector<HiveParseError> errors;
+            bool m_success{false};
+            wax::Vector<HiveParseError> m_errors;
         };
 
         [[nodiscard]] LoadResult Load(wax::StringView content);
-        [[nodiscard]] LoadResult LoadFromDisk(wax::StringView file_path);
+        [[nodiscard]] LoadResult LoadFromDisk(wax::StringView filePath);
 
         void Create(const ProjectDesc& desc);
 
         [[nodiscard]] wax::String Serialize() const;
-        [[nodiscard]] bool SaveToDisk(wax::StringView file_path) const;
+        [[nodiscard]] bool SaveToDisk(wax::StringView filePath) const;
 
         [[nodiscard]] wax::StringView Name() const;
         [[nodiscard]] wax::StringView Version() const;
@@ -56,15 +58,15 @@ namespace nectar
         [[nodiscard]] wax::StringView CacheRelative() const;
         [[nodiscard]] wax::StringView SourceRelative() const;
 
-        [[nodiscard]] ProjectPaths ResolvePaths(wax::StringView project_root) const;
+        [[nodiscard]] ProjectPaths ResolvePaths(wax::StringView projectRoot) const;
 
-        [[nodiscard]] const HiveDocument& Document() const noexcept { return doc_; }
-        [[nodiscard]] HiveDocument& Document() noexcept { return doc_; }
+        [[nodiscard]] const HiveDocument& Document() const noexcept { return m_doc; }
+        [[nodiscard]] HiveDocument& Document() noexcept { return m_doc; }
 
     private:
-        comb::DefaultAllocator* alloc_;
-        HiveDocument doc_;
+        comb::DefaultAllocator* m_alloc;
+        HiveDocument m_doc;
 
         [[nodiscard]] bool Validate(wax::Vector<HiveParseError>& errors) const;
     };
-}
+} // namespace nectar

@@ -19,9 +19,7 @@ namespace hive
         void Unload();
         [[nodiscard]] void* GetSymbol(const char* name) const;
 
-        template<typename Fn>
-        [[nodiscard]] Fn GetFunction(const char* name) const
-        {
+        template <typename Fn> [[nodiscard]] Fn GetFunction(const char* name) const {
             return reinterpret_cast<Fn>(GetSymbol(name));
         }
 
@@ -29,8 +27,8 @@ namespace hive
         [[nodiscard]] const char* GetError() const noexcept;
 
     private:
-        void* handle_{nullptr};
+        void* m_handle{nullptr};
         static constexpr size_t kErrorBufSize = 256;
-        mutable char error_buf_[kErrorBufSize]{};
+        mutable char m_errorBuf[kErrorBufSize]{};
     };
-}
+} // namespace hive

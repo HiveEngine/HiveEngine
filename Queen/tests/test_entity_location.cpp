@@ -1,6 +1,8 @@
-#include <larvae/larvae.h>
-#include <queen/core/entity_location.h>
 #include <comb/linear_allocator.h>
+
+#include <queen/core/entity_location.h>
+
+#include <larvae/larvae.h>
 
 namespace
 {
@@ -16,8 +18,8 @@ namespace
         Record record;
 
         larvae::AssertFalse(record.IsValid());
-        larvae::AssertNull(record.archetype);
-        larvae::AssertEqual(record.row, Record::kInvalidRow);
+        larvae::AssertNull(record.m_archetype);
+        larvae::AssertEqual(record.m_row, Record::kInvalidRow);
     });
 
     auto test2 = larvae::RegisterTest("QueenEntityLocation", "SetAndGet", []() {
@@ -32,8 +34,8 @@ namespace
         Record* record = map.Get(e);
         larvae::AssertNotNull(record);
         larvae::AssertTrue(record->IsValid());
-        larvae::AssertEqual(record->archetype, &arch);
-        larvae::AssertEqual(record->row, 10u);
+        larvae::AssertEqual(record->m_archetype, &arch);
+        larvae::AssertEqual(record->m_row, 10u);
     });
 
     auto test3 = larvae::RegisterTest("QueenEntityLocation", "GetNonExistentReturnsNull", []() {
@@ -87,8 +89,8 @@ namespace
 
         Record* record = map.Get(e);
         larvae::AssertNotNull(record);
-        larvae::AssertEqual(record->archetype, &arch2);
-        larvae::AssertEqual(record->row, 20u);
+        larvae::AssertEqual(record->m_archetype, &arch2);
+        larvae::AssertEqual(record->m_row, 20u);
     });
 
     auto test7 = larvae::RegisterTest("QueenEntityLocation", "MultipleEntities", []() {
@@ -107,9 +109,9 @@ namespace
         map.Set(e2, Record{&arch2, 1});
         map.Set(e3, Record{&arch3, 2});
 
-        larvae::AssertEqual(map.Get(e1)->archetype->id, 100);
-        larvae::AssertEqual(map.Get(e2)->archetype->id, 200);
-        larvae::AssertEqual(map.Get(e3)->archetype->id, 300);
+        larvae::AssertEqual(map.Get(e1)->m_archetype->id, 100);
+        larvae::AssertEqual(map.Get(e2)->m_archetype->id, 200);
+        larvae::AssertEqual(map.Get(e3)->m_archetype->id, 300);
     });
 
     auto test8 = larvae::RegisterTest("QueenEntityLocation", "Clear", []() {
@@ -138,7 +140,7 @@ namespace
 
         Record* record = map.Get(e);
         larvae::AssertNotNull(record);
-        larvae::AssertEqual(record->archetype->id, 999);
-        larvae::AssertEqual(record->row, 50u);
+        larvae::AssertEqual(record->m_archetype->id, 999);
+        larvae::AssertEqual(record->m_row, 50u);
     });
-}
+} // namespace

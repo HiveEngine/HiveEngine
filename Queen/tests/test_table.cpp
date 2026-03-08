@@ -1,6 +1,8 @@
-#include <larvae/larvae.h>
-#include <queen/storage/table.h>
 #include <comb/linear_allocator.h>
+
+#include <queen/storage/table.h>
+
+#include <larvae/larvae.h>
 
 namespace
 {
@@ -377,13 +379,16 @@ namespace
 
         for (size_t i = 0; i < type_ids.Size(); ++i)
         {
-            if (type_ids[i] == queen::TypeIdOf<Position>()) has_position = true;
-            if (type_ids[i] == queen::TypeIdOf<Velocity>()) has_velocity = true;
-            if (type_ids[i] == queen::TypeIdOf<Health>()) has_health = true;
+            if (type_ids[i] == queen::TypeIdOf<Position>())
+                has_position = true;
+            if (type_ids[i] == queen::TypeIdOf<Velocity>())
+                has_velocity = true;
+            if (type_ids[i] == queen::TypeIdOf<Health>())
+                has_health = true;
         }
 
         larvae::AssertTrue(has_position);
         larvae::AssertTrue(has_velocity);
         larvae::AssertTrue(has_health);
     });
-}
+} // namespace

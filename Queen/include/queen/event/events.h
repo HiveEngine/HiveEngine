@@ -1,13 +1,19 @@
 #pragma once
 
-#include <queen/event/event.h>
-#include <queen/event/event_queue.h>
-#include <queen/event/event_writer.h>
-#include <queen/event/event_reader.h>
+#include <hive/core/assert.h>
+
 #include <comb/allocator_concepts.h>
+
 #include <wax/containers/hash_map.h>
 #include <wax/containers/vector.h>
-#include <hive/core/assert.h>
+
+#include <queen/event/event.h>
+#include <queen/event/event_queue.h>
+#include <queen/event/event_reader.h>
+#include <queen/event/event_writer.h>
+
+#include <type_traits>
+#include <utility>
 
 namespace queen
 {
@@ -66,27 +72,23 @@ namespace queen
      *   events.SwapBuffers();
      * @endcode
      */
-    template<comb::Allocator Allocator>
-    class Events
+    template <comb::Allocator Allocator> class Events
     {
     public:
         explicit Events(Allocator& allocator)
-            : allocator_{&allocator}
-            , queues_{allocator, 32}
-            , entries_{allocator}
-        {
-        }
+            : m_allocator{&allocator}
+            , m_queues{allocator, 32}
+            , m_entries{allocator} {}
 
-        ~Events()
-        {
+        ~Events() {
             // Call destructors on all queue entries
-            for (size_t i = 0; i < entries_.Size(); ++i)
+            for (size_t i = 0; i < m_entries.Size(); ++i)
             {
-                if (entries_[i].destructor != nullptr)
+                if (m_entries[i].m_destructor != nullptr)
                 {
-                    entries_[i].destructor(entries_[i].queue);
+                    m_entries[i].m_destructor(m_entries[i].m_queue);
                 }
-                allocator_->Deallocate(entries_[i].queue);
+                m_allocator->Deallocate(m_entries[i].m_queue);
             }
         }
 
@@ -103,10 +105,8 @@ namespace queen
          * @tparam T Event type (must satisfy Event concept)
          * @return EventWriter for the event type
          */
-        template<Event T>
-        [[nodiscard]] EventWriter<T, Allocator> Writer()
-        {
-            return EventWriter<T, Allocator>{GetOrCreateQueue<T>()};
+        template <Event T> [[nodiscard]] EventWriter<T, Allocator> Writer() {
+            return EventWriter<T, Allocator>{this->template GetOrCreateQueue<T>()};
         }
 
         /**
@@ -117,10 +117,8 @@ namespace queen
          * @tparam T Event type (must satisfy Event concept)
          * @return EventReader for the event type
          */
-        template<Event T>
-        [[nodiscard]] EventReader<T, Allocator> Reader()
-        {
-            return EventReader<T, Allocator>{GetOrCreateQueue<T>()};
+        template <Event T> [[nodiscard]] EventReader<T, Allocator> Reader() {
+            return EventReader<T, Allocator>{this->template GetOrCreateQueue<T>()};
         }
 
         /**
@@ -129,11 +127,7 @@ namespace queen
          * @tparam T Event type
          * @param event Event to send
          */
-        template<Event T>
-        void Send(const T& event)
-        {
-            GetOrCreateQueue<T>().Push(event);
-        }
+        template <Event T> void Send(const T& event) { this->template GetOrCreateQueue<T>().Push(event); }
 
         /**
          * Send an event (move, convenience method)
@@ -141,10 +135,9 @@ namespace queen
          * @tparam T Event type
          * @param event Event to send
          */
-        template<Event T>
-        void Send(T&& event)
-        {
-            GetOrCreateQueue<T>().Push(std::move(event));
+        template <Event T> void Send(T&& event) {
+            using EventType = std::remove_cvref_t<T>;
+            this->template GetOrCreateQueue<EventType>().Push(std::forward<T>(event));
         }
 
         /**
@@ -153,13 +146,12 @@ namespace queen
          * Should be called at the end of each frame (Update).
          * Clears previous frame's events and rotates buffers.
          */
-        void SwapBuffers()
-        {
-            for (size_t i = 0; i < entries_.Size(); ++i)
+        void SwapBuffers() {
+            for (size_t i = 0; i < m_entries.Size(); ++i)
             {
-                if (entries_[i].swap_fn != nullptr)
+                if (m_entries[i].m_swapFn != nullptr)
                 {
-                    entries_[i].swap_fn(entries_[i].queue);
+                    m_entries[i].m_swapFn(m_entries[i].m_queue);
                 }
             }
         }
@@ -167,13 +159,12 @@ namespace queen
         /**
          * Clear all events from all queues
          */
-        void ClearAll()
-        {
-            for (size_t i = 0; i < entries_.Size(); ++i)
+        void ClearAll() {
+            for (size_t i = 0; i < m_entries.Size(); ++i)
             {
-                if (entries_[i].clear_fn != nullptr)
+                if (m_entries[i].m_clearFn != nullptr)
                 {
-                    entries_[i].clear_fn(entries_[i].queue);
+                    m_entries[i].m_clearFn(m_entries[i].m_queue);
                 }
             }
         }
@@ -184,68 +175,61 @@ namespace queen
          * @tparam T Event type
          * @return true if queue exists
          */
-        template<Event T>
-        [[nodiscard]] bool HasQueue() const
-        {
+        template <Event T> [[nodiscard]] bool HasQueue() const {
             TypeId id = TypeIdOf<T>();
-            return queues_.Find(id) != nullptr;
+            return m_queues.Find(id) != nullptr;
         }
 
         /**
          * Get number of registered event types
          */
-        [[nodiscard]] size_t QueueCount() const noexcept
-        {
-            return entries_.Size();
-        }
+        [[nodiscard]] size_t QueueCount() const noexcept { return m_entries.Size(); }
 
     private:
         struct QueueEntry
         {
-            void* queue;
-            void (*swap_fn)(void*);
-            void (*clear_fn)(void*);
-            void (*destructor)(void*);
-            TypeId type_id;
+            void* m_queue;
+            void (*m_swapFn)(void*);
+            void (*m_clearFn)(void*);
+            void (*m_destructor)(void*);
+            TypeId m_typeId;
         };
 
-        template<Event T>
-        EventQueue<T, Allocator>& GetOrCreateQueue()
-        {
+        template <Event T> EventQueue<T, Allocator>& GetOrCreateQueue() {
             TypeId id = TypeIdOf<T>();
 
-            if (auto* index = queues_.Find(id))
+            if (auto* index = m_queues.Find(id))
             {
-                return *static_cast<EventQueue<T, Allocator>*>(entries_[*index].queue);
+                return *static_cast<EventQueue<T, Allocator>*>(m_entries[*index].m_queue);
             }
 
-            void* memory = allocator_->Allocate(sizeof(EventQueue<T, Allocator>), alignof(EventQueue<T, Allocator>));
+            void* memory = m_allocator->Allocate(sizeof(EventQueue<T, Allocator>), alignof(EventQueue<T, Allocator>));
             hive::Assert(memory != nullptr, "Failed to allocate EventQueue");
 
-            auto* queue = new (memory) EventQueue<T, Allocator>(*allocator_);
+            auto* queue = new (memory) EventQueue<T, Allocator>(*m_allocator);
 
             QueueEntry entry{};
-            entry.queue = queue;
-            entry.swap_fn = [](void* q) {
+            entry.m_queue = queue;
+            entry.m_swapFn = [](void* q) {
                 static_cast<EventQueue<T, Allocator>*>(q)->Swap();
             };
-            entry.clear_fn = [](void* q) {
+            entry.m_clearFn = [](void* q) {
                 static_cast<EventQueue<T, Allocator>*>(q)->Clear();
             };
-            entry.destructor = [](void* q) {
+            entry.m_destructor = [](void* q) {
                 static_cast<EventQueue<T, Allocator>*>(q)->~EventQueue();
             };
-            entry.type_id = id;
+            entry.m_typeId = id;
 
-            size_t new_index = entries_.Size();
-            entries_.PushBack(entry);
-            queues_.Insert(id, new_index);
+            size_t newIndex = m_entries.Size();
+            m_entries.PushBack(entry);
+            m_queues.Insert(id, newIndex);
 
             return *queue;
         }
 
-        Allocator* allocator_;
-        wax::HashMap<TypeId, size_t> queues_;
-        wax::Vector<QueueEntry> entries_;
+        Allocator* m_allocator;
+        wax::HashMap<TypeId, size_t> m_queues;
+        wax::Vector<QueueEntry> m_entries;
     };
-}
+} // namespace queen

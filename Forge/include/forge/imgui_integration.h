@@ -3,7 +3,11 @@
 #include <cstdint>
 
 struct GLFWwindow;
-namespace swarm { struct RenderContext; struct ViewportRT; }
+namespace swarm
+{
+    struct RenderContext;
+    struct ViewportRT;
+} // namespace swarm
 
 namespace forge
 {
@@ -20,5 +24,5 @@ namespace forge
 
     // Register/unregister a ViewportRT for display via ImGui::Image.
     void* ForgeRegisterViewportRT(swarm::RenderContext* ctx, swarm::ViewportRT* rt);
-    void ForgeUnregisterViewportRT(void* texture_id);
-}
+    void ForgeUnregisterViewportRT(void* textureId);
+} // namespace forge

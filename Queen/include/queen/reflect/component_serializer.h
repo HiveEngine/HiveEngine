@@ -1,10 +1,12 @@
 #pragma once
 
-#include <queen/reflect/reflectable.h>
-#include <queen/reflect/field_info.h>
-#include <queen/core/entity.h>
-#include <wax/serialization/binary_writer.h>
 #include <wax/serialization/binary_reader.h>
+#include <wax/serialization/binary_writer.h>
+
+#include <queen/core/entity.h>
+#include <queen/reflect/field_info.h>
+#include <queen/reflect/reflectable.h>
+
 #include <cstddef>
 #include <cstring>
 
@@ -55,105 +57,110 @@ namespace queen
     /**
      * Serialize a single field to binary
      */
-    inline void SerializeField(const void* component, const FieldInfo& field,
-                               wax::BinaryWriter& writer) noexcept
-    {
-        const auto* field_ptr = static_cast<const std::byte*>(component) + field.offset;
+    inline void SerializeField(const void* component, const FieldInfo& field, wax::BinaryWriter& writer) noexcept {
+        const auto* fieldPtr = static_cast<const std::byte*>(component) + field.m_offset;
 
-        switch (field.type)
+        switch (field.m_type)
         {
-            case FieldType::Int8:
-                writer.template Write<int8_t>(*reinterpret_cast<const int8_t*>(field_ptr));
+            case FieldType::INT8:
+                writer.template Write<int8_t>(*reinterpret_cast<const int8_t*>(fieldPtr));
                 break;
-            case FieldType::Int16:
-                writer.template Write<int16_t>(*reinterpret_cast<const int16_t*>(field_ptr));
+            case FieldType::INT16:
+                writer.template Write<int16_t>(*reinterpret_cast<const int16_t*>(fieldPtr));
                 break;
-            case FieldType::Int32:
-                writer.template Write<int32_t>(*reinterpret_cast<const int32_t*>(field_ptr));
+            case FieldType::INT32:
+                writer.template Write<int32_t>(*reinterpret_cast<const int32_t*>(fieldPtr));
                 break;
-            case FieldType::Int64:
-                writer.template Write<int64_t>(*reinterpret_cast<const int64_t*>(field_ptr));
+            case FieldType::INT64:
+                writer.template Write<int64_t>(*reinterpret_cast<const int64_t*>(fieldPtr));
                 break;
-            case FieldType::Uint8:
-                writer.template Write<uint8_t>(*reinterpret_cast<const uint8_t*>(field_ptr));
+            case FieldType::UINT8:
+                writer.template Write<uint8_t>(*reinterpret_cast<const uint8_t*>(fieldPtr));
                 break;
-            case FieldType::Uint16:
-                writer.template Write<uint16_t>(*reinterpret_cast<const uint16_t*>(field_ptr));
+            case FieldType::UINT16:
+                writer.template Write<uint16_t>(*reinterpret_cast<const uint16_t*>(fieldPtr));
                 break;
-            case FieldType::Uint32:
-                writer.template Write<uint32_t>(*reinterpret_cast<const uint32_t*>(field_ptr));
+            case FieldType::UINT32:
+                writer.template Write<uint32_t>(*reinterpret_cast<const uint32_t*>(fieldPtr));
                 break;
-            case FieldType::Uint64:
-                writer.template Write<uint64_t>(*reinterpret_cast<const uint64_t*>(field_ptr));
+            case FieldType::UINT64:
+                writer.template Write<uint64_t>(*reinterpret_cast<const uint64_t*>(fieldPtr));
                 break;
-            case FieldType::Float32:
-                writer.template Write<float>(*reinterpret_cast<const float*>(field_ptr));
+            case FieldType::FLOAT32:
+                writer.template Write<float>(*reinterpret_cast<const float*>(fieldPtr));
                 break;
-            case FieldType::Float64:
-                writer.template Write<double>(*reinterpret_cast<const double*>(field_ptr));
+            case FieldType::FLOAT64:
+                writer.template Write<double>(*reinterpret_cast<const double*>(fieldPtr));
                 break;
-            case FieldType::Bool:
-                writer.template Write<uint8_t>(*reinterpret_cast<const bool*>(field_ptr) ? 1 : 0);
+            case FieldType::BOOL:
+                writer.template Write<uint8_t>(*reinterpret_cast<const bool*>(fieldPtr) ? 1 : 0);
                 break;
-            case FieldType::Entity:
-                writer.template Write<uint64_t>(reinterpret_cast<const Entity*>(field_ptr)->ToU64());
+            case FieldType::ENTITY:
+                writer.template Write<uint64_t>(reinterpret_cast<const Entity*>(fieldPtr)->ToU64());
                 break;
-            case FieldType::Struct:
-                if (field.nested_fields != nullptr)
+            case FieldType::STRUCT:
+                if (field.m_nestedFields != nullptr)
                 {
                     // Recursively serialize nested struct fields
-                    for (size_t i = 0; i < field.nested_field_count; ++i)
+                    for (size_t i = 0; i < field.m_nestedFieldCount; ++i)
                     {
-                        SerializeField(field_ptr, field.nested_fields[i], writer);
+                        SerializeField(fieldPtr, field.m_nestedFields[i], writer);
                     }
                 }
                 else
                 {
                     // Fallback: raw bytes for non-reflectable nested types
-                    writer.WriteBytes(field_ptr, field.size);
+                    writer.WriteBytes(fieldPtr, field.m_size);
                 }
                 break;
-            case FieldType::Enum:
-            {
+            case FieldType::ENUM: {
                 // Serialize as raw bytes matching the underlying type size
-                size_t enum_size = field.enum_info ? field.enum_info->underlying_size : field.size;
-                switch (enum_size)
+                size_t enumSize = field.m_enumInfo ? field.m_enumInfo->m_underlyingSize : field.m_size;
+                switch (enumSize)
                 {
-                    case 1: writer.template Write<uint8_t>(*reinterpret_cast<const uint8_t*>(field_ptr)); break;
-                    case 2: writer.template Write<uint16_t>(*reinterpret_cast<const uint16_t*>(field_ptr)); break;
-                    case 4: writer.template Write<uint32_t>(*reinterpret_cast<const uint32_t*>(field_ptr)); break;
-                    case 8: writer.template Write<uint64_t>(*reinterpret_cast<const uint64_t*>(field_ptr)); break;
-                    default: writer.WriteBytes(field_ptr, field.size); break;
+                    case 1:
+                        writer.template Write<uint8_t>(*reinterpret_cast<const uint8_t*>(fieldPtr));
+                        break;
+                    case 2:
+                        writer.template Write<uint16_t>(*reinterpret_cast<const uint16_t*>(fieldPtr));
+                        break;
+                    case 4:
+                        writer.template Write<uint32_t>(*reinterpret_cast<const uint32_t*>(fieldPtr));
+                        break;
+                    case 8:
+                        writer.template Write<uint64_t>(*reinterpret_cast<const uint64_t*>(fieldPtr));
+                        break;
+                    default:
+                        writer.WriteBytes(fieldPtr, field.m_size);
+                        break;
                 }
                 break;
             }
-            case FieldType::String:
-            {
+            case FieldType::STRING: {
                 // FixedString: write length (uint8) + chars
                 // Layout: char buffer[23] at offset 0, uint8_t size at offset 23
-                uint8_t len = *reinterpret_cast<const uint8_t*>(
-                    static_cast<const std::byte*>(field_ptr) + (field.size - 1));
+                uint8_t len =
+                    *reinterpret_cast<const uint8_t*>(static_cast<const std::byte*>(fieldPtr) + (field.m_size - 1));
                 writer.template Write<uint8_t>(len);
-                writer.WriteBytes(field_ptr, len);
+                writer.WriteBytes(fieldPtr, len);
                 break;
             }
-            case FieldType::FixedArray:
-            {
+            case FieldType::FIXED_ARRAY: {
                 // Write each element sequentially
-                size_t elem_size = (field.element_count > 0) ? (field.size / field.element_count) : 0;
-                for (size_t i = 0; i < field.element_count; ++i)
+                size_t elemSize = (field.m_elementCount > 0) ? (field.m_size / field.m_elementCount) : 0;
+                for (size_t i = 0; i < field.m_elementCount; ++i)
                 {
-                    const auto* elem_ptr = static_cast<const std::byte*>(field_ptr) + (i * elem_size);
-                    FieldInfo elem_field{};
-                    elem_field.name = "";
-                    elem_field.offset = 0;
-                    elem_field.size = elem_size;
-                    elem_field.type = field.element_type;
-                    SerializeField(elem_ptr, elem_field, writer);
+                    const auto* elemPtr = static_cast<const std::byte*>(fieldPtr) + (i * elemSize);
+                    FieldInfo elemField{};
+                    elemField.m_name = "";
+                    elemField.m_offset = 0;
+                    elemField.m_size = elemSize;
+                    elemField.m_type = field.m_elementType;
+                    SerializeField(elemPtr, elemField, writer);
                 }
                 break;
             }
-            case FieldType::Invalid:
+            case FieldType::INVALID:
                 break;
         }
     }
@@ -161,106 +168,110 @@ namespace queen
     /**
      * Deserialize a single field from binary
      */
-    inline void DeserializeField(void* component, const FieldInfo& field,
-                                 wax::BinaryReader& reader) noexcept
-    {
-        auto* field_ptr = static_cast<std::byte*>(component) + field.offset;
+    inline void DeserializeField(void* component, const FieldInfo& field, wax::BinaryReader& reader) noexcept {
+        auto* fieldPtr = static_cast<std::byte*>(component) + field.m_offset;
 
-        switch (field.type)
+        switch (field.m_type)
         {
-            case FieldType::Int8:
-                *reinterpret_cast<int8_t*>(field_ptr) = reader.Read<int8_t>();
+            case FieldType::INT8:
+                *reinterpret_cast<int8_t*>(fieldPtr) = reader.Read<int8_t>();
                 break;
-            case FieldType::Int16:
-                *reinterpret_cast<int16_t*>(field_ptr) = reader.Read<int16_t>();
+            case FieldType::INT16:
+                *reinterpret_cast<int16_t*>(fieldPtr) = reader.Read<int16_t>();
                 break;
-            case FieldType::Int32:
-                *reinterpret_cast<int32_t*>(field_ptr) = reader.Read<int32_t>();
+            case FieldType::INT32:
+                *reinterpret_cast<int32_t*>(fieldPtr) = reader.Read<int32_t>();
                 break;
-            case FieldType::Int64:
-                *reinterpret_cast<int64_t*>(field_ptr) = reader.Read<int64_t>();
+            case FieldType::INT64:
+                *reinterpret_cast<int64_t*>(fieldPtr) = reader.Read<int64_t>();
                 break;
-            case FieldType::Uint8:
-                *reinterpret_cast<uint8_t*>(field_ptr) = reader.Read<uint8_t>();
+            case FieldType::UINT8:
+                *reinterpret_cast<uint8_t*>(fieldPtr) = reader.Read<uint8_t>();
                 break;
-            case FieldType::Uint16:
-                *reinterpret_cast<uint16_t*>(field_ptr) = reader.Read<uint16_t>();
+            case FieldType::UINT16:
+                *reinterpret_cast<uint16_t*>(fieldPtr) = reader.Read<uint16_t>();
                 break;
-            case FieldType::Uint32:
-                *reinterpret_cast<uint32_t*>(field_ptr) = reader.Read<uint32_t>();
+            case FieldType::UINT32:
+                *reinterpret_cast<uint32_t*>(fieldPtr) = reader.Read<uint32_t>();
                 break;
-            case FieldType::Uint64:
-                *reinterpret_cast<uint64_t*>(field_ptr) = reader.Read<uint64_t>();
+            case FieldType::UINT64:
+                *reinterpret_cast<uint64_t*>(fieldPtr) = reader.Read<uint64_t>();
                 break;
-            case FieldType::Float32:
-                *reinterpret_cast<float*>(field_ptr) = reader.Read<float>();
+            case FieldType::FLOAT32:
+                *reinterpret_cast<float*>(fieldPtr) = reader.Read<float>();
                 break;
-            case FieldType::Float64:
-                *reinterpret_cast<double*>(field_ptr) = reader.Read<double>();
+            case FieldType::FLOAT64:
+                *reinterpret_cast<double*>(fieldPtr) = reader.Read<double>();
                 break;
-            case FieldType::Bool:
-                *reinterpret_cast<bool*>(field_ptr) = reader.Read<uint8_t>() != 0;
+            case FieldType::BOOL:
+                *reinterpret_cast<bool*>(fieldPtr) = reader.Read<uint8_t>() != 0;
                 break;
-            case FieldType::Entity:
-                *reinterpret_cast<Entity*>(field_ptr) = Entity::FromU64(reader.Read<uint64_t>());
+            case FieldType::ENTITY:
+                *reinterpret_cast<Entity*>(fieldPtr) = Entity::FromU64(reader.Read<uint64_t>());
                 break;
-            case FieldType::Struct:
-                if (field.nested_fields != nullptr)
+            case FieldType::STRUCT:
+                if (field.m_nestedFields != nullptr)
                 {
                     // Recursively deserialize nested struct fields
-                    for (size_t i = 0; i < field.nested_field_count; ++i)
+                    for (size_t i = 0; i < field.m_nestedFieldCount; ++i)
                     {
-                        DeserializeField(field_ptr, field.nested_fields[i], reader);
+                        DeserializeField(fieldPtr, field.m_nestedFields[i], reader);
                     }
                 }
                 else
                 {
                     // Fallback: raw bytes for non-reflectable nested types
-                    reader.ReadBytes(field_ptr, field.size);
+                    reader.ReadBytes(fieldPtr, field.m_size);
                 }
                 break;
-            case FieldType::Enum:
-            {
-                size_t enum_size = field.enum_info ? field.enum_info->underlying_size : field.size;
-                switch (enum_size)
+            case FieldType::ENUM: {
+                size_t enumSize = field.m_enumInfo ? field.m_enumInfo->m_underlyingSize : field.m_size;
+                switch (enumSize)
                 {
-                    case 1: *reinterpret_cast<uint8_t*>(field_ptr) = reader.Read<uint8_t>(); break;
-                    case 2: *reinterpret_cast<uint16_t*>(field_ptr) = reader.Read<uint16_t>(); break;
-                    case 4: *reinterpret_cast<uint32_t*>(field_ptr) = reader.Read<uint32_t>(); break;
-                    case 8: *reinterpret_cast<uint64_t*>(field_ptr) = reader.Read<uint64_t>(); break;
-                    default: reader.ReadBytes(field_ptr, field.size); break;
+                    case 1:
+                        *reinterpret_cast<uint8_t*>(fieldPtr) = reader.Read<uint8_t>();
+                        break;
+                    case 2:
+                        *reinterpret_cast<uint16_t*>(fieldPtr) = reader.Read<uint16_t>();
+                        break;
+                    case 4:
+                        *reinterpret_cast<uint32_t*>(fieldPtr) = reader.Read<uint32_t>();
+                        break;
+                    case 8:
+                        *reinterpret_cast<uint64_t*>(fieldPtr) = reader.Read<uint64_t>();
+                        break;
+                    default:
+                        reader.ReadBytes(fieldPtr, field.m_size);
+                        break;
                 }
                 break;
             }
-            case FieldType::String:
-            {
+            case FieldType::STRING: {
                 // FixedString: read length (uint8) + chars, then null-terminate
                 uint8_t len = reader.Read<uint8_t>();
-                reader.ReadBytes(field_ptr, len);
+                reader.ReadBytes(fieldPtr, len);
                 // Null-terminate the buffer
-                auto* char_ptr = reinterpret_cast<char*>(field_ptr);
-                char_ptr[len] = '\0';
+                auto* charPtr = reinterpret_cast<char*>(fieldPtr);
+                charPtr[len] = '\0';
                 // Write size byte (last byte of the FixedString struct)
-                *reinterpret_cast<uint8_t*>(
-                    static_cast<std::byte*>(field_ptr) + (field.size - 1)) = len;
+                *reinterpret_cast<uint8_t*>(static_cast<std::byte*>(fieldPtr) + (field.m_size - 1)) = len;
                 break;
             }
-            case FieldType::FixedArray:
-            {
-                size_t elem_size = (field.element_count > 0) ? (field.size / field.element_count) : 0;
-                for (size_t i = 0; i < field.element_count; ++i)
+            case FieldType::FIXED_ARRAY: {
+                size_t elemSize = (field.m_elementCount > 0) ? (field.m_size / field.m_elementCount) : 0;
+                for (size_t i = 0; i < field.m_elementCount; ++i)
                 {
-                    auto* elem_ptr = static_cast<std::byte*>(field_ptr) + (i * elem_size);
-                    FieldInfo elem_field{};
-                    elem_field.name = "";
-                    elem_field.offset = 0;
-                    elem_field.size = elem_size;
-                    elem_field.type = field.element_type;
-                    DeserializeField(elem_ptr, elem_field, reader);
+                    auto* elemPtr = static_cast<std::byte*>(fieldPtr) + (i * elemSize);
+                    FieldInfo elemField{};
+                    elemField.m_name = "";
+                    elemField.m_offset = 0;
+                    elemField.m_size = elemSize;
+                    elemField.m_type = field.m_elementType;
+                    DeserializeField(elemPtr, elemField, reader);
                 }
                 break;
             }
-            case FieldType::Invalid:
+            case FieldType::INVALID:
                 break;
         }
     }
@@ -273,11 +284,10 @@ namespace queen
      * @param writer BinaryWriter to write to
      */
     inline void SerializeComponent(const void* component, const ComponentReflection& reflection,
-                                   wax::BinaryWriter& writer) noexcept
-    {
-        for (size_t i = 0; i < reflection.field_count; ++i)
+                                   wax::BinaryWriter& writer) noexcept {
+        for (size_t i = 0; i < reflection.m_fieldCount; ++i)
         {
-            SerializeField(component, reflection.fields[i], writer);
+            SerializeField(component, reflection.m_fields[i], writer);
         }
     }
 
@@ -289,20 +299,17 @@ namespace queen
      * @param reader BinaryReader to read from
      */
     inline void DeserializeComponent(void* component, const ComponentReflection& reflection,
-                                     wax::BinaryReader& reader) noexcept
-    {
-        for (size_t i = 0; i < reflection.field_count; ++i)
+                                     wax::BinaryReader& reader) noexcept {
+        for (size_t i = 0; i < reflection.m_fieldCount; ++i)
         {
-            DeserializeField(component, reflection.fields[i], reader);
+            DeserializeField(component, reflection.m_fields[i], reader);
         }
     }
 
     /**
      * Serialize a reflectable component (type-safe version)
      */
-    template<Reflectable T>
-    void Serialize(const T& component, wax::BinaryWriter& writer) noexcept
-    {
+    template <Reflectable T> void Serialize(const T& component, wax::BinaryWriter& writer) noexcept {
         auto reflection = GetReflectionData<T>();
         SerializeComponent(&component, reflection, writer);
     }
@@ -310,10 +317,8 @@ namespace queen
     /**
      * Deserialize a reflectable component (type-safe version)
      */
-    template<Reflectable T>
-    void Deserialize(T& component, wax::BinaryReader& reader) noexcept
-    {
+    template <Reflectable T> void Deserialize(T& component, wax::BinaryReader& reader) noexcept {
         auto reflection = GetReflectionData<T>();
         DeserializeComponent(&component, reflection, reader);
     }
-}
+} // namespace queen

@@ -1,13 +1,16 @@
-#include <larvae/larvae.h>
-#include <nectar/vfs/virtual_filesystem.h>
-#include <nectar/vfs/memory_mount.h>
 #include <comb/default_allocator.h>
+
+#include <nectar/vfs/memory_mount.h>
+#include <nectar/vfs/virtual_filesystem.h>
+
+#include <larvae/larvae.h>
+
 #include <cstring>
 
-namespace {
+namespace
+{
 
-    auto& GetVfsAlloc()
-    {
+    auto& GetVfsAlloc() {
         static comb::ModuleAllocator alloc{"TestVFS", 4 * 1024 * 1024};
         return alloc.Get();
     }
@@ -80,8 +83,8 @@ namespace {
         vfs.Mount("", &mem);
 
         auto info = vfs.Stat("data.bin");
-        larvae::AssertTrue(info.exists);
-        larvae::AssertEqual(info.size, size_t{64});
+        larvae::AssertTrue(info.m_exists);
+        larvae::AssertEqual(info.m_size, size_t{64});
     });
 
     // =========================================================================
@@ -101,7 +104,7 @@ namespace {
 
         nectar::VirtualFilesystem vfs{alloc};
         vfs.Mount("", &base, 0);
-        vfs.Mount("", &overlay, 10);  // higher priority
+        vfs.Mount("", &overlay, 10); // higher priority
 
         auto buf = vfs.ReadSync("config.txt");
         larvae::AssertEqual(buf.Size(), size_t{7});
@@ -171,7 +174,7 @@ namespace {
         auto& alloc = GetVfsAlloc();
         nectar::MemoryMountSource mem{alloc};
         nectar::VirtualFilesystem vfs{alloc};
-        vfs.Unmount("", &mem);  // should not crash
+        vfs.Unmount("", &mem); // should not crash
         larvae::AssertEqual(vfs.MountCount(), size_t{0});
     });
 
@@ -230,7 +233,7 @@ namespace {
         base.AddFile("b.txt", wax::ByteSpan{});
 
         nectar::MemoryMountSource overlay{alloc};
-        overlay.AddFile("b.txt", wax::ByteSpan{});  // same name, different mount
+        overlay.AddFile("b.txt", wax::ByteSpan{}); // same name, different mount
         overlay.AddFile("c.txt", wax::ByteSpan{});
 
         nectar::VirtualFilesystem vfs{alloc};
@@ -257,4 +260,4 @@ namespace {
         larvae::AssertEqual(vfs.MountCount(), size_t{2});
     });
 
-}
+} // namespace

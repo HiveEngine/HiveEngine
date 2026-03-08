@@ -1,6 +1,6 @@
+#include <swarm/platform/win32_swarm.h>
 #include <swarm/precomp.h>
 #include <swarm/swarm.h>
-#include <swarm/platform/win32_swarm.h>
 
 #include <EngineFactoryVk.h>
 
@@ -8,11 +8,10 @@
 
 namespace swarm
 {
-    extern bool InitRenderContextCommon(RenderContext *renderContext);
+    extern bool InitRenderContextCommon(RenderContext* renderContext);
 
-    bool InitRenderContextWin32(RenderContext *renderContext, HINSTANCE instance, HWND window,
-                                uint32_t width, uint32_t height)
-    {
+    bool InitRenderContextWin32(RenderContext* renderContext, HINSTANCE instance, HWND window, uint32_t width,
+                                uint32_t height) {
         if (!InitRenderContextCommon(renderContext))
         {
             return false;
@@ -27,9 +26,10 @@ namespace swarm
 
             Diligent::Win32NativeWindow nativeWindow;
             nativeWindow.hWnd = window;
-            factory->CreateSwapChainVk(renderContext->device_, renderContext->context_, swapChainDesc, nativeWindow, &renderContext->swapchain_);
+            factory->CreateSwapChainVk(renderContext->m_device, renderContext->m_context, swapChainDesc, nativeWindow,
+                                       &renderContext->m_swapchain);
         }
 
         return true;
     }
-}
+} // namespace swarm

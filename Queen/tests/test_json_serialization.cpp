@@ -1,13 +1,16 @@
-#include <larvae/larvae.h>
-#include <queen/reflect/component_reflector.h>
-#include <queen/reflect/reflectable.h>
-#include <queen/reflect/json_serializer.h>
-#include <queen/reflect/json_deserializer.h>
-#include <queen/reflect/enum_reflection.h>
-#include <queen/core/entity.h>
 #include <wax/containers/fixed_string.h>
-#include <cstring>
+
+#include <queen/core/entity.h>
+#include <queen/reflect/component_reflector.h>
+#include <queen/reflect/enum_reflection.h>
+#include <queen/reflect/json_deserializer.h>
+#include <queen/reflect/json_serializer.h>
+#include <queen/reflect/reflectable.h>
+
+#include <larvae/larvae.h>
+
 #include <cmath>
+#include <cstring>
 
 namespace
 {
@@ -21,8 +24,7 @@ namespace
         float y = 0.f;
         float z = 0.f;
 
-        static void Reflect(queen::ComponentReflector<>& r)
-        {
+        static void Reflect(queen::ComponentReflector<>& r) {
             r.Field("x", &Position::x);
             r.Field("y", &Position::y);
             r.Field("z", &Position::z);
@@ -37,8 +39,7 @@ namespace
         double f64 = 0.0;
         bool flag = false;
 
-        static void Reflect(queen::ComponentReflector<>& r)
-        {
+        static void Reflect(queen::ComponentReflector<>& r) {
             r.Field("i32", &AllPrimitives::i32);
             r.Field("u32", &AllPrimitives::u32);
             r.Field("f32", &AllPrimitives::f32);
@@ -52,8 +53,7 @@ namespace
         float x = 0.f;
         float y = 0.f;
 
-        static void Reflect(queen::ComponentReflector<>& r)
-        {
+        static void Reflect(queen::ComponentReflector<>& r) {
             r.Field("x", &Vec2::x);
             r.Field("y", &Vec2::y);
         }
@@ -64,8 +64,7 @@ namespace
         Vec2 position;
         float rotation = 0.f;
 
-        static void Reflect(queen::ComponentReflector<>& r)
-        {
+        static void Reflect(queen::ComponentReflector<>& r) {
             r.Field("position", &Transform::position);
             r.Field("rotation", &Transform::rotation);
         }
@@ -83,8 +82,7 @@ namespace
         queen::Entity target;
         int32_t data = 0;
 
-        static void Reflect(queen::ComponentReflector<>& r)
-        {
+        static void Reflect(queen::ComponentReflector<>& r) {
             r.Field("target", &WithEntity::target);
             r.Field("data", &WithEntity::data);
         }
@@ -94,10 +92,7 @@ namespace
     {
         float values[3] = {0.f, 0.f, 0.f};
 
-        static void Reflect(queen::ComponentReflector<>& r)
-        {
-            r.Field("values", &WithFixedArray::values);
-        }
+        static void Reflect(queen::ComponentReflector<>& r) { r.Field("values", &WithFixedArray::values); }
     };
 
     struct WithString
@@ -105,18 +100,16 @@ namespace
         wax::FixedString name;
         int32_t id = 0;
 
-        static void Reflect(queen::ComponentReflector<>& r)
-        {
+        static void Reflect(queen::ComponentReflector<>& r) {
             r.Field("name", &WithString::name);
             r.Field("id", &WithString::id);
         }
     };
-}
+} // namespace
 
-template<> struct queen::EnumInfo<RenderMode>
+template <> struct queen::EnumInfo<RenderMode>
 {
-    static const queen::EnumReflectionBase& Get()
-    {
+    static const queen::EnumReflectionBase& Get() {
         static auto r = []() {
             queen::EnumReflector<> e;
             e.Value("Opaque", RenderMode::Opaque);
@@ -135,26 +128,22 @@ namespace
         RenderMode mode = RenderMode::Opaque;
         float alpha = 1.f;
 
-        static void Reflect(queen::ComponentReflector<>& r)
-        {
+        static void Reflect(queen::ComponentReflector<>& r) {
             r.Field("mode", &WithEnum::mode);
             r.Field("alpha", &WithEnum::alpha);
         }
     };
 
     // Helper to do a JSON roundtrip
-    template<queen::Reflectable T>
-    void JsonRoundtrip(const T& original, T& loaded)
-    {
+    template <queen::Reflectable T> void JsonRoundtrip(const T& original, T& loaded) {
         auto reflection = queen::GetReflectionData<T>();
 
         queen::JsonSerializer<4096> serializer;
         serializer.SerializeComponent(&original, reflection);
 
-        auto result = queen::JsonDeserializer::DeserializeComponent(
-            &loaded, reflection, serializer.CStr());
+        auto result = queen::JsonDeserializer::DeserializeComponent(&loaded, reflection, serializer.CStr());
 
-        larvae::AssertTrue(result.success);
+        larvae::AssertTrue(result.m_success);
     }
 
     // ============================================================
@@ -186,8 +175,8 @@ namespace
 
         larvae::AssertTrue(std::strstr(serializer.CStr(), "true") != nullptr);
         larvae::AssertTrue(std::strstr(serializer.CStr(), "1") == nullptr ||
-                          std::strstr(serializer.CStr(), "true") < std::strstr(serializer.CStr(), "1") ||
-                          true);  // Just check "true" is present
+                           std::strstr(serializer.CStr(), "true") < std::strstr(serializer.CStr(), "1") ||
+                           true); // Just check "true" is present
     });
 
     auto test_serialize_enum_as_name = larvae::RegisterTest("QueenJsonSerialization", "SerializeEnumAsName", []() {
@@ -292,29 +281,30 @@ namespace
         Position loaded{};
         auto result = queen::JsonDeserializer::DeserializeComponent(&loaded, reflection, json);
 
-        larvae::AssertTrue(result.success);
-        larvae::AssertEqual(result.fields_read, size_t{3});
-        larvae::AssertEqual(result.fields_skipped, size_t{1});
+        larvae::AssertTrue(result.m_success);
+        larvae::AssertEqual(result.m_fieldsRead, size_t{3});
+        larvae::AssertEqual(result.m_fieldsSkipped, size_t{1});
         larvae::AssertEqual(loaded.x, 1.0f);
         larvae::AssertEqual(loaded.y, 2.0f);
         larvae::AssertEqual(loaded.z, 3.0f);
     });
 
-    auto test_missing_field_keeps_default = larvae::RegisterTest("QueenJsonSerialization", "MissingFieldKeepsDefault", []() {
-        auto reflection = queen::GetReflectionData<Position>();
+    auto test_missing_field_keeps_default =
+        larvae::RegisterTest("QueenJsonSerialization", "MissingFieldKeepsDefault", []() {
+            auto reflection = queen::GetReflectionData<Position>();
 
-        // Only x is provided, y and z should keep their default (0.f)
-        const char* json = R"({"x": 5.0})";
+            // Only x is provided, y and z should keep their default (0.f)
+            const char* json = R"({"x": 5.0})";
 
-        Position loaded{};
-        loaded.y = 99.f;  // pre-set to verify it's NOT overwritten
-        auto result = queen::JsonDeserializer::DeserializeComponent(&loaded, reflection, json);
+            Position loaded{};
+            loaded.y = 99.f; // pre-set to verify it's NOT overwritten
+            auto result = queen::JsonDeserializer::DeserializeComponent(&loaded, reflection, json);
 
-        larvae::AssertTrue(result.success);
-        larvae::AssertEqual(result.fields_read, size_t{1});
-        larvae::AssertEqual(loaded.x, 5.0f);
-        larvae::AssertEqual(loaded.y, 99.f);  // not in JSON, kept original
-    });
+            larvae::AssertTrue(result.m_success);
+            larvae::AssertEqual(result.m_fieldsRead, size_t{1});
+            larvae::AssertEqual(loaded.x, 5.0f);
+            larvae::AssertEqual(loaded.y, 99.f); // not in JSON, kept original
+        });
 
     auto test_unknown_object_skipped = larvae::RegisterTest("QueenJsonSerialization", "UnknownObjectSkipped", []() {
         auto reflection = queen::GetReflectionData<Position>();
@@ -324,9 +314,9 @@ namespace
         Position loaded{};
         auto result = queen::JsonDeserializer::DeserializeComponent(&loaded, reflection, json);
 
-        larvae::AssertTrue(result.success);
-        larvae::AssertEqual(result.fields_read, size_t{3});
-        larvae::AssertEqual(result.fields_skipped, size_t{1});
+        larvae::AssertTrue(result.m_success);
+        larvae::AssertEqual(result.m_fieldsRead, size_t{3});
+        larvae::AssertEqual(result.m_fieldsSkipped, size_t{1});
     });
 
     auto test_unknown_array_skipped = larvae::RegisterTest("QueenJsonSerialization", "UnknownArraySkipped", []() {
@@ -337,9 +327,9 @@ namespace
         Position loaded{};
         auto result = queen::JsonDeserializer::DeserializeComponent(&loaded, reflection, json);
 
-        larvae::AssertTrue(result.success);
-        larvae::AssertEqual(result.fields_read, size_t{3});
-        larvae::AssertEqual(result.fields_skipped, size_t{1});
+        larvae::AssertTrue(result.m_success);
+        larvae::AssertEqual(result.m_fieldsRead, size_t{3});
+        larvae::AssertEqual(result.m_fieldsSkipped, size_t{1});
     });
 
     auto test_empty_object = larvae::RegisterTest("QueenJsonSerialization", "EmptyObject", []() {
@@ -350,8 +340,8 @@ namespace
         Position loaded{};
         auto result = queen::JsonDeserializer::DeserializeComponent(&loaded, reflection, json);
 
-        larvae::AssertTrue(result.success);
-        larvae::AssertEqual(result.fields_read, size_t{0});
+        larvae::AssertTrue(result.m_success);
+        larvae::AssertEqual(result.m_fieldsRead, size_t{0});
     });
 
     auto test_whitespace_tolerance = larvae::RegisterTest("QueenJsonSerialization", "WhitespaceTolerance", []() {
@@ -362,7 +352,7 @@ namespace
         Position loaded{};
         auto result = queen::JsonDeserializer::DeserializeComponent(&loaded, reflection, json);
 
-        larvae::AssertTrue(result.success);
+        larvae::AssertTrue(result.m_success);
         larvae::AssertEqual(loaded.x, 1.0f);
     });
 
@@ -379,7 +369,7 @@ namespace
         WithString loaded{};
         auto result = queen::JsonDeserializer::DeserializeComponent(&loaded, reflection, serializer.CStr());
 
-        larvae::AssertTrue(result.success);
+        larvae::AssertTrue(result.m_success);
         larvae::AssertTrue(loaded.name == wax::FixedString{"a\"b"});
     });
 
@@ -404,10 +394,10 @@ namespace
         larvae::AssertTrue(std::strstr(serializer.CStr(), "false") != nullptr);
 
         AllPrimitives loaded{};
-        loaded.flag = true;  // pre-set
+        loaded.flag = true; // pre-set
         auto result = queen::JsonDeserializer::DeserializeComponent(&loaded, reflection, serializer.CStr());
 
-        larvae::AssertTrue(result.success);
+        larvae::AssertTrue(result.m_success);
         larvae::AssertFalse(loaded.flag);
     });
-}
+} // namespace

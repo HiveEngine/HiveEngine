@@ -1,6 +1,8 @@
-#include <larvae/larvae.h>
-#include <queen/storage/column.h>
 #include <comb/linear_allocator.h>
+
+#include <queen/storage/column.h>
+
+#include <larvae/larvae.h>
 
 namespace
 {
@@ -15,14 +17,26 @@ namespace
         static int construct_count;
         static int destruct_count;
 
-        NonTrivial() : value{0} { ++construct_count; }
-        explicit NonTrivial(int v) : value{v} { ++construct_count; }
+        NonTrivial()
+            : value{0} {
+            ++construct_count;
+        }
+        explicit NonTrivial(int v)
+            : value{v} {
+            ++construct_count;
+        }
         ~NonTrivial() { ++destruct_count; }
-        NonTrivial(const NonTrivial& other) : value{other.value} { ++construct_count; }
-        NonTrivial(NonTrivial&& other) noexcept : value{other.value} { other.value = 0; ++construct_count; }
+        NonTrivial(const NonTrivial& other)
+            : value{other.value} {
+            ++construct_count;
+        }
+        NonTrivial(NonTrivial&& other) noexcept
+            : value{other.value} {
+            other.value = 0;
+            ++construct_count;
+        }
 
-        static void ResetCounts()
-        {
+        static void ResetCounts() {
             construct_count = 0;
             destruct_count = 0;
         }
@@ -251,4 +265,4 @@ namespace
         void* ptr = column.GetRaw(0);
         larvae::AssertEqual(reinterpret_cast<uintptr_t>(ptr) % 32, uintptr_t{0});
     });
-}
+} // namespace

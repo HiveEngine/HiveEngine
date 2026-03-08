@@ -1,6 +1,8 @@
-#include <larvae/larvae.h>
-#include <queen/storage/archetype.h>
 #include <comb/linear_allocator.h>
+
+#include <queen/storage/archetype.h>
+
+#include <larvae/larvae.h>
 
 namespace
 {
@@ -231,4 +233,4 @@ namespace
         larvae::AssertEqual(arch.EntityCount(), size_t{1});
         larvae::AssertFalse(arch.IsEmpty());
     });
-}
+} // namespace

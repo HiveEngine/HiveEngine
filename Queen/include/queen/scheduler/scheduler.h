@@ -1,9 +1,10 @@
 #pragma once
 
+#include <comb/allocator_concepts.h>
+
+#include <queen/core/tick.h>
 #include <queen/scheduler/dependency_graph.h>
 #include <queen/system/system_storage.h>
-#include <queen/core/tick.h>
-#include <comb/allocator_concepts.h>
 
 namespace queen
 {
@@ -34,13 +35,11 @@ namespace queen
      * - No parallel execution
      * - Systems run in registration order when no conflicts exist
      */
-    template<comb::Allocator Allocator>
-    class Scheduler
+    template <comb::Allocator Allocator> class Scheduler
     {
     public:
         explicit Scheduler(Allocator& allocator)
-            : graph_{allocator}
-        {}
+            : m_graph{allocator} {}
 
         Scheduler(const Scheduler&) = delete;
         Scheduler& operator=(const Scheduler&) = delete;
@@ -52,28 +51,19 @@ namespace queen
          *
          * Call this after registering new systems or when the graph is dirty.
          */
-        void Build(const SystemStorage<Allocator>& storage)
-        {
-            graph_.Build(storage);
-        }
+        void Build(const SystemStorage<Allocator>& storage) { m_graph.Build(storage); }
 
         /**
          * Mark the graph as needing rebuild
          *
          * Call this when systems are added, removed, or modified.
          */
-        void Invalidate() noexcept
-        {
-            graph_.MarkDirty();
-        }
+        void Invalidate() noexcept { m_graph.MarkDirty(); }
 
         /**
          * Check if the graph needs rebuild
          */
-        [[nodiscard]] bool NeedsRebuild() const noexcept
-        {
-            return graph_.IsDirty();
-        }
+        [[nodiscard]] bool NeedsRebuild() const noexcept { return m_graph.IsDirty(); }
 
         /**
          * Run all systems in dependency order
@@ -85,38 +75,26 @@ namespace queen
          * @param world The world to run systems on
          * @param storage System storage containing the systems
          */
-        void RunAll(World& world, SystemStorage<Allocator>& storage);  // Implementation in scheduler_impl.h
+        void RunAll(World& world, SystemStorage<Allocator>& storage); // Implementation in scheduler_impl.h
 
         /**
          * Get the dependency graph
          */
-        [[nodiscard]] const DependencyGraph<Allocator>& Graph() const noexcept
-        {
-            return graph_;
-        }
+        [[nodiscard]] const DependencyGraph<Allocator>& Graph() const noexcept { return m_graph; }
 
-        [[nodiscard]] DependencyGraph<Allocator>& Graph() noexcept
-        {
-            return graph_;
-        }
+        [[nodiscard]] DependencyGraph<Allocator>& Graph() noexcept { return m_graph; }
 
         /**
          * Get the execution order (for debugging/visualization)
          */
-        [[nodiscard]] const wax::Vector<uint32_t>& ExecutionOrder() const noexcept
-        {
-            return graph_.ExecutionOrder();
-        }
+        [[nodiscard]] const wax::Vector<uint32_t>& ExecutionOrder() const noexcept { return m_graph.ExecutionOrder(); }
 
         /**
          * Check if the dependency graph has cycles
          */
-        [[nodiscard]] bool HasCycle() const noexcept
-        {
-            return graph_.HasCycle();
-        }
+        [[nodiscard]] bool HasCycle() const noexcept { return m_graph.HasCycle(); }
 
     private:
-        DependencyGraph<Allocator> graph_;
+        DependencyGraph<Allocator> m_graph;
     };
-}
+} // namespace queen

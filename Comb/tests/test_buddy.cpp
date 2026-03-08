@@ -1,13 +1,19 @@
-#include <larvae/larvae.h>
-#include <comb/buddy_allocator.h>
 #include <comb/allocator_concepts.h>
+#include <comb/buddy_allocator.h>
 #include <comb/new.h>
+
+#include <larvae/larvae.h>
+
 #include <cstring>
 
 namespace
 {
-    constexpr size_t operator""_KB(unsigned long long kb) { return kb * 1024; }
-    constexpr size_t operator""_MB(unsigned long long mb) { return mb * 1024 * 1024; }
+    constexpr size_t operator""_KB(unsigned long long kb) {
+        return kb * 1024;
+    }
+    constexpr size_t operator""_MB(unsigned long long mb) {
+        return mb * 1024 * 1024;
+    }
 
     auto test1 = larvae::RegisterTest("BuddyAllocator", "BasicAllocation", []() {
         comb::BuddyAllocator buddy{1_MB};
@@ -223,9 +229,8 @@ namespace
     // Concept Satisfaction
     // =============================================================================
 
-    auto test12 = larvae::RegisterTest("BuddyAllocator", "ConceptSatisfaction", []() {
-        larvae::AssertTrue((comb::Allocator<comb::BuddyAllocator>));
-    });
+    auto test12 = larvae::RegisterTest("BuddyAllocator", "ConceptSatisfaction",
+                                       []() { larvae::AssertTrue((comb::Allocator<comb::BuddyAllocator>)); });
 
     // =============================================================================
     // Reset
@@ -391,7 +396,8 @@ namespace
         struct TestObj
         {
             int value;
-            TestObj(int v) : value{v} {}
+            TestObj(int v)
+                : value{v} {}
         };
 
         TestObj* obj = comb::New<TestObj>(buddy, 42);
@@ -408,7 +414,10 @@ namespace
         struct TestObj
         {
             bool* destroyed;
-            TestObj(bool* d) : destroyed{d} { *destroyed = false; }
+            TestObj(bool* d)
+                : destroyed{d} {
+                *destroyed = false;
+            }
             ~TestObj() { *destroyed = true; }
         };
 
@@ -448,4 +457,4 @@ namespace
         comb::BuddyAllocator buddy{1_KB};
         larvae::AssertStringEqual(buddy.GetName(), "BuddyAllocator");
     });
-}
+} // namespace

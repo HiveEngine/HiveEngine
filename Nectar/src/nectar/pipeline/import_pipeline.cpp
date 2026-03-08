@@ -1,173 +1,162 @@
-#include <nectar/pipeline/import_pipeline.h>
-#include <nectar/pipeline/importer_registry.h>
-#include <nectar/pipeline/import_context.h>
 #include <nectar/cas/cas_store.h>
-#include <nectar/vfs/virtual_filesystem.h>
 #include <nectar/database/asset_database.h>
 #include <nectar/hive/hive_document.h>
-#include <hive/profiling/profiler.h>
+#include <nectar/pipeline/import_context.h>
+#include <nectar/pipeline/import_pipeline.h>
+#include <nectar/pipeline/importer_registry.h>
+#include <nectar/vfs/virtual_filesystem.h>
 
 namespace nectar
 {
-    ImportPipeline::ImportPipeline(comb::DefaultAllocator& alloc,
-                                   ImporterRegistry& registry,
-                                   CasStore& cas,
-                                   VirtualFilesystem& vfs,
-                                   AssetDatabase& db)
-        : alloc_{&alloc}
-        , registry_{&registry}
-        , cas_{&cas}
-        , vfs_{&vfs}
-        , db_{&db}
-    {}
+    ImportPipeline::ImportPipeline(comb::DefaultAllocator& alloc, ImporterRegistry& registry, CasStore& cas,
+                                   VirtualFilesystem& vfs, AssetDatabase& db)
+        : m_alloc{&alloc}
+        , m_registry{&registry}
+        , m_cas{&cas}
+        , m_vfs{&vfs}
+        , m_db{&db} {}
 
-    ImportOutput ImportPipeline::ImportAsset(const ImportRequest& request)
-    {
-        HiveDocument empty_settings{*alloc_};
-        return ImportAsset(request, empty_settings);
+    ImportOutput ImportPipeline::ImportAsset(const ImportRequest& request) {
+        HiveDocument emptySettings{*m_alloc};
+        return ImportAsset(request, emptySettings);
     }
 
-    ImportOutput ImportPipeline::ImportAsset(const ImportRequest& request,
-                                             const HiveDocument& settings)
-    {
+    ImportOutput ImportPipeline::ImportAsset(const ImportRequest& request, const HiveDocument& settings) {
         HIVE_PROFILE_SCOPE_N("ImportPipeline::ImportAsset");
         ImportOutput output{};
-        output.error_message = wax::String{*alloc_};
-        output.dependencies = wax::Vector<DependencyEdge>{*alloc_};
+        output.m_errorMessage = wax::String{*m_alloc};
+        output.m_dependencies = wax::Vector<DependencyEdge>{*m_alloc};
 
-        // 1. Find importer
-        IAssetImporter* importer = registry_->FindByPath(request.source_path);
+        IAssetImporter* importer = m_registry->FindByPath(request.m_sourcePath);
         if (!importer)
         {
-            output.error_message.Append("No importer for path: ");
-            output.error_message.Append(request.source_path.Data(), request.source_path.Size());
+            output.m_errorMessage.Append("No importer for path: ");
+            output.m_errorMessage.Append(request.m_sourcePath.Data(), request.m_sourcePath.Size());
             return output;
         }
 
-        // 2. Read source from VFS
-        auto source_data = vfs_->ReadSync(request.source_path);
-        if (source_data.Size() == 0)
+        auto sourceData = m_vfs->ReadSync(request.m_sourcePath);
+        if (sourceData.Size() == 0)
         {
-            output.error_message.Append("Source file not found or empty: ");
-            output.error_message.Append(request.source_path.Data(), request.source_path.Size());
+            output.m_errorMessage.Append("Source file not found or empty: ");
+            output.m_errorMessage.Append(request.m_sourcePath.Data(), request.m_sourcePath.Size());
             return output;
         }
 
-        // 3. Hash the source (for change detection in NeedsReimport)
-        ContentHash source_hash = ContentHash::FromData(source_data.View());
+        ContentHash sourceHash = ContentHash::FromData(sourceData.View());
 
-        // 4. Run import
-        ImportContext ctx{*alloc_, *db_, request.asset_id};
-        auto result = importer->Import(source_data.View(), settings, ctx);
-        if (!result.success)
+        ImportContext ctx{*m_alloc, *m_db, request.m_assetId};
+        auto result = importer->Import(sourceData.View(), settings, ctx);
+        if (!result.m_success)
         {
-            output.error_message = static_cast<wax::String&&>(result.error_message);
+            output.m_errorMessage = static_cast<wax::String&&>(result.m_errorMessage);
             return output;
         }
 
-        // 5. Hash intermediate data (CAS key)
-        ContentHash cas_hash = ContentHash::FromData(result.intermediate_data.View());
-
-        // 6. Store in CAS
-        ContentHash stored = cas_->Store(result.intermediate_data.View());
+        ContentHash stored = m_cas->Store(result.m_intermediateData.View());
         if (!stored.IsValid())
         {
-            output.error_message.Append("Failed to store blob in CAS");
+            output.m_errorMessage.Append("Failed to store blob in CAS");
             return output;
         }
 
-        // 7. Update/insert database record
-        //    content_hash = source hash (for change detection)
-        auto* existing = db_->FindByUuid(request.asset_id);
+        auto* existing = m_db->FindByUuid(request.m_assetId);
         if (existing)
         {
-            existing->content_hash = source_hash;
-            existing->intermediate_hash = cas_hash;
-            existing->import_version = importer->Version();
-            existing->type = wax::String{*alloc_};
-            existing->type.Append(importer->TypeName().Data(), importer->TypeName().Size());
+            existing->m_contentHash = sourceHash;
+            existing->m_intermediateHash = stored;
+            existing->m_importVersion = importer->Version();
+            existing->m_type = wax::String{*m_alloc};
+            existing->m_type.Append(importer->TypeName().Data(), importer->TypeName().Size());
         }
         else
         {
             AssetRecord record{};
-            record.uuid = request.asset_id;
-            record.path = wax::String{*alloc_};
-            record.path.Append(request.source_path.Data(), request.source_path.Size());
-            record.type = wax::String{*alloc_};
-            record.type.Append(importer->TypeName().Data(), importer->TypeName().Size());
-            record.name = wax::String{*alloc_};
-            record.content_hash = source_hash;
-            record.intermediate_hash = cas_hash;
-            record.import_version = importer->Version();
-            record.labels = wax::Vector<wax::String>{*alloc_};
-            db_->Insert(static_cast<AssetRecord&&>(record));
+            record.m_uuid = request.m_assetId;
+            record.m_path = wax::String{*m_alloc};
+            record.m_path.Append(request.m_sourcePath.Data(), request.m_sourcePath.Size());
+            record.m_type = wax::String{*m_alloc};
+            record.m_type.Append(importer->TypeName().Data(), importer->TypeName().Size());
+            record.m_name = wax::String{*m_alloc};
+            record.m_contentHash = sourceHash;
+            record.m_intermediateHash = stored;
+            record.m_importVersion = importer->Version();
+            record.m_labels = wax::Vector<wax::String>{*m_alloc};
+            m_db->Insert(static_cast<AssetRecord&&>(record));
         }
 
-        // 8. Update dependency graph
         auto& deps = ctx.GetDeclaredDeps();
-        auto& graph = db_->GetDependencyGraph();
+        auto& graph = m_db->GetDependencyGraph();
         for (size_t i = 0; i < deps.Size(); ++i)
         {
-            graph.AddEdge(deps[i].from, deps[i].to, deps[i].kind);
-            output.dependencies.PushBack(deps[i]);
+            graph.AddEdge(deps[i].m_from, deps[i].m_to, deps[i].m_kind);
+            output.m_dependencies.PushBack(deps[i]);
         }
 
-        // 9. Fill output (content_hash = CAS hash of intermediate)
-        output.success = true;
-        output.content_hash = cas_hash;
-        output.import_version = importer->Version();
+        output.m_success = true;
+        output.m_contentHash = stored;
+        output.m_importVersion = importer->Version();
         return output;
     }
 
-    void ImportPipeline::ScanOutdated(wax::Vector<AssetId>& out) const
-    {
+    void ImportPipeline::ScanOutdated(wax::Vector<AssetId>& out) const {
         HIVE_PROFILE_SCOPE_N("ImportPipeline::ScanOutdated");
-        db_->ForEach([&](AssetId id, const AssetRecord&) {
+        m_db->ForEach([&](AssetId id, const AssetRecord&) {
             if (NeedsReimport(id))
+            {
                 out.PushBack(id);
+            }
         });
     }
 
-    size_t ImportPipeline::ReimportOutdated(const wax::Vector<AssetId>& assets)
-    {
+    size_t ImportPipeline::ReimportOutdated(const wax::Vector<AssetId>& assets) {
         HIVE_PROFILE_SCOPE_N("ImportPipeline::ReimportOutdated");
         size_t count = 0;
         for (size_t i = 0; i < assets.Size(); ++i)
         {
-            auto* record = db_->FindByUuid(assets[i]);
-            if (!record) continue;
+            auto* record = m_db->FindByUuid(assets[i]);
+            if (!record)
+            {
+                continue;
+            }
 
             ImportRequest req;
-            req.source_path = record->path.View();
-            req.asset_id = assets[i];
+            req.m_sourcePath = record->m_path.View();
+            req.m_assetId = assets[i];
             auto result = ImportAsset(req);
-            if (result.success)
+            if (result.m_success)
+            {
                 ++count;
+            }
         }
         return count;
     }
 
-    bool ImportPipeline::NeedsReimport(AssetId id) const
-    {
-        auto* record = db_->FindByUuid(id);
+    bool ImportPipeline::NeedsReimport(AssetId id) const {
+        auto* record = m_db->FindByUuid(id);
         if (!record)
+        {
             return true;
+        }
 
-        // Find importer for this asset's path
-        IAssetImporter* importer = registry_->FindByPath(record->path.View());
+        IAssetImporter* importer = m_registry->FindByPath(record->m_path.View());
         if (!importer)
-            return false;  // no importer = can't reimport
+        {
+            return false;
+        }
 
-        // Version mismatch
-        if (record->import_version != importer->Version())
+        if (record->m_importVersion != importer->Version())
+        {
             return true;
+        }
 
-        // Content hash mismatch
-        auto source_data = vfs_->ReadSync(record->path.View());
-        if (source_data.Size() == 0)
-            return true;  // source missing = needs reimport
+        auto sourceData = m_vfs->ReadSync(record->m_path.View());
+        if (sourceData.Size() == 0)
+        {
+            return true;
+        }
 
-        ContentHash current = ContentHash::FromData(source_data.View());
-        return !(current == record->content_hash);
+        ContentHash current = ContentHash::FromData(sourceData.View());
+        return !(current == record->m_contentHash);
     }
-}
+} // namespace nectar

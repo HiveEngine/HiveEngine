@@ -1,12 +1,14 @@
-#include <larvae/larvae.h>
-#include <nectar/hive/hive_writer.h>
-#include <nectar/hive/hive_parser.h>
 #include <comb/default_allocator.h>
 
-namespace {
+#include <nectar/hive/hive_parser.h>
+#include <nectar/hive/hive_writer.h>
 
-    auto& GetWriterAlloc()
-    {
+#include <larvae/larvae.h>
+
+namespace
+{
+
+    auto& GetWriterAlloc() {
         static comb::ModuleAllocator alloc{"TestHiveWriter", 4 * 1024 * 1024};
         return alloc.Get();
     }
@@ -138,15 +140,15 @@ namespace {
         auto result = nectar::HiveParser::Parse(text.View(), alloc);
         larvae::AssertTrue(result.Success());
 
-        larvae::AssertTrue(result.document.GetString("s", "name").Equals("test"));
-        larvae::AssertEqual(result.document.GetBool("s", "flag"), false);
-        larvae::AssertEqual(result.document.GetInt("s", "num"), int64_t{-7});
-        larvae::AssertDoubleEqual(result.document.GetFloat("s", "flt"), 3.14);
+        larvae::AssertTrue(result.m_document.GetString("s", "name").Equals("test"));
+        larvae::AssertEqual(result.m_document.GetBool("s", "flag"), false);
+        larvae::AssertEqual(result.m_document.GetInt("s", "num"), int64_t{-7});
+        larvae::AssertDoubleEqual(result.m_document.GetFloat("s", "flt"), 3.14);
 
-        auto* a = result.document.GetValue("s", "arr");
+        auto* a = result.m_document.GetValue("s", "arr");
         larvae::AssertNotNull(a);
         larvae::AssertEqual(a->AsStringArray().Size(), size_t{1});
         larvae::AssertTrue(a->AsStringArray()[0].View().Equals("x"));
     });
 
-}
+} // namespace

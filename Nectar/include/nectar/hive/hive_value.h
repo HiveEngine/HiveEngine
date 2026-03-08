@@ -1,9 +1,11 @@
 #pragma once
 
+#include <comb/default_allocator.h>
+
 #include <wax/containers/string.h>
 #include <wax/containers/string_view.h>
 #include <wax/containers/vector.h>
-#include <comb/default_allocator.h>
+
 #include <cstdint>
 
 namespace nectar
@@ -15,73 +17,65 @@ namespace nectar
     {
         enum class Type : uint8_t
         {
-            String,
-            Bool,
-            Int,
-            Float,
-            StringArray
+            STRING,
+            BOOL,
+            INT,
+            FLOAT,
+            STRING_ARRAY
         };
 
-        Type type{Type::String};
-        wax::String str{};
-        int64_t int_val{0};
-        double float_val{0.0};
-        bool bool_val{false};
-        wax::Vector<wax::String> array{};
+        Type m_type{Type::STRING};
+        wax::String m_str{};
+        int64_t m_intVal{0};
+        double m_floatVal{0.0};
+        bool m_boolVal{false};
+        wax::Vector<wax::String> m_array{};
 
         // -- Factory methods --
 
-        [[nodiscard]] static HiveValue MakeString(comb::DefaultAllocator& alloc, wax::StringView s)
-        {
+        [[nodiscard]] static HiveValue MakeString(comb::DefaultAllocator& alloc, wax::StringView s) {
             HiveValue v{};
-            v.type = Type::String;
-            v.str = wax::String{alloc, s};
+            v.m_type = Type::STRING;
+            v.m_str = wax::String{alloc, s};
             return v;
         }
 
-        [[nodiscard]] static HiveValue MakeBool(bool b)
-        {
+        [[nodiscard]] static HiveValue MakeBool(bool b) {
             HiveValue v{};
-            v.type = Type::Bool;
-            v.bool_val = b;
+            v.m_type = Type::BOOL;
+            v.m_boolVal = b;
             return v;
         }
 
-        [[nodiscard]] static HiveValue MakeInt(int64_t i)
-        {
+        [[nodiscard]] static HiveValue MakeInt(int64_t i) {
             HiveValue v{};
-            v.type = Type::Int;
-            v.int_val = i;
+            v.m_type = Type::INT;
+            v.m_intVal = i;
             return v;
         }
 
-        [[nodiscard]] static HiveValue MakeFloat(double f)
-        {
+        [[nodiscard]] static HiveValue MakeFloat(double f) {
             HiveValue v{};
-            v.type = Type::Float;
-            v.float_val = f;
+            v.m_type = Type::FLOAT;
+            v.m_floatVal = f;
             return v;
         }
 
-        [[nodiscard]] static HiveValue MakeStringArray(comb::DefaultAllocator& alloc)
-        {
+        [[nodiscard]] static HiveValue MakeStringArray(comb::DefaultAllocator& alloc) {
             HiveValue v{};
-            v.type = Type::StringArray;
-            v.array = wax::Vector<wax::String>{alloc};
+            v.m_type = Type::STRING_ARRAY;
+            v.m_array = wax::Vector<wax::String>{alloc};
             return v;
         }
 
         // -- Accessors --
 
-        [[nodiscard]] wax::StringView AsString() const noexcept { return str.View(); }
-        [[nodiscard]] bool AsBool() const noexcept { return bool_val; }
-        [[nodiscard]] int64_t AsInt() const noexcept { return int_val; }
-        [[nodiscard]] double AsFloat() const noexcept { return float_val; }
-        [[nodiscard]] const wax::Vector<wax::String>& AsStringArray() const noexcept { return array; }
+        [[nodiscard]] wax::StringView AsString() const noexcept { return m_str.View(); }
+        [[nodiscard]] bool AsBool() const noexcept { return m_boolVal; }
+        [[nodiscard]] int64_t AsInt() const noexcept { return m_intVal; }
+        [[nodiscard]] double AsFloat() const noexcept { return m_floatVal; }
+        [[nodiscard]] const wax::Vector<wax::String>& AsStringArray() const noexcept { return m_array; }
 
-        void PushString(comb::DefaultAllocator& alloc, wax::StringView s)
-        {
-            array.PushBack(wax::String{alloc, s});
-        }
+        void PushString(comb::DefaultAllocator& alloc, wax::StringView s) { m_array.PushBack(wax::String{alloc, s}); }
     };
-}
+} // namespace nectar

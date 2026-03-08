@@ -1,22 +1,22 @@
-#include <forge/gizmo.h>
-
 #include <hive/math/math.h>
 
+#include <forge/gizmo.h>
+
 #include <imgui.h>
+
 #include <ImGuizmo.h>
 
-#include <cstring>
 #include <cmath>
+#include <cstring>
 
 namespace forge
 {
     using namespace hive::math;
 
-    static void EulerToQuat(const float* euler_deg, float* quat)
-    {
-        float px = euler_deg[0] * (kPi / 180.f) * 0.5f;
-        float py = euler_deg[1] * (kPi / 180.f) * 0.5f;
-        float pz = euler_deg[2] * (kPi / 180.f) * 0.5f;
+    static void EulerToQuat(const float* eulerDeg, float* quat) {
+        float px = eulerDeg[0] * (kPi / 180.f) * 0.5f;
+        float py = eulerDeg[1] * (kPi / 180.f) * 0.5f;
+        float pz = eulerDeg[2] * (kPi / 180.f) * 0.5f;
 
         float cx = std::cos(px), sx = std::sin(px);
         float cy = std::cos(py), sy = std::sin(py);
@@ -28,46 +28,42 @@ namespace forge
         quat[3] = cx * cy * cz + sx * sy * sz; // w
     }
 
-    bool DrawGizmo(GizmoState& state,
-                   const Mat4& view,
-                   const Mat4& projection,
-                   float* world_matrix,
-                   float* out_position,
-                   float* out_rotation_quat,
-                   float* out_scale,
-                   float viewport_x, float viewport_y,
-                   float viewport_w, float viewport_h)
-    {
+    bool DrawGizmo(GizmoState& state, const Mat4& view, const Mat4& projection, float* worldMatrix, float* outPosition,
+                   float* outRotationQuat, float* outScale, float viewportX, float viewportY, float viewportW,
+                   float viewportH) {
         ImGuizmo::SetDrawlist();
-        ImGuizmo::SetRect(viewport_x, viewport_y, viewport_w, viewport_h);
+        ImGuizmo::SetRect(viewportX, viewportY, viewportW, viewportH);
 
         ImGuizmo::OPERATION op = ImGuizmo::TRANSLATE;
-        switch (state.mode)
+        switch (state.m_mode)
         {
-        case GizmoMode::Translate: op = ImGuizmo::TRANSLATE; break;
-        case GizmoMode::Rotate:    op = ImGuizmo::ROTATE;    break;
-        case GizmoMode::Scale:     op = ImGuizmo::SCALE;     break;
+            case GizmoMode::TRANSLATE:
+                op = ImGuizmo::TRANSLATE;
+                break;
+            case GizmoMode::ROTATE:
+                op = ImGuizmo::ROTATE;
+                break;
+            case GizmoMode::SCALE:
+                op = ImGuizmo::SCALE;
+                break;
         }
 
-        ImGuizmo::MODE mode = (state.space == GizmoSpace::Local)
-            ? ImGuizmo::LOCAL : ImGuizmo::WORLD;
+        ImGuizmo::MODE mode = (state.m_space == GizmoSpace::LOCAL) ? ImGuizmo::LOCAL : ImGuizmo::WORLD;
 
-        bool manipulated = ImGuizmo::Manipulate(
-            &view.m[0][0], &projection.m[0][0],
-            op, mode, world_matrix);
+        bool manipulated = ImGuizmo::Manipulate(&view.m_m[0][0], &projection.m_m[0][0], op, mode, worldMatrix);
 
-        state.is_using = ImGuizmo::IsUsing();
+        state.m_isUsing = ImGuizmo::IsUsing();
 
         if (manipulated)
         {
             float t[3], r[3], s[3];
-            ImGuizmo::DecomposeMatrixToComponents(world_matrix, t, r, s);
+            ImGuizmo::DecomposeMatrixToComponents(worldMatrix, t, r, s);
 
-            std::memcpy(out_position, t, sizeof(float) * 3);
-            std::memcpy(out_scale, s, sizeof(float) * 3);
-            EulerToQuat(r, out_rotation_quat);
+            std::memcpy(outPosition, t, sizeof(float) * 3);
+            std::memcpy(outScale, s, sizeof(float) * 3);
+            EulerToQuat(r, outRotationQuat);
         }
 
         return manipulated;
     }
-}
+} // namespace forge

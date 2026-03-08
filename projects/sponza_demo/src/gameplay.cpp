@@ -1,21 +1,21 @@
-#include <hive/project/gameplay_api.h>
 #include <hive/core/log.h>
+#include <hive/project/gameplay_api.h>
 
-namespace queen { class World; }
+namespace queen
+{
+    class World;
+}
 
 static const hive::LogCategory LogSponza{"SponzaDemo"};
 
-HIVE_GAMEPLAY_EXPORT void HiveGameplayRegister(queen::World& /*world*/)
-{
+HIVE_GAMEPLAY_EXPORT void HiveGameplayRegister(queen::World& /*world*/) {
     hive::LogInfo(LogSponza, "Sponza Demo registered");
 }
 
-HIVE_GAMEPLAY_EXPORT void HiveGameplayUnregister(queen::World& /*world*/)
-{
+HIVE_GAMEPLAY_EXPORT void HiveGameplayUnregister(queen::World& /*world*/) {
     hive::LogInfo(LogSponza, "Sponza Demo unregistered");
 }
 
-HIVE_GAMEPLAY_EXPORT const char* HiveGameplayVersion()
-{
+HIVE_GAMEPLAY_EXPORT const char* HiveGameplayVersion() {
     return "0.1.0";
 }

@@ -3,36 +3,33 @@
 namespace nectar
 {
     CookerRegistry::CookerRegistry(comb::DefaultAllocator& alloc)
-        : alloc_{&alloc}
-        , type_map_{alloc, 32}
-    {}
+        : m_alloc{&alloc}
+        , m_typeMap{alloc, 32} {}
 
-    void CookerRegistry::Register(IAssetCooker* cooker)
-    {
-        if (!cooker) return;
+    void CookerRegistry::Register(IAssetCooker* cooker) {
+        if (!cooker)
+            return;
 
         auto name = cooker->TypeName();
-        wax::String key{*alloc_};
+        wax::String key{*m_alloc};
         key.Append(name.Data(), name.Size());
 
-        auto* existing = type_map_.Find(key);
+        auto* existing = m_typeMap.Find(key);
         if (existing)
             *existing = cooker;
         else
-            type_map_.Insert(static_cast<wax::String&&>(key), cooker);
+            m_typeMap.Insert(static_cast<wax::String&&>(key), cooker);
     }
 
-    IAssetCooker* CookerRegistry::FindByType(wax::StringView type_name) const
-    {
-        wax::String key{*alloc_};
-        key.Append(type_name.Data(), type_name.Size());
+    IAssetCooker* CookerRegistry::FindByType(wax::StringView typeName) const {
+        wax::String key{*m_alloc};
+        key.Append(typeName.Data(), typeName.Size());
 
-        auto* found = type_map_.Find(key);
+        auto* found = m_typeMap.Find(key);
         return found ? *found : nullptr;
     }
 
-    size_t CookerRegistry::Count() const noexcept
-    {
-        return type_map_.Count();
+    size_t CookerRegistry::Count() const noexcept {
+        return m_typeMap.Count();
     }
-}
+} // namespace nectar

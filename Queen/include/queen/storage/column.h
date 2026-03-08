@@ -1,10 +1,13 @@
 #pragma once
 
-#include <queen/core/type_id.h>
+#include <hive/core/assert.h>
+
+#include <comb/allocator_concepts.h>
+
 #include <queen/core/component_info.h>
 #include <queen/core/tick.h>
-#include <comb/allocator_concepts.h>
-#include <hive/core/assert.h>
+#include <queen/core/type_id.h>
+
 #include <cstddef>
 #include <cstring>
 
@@ -52,34 +55,31 @@ namespace queen
      *   Position* p = column.Get<Position>(0);
      * @endcode
      */
-    template<comb::Allocator Allocator>
-    class Column
+    template <comb::Allocator Allocator> class Column
     {
     public:
-        Column(Allocator& allocator, ComponentMeta meta, size_t initial_capacity = 64)
-            : allocator_{&allocator}
-            , meta_{meta}
-            , data_{nullptr}
-            , ticks_{nullptr}
-            , size_{0}
-            , capacity_{0}
-        {
+        Column(Allocator& allocator, ComponentMeta meta, size_t initialCapacity = 64)
+            : m_allocator{&allocator}
+            , m_meta{meta}
+            , m_data{nullptr}
+            , m_ticks{nullptr}
+            , m_size{0}
+            , m_capacity{0} {
             hive::Assert(meta.IsValid(), "Column requires valid ComponentMeta");
-            Reserve(initial_capacity);
+            Reserve(initialCapacity);
         }
 
-        ~Column()
-        {
+        ~Column() {
             Clear();
-            if (data_ != nullptr)
+            if (m_data != nullptr)
             {
-                allocator_->Deallocate(data_);
-                data_ = nullptr;
+                m_allocator->Deallocate(m_data);
+                m_data = nullptr;
             }
-            if (ticks_ != nullptr)
+            if (m_ticks != nullptr)
             {
-                allocator_->Deallocate(ticks_);
-                ticks_ = nullptr;
+                m_allocator->Deallocate(m_ticks);
+                m_ticks = nullptr;
             }
         }
 
@@ -87,314 +87,291 @@ namespace queen
         Column& operator=(const Column&) = delete;
 
         Column(Column&& other) noexcept
-            : allocator_{other.allocator_}
-            , meta_{other.meta_}
-            , data_{other.data_}
-            , ticks_{other.ticks_}
-            , size_{other.size_}
-            , capacity_{other.capacity_}
-        {
-            other.data_ = nullptr;
-            other.ticks_ = nullptr;
-            other.size_ = 0;
-            other.capacity_ = 0;
+            : m_allocator{other.m_allocator}
+            , m_meta{other.m_meta}
+            , m_data{other.m_data}
+            , m_ticks{other.m_ticks}
+            , m_size{other.m_size}
+            , m_capacity{other.m_capacity} {
+            other.m_data = nullptr;
+            other.m_ticks = nullptr;
+            other.m_size = 0;
+            other.m_capacity = 0;
         }
 
-        Column& operator=(Column&& other) noexcept
-        {
+        Column& operator=(Column&& other) noexcept {
             if (this != &other)
             {
                 Clear();
-                if (data_ != nullptr)
+                if (m_data != nullptr)
                 {
-                    allocator_->Deallocate(data_);
+                    m_allocator->Deallocate(m_data);
                 }
-                if (ticks_ != nullptr)
+                if (m_ticks != nullptr)
                 {
-                    allocator_->Deallocate(ticks_);
+                    m_allocator->Deallocate(m_ticks);
                 }
 
-                allocator_ = other.allocator_;
-                meta_ = other.meta_;
-                data_ = other.data_;
-                ticks_ = other.ticks_;
-                size_ = other.size_;
-                capacity_ = other.capacity_;
+                m_allocator = other.m_allocator;
+                m_meta = other.m_meta;
+                m_data = other.m_data;
+                m_ticks = other.m_ticks;
+                m_size = other.m_size;
+                m_capacity = other.m_capacity;
 
-                other.data_ = nullptr;
-                other.ticks_ = nullptr;
-                other.size_ = 0;
-                other.capacity_ = 0;
+                other.m_data = nullptr;
+                other.m_ticks = nullptr;
+                other.m_size = 0;
+                other.m_capacity = 0;
             }
             return *this;
         }
 
-        void PushDefault(Tick current_tick = Tick{0})
-        {
-            EnsureCapacity(size_ + 1);
+        void PushDefault(Tick currentTick = Tick{0}) {
+            EnsureCapacity(m_size + 1);
 
-            void* dst = GetRaw(size_);
-            if (meta_.construct != nullptr)
+            void* dst = GetRaw(m_size);
+            if (m_meta.m_construct != nullptr)
             {
-                meta_.construct(dst);
+                m_meta.m_construct(dst);
             }
             else
             {
-                std::memset(dst, 0, meta_.size);
+                std::memset(dst, 0, m_meta.m_size);
             }
-            ticks_[size_].SetAdded(current_tick);
-            ++size_;
+            m_ticks[m_size].SetAdded(currentTick);
+            ++m_size;
         }
 
-        void PushCopy(const void* src, Tick current_tick = Tick{0})
-        {
+        void PushCopy(const void* src, Tick currentTick = Tick{0}) {
             hive::Assert(src != nullptr, "Cannot push null source");
-            EnsureCapacity(size_ + 1);
+            EnsureCapacity(m_size + 1);
 
-            void* dst = GetRaw(size_);
-            if (meta_.copy != nullptr)
+            void* dst = GetRaw(m_size);
+            if (m_meta.m_copy != nullptr)
             {
-                meta_.copy(dst, src);
+                m_meta.m_copy(dst, src);
             }
             else
             {
-                std::memcpy(dst, src, meta_.size);
+                std::memcpy(dst, src, m_meta.m_size);
             }
-            ticks_[size_].SetAdded(current_tick);
-            ++size_;
+            m_ticks[m_size].SetAdded(currentTick);
+            ++m_size;
         }
 
-        void PushMove(void* src, Tick current_tick = Tick{0})
-        {
+        void PushMove(void* src, Tick currentTick = Tick{0}) {
             hive::Assert(src != nullptr, "Cannot push null source");
-            EnsureCapacity(size_ + 1);
+            EnsureCapacity(m_size + 1);
 
-            void* dst = GetRaw(size_);
-            if (meta_.move != nullptr)
+            void* dst = GetRaw(m_size);
+            if (m_meta.m_move != nullptr)
             {
-                meta_.move(dst, src);
+                m_meta.m_move(dst, src);
             }
             else
             {
-                std::memcpy(dst, src, meta_.size);
+                std::memcpy(dst, src, m_meta.m_size);
             }
-            ticks_[size_].SetAdded(current_tick);
-            ++size_;
+            m_ticks[m_size].SetAdded(currentTick);
+            ++m_size;
         }
 
-        void Pop()
-        {
-            hive::Assert(size_ > 0, "Cannot pop from empty column");
+        void Pop() {
+            hive::Assert(m_size > 0, "Cannot pop from empty column");
 
-            --size_;
-            void* ptr = GetRaw(size_);
-            if (meta_.destruct != nullptr)
+            --m_size;
+            void* ptr = GetRaw(m_size);
+            if (m_meta.m_destruct != nullptr)
             {
-                meta_.destruct(ptr);
+                m_meta.m_destruct(ptr);
             }
         }
 
-        void SwapRemove(size_t index)
-        {
-            hive::Assert(index < size_, "Index out of bounds");
+        void SwapRemove(size_t index) {
+            hive::Assert(index < m_size, "Index out of bounds");
 
-            if (index != size_ - 1)
+            if (index != m_size - 1)
             {
                 void* dst = GetRaw(index);
-                void* src = GetRaw(size_ - 1);
+                void* src = GetRaw(m_size - 1);
 
-                if (meta_.destruct != nullptr)
+                if (m_meta.m_destruct != nullptr)
                 {
-                    meta_.destruct(dst);
+                    m_meta.m_destruct(dst);
                 }
 
-                if (meta_.move != nullptr)
+                if (m_meta.m_move != nullptr)
                 {
-                    meta_.move(dst, src);
+                    m_meta.m_move(dst, src);
                 }
                 else
                 {
-                    std::memcpy(dst, src, meta_.size);
+                    std::memcpy(dst, src, m_meta.m_size);
                 }
 
-                if (meta_.destruct != nullptr)
+                if (m_meta.m_destruct != nullptr)
                 {
-                    meta_.destruct(src);
+                    m_meta.m_destruct(src);
                 }
 
-                ticks_[index] = ticks_[size_ - 1];
+                m_ticks[index] = m_ticks[m_size - 1];
             }
             else
             {
-                if (meta_.destruct != nullptr)
+                if (m_meta.m_destruct != nullptr)
                 {
-                    meta_.destruct(GetRaw(index));
+                    m_meta.m_destruct(GetRaw(index));
                 }
             }
 
-            --size_;
+            --m_size;
         }
 
-        [[nodiscard]] void* GetRaw(size_t index) noexcept
-        {
-            hive::Assert(index < capacity_, "Index out of bounds");
-            return static_cast<std::byte*>(data_) + (index * meta_.size);
+        [[nodiscard]] void* GetRaw(size_t index) noexcept {
+            hive::Assert(index < m_capacity, "Index out of bounds");
+            return static_cast<std::byte*>(m_data) + (index * m_meta.m_size);
         }
 
-        [[nodiscard]] const void* GetRaw(size_t index) const noexcept
-        {
-            hive::Assert(index < capacity_, "Index out of bounds");
-            return static_cast<const std::byte*>(data_) + (index * meta_.size);
+        [[nodiscard]] const void* GetRaw(size_t index) const noexcept {
+            hive::Assert(index < m_capacity, "Index out of bounds");
+            return static_cast<const std::byte*>(m_data) + (index * m_meta.m_size);
         }
 
-        template<typename T>
-        [[nodiscard]] T* Get(size_t index) noexcept
-        {
-            hive::Assert(TypeIdOf<T>() == meta_.type_id, "Type mismatch");
-            hive::Assert(index < size_, "Index out of bounds");
+        template <typename T> [[nodiscard]] T* Get(size_t index) noexcept {
+            hive::Assert(TypeIdOf<T>() == m_meta.m_typeId, "Type mismatch");
+            hive::Assert(index < m_size, "Index out of bounds");
             return static_cast<T*>(GetRaw(index));
         }
 
-        template<typename T>
-        [[nodiscard]] const T* Get(size_t index) const noexcept
-        {
-            hive::Assert(TypeIdOf<T>() == meta_.type_id, "Type mismatch");
-            hive::Assert(index < size_, "Index out of bounds");
+        template <typename T> [[nodiscard]] const T* Get(size_t index) const noexcept {
+            hive::Assert(TypeIdOf<T>() == m_meta.m_typeId, "Type mismatch");
+            hive::Assert(index < m_size, "Index out of bounds");
             return static_cast<const T*>(GetRaw(index));
         }
 
-        template<typename T>
-        [[nodiscard]] T* Data() noexcept
-        {
-            hive::Assert(TypeIdOf<T>() == meta_.type_id, "Type mismatch");
-            return static_cast<T*>(data_);
+        template <typename T> [[nodiscard]] T* Data() noexcept {
+            hive::Assert(TypeIdOf<T>() == m_meta.m_typeId, "Type mismatch");
+            return static_cast<T*>(m_data);
         }
 
-        template<typename T>
-        [[nodiscard]] const T* Data() const noexcept
-        {
-            hive::Assert(TypeIdOf<T>() == meta_.type_id, "Type mismatch");
-            return static_cast<const T*>(data_);
+        template <typename T> [[nodiscard]] const T* Data() const noexcept {
+            hive::Assert(TypeIdOf<T>() == m_meta.m_typeId, "Type mismatch");
+            return static_cast<const T*>(m_data);
         }
 
-        void Clear()
-        {
-            if (meta_.destruct != nullptr)
+        void Clear() {
+            if (m_meta.m_destruct != nullptr)
             {
-                for (size_t i = 0; i < size_; ++i)
+                for (size_t i = 0; i < m_size; ++i)
                 {
-                    meta_.destruct(GetRaw(i));
+                    m_meta.m_destruct(GetRaw(i));
                 }
             }
-            size_ = 0;
+            m_size = 0;
         }
 
-        void Reserve(size_t new_capacity)
-        {
-            if (new_capacity <= capacity_)
+        void Reserve(size_t newCapacity) {
+            if (newCapacity <= m_capacity)
             {
                 return;
             }
 
-            void* new_data = allocator_->Allocate(new_capacity * meta_.size, meta_.alignment);
-            hive::Assert(new_data != nullptr, "Column data allocation failed");
+            void* newData = m_allocator->Allocate(newCapacity * m_meta.m_size, m_meta.m_alignment);
+            hive::Assert(newData != nullptr, "Column data allocation failed");
 
-            ComponentTicks* new_ticks = static_cast<ComponentTicks*>(
-                allocator_->Allocate(new_capacity * sizeof(ComponentTicks), alignof(ComponentTicks)));
-            hive::Assert(new_ticks != nullptr, "Column ticks allocation failed");
+            ComponentTicks* newTicks = static_cast<ComponentTicks*>(
+                m_allocator->Allocate(newCapacity * sizeof(ComponentTicks), alignof(ComponentTicks)));
+            hive::Assert(newTicks != nullptr, "Column ticks allocation failed");
 
-            if (data_ != nullptr)
+            if (m_data != nullptr)
             {
-                for (size_t i = 0; i < size_; ++i)
+                for (size_t i = 0; i < m_size; ++i)
                 {
-                    void* dst = static_cast<std::byte*>(new_data) + (i * meta_.size);
+                    void* dst = static_cast<std::byte*>(newData) + (i * m_meta.m_size);
                     void* src = GetRaw(i);
 
-                    if (meta_.move != nullptr)
+                    if (m_meta.m_move != nullptr)
                     {
-                        meta_.move(dst, src);
+                        m_meta.m_move(dst, src);
                     }
                     else
                     {
-                        std::memcpy(dst, src, meta_.size);
+                        std::memcpy(dst, src, m_meta.m_size);
                     }
 
-                    if (meta_.destruct != nullptr)
+                    if (m_meta.m_destruct != nullptr)
                     {
-                        meta_.destruct(src);
+                        m_meta.m_destruct(src);
                     }
 
-                    new_ticks[i] = ticks_[i];
+                    newTicks[i] = m_ticks[i];
                 }
 
-                allocator_->Deallocate(data_);
+                m_allocator->Deallocate(m_data);
             }
 
-            if (ticks_ != nullptr)
+            if (m_ticks != nullptr)
             {
-                allocator_->Deallocate(ticks_);
+                m_allocator->Deallocate(m_ticks);
             }
 
-            data_ = new_data;
-            ticks_ = new_ticks;
-            capacity_ = new_capacity;
+            m_data = newData;
+            m_ticks = newTicks;
+            m_capacity = newCapacity;
         }
 
-        [[nodiscard]] size_t Size() const noexcept { return size_; }
-        [[nodiscard]] size_t Capacity() const noexcept { return capacity_; }
-        [[nodiscard]] bool IsEmpty() const noexcept { return size_ == 0; }
-        [[nodiscard]] TypeId GetTypeId() const noexcept { return meta_.type_id; }
-        [[nodiscard]] const ComponentMeta& GetMeta() const noexcept { return meta_; }
+        [[nodiscard]] size_t Size() const noexcept { return m_size; }
+        [[nodiscard]] size_t Capacity() const noexcept { return m_capacity; }
+        [[nodiscard]] bool IsEmpty() const noexcept { return m_size == 0; }
+        [[nodiscard]] TypeId GetTypeId() const noexcept { return m_meta.m_typeId; }
+        [[nodiscard]] const ComponentMeta& GetMeta() const noexcept { return m_meta; }
 
         /**
          * Get ticks for a component at the given index
          */
-        [[nodiscard]] ComponentTicks& GetTicks(size_t index) noexcept
-        {
-            hive::Assert(index < size_, "Index out of bounds");
-            return ticks_[index];
+        [[nodiscard]] ComponentTicks& GetTicks(size_t index) noexcept {
+            hive::Assert(index < m_size, "Index out of bounds");
+            return m_ticks[index];
         }
 
-        [[nodiscard]] const ComponentTicks& GetTicks(size_t index) const noexcept
-        {
-            hive::Assert(index < size_, "Index out of bounds");
-            return ticks_[index];
+        [[nodiscard]] const ComponentTicks& GetTicks(size_t index) const noexcept {
+            hive::Assert(index < m_size, "Index out of bounds");
+            return m_ticks[index];
         }
 
         /**
          * Get raw ticks array
          */
-        [[nodiscard]] ComponentTicks* TicksData() noexcept { return ticks_; }
-        [[nodiscard]] const ComponentTicks* TicksData() const noexcept { return ticks_; }
+        [[nodiscard]] ComponentTicks* TicksData() noexcept { return m_ticks; }
+        [[nodiscard]] const ComponentTicks* TicksData() const noexcept { return m_ticks; }
 
         /**
          * Mark component as changed at the given tick
          */
-        void MarkChanged(size_t index, Tick current_tick) noexcept
-        {
-            hive::Assert(index < size_, "Index out of bounds");
-            ticks_[index].MarkChanged(current_tick);
+        void MarkChanged(size_t index, Tick currentTick) noexcept {
+            hive::Assert(index < m_size, "Index out of bounds");
+            m_ticks[index].MarkChanged(currentTick);
         }
 
     private:
-        void EnsureCapacity(size_t required)
-        {
-            if (required > capacity_)
+        void EnsureCapacity(size_t required) {
+            if (required > m_capacity)
             {
-                size_t new_capacity = capacity_ == 0 ? 8 : capacity_ * 2;
-                while (new_capacity < required)
+                size_t newCapacity = m_capacity == 0 ? 8 : m_capacity * 2;
+                while (newCapacity < required)
                 {
-                    new_capacity *= 2;
+                    newCapacity *= 2;
                 }
-                Reserve(new_capacity);
+                Reserve(newCapacity);
             }
         }
 
-        Allocator* allocator_;
-        ComponentMeta meta_;
-        void* data_;
-        ComponentTicks* ticks_;
-        size_t size_;
-        size_t capacity_;
+        Allocator* m_allocator;
+        ComponentMeta m_meta;
+        void* m_data;
+        ComponentTicks* m_ticks;
+        size_t m_size;
+        size_t m_capacity;
     };
-}
+} // namespace queen

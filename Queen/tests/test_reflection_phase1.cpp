@@ -1,15 +1,18 @@
-#include <larvae/larvae.h>
+#include <comb/linear_allocator.h>
+
+#include <wax/containers/fixed_string.h>
+#include <wax/serialization/binary_reader.h>
+#include <wax/serialization/binary_writer.h>
+
+#include <queen/core/entity.h>
 #include <queen/reflect/component_reflector.h>
-#include <queen/reflect/reflectable.h>
-#include <queen/reflect/component_serializer.h>
 #include <queen/reflect/component_registry.h>
+#include <queen/reflect/component_serializer.h>
 #include <queen/reflect/enum_reflection.h>
 #include <queen/reflect/field_attributes.h>
-#include <queen/core/entity.h>
-#include <wax/serialization/binary_writer.h>
-#include <wax/serialization/binary_reader.h>
-#include <wax/containers/fixed_string.h>
-#include <comb/linear_allocator.h>
+#include <queen/reflect/reflectable.h>
+
+#include <larvae/larvae.h>
 
 namespace
 {
@@ -37,13 +40,12 @@ namespace
         Off = 0,
         On = 1,
     };
-}
+} // namespace
 
 // EnumInfo specializations (outside anonymous namespace for template specialization)
-template<> struct queen::EnumInfo<RenderMode>
+template <> struct queen::EnumInfo<RenderMode>
 {
-    static const queen::EnumReflectionBase& Get()
-    {
+    static const queen::EnumReflectionBase& Get() {
         static auto r = []() {
             queen::EnumReflector<> e;
             e.Value("Opaque", RenderMode::Opaque);
@@ -55,10 +57,9 @@ template<> struct queen::EnumInfo<RenderMode>
     }
 };
 
-template<> struct queen::EnumInfo<Alignment>
+template <> struct queen::EnumInfo<Alignment>
 {
-    static const queen::EnumReflectionBase& Get()
-    {
+    static const queen::EnumReflectionBase& Get() {
         static auto r = []() {
             queen::EnumReflector<> e;
             e.Value("Left", Alignment::Left);
@@ -81,8 +82,7 @@ namespace
         RenderMode mode;
         float alpha;
 
-        static void Reflect(queen::ComponentReflector<>& r)
-        {
+        static void Reflect(queen::ComponentReflector<>& r) {
             r.Field("mode", &WithEnum::mode);
             r.Field("alpha", &WithEnum::alpha);
         }
@@ -93,8 +93,7 @@ namespace
         Alignment align;
         int32_t padding;
 
-        static void Reflect(queen::ComponentReflector<>& r)
-        {
+        static void Reflect(queen::ComponentReflector<>& r) {
             r.Field("align", &WithAlignment::align);
             r.Field("padding", &WithAlignment::padding);
         }
@@ -105,8 +104,7 @@ namespace
         InternalFlag flag;
         uint8_t data;
 
-        static void Reflect(queen::ComponentReflector<>& r)
-        {
+        static void Reflect(queen::ComponentReflector<>& r) {
             r.Field("flag", &WithUnreflectedEnum::flag);
             r.Field("data", &WithUnreflectedEnum::data);
         }
@@ -117,8 +115,7 @@ namespace
         wax::FixedString name;
         int32_t id;
 
-        static void Reflect(queen::ComponentReflector<>& r)
-        {
+        static void Reflect(queen::ComponentReflector<>& r) {
             r.Field("name", &WithFixedString::name);
             r.Field("id", &WithFixedString::id);
         }
@@ -129,8 +126,7 @@ namespace
         float values[4];
         int32_t count;
 
-        static void Reflect(queen::ComponentReflector<>& r)
-        {
+        static void Reflect(queen::ComponentReflector<>& r) {
             r.Field("values", &WithFixedArray::values);
             r.Field("count", &WithFixedArray::count);
         }
@@ -143,18 +139,13 @@ namespace
         float rotation;
         RenderMode mode;
 
-        static void Reflect(queen::ComponentReflector<>& r)
-        {
+        static void Reflect(queen::ComponentReflector<>& r) {
             r.Field("speed", &WithAnnotations::speed)
                 .Range(0.f, 100.f, 0.5f)
                 .Tooltip("Movement speed in units/sec")
                 .Category("Movement");
-            r.Field("health", &WithAnnotations::health)
-                .Range(0.f, 1000.f)
-                .Flag(queen::FieldFlag::ReadOnly);
-            r.Field("rotation", &WithAnnotations::rotation)
-                .Flag(queen::FieldFlag::Angle)
-                .DisplayName("Rotation (deg)");
+            r.Field("health", &WithAnnotations::health).Range(0.f, 1000.f).Flag(queen::FieldFlag::READ_ONLY);
+            r.Field("rotation", &WithAnnotations::rotation).Flag(queen::FieldFlag::ANGLE).DisplayName("Rotation (deg)");
             r.Field("mode", &WithAnnotations::mode);
         }
     };
@@ -174,8 +165,8 @@ namespace
         const auto& info = queen::EnumInfo<RenderMode>::Get();
 
         larvae::AssertTrue(info.IsValid());
-        larvae::AssertEqual(info.entry_count, size_t{3});
-        larvae::AssertEqual(info.underlying_size, sizeof(uint8_t));
+        larvae::AssertEqual(info.m_entryCount, size_t{3});
+        larvae::AssertEqual(info.m_underlyingSize, sizeof(uint8_t));
 
         const char* name = info.NameOf(0);
         larvae::AssertNotNull(name);
@@ -202,7 +193,7 @@ namespace
     auto test_enum_signed = larvae::RegisterTest("QueenReflectionPhase1", "EnumSignedValues", []() {
         const auto& info = queen::EnumInfo<Alignment>::Get();
 
-        larvae::AssertEqual(info.underlying_size, sizeof(int32_t));
+        larvae::AssertEqual(info.m_underlyingSize, sizeof(int32_t));
 
         int64_t value = 0;
         larvae::AssertTrue(info.ValueOf("Left", value));
@@ -223,13 +214,13 @@ namespace
         larvae::AssertEqual(reflector.Count(), size_t{2});
 
         const auto& mode_field = reflector[0];
-        larvae::AssertEqual(static_cast<int>(mode_field.type), static_cast<int>(queen::FieldType::Enum));
-        larvae::AssertEqual(mode_field.size, sizeof(RenderMode));
-        larvae::AssertNotNull(mode_field.enum_info);
-        larvae::AssertEqual(mode_field.enum_info->entry_count, size_t{3});
+        larvae::AssertEqual(static_cast<int>(mode_field.m_type), static_cast<int>(queen::FieldType::ENUM));
+        larvae::AssertEqual(mode_field.m_size, sizeof(RenderMode));
+        larvae::AssertNotNull(mode_field.m_enumInfo);
+        larvae::AssertEqual(mode_field.m_enumInfo->m_entryCount, size_t{3});
 
         const auto& alpha_field = reflector[1];
-        larvae::AssertEqual(static_cast<int>(alpha_field.type), static_cast<int>(queen::FieldType::Float32));
+        larvae::AssertEqual(static_cast<int>(alpha_field.m_type), static_cast<int>(queen::FieldType::FLOAT32));
     });
 
     auto test_enum_unreflected_field = larvae::RegisterTest("QueenReflectionPhase1", "EnumUnreflectedNoEnumInfo", []() {
@@ -237,8 +228,8 @@ namespace
         WithUnreflectedEnum::Reflect(reflector);
 
         const auto& flag_field = reflector[0];
-        larvae::AssertEqual(static_cast<int>(flag_field.type), static_cast<int>(queen::FieldType::Enum));
-        larvae::AssertNull(flag_field.enum_info);
+        larvae::AssertEqual(static_cast<int>(flag_field.m_type), static_cast<int>(queen::FieldType::ENUM));
+        larvae::AssertNull(flag_field.m_enumInfo);
     });
 
     // ============================================================
@@ -260,20 +251,21 @@ namespace
         larvae::AssertEqual(loaded.alpha, 0.5f);
     });
 
-    auto test_enum_signed_serialize = larvae::RegisterTest("QueenReflectionPhase1", "EnumSignedSerializeDeserialize", []() {
-        WithAlignment original{Alignment::Left, 42};
+    auto test_enum_signed_serialize =
+        larvae::RegisterTest("QueenReflectionPhase1", "EnumSignedSerializeDeserialize", []() {
+            WithAlignment original{Alignment::Left, 42};
 
-        comb::LinearAllocator alloc{4096};
-        wax::BinaryWriter writer{alloc};
-        queen::Serialize(original, writer);
+            comb::LinearAllocator alloc{4096};
+            wax::BinaryWriter writer{alloc};
+            queen::Serialize(original, writer);
 
-        WithAlignment loaded{};
-        wax::BinaryReader reader{writer.View()};
-        queen::Deserialize(loaded, reader);
+            WithAlignment loaded{};
+            wax::BinaryReader reader{writer.View()};
+            queen::Deserialize(loaded, reader);
 
-        larvae::AssertEqual(static_cast<int>(loaded.align), static_cast<int>(Alignment::Left));
-        larvae::AssertEqual(loaded.padding, int32_t{42});
-    });
+            larvae::AssertEqual(static_cast<int>(loaded.align), static_cast<int>(Alignment::Left));
+            larvae::AssertEqual(loaded.padding, int32_t{42});
+        });
 
     // ============================================================
     // FixedString field tests
@@ -284,8 +276,8 @@ namespace
         WithFixedString::Reflect(reflector);
 
         const auto& name_field = reflector[0];
-        larvae::AssertEqual(static_cast<int>(name_field.type), static_cast<int>(queen::FieldType::String));
-        larvae::AssertEqual(name_field.size, sizeof(wax::FixedString));
+        larvae::AssertEqual(static_cast<int>(name_field.m_type), static_cast<int>(queen::FieldType::STRING));
+        larvae::AssertEqual(name_field.m_size, sizeof(wax::FixedString));
     });
 
     auto test_string_serialize = larvae::RegisterTest("QueenReflectionPhase1", "FixedStringSerializeDeserialize", []() {
@@ -319,7 +311,7 @@ namespace
     });
 
     auto test_string_max_serialize = larvae::RegisterTest("QueenReflectionPhase1", "FixedStringMaxLenSerialize", []() {
-        WithFixedString original{wax::FixedString{"1234567890123456789012"}, 1};  // 22 chars = max
+        WithFixedString original{wax::FixedString{"1234567890123456789012"}, 1}; // 22 chars = max
 
         comb::LinearAllocator alloc{4096};
         wax::BinaryWriter writer{alloc};
@@ -343,10 +335,10 @@ namespace
         WithFixedArray::Reflect(reflector);
 
         const auto& values_field = reflector[0];
-        larvae::AssertEqual(static_cast<int>(values_field.type), static_cast<int>(queen::FieldType::FixedArray));
-        larvae::AssertEqual(values_field.element_count, size_t{4});
-        larvae::AssertEqual(static_cast<int>(values_field.element_type), static_cast<int>(queen::FieldType::Float32));
-        larvae::AssertEqual(values_field.size, sizeof(float) * 4);
+        larvae::AssertEqual(static_cast<int>(values_field.m_type), static_cast<int>(queen::FieldType::FIXED_ARRAY));
+        larvae::AssertEqual(values_field.m_elementCount, size_t{4});
+        larvae::AssertEqual(static_cast<int>(values_field.m_elementType), static_cast<int>(queen::FieldType::FLOAT32));
+        larvae::AssertEqual(values_field.m_size, sizeof(float) * 4);
     });
 
     auto test_array_serialize = larvae::RegisterTest("QueenReflectionPhase1", "FixedArraySerializeDeserialize", []() {
@@ -376,8 +368,8 @@ namespace
         WithEnum::Reflect(reflector);
 
         // Fields without chaining should have nullptr attributes
-        larvae::AssertNull(reflector[0].attributes);
-        larvae::AssertNull(reflector[1].attributes);
+        larvae::AssertNull(reflector[0].m_attributes);
+        larvae::AssertNull(reflector[1].m_attributes);
     });
 
     auto test_range_annotation = larvae::RegisterTest("QueenReflectionPhase1", "RangeAnnotation", []() {
@@ -385,11 +377,11 @@ namespace
         WithAnnotations::Reflect(reflector);
 
         const auto& speed_field = reflector[0];
-        larvae::AssertNotNull(speed_field.attributes);
-        larvae::AssertTrue(speed_field.attributes->HasRange());
-        larvae::AssertEqual(speed_field.attributes->min, 0.f);
-        larvae::AssertEqual(speed_field.attributes->max, 100.f);
-        larvae::AssertEqual(speed_field.attributes->step, 0.5f);
+        larvae::AssertNotNull(speed_field.m_attributes);
+        larvae::AssertTrue(speed_field.m_attributes->HasRange());
+        larvae::AssertEqual(speed_field.m_attributes->m_min, 0.f);
+        larvae::AssertEqual(speed_field.m_attributes->m_max, 100.f);
+        larvae::AssertEqual(speed_field.m_attributes->m_step, 0.5f);
     });
 
     auto test_tooltip_annotation = larvae::RegisterTest("QueenReflectionPhase1", "TooltipAnnotation", []() {
@@ -397,10 +389,10 @@ namespace
         WithAnnotations::Reflect(reflector);
 
         const auto& speed_field = reflector[0];
-        larvae::AssertNotNull(speed_field.attributes);
-        larvae::AssertNotNull(speed_field.attributes->tooltip);
-        larvae::AssertTrue(queen::detail::StringsEqual(
-            speed_field.attributes->tooltip, "Movement speed in units/sec"));
+        larvae::AssertNotNull(speed_field.m_attributes);
+        larvae::AssertNotNull(speed_field.m_attributes->m_tooltip);
+        larvae::AssertTrue(
+            queen::detail::StringsEqual(speed_field.m_attributes->m_tooltip, "Movement speed in units/sec"));
     });
 
     auto test_category_annotation = larvae::RegisterTest("QueenReflectionPhase1", "CategoryAnnotation", []() {
@@ -408,10 +400,9 @@ namespace
         WithAnnotations::Reflect(reflector);
 
         const auto& speed_field = reflector[0];
-        larvae::AssertNotNull(speed_field.attributes);
-        larvae::AssertNotNull(speed_field.attributes->category);
-        larvae::AssertTrue(queen::detail::StringsEqual(
-            speed_field.attributes->category, "Movement"));
+        larvae::AssertNotNull(speed_field.m_attributes);
+        larvae::AssertNotNull(speed_field.m_attributes->m_category);
+        larvae::AssertTrue(queen::detail::StringsEqual(speed_field.m_attributes->m_category, "Movement"));
     });
 
     auto test_flag_annotation = larvae::RegisterTest("QueenReflectionPhase1", "FlagAnnotation", []() {
@@ -420,14 +411,14 @@ namespace
 
         // health has ReadOnly flag
         const auto& health_field = reflector[1];
-        larvae::AssertNotNull(health_field.attributes);
-        larvae::AssertTrue(health_field.attributes->HasFlag(queen::FieldFlag::ReadOnly));
-        larvae::AssertFalse(health_field.attributes->HasFlag(queen::FieldFlag::Hidden));
+        larvae::AssertNotNull(health_field.m_attributes);
+        larvae::AssertTrue(health_field.m_attributes->HasFlag(queen::FieldFlag::READ_ONLY));
+        larvae::AssertFalse(health_field.m_attributes->HasFlag(queen::FieldFlag::HIDDEN));
 
         // rotation has Angle flag
         const auto& rotation_field = reflector[2];
-        larvae::AssertNotNull(rotation_field.attributes);
-        larvae::AssertTrue(rotation_field.attributes->HasFlag(queen::FieldFlag::Angle));
+        larvae::AssertNotNull(rotation_field.m_attributes);
+        larvae::AssertTrue(rotation_field.m_attributes->HasFlag(queen::FieldFlag::ANGLE));
     });
 
     auto test_display_name_annotation = larvae::RegisterTest("QueenReflectionPhase1", "DisplayNameAnnotation", []() {
@@ -435,20 +426,20 @@ namespace
         WithAnnotations::Reflect(reflector);
 
         const auto& rotation_field = reflector[2];
-        larvae::AssertNotNull(rotation_field.attributes);
-        larvae::AssertNotNull(rotation_field.attributes->display_name);
-        larvae::AssertTrue(queen::detail::StringsEqual(
-            rotation_field.attributes->display_name, "Rotation (deg)"));
+        larvae::AssertNotNull(rotation_field.m_attributes);
+        larvae::AssertNotNull(rotation_field.m_attributes->m_displayName);
+        larvae::AssertTrue(queen::detail::StringsEqual(rotation_field.m_attributes->m_displayName, "Rotation (deg)"));
     });
 
-    auto test_unannotated_field_in_annotated_component = larvae::RegisterTest("QueenReflectionPhase1", "UnannotatedFieldNull", []() {
-        queen::ComponentReflector<> reflector;
-        WithAnnotations::Reflect(reflector);
+    auto test_unannotated_field_in_annotated_component =
+        larvae::RegisterTest("QueenReflectionPhase1", "UnannotatedFieldNull", []() {
+            queen::ComponentReflector<> reflector;
+            WithAnnotations::Reflect(reflector);
 
-        // mode field has no chaining — attributes should be nullptr
-        const auto& mode_field = reflector[3];
-        larvae::AssertNull(mode_field.attributes);
-    });
+            // mode field has no chaining — attributes should be nullptr
+            const auto& mode_field = reflector[3];
+            larvae::AssertNull(mode_field.m_attributes);
+        });
 
     // ============================================================
     // Registry integration with new types
@@ -463,23 +454,24 @@ namespace
         larvae::AssertTrue(found->HasReflection());
 
         // Verify enum field is properly captured
-        const auto* mode_field = found->reflection.FindField("mode");
+        const auto* mode_field = found->m_reflection.FindField("mode");
         larvae::AssertNotNull(mode_field);
-        larvae::AssertEqual(static_cast<int>(mode_field->type), static_cast<int>(queen::FieldType::Enum));
-        larvae::AssertNotNull(mode_field->enum_info);
+        larvae::AssertEqual(static_cast<int>(mode_field->m_type), static_cast<int>(queen::FieldType::ENUM));
+        larvae::AssertNotNull(mode_field->m_enumInfo);
     });
 
-    auto test_registry_string_component = larvae::RegisterTest("QueenReflectionPhase1", "RegistryStringComponent", []() {
-        queen::ComponentRegistry<32> registry;
-        registry.Register<WithFixedString>();
+    auto test_registry_string_component =
+        larvae::RegisterTest("QueenReflectionPhase1", "RegistryStringComponent", []() {
+            queen::ComponentRegistry<32> registry;
+            registry.Register<WithFixedString>();
 
-        const auto* found = registry.Find(queen::TypeIdOf<WithFixedString>());
-        larvae::AssertNotNull(found);
+            const auto* found = registry.Find(queen::TypeIdOf<WithFixedString>());
+            larvae::AssertNotNull(found);
 
-        const auto* name_field = found->reflection.FindField("name");
-        larvae::AssertNotNull(name_field);
-        larvae::AssertEqual(static_cast<int>(name_field->type), static_cast<int>(queen::FieldType::String));
-    });
+            const auto* name_field = found->m_reflection.FindField("name");
+            larvae::AssertNotNull(name_field);
+            larvae::AssertEqual(static_cast<int>(name_field->m_type), static_cast<int>(queen::FieldType::STRING));
+        });
 
     auto test_registry_array_component = larvae::RegisterTest("QueenReflectionPhase1", "RegistryArrayComponent", []() {
         queen::ComponentRegistry<32> registry;
@@ -488,9 +480,9 @@ namespace
         const auto* found = registry.Find(queen::TypeIdOf<WithFixedArray>());
         larvae::AssertNotNull(found);
 
-        const auto* values_field = found->reflection.FindField("values");
+        const auto* values_field = found->m_reflection.FindField("values");
         larvae::AssertNotNull(values_field);
-        larvae::AssertEqual(static_cast<int>(values_field->type), static_cast<int>(queen::FieldType::FixedArray));
-        larvae::AssertEqual(values_field->element_count, size_t{4});
+        larvae::AssertEqual(static_cast<int>(values_field->m_type), static_cast<int>(queen::FieldType::FIXED_ARRAY));
+        larvae::AssertEqual(values_field->m_elementCount, size_t{4});
     });
-}
+} // namespace

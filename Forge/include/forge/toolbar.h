@@ -6,19 +6,19 @@ namespace forge
 {
     enum class PlayState : uint8_t
     {
-        Editing,
-        Playing,
-        Paused
+        EDITING,
+        PLAYING,
+        PAUSED
     };
 
     struct ToolbarAction
     {
-        bool play_pressed  = false;
-        bool pause_pressed = false;
-        bool stop_pressed  = false;
+        bool m_playPressed = false;
+        bool m_pausePressed = false;
+        bool m_stopPressed = false;
     };
 
     // Draw toolbar buttons inline (no Begin/End — caller provides the context).
     // Call this between BeginMenuBar/EndMenuBar or in any horizontal layout.
-    ToolbarAction DrawToolbarButtons(PlayState play_state, GizmoState& gizmo);
-}
+    ToolbarAction DrawToolbarButtons(PlayState playState, GizmoState& gizmo);
+} // namespace forge

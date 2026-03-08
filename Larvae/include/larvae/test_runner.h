@@ -2,8 +2,9 @@
 
 #include <larvae/test_info.h>
 #include <larvae/test_result.h>
-#include <vector>
+
 #include <string>
+#include <vector>
 
 namespace larvae
 {
@@ -43,4 +44,4 @@ namespace larvae
     };
 
     TestRunnerConfig ParseCommandLine(int argc, char** argv);
-}
+} // namespace larvae

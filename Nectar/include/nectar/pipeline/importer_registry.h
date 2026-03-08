@@ -1,10 +1,12 @@
 #pragma once
 
-#include <nectar/pipeline/i_asset_importer.h>
+#include <comb/default_allocator.h>
+
 #include <wax/containers/hash_map.h>
 #include <wax/containers/string.h>
 #include <wax/containers/string_view.h>
-#include <comb/default_allocator.h>
+
+#include <nectar/pipeline/i_asset_importer.h>
 
 namespace nectar
 {
@@ -27,7 +29,7 @@ namespace nectar
         [[nodiscard]] size_t Count() const noexcept;
 
     private:
-        comb::DefaultAllocator* alloc_;
-        wax::HashMap<wax::String, IAssetImporter*> extension_map_;
+        comb::DefaultAllocator* m_alloc;
+        wax::HashMap<wax::String, IAssetImporter*> m_extensionMap;
     };
-}
+} // namespace nectar

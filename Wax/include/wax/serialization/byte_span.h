@@ -1,9 +1,10 @@
 #pragma once
 
+#include <hive/core/assert.h>
+
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
-#include <hive/core/assert.h>
 
 namespace wax
 {
@@ -46,131 +47,98 @@ namespace wax
     {
     public:
         constexpr ByteSpan() noexcept
-            : data_{nullptr}
-            , size_{0}
-        {}
+            : m_data{nullptr}
+            , m_size{0} {}
 
         constexpr ByteSpan(const uint8_t* data, size_t size) noexcept
-            : data_{data}
-            , size_{size}
-        {}
+            : m_data{data}
+            , m_size{size} {}
 
         constexpr ByteSpan(const void* data, size_t size) noexcept
-            : data_{static_cast<const uint8_t*>(data)}
-            , size_{size}
-        {}
+            : m_data{static_cast<const uint8_t*>(data)}
+            , m_size{size} {}
 
-        template<size_t N>
+        template <size_t N>
         constexpr ByteSpan(const uint8_t (&array)[N]) noexcept
-            : data_{array}
-            , size_{N}
-        {}
+            : m_data{array}
+            , m_size{N} {}
 
-        [[nodiscard]] constexpr const uint8_t* Data() const noexcept
-        {
-            return data_;
+        [[nodiscard]] constexpr const uint8_t* Data() const noexcept { return m_data; }
+
+        [[nodiscard]] constexpr size_t Size() const noexcept { return m_size; }
+
+        [[nodiscard]] constexpr bool IsEmpty() const noexcept { return m_size == 0; }
+
+        [[nodiscard]] constexpr uint8_t operator[](size_t index) const noexcept {
+            hive::Assert(index < m_size, "ByteSpan index out of bounds");
+            return m_data[index];
         }
 
-        [[nodiscard]] constexpr size_t Size() const noexcept
-        {
-            return size_;
+        [[nodiscard]] constexpr uint8_t At(size_t index) const {
+            hive::Check(index < m_size, "ByteSpan index out of bounds");
+            return m_data[index];
         }
 
-        [[nodiscard]] constexpr bool IsEmpty() const noexcept
-        {
-            return size_ == 0;
-        }
-
-        [[nodiscard]] constexpr uint8_t operator[](size_t index) const noexcept
-        {
-            hive::Assert(index < size_, "ByteSpan index out of bounds");
-            return data_[index];
-        }
-
-        [[nodiscard]] constexpr uint8_t At(size_t index) const
-        {
-            hive::Check(index < size_, "ByteSpan index out of bounds");
-            return data_[index];
-        }
-
-        template<typename T>
-        [[nodiscard]] T Read(size_t offset) const noexcept
-        {
-            hive::Assert(offset + sizeof(T) <= size_, "ByteSpan read out of bounds");
+        template <typename T> [[nodiscard]] T Read(size_t offset) const noexcept {
+            hive::Assert(offset + sizeof(T) <= m_size, "ByteSpan read out of bounds");
 
             T result;
-            std::memcpy(&result, data_ + offset, sizeof(T));
+            std::memcpy(&result, m_data + offset, sizeof(T));
             return result;
         }
 
-        template<typename T>
-        [[nodiscard]] bool TryRead(size_t offset, T& out) const noexcept
-        {
-            if (offset + sizeof(T) > size_)
+        template <typename T> [[nodiscard]] bool TryRead(size_t offset, T& out) const noexcept {
+            if (offset + sizeof(T) > m_size)
             {
                 return false;
             }
 
-            std::memcpy(&out, data_ + offset, sizeof(T));
+            std::memcpy(&out, m_data + offset, sizeof(T));
             return true;
         }
 
-        [[nodiscard]] constexpr ByteSpan Subspan(size_t offset, size_t count) const noexcept
-        {
-            hive::Assert(offset <= size_, "ByteSpan subspan offset out of bounds");
-            hive::Assert(offset + count <= size_, "ByteSpan subspan exceeds bounds");
-            return ByteSpan{data_ + offset, count};
+        [[nodiscard]] constexpr ByteSpan Subspan(size_t offset, size_t count) const noexcept {
+            hive::Assert(offset <= m_size, "ByteSpan subspan offset out of bounds");
+            hive::Assert(offset + count <= m_size, "ByteSpan subspan exceeds bounds");
+            return ByteSpan{m_data + offset, count};
         }
 
-        [[nodiscard]] constexpr ByteSpan Subspan(size_t offset) const noexcept
-        {
-            hive::Assert(offset <= size_, "ByteSpan subspan offset out of bounds");
-            return ByteSpan{data_ + offset, size_ - offset};
+        [[nodiscard]] constexpr ByteSpan Subspan(size_t offset) const noexcept {
+            hive::Assert(offset <= m_size, "ByteSpan subspan offset out of bounds");
+            return ByteSpan{m_data + offset, m_size - offset};
         }
 
-        [[nodiscard]] constexpr ByteSpan First(size_t count) const noexcept
-        {
-            hive::Assert(count <= size_, "ByteSpan first count exceeds size");
-            return ByteSpan{data_, count};
+        [[nodiscard]] constexpr ByteSpan First(size_t count) const noexcept {
+            hive::Assert(count <= m_size, "ByteSpan first count exceeds size");
+            return ByteSpan{m_data, count};
         }
 
-        [[nodiscard]] constexpr ByteSpan Last(size_t count) const noexcept
-        {
-            hive::Assert(count <= size_, "ByteSpan last count exceeds size");
-            return ByteSpan{data_ + (size_ - count), count};
+        [[nodiscard]] constexpr ByteSpan Last(size_t count) const noexcept {
+            hive::Assert(count <= m_size, "ByteSpan last count exceeds size");
+            return ByteSpan{m_data + (m_size - count), count};
         }
 
-        [[nodiscard]] constexpr const uint8_t* begin() const noexcept
-        {
-            return data_;
-        }
+        [[nodiscard]] constexpr const uint8_t* Begin() const noexcept { return m_data; }
 
-        [[nodiscard]] constexpr const uint8_t* end() const noexcept
-        {
-            return data_ + size_;
-        }
+        [[nodiscard]] constexpr const uint8_t* End() const noexcept { return m_data + m_size; }
 
-        [[nodiscard]] bool operator==(const ByteSpan& other) const noexcept
-        {
-            if (size_ != other.size_)
+        [[nodiscard]] bool operator==(const ByteSpan& other) const noexcept {
+            if (m_size != other.m_size)
             {
                 return false;
             }
-            if (data_ == other.data_)
+            if (m_data == other.m_data)
             {
                 return true;
             }
-            return std::memcmp(data_, other.data_, size_) == 0;
+            return std::memcmp(m_data, other.m_data, m_size) == 0;
         }
 
-        [[nodiscard]] bool operator!=(const ByteSpan& other) const noexcept
-        {
-            return !(*this == other);
-        }
+        [[nodiscard]] bool operator!=(const ByteSpan& other) const noexcept { return !(*this == other); }
 
     private:
-        const uint8_t* data_;
-        size_t size_;
+        const uint8_t* m_data;
+        size_t m_size;
     };
 
-}
+} // namespace wax

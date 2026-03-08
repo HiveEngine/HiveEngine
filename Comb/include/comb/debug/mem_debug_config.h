@@ -24,17 +24,20 @@
 
 #pragma once
 
+#include <cstddef>
+#include <cstdint>
+
 // ============================================================================
 // Build Configuration (Set by CMake)
 // ============================================================================
 
 // Default to disabled if not set by CMake
 #ifndef COMB_MEM_DEBUG
-    #define COMB_MEM_DEBUG 0
+#define COMB_MEM_DEBUG 0
 #endif
 
 #ifndef COMB_MEM_DEBUG_CALLSTACKS
-    #define COMB_MEM_DEBUG_CALLSTACKS 0
+#define COMB_MEM_DEBUG_CALLSTACKS 0
 #endif
 
 // ============================================================================
@@ -43,148 +46,146 @@
 
 #if COMB_MEM_DEBUG
 
-    // ========================================================================
-    // Core Features (Always Enabled)
-    // ========================================================================
+// ========================================================================
+// Core Features (Always Enabled)
+// ========================================================================
 
-    /**
-     * Leak Detection
-     * - Tracks all allocations in hash table
-     * - Reports unfreed allocations on allocator destruction
-     * - Overhead: Low (hash table insert/remove)
-     */
-    #define COMB_MEM_DEBUG_LEAK_DETECTION 1
+/**
+ * Leak Detection
+ * - Tracks all allocations in hash table
+ * - Reports unfreed allocations on allocator destruction
+ * - Overhead: Low (hash table insert/remove)
+ */
+#define COMB_MEM_DEBUG_LEAK_DETECTION 1
 
-    /**
-     * Double-Free Detection
-     * - Checks if pointer exists in registry before deallocation
-     * - Asserts if pointer not found (already freed or never allocated)
-     * - Overhead: Low (hash table lookup)
-     */
-    #define COMB_MEM_DEBUG_DOUBLE_FREE 1
+/**
+ * Double-Free Detection
+ * - Checks if pointer exists in registry before deallocation
+ * - Asserts if pointer not found (already freed or never allocated)
+ * - Overhead: Low (hash table lookup)
+ */
+#define COMB_MEM_DEBUG_DOUBLE_FREE 1
 
-    /**
-     * Buffer Overrun Detection
-     * - Adds guard bytes (0xDEADBEEF) before and after allocation
-     * - Checks guards on deallocation
-     * - Overhead: Low (+8 bytes per allocation)
-     */
-    #define COMB_MEM_DEBUG_BUFFER_OVERRUN 1
+/**
+ * Buffer Overrun Detection
+ * - Adds guard bytes (0xDEADBEEF) before and after allocation
+ * - Checks guards on deallocation
+ * - Overhead: Low (+8 bytes per allocation)
+ */
+#define COMB_MEM_DEBUG_BUFFER_OVERRUN 1
 
-    /**
-     * Allocation Tracking
-     * - Stores metadata for each allocation (size, alignment, timestamp, tag)
-     * - Overhead: Low (~32 bytes per allocation in hash table)
-     */
-    #define COMB_MEM_DEBUG_TRACKING 1
+/**
+ * Allocation Tracking
+ * - Stores metadata for each allocation (size, alignment, timestamp, tag)
+ * - Overhead: Low (~32 bytes per allocation in hash table)
+ */
+#define COMB_MEM_DEBUG_TRACKING 1
 
-    /**
-     * Memory Profiling Statistics
-     * - Tracks peak usage, allocation count, fragmentation
-     * - Overhead: Negligible (few counters)
-     */
-    #define COMB_MEM_DEBUG_STATS 1
+/**
+ * Memory Profiling Statistics
+ * - Tracks peak usage, allocation count, fragmentation
+ * - Overhead: Negligible (few counters)
+ */
+#define COMB_MEM_DEBUG_STATS 1
 
-    // ========================================================================
-    // Optional Features (Can be Disabled for Performance)
-    // ========================================================================
+// ========================================================================
+// Optional Features (Can be Disabled for Performance)
+// ========================================================================
 
-    /**
-     * Use-After-Free Detection
-     * - Fills freed memory with pattern (0xFE)
-     * - Helps detect reads from freed memory
-     * - Overhead: Medium (memset on every deallocation)
-     * - Can be disabled: #define COMB_MEM_DEBUG_USE_AFTER_FREE 0
-     */
-    #ifndef COMB_MEM_DEBUG_USE_AFTER_FREE
-        #define COMB_MEM_DEBUG_USE_AFTER_FREE 1  // Enabled by default
-    #endif
+/**
+ * Use-After-Free Detection
+ * - Fills freed memory with pattern (0xFE)
+ * - Helps detect reads from freed memory
+ * - Overhead: Medium (memset on every deallocation)
+ * - Can be disabled: #define COMB_MEM_DEBUG_USE_AFTER_FREE 0
+ */
+#ifndef COMB_MEM_DEBUG_USE_AFTER_FREE
+#define COMB_MEM_DEBUG_USE_AFTER_FREE 1 // Enabled by default
+#endif
 
-    /**
-     * Allocation History Ring Buffer
-     * - Keeps ring buffer of recent allocations
-     * - Useful for post-mortem debugging
-     * - Overhead: Medium (ring buffer storage)
-     * - Size configurable via COMB_MEM_DEBUG_HISTORY_SIZE
-     */
-    #ifndef COMB_MEM_DEBUG_HISTORY
-        #define COMB_MEM_DEBUG_HISTORY 1  // Enabled by default
-    #endif
+/**
+ * Allocation History Ring Buffer
+ * - Keeps ring buffer of recent allocations
+ * - Useful for post-mortem debugging
+ * - Overhead: Medium (ring buffer storage)
+ * - Size configurable via COMB_MEM_DEBUG_HISTORY_SIZE
+ */
+#ifndef COMB_MEM_DEBUG_HISTORY
+#define COMB_MEM_DEBUG_HISTORY 1 // Enabled by default
+#endif
 
-    #ifndef COMB_MEM_DEBUG_HISTORY_SIZE
-        #define COMB_MEM_DEBUG_HISTORY_SIZE 1000  // Last 1000 allocations
-    #endif
+#ifndef COMB_MEM_DEBUG_HISTORY_SIZE
+#define COMB_MEM_DEBUG_HISTORY_SIZE 1000 // Last 1000 allocations
+#endif
 
-    // ========================================================================
-    // Expensive Features (Disabled by Default)
-    // ========================================================================
+// ========================================================================
+// Expensive Features (Disabled by Default)
+// ========================================================================
 
-    /**
-     * Callstack Capture
-     * - Captures callstack at allocation site (16 frames)
-     * - Platform-specific (Windows: CaptureStackBackTrace, POSIX: backtrace)
-     * - Overhead: VERY HIGH (10-100x slower allocations!)
-     * - Only enable when debugging specific leaks
-     * - Set by CMake: -DCOMB_ENABLE_CALLSTACKS=ON
-     */
-    // COMB_MEM_DEBUG_CALLSTACKS already defined by CMake
+/**
+ * Callstack Capture
+ * - Captures callstack at allocation site (16 frames)
+ * - Platform-specific (Windows: CaptureStackBackTrace, POSIX: backtrace)
+ * - Overhead: VERY HIGH (10-100x slower allocations!)
+ * - Only enable when debugging specific leaks
+ * - Set by CMake: -DCOMB_ENABLE_CALLSTACKS=ON
+ */
+// COMB_MEM_DEBUG_CALLSTACKS already defined by CMake
 
-    // ========================================================================
-    // Debug Constants
-    // ========================================================================
+// ========================================================================
+// Debug Constants
+// ========================================================================
 
-    #include <cstring>  // For memcpy
+#include <cstring> // For memcpy
 
-    namespace comb::debug
-    {
-        // Guard magic value (0xDEADBEEF)
-        constexpr uint32_t GuardMagic = 0xDEADBEEF;
+namespace comb::debug
+{
+    // Guard magic value (0xDEADBEEF)
+    constexpr uint32_t guardMagic = 0xDEADBEEF;
 
-        // Memory patterns
-        constexpr uint8_t AllocatedMemoryPattern = 0xAA;  // "Allocated" - 0b10101010
-        constexpr uint8_t FreedMemoryPattern = 0xFE;      // "Freed"     - 0b11111110
-        constexpr uint8_t GuardBytePattern = 0xBE;        // "BEef"      - 0b10111110
+    // Memory patterns
+    constexpr uint8_t allocatedMemoryPattern = 0xAA; // "Allocated" - 0b10101010
+    constexpr uint8_t freedMemoryPattern = 0xFE;     // "Freed"     - 0b11111110
+    constexpr uint8_t guardBytePattern = 0xBE;       // "BEef"      - 0b10111110
 
-        // Guard size (before and after allocation)
-        constexpr size_t GuardSize = sizeof(uint32_t);  // 4 bytes
-        constexpr size_t TotalGuardSize = 2 * GuardSize;  // 8 bytes total
+    // Guard size (before and after allocation)
+    constexpr size_t guardSize = sizeof(uint32_t);   // 4 bytes
+    constexpr size_t totalGuardSize = 2 * guardSize; // 8 bytes total
 
-        // Callstack depth (if enabled)
-        constexpr uint32_t MaxCallstackDepth = 16;
+    // Callstack depth (if enabled)
+    constexpr uint32_t maxCallstackDepth = 16;
 
-        // Safe guard read/write (handles potentially misaligned back guards)
-        inline void WriteGuard(void* addr) noexcept
-        {
-            uint32_t magic = GuardMagic;
-            std::memcpy(addr, &magic, sizeof(uint32_t));
-        }
-
-        inline uint32_t ReadGuard(const void* addr) noexcept
-        {
-            uint32_t value;
-            std::memcpy(&value, addr, sizeof(uint32_t));
-            return value;
-        }
+    // Safe guard read/write (handles potentially misaligned back guards)
+    inline void WriteGuard(void* addr) noexcept {
+        uint32_t magic = guardMagic;
+        std::memcpy(addr, &magic, sizeof(uint32_t));
     }
+
+    inline uint32_t ReadGuard(const void* addr) noexcept {
+        uint32_t value;
+        std::memcpy(&value, addr, sizeof(uint32_t));
+        return value;
+    }
+} // namespace comb::debug
 
 #else // COMB_MEM_DEBUG = 0
 
-    // ========================================================================
-    // All Features Disabled (Zero Overhead)
-    // ========================================================================
+// ========================================================================
+// All Features Disabled (Zero Overhead)
+// ========================================================================
 
-    #define COMB_MEM_DEBUG_LEAK_DETECTION 0
-    #define COMB_MEM_DEBUG_DOUBLE_FREE 0
-    #define COMB_MEM_DEBUG_BUFFER_OVERRUN 0
-    #define COMB_MEM_DEBUG_TRACKING 0
-    #define COMB_MEM_DEBUG_STATS 0
-    #define COMB_MEM_DEBUG_USE_AFTER_FREE 0
-    #define COMB_MEM_DEBUG_HISTORY 0
-    #define COMB_MEM_DEBUG_HISTORY_SIZE 0
+#define COMB_MEM_DEBUG_LEAK_DETECTION 0
+#define COMB_MEM_DEBUG_DOUBLE_FREE 0
+#define COMB_MEM_DEBUG_BUFFER_OVERRUN 0
+#define COMB_MEM_DEBUG_TRACKING 0
+#define COMB_MEM_DEBUG_STATS 0
+#define COMB_MEM_DEBUG_USE_AFTER_FREE 0
+#define COMB_MEM_DEBUG_HISTORY 0
+#define COMB_MEM_DEBUG_HISTORY_SIZE 0
 
-    // Callstack always disabled if MEM_DEBUG is off
-    #undef COMB_MEM_DEBUG_CALLSTACKS
-    #define COMB_MEM_DEBUG_CALLSTACKS 0
+// Callstack always disabled if MEM_DEBUG is off
+#undef COMB_MEM_DEBUG_CALLSTACKS
+#define COMB_MEM_DEBUG_CALLSTACKS 0
 
 #endif // COMB_MEM_DEBUG
 
@@ -221,17 +222,15 @@ namespace comb::debug
      * Compile-time constant: is use-after-free detection enabled?
      */
     inline constexpr bool kUseAfterFreeEnabled = (COMB_MEM_DEBUG_USE_AFTER_FREE != 0);
-}
+} // namespace comb::debug
 
 // ============================================================================
 // Static Assertions (Compile-Time Checks)
 // ============================================================================
 
 // Callstacks require MEM_DEBUG
-static_assert(
-    COMB_MEM_DEBUG_CALLSTACKS == 0 || COMB_MEM_DEBUG == 1,
-    "COMB_MEM_DEBUG_CALLSTACKS requires COMB_MEM_DEBUG=1"
-);
+static_assert(COMB_MEM_DEBUG_CALLSTACKS == 0 || COMB_MEM_DEBUG == 1,
+              "COMB_MEM_DEBUG_CALLSTACKS requires COMB_MEM_DEBUG=1");
 
 // ============================================================================
 // Summary Log (Disabled - too verbose during compilation)

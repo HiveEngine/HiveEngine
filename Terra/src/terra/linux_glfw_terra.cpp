@@ -1,5 +1,5 @@
-#include <terra/precomp.h>
 #include <terra/platform/glfw_terra.h>
+#include <terra/precomp.h>
 #define TERRA_NATIVE_LINUX
 #include <terra/terra_native.h>
 
@@ -9,8 +9,7 @@
 #include <GLFW/glfw3native.h>
 namespace terra
 {
-    NativeWindow GetNativeWindow(WindowContext* windowContext)
-    {
+    NativeWindow GetNativeWindow(WindowContext* windowContext) {
         NativeWindow nativeWindow{};
 
         nativeWindow.wlDisplay_ = glfwGetWaylandDisplay();
@@ -28,7 +27,6 @@ namespace terra
             nativeWindow.type_ = NativeWindowType::X11;
         }
 
-
         return nativeWindow;
     }
-}
+} // namespace terra

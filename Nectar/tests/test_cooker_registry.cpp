@@ -1,32 +1,38 @@
-#include <larvae/larvae.h>
-#include <nectar/pipeline/cooker_registry.h>
-#include <nectar/pipeline/asset_cooker.h>
 #include <comb/default_allocator.h>
+
+#include <nectar/pipeline/asset_cooker.h>
+#include <nectar/pipeline/cooker_registry.h>
+
+#include <larvae/larvae.h>
+
 #include <cstring>
 
-namespace {
+namespace
+{
 
-    auto& GetCookRegAlloc()
-    {
+    auto& GetCookRegAlloc() {
         static comb::ModuleAllocator alloc{"TestCookReg", 4 * 1024 * 1024};
         return alloc.Get();
     }
 
-    struct DummyTex {};
-    struct DummyMesh {};
+    struct DummyTex
+    {
+    };
+    struct DummyMesh
+    {
+    };
 
     class TextureCooker final : public nectar::AssetCooker<DummyTex>
     {
     public:
         wax::StringView TypeName() const override { return "Texture"; }
         uint32_t Version() const override { return 1; }
-        nectar::CookResult Cook(wax::ByteSpan data, const nectar::CookContext& ctx) override
-        {
+        nectar::CookResult Cook(wax::ByteSpan data, const nectar::CookContext& ctx) override {
             nectar::CookResult r;
-            r.success = true;
-            r.cooked_data = wax::ByteBuffer{*ctx.alloc};
-            r.cooked_data.Resize(data.Size());
-            std::memcpy(r.cooked_data.Data(), data.Data(), data.Size());
+            r.m_success = true;
+            r.m_cookedData = wax::ByteBuffer{*ctx.m_alloc};
+            r.m_cookedData.Resize(data.Size());
+            std::memcpy(r.m_cookedData.Data(), data.Data(), data.Size());
             return r;
         }
     };
@@ -36,13 +42,12 @@ namespace {
     public:
         wax::StringView TypeName() const override { return "Mesh"; }
         uint32_t Version() const override { return 2; }
-        nectar::CookResult Cook(wax::ByteSpan data, const nectar::CookContext& ctx) override
-        {
+        nectar::CookResult Cook(wax::ByteSpan data, const nectar::CookContext& ctx) override {
             nectar::CookResult r;
-            r.success = true;
-            r.cooked_data = wax::ByteBuffer{*ctx.alloc};
-            r.cooked_data.Resize(data.Size());
-            std::memcpy(r.cooked_data.Data(), data.Data(), data.Size());
+            r.m_success = true;
+            r.m_cookedData = wax::ByteBuffer{*ctx.m_alloc};
+            r.m_cookedData.Resize(data.Size());
+            std::memcpy(r.m_cookedData.Data(), data.Data(), data.Size());
             return r;
         }
     };
@@ -133,4 +138,4 @@ namespace {
         larvae::AssertEqual(m->Version(), uint32_t{2});
     });
 
-}
+} // namespace

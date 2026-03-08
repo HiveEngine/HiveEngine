@@ -5,21 +5,16 @@
 #include <cstring>
 
 #if HIVE_PLATFORM_WINDOWS
-    #define WIN32_LEAN_AND_MEAN
-    #include <Windows.h>
+#define WIN32_LEAN_AND_MEAN
+#include <Windows.h>
 #endif
 
 namespace hive
 {
     // Thread-local to avoid allocations
-    thread_local char s_AssertMessageBuffer[2048];
+    thread_local char g_sAssertMessageBuffer[2048];
 
-    bool HandleAssertionFailure(
-        const char* file,
-        std::uint_least32_t line,
-        const char* function,
-        const char* message)
-    {
+    bool HandleAssertionFailure(const char* file, std::uint_least32_t line, const char* function, const char* message) {
         const char* filename = file;
         const char* lastSlash = std::strrchr(file, '/');
         const char* lastBackslash = std::strrchr(file, '\\');
@@ -39,31 +34,31 @@ namespace hive
 
         if (message && message[0] != '\0')
         {
-            std::snprintf(s_AssertMessageBuffer, sizeof(s_AssertMessageBuffer),
-                "Assertion failed\n"
-                "  File: %s:%d\n"
-                "  Function: %s\n"
-                "  Message: %s",
-                filename, line, function, message);
+            std::snprintf(g_sAssertMessageBuffer, sizeof(g_sAssertMessageBuffer),
+                          "Assertion failed\n"
+                          "  File: %s:%d\n"
+                          "  Function: %s\n"
+                          "  Message: %s",
+                          filename, line, function, message);
         }
         else
         {
-            std::snprintf(s_AssertMessageBuffer, sizeof(s_AssertMessageBuffer),
-                "Assertion failed\n"
-                "  File: %s:%d\n"
-                "  Function: %s",
-                filename, line, function);
+            std::snprintf(g_sAssertMessageBuffer, sizeof(g_sAssertMessageBuffer),
+                          "Assertion failed\n"
+                          "  File: %s:%d\n"
+                          "  Function: %s",
+                          filename, line, function);
         }
 
-        #if HIVE_PLATFORM_WINDOWS
-            OutputDebugStringA(s_AssertMessageBuffer);
-            OutputDebugStringA("\n");
-        #endif
+#if HIVE_PLATFORM_WINDOWS
+        OutputDebugStringA(g_sAssertMessageBuffer);
+        OutputDebugStringA("\n");
+#endif
 
-        std::fprintf(stderr, "%s\n", s_AssertMessageBuffer);
+        std::fprintf(stderr, "%s\n", g_sAssertMessageBuffer);
 
         HIVE_INTERNAL_DEBUG_BREAK();
 
         return false;
     }
-}
+} // namespace hive

@@ -1,6 +1,9 @@
-#include <larvae/larvae.h>
-#include <queen/scheduler/mpmc_queue.h>
 #include <comb/linear_allocator.h>
+
+#include <queen/scheduler/mpmc_queue.h>
+
+#include <larvae/larvae.h>
+
 #include <atomic>
 #include <thread>
 #include <vector>
@@ -459,8 +462,10 @@ namespace
             });
         }
 
-        for (auto& t : producers) t.join();
-        for (auto& t : consumers) t.join();
+        for (auto& t : producers)
+            t.join();
+        for (auto& t : consumers)
+            t.join();
 
         // Expected sum: sum of 0..kTotalItems-1 = kTotalItems * (kTotalItems - 1) / 2
         int64_t expected_sum = static_cast<int64_t>(kTotalItems) * (kTotalItems - 1) / 2;
@@ -468,4 +473,4 @@ namespace
         larvae::AssertEqual(consumed_count.load(), kTotalItems);
         larvae::AssertEqual(consumed_sum.load(), expected_sum);
     });
-}
+} // namespace

@@ -1,14 +1,20 @@
-#include <larvae/larvae.h>
-#include <comb/thread_safe_allocator.h>
 #include <comb/buddy_allocator.h>
 #include <comb/linear_allocator.h>
 #include <comb/new.h>
+#include <comb/thread_safe_allocator.h>
+
+#include <larvae/larvae.h>
+
 #include <thread>
 
 namespace
 {
-    constexpr size_t operator""_KB(unsigned long long kb) { return kb * 1024; }
-    constexpr size_t operator""_MB(unsigned long long mb) { return mb * 1024 * 1024; }
+    constexpr size_t operator""_KB(unsigned long long kb) {
+        return kb * 1024;
+    }
+    constexpr size_t operator""_MB(unsigned long long mb) {
+        return mb * 1024 * 1024;
+    }
 
     // =============================================================================
     // Concept Satisfaction
@@ -110,7 +116,8 @@ namespace
         struct TestObject
         {
             int value;
-            TestObject(int v) : value{v} {}
+            TestObject(int v)
+                : value{v} {}
         };
 
         TestObject* obj = comb::New<TestObject>(safe, 42);
@@ -128,7 +135,10 @@ namespace
         struct TestObject
         {
             bool* destroyed;
-            TestObject(bool* d) : destroyed{d} { *destroyed = false; }
+            TestObject(bool* d)
+                : destroyed{d} {
+                *destroyed = false;
+            }
             ~TestObject() { *destroyed = true; }
         };
 
@@ -326,4 +336,4 @@ namespace
         larvae::AssertTrue(safe.GetUsedMemory() > 0);
         larvae::AssertEqual(safe.GetTotalMemory(), 1_MB);
     });
-}
+} // namespace

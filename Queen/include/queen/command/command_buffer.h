@@ -1,11 +1,14 @@
 #pragma once
 
-#include <queen/core/type_id.h>
-#include <queen/core/entity.h>
-#include <queen/core/component_info.h>
-#include <comb/allocator_concepts.h>
-#include <wax/containers/vector.h>
 #include <hive/core/assert.h>
+
+#include <comb/allocator_concepts.h>
+
+#include <wax/containers/vector.h>
+
+#include <queen/core/component_info.h>
+#include <queen/core/entity.h>
+#include <queen/core/type_id.h>
 
 namespace queen
 {
@@ -16,11 +19,11 @@ namespace queen
      */
     enum class CommandType : uint8_t
     {
-        Spawn,           // Create a new entity
-        Despawn,         // Destroy an entity
-        AddComponent,    // Add a component to an entity
-        RemoveComponent, // Remove a component from an entity
-        SetComponent,    // Set/update a component on an entity
+        SPAWN,            // Create a new entity
+        DESPAWN,          // Destroy an entity
+        ADD_COMPONENT,    // Add a component to an entity
+        REMOVE_COMPONENT, // Remove a component from an entity
+        SET_COMPONENT,    // Set/update a component on an entity
     };
 
     /**
@@ -88,11 +91,9 @@ namespace queen
      *   cmd.Flush(world);  // Now entity exists in World
      * @endcode
      */
-    template<comb::Allocator Allocator>
-    class CommandBuffer;
+    template <comb::Allocator Allocator> class CommandBuffer;
 
-    template<comb::Allocator Allocator>
-    class SpawnCommandBuilder;
+    template <comb::Allocator Allocator> class SpawnCommandBuilder;
 
     namespace detail
     {
@@ -100,94 +101,82 @@ namespace queen
 
         struct CommandDataBlock
         {
-            alignas(alignof(std::max_align_t)) uint8_t data[kCommandBlockSize];
-            size_t used = 0;
-            CommandDataBlock* next = nullptr;
+            alignas(alignof(std::max_align_t)) uint8_t m_data[kCommandBlockSize];
+            size_t m_used = 0;
+            CommandDataBlock* m_next = nullptr;
         };
 
         struct Command
         {
-            CommandType type;
-            Entity entity;          // Target entity or pending entity index
-            TypeId component_type;  // Component type for add/remove/set
-            void* data;             // Component data (for add/set)
-            size_t data_size;       // Size of component data
-            ComponentMeta meta;     // Lifecycle info for component
+            CommandType m_type;
+            Entity m_entity;        // Target entity or pending entity index
+            TypeId m_componentType; // Component type for add/remove/set
+            void* m_data;           // Component data (for add/set)
+            size_t m_dataSize;      // Size of component data
+            ComponentMeta m_meta;   // Lifecycle info for component
         };
-    }
+    } // namespace detail
 
     /**
      * Builder for spawning entities with components via CommandBuffer
      */
-    template<comb::Allocator Allocator>
-    class SpawnCommandBuilder
+    template <comb::Allocator Allocator> class SpawnCommandBuilder
     {
     public:
-        SpawnCommandBuilder(CommandBuffer<Allocator>& buffer, uint32_t spawn_index)
-            : buffer_{&buffer}
-            , spawn_index_{spawn_index}
-        {
-        }
+        SpawnCommandBuilder(CommandBuffer<Allocator>& buffer, uint32_t spawnIndex)
+            : m_buffer{&buffer}
+            , m_spawnIndex{spawnIndex} {}
 
-        template<typename T>
-        SpawnCommandBuilder& With(T&& component);
+        template <typename T> SpawnCommandBuilder& With(T&& component);
 
-        uint32_t GetSpawnIndex() const noexcept { return spawn_index_; }
+        uint32_t GetSpawnIndex() const noexcept { return m_spawnIndex; }
 
     private:
-        CommandBuffer<Allocator>* buffer_;
-        uint32_t spawn_index_;
+        CommandBuffer<Allocator>* m_buffer;
+        uint32_t m_spawnIndex;
     };
 
-    template<comb::Allocator Allocator>
-    class CommandBuffer
+    template <comb::Allocator Allocator> class CommandBuffer
     {
     public:
         explicit CommandBuffer(Allocator& allocator)
-            : allocator_{&allocator}
-            , commands_{allocator}
-            , spawned_entities_{allocator}
-            , head_block_{nullptr}
-            , current_block_{nullptr}
-            , spawn_count_{0}
-        {
-        }
+            : m_allocator{&allocator}
+            , m_commands{allocator}
+            , m_spawnedEntities{allocator}
+            , m_headBlock{nullptr}
+            , m_currentBlock{nullptr}
+            , m_spawnCount{0} {}
 
-        ~CommandBuffer()
-        {
-            ClearBlocks();
-        }
+        ~CommandBuffer() { ClearBlocks(); }
 
         CommandBuffer(const CommandBuffer&) = delete;
         CommandBuffer& operator=(const CommandBuffer&) = delete;
 
         CommandBuffer(CommandBuffer&& other) noexcept
-            : allocator_{other.allocator_}
-            , commands_{static_cast<wax::Vector<detail::Command>&&>(other.commands_)}
-            , spawned_entities_{static_cast<wax::Vector<Entity>&&>(other.spawned_entities_)}
-            , head_block_{other.head_block_}
-            , current_block_{other.current_block_}
-            , spawn_count_{other.spawn_count_}
-        {
-            other.head_block_ = nullptr;
-            other.current_block_ = nullptr;
-            other.spawn_count_ = 0;
+            : m_allocator{other.m_allocator}
+            , m_commands{static_cast<wax::Vector<detail::Command>&&>(other.m_commands)}
+            , m_spawnedEntities{static_cast<wax::Vector<Entity>&&>(other.m_spawnedEntities)}
+            , m_headBlock{other.m_headBlock}
+            , m_currentBlock{other.m_currentBlock}
+            , m_spawnCount{other.m_spawnCount} {
+            other.m_headBlock = nullptr;
+            other.m_currentBlock = nullptr;
+            other.m_spawnCount = 0;
         }
 
-        CommandBuffer& operator=(CommandBuffer&& other) noexcept
-        {
+        CommandBuffer& operator=(CommandBuffer&& other) noexcept {
             if (this != &other)
             {
                 ClearBlocks();
-                allocator_ = other.allocator_;
-                commands_ = static_cast<wax::Vector<detail::Command>&&>(other.commands_);
-                spawned_entities_ = static_cast<wax::Vector<Entity>&&>(other.spawned_entities_);
-                head_block_ = other.head_block_;
-                current_block_ = other.current_block_;
-                spawn_count_ = other.spawn_count_;
-                other.head_block_ = nullptr;
-                other.current_block_ = nullptr;
-                other.spawn_count_ = 0;
+                m_allocator = other.m_allocator;
+                m_commands = static_cast<wax::Vector<detail::Command>&&>(other.m_commands);
+                m_spawnedEntities = static_cast<wax::Vector<Entity>&&>(other.m_spawnedEntities);
+                m_headBlock = other.m_headBlock;
+                m_currentBlock = other.m_currentBlock;
+                m_spawnCount = other.m_spawnCount;
+                other.m_headBlock = nullptr;
+                other.m_currentBlock = nullptr;
+                other.m_spawnCount = 0;
             }
             return *this;
         }
@@ -200,20 +189,19 @@ namespace queen
          *
          * @return SpawnCommandBuilder for chaining component additions
          */
-        [[nodiscard]] SpawnCommandBuilder<Allocator> Spawn()
-        {
-            uint32_t spawn_index = spawn_count_++;
+        [[nodiscard]] SpawnCommandBuilder<Allocator> Spawn() {
+            uint32_t spawnIndex = m_spawnCount++;
 
             detail::Command cmd{};
-            cmd.type = CommandType::Spawn;
-            cmd.entity = Entity{spawn_index, 0, Entity::Flags::kPendingDelete};
-            cmd.component_type = 0;
-            cmd.data = nullptr;
-            cmd.data_size = 0;
+            cmd.m_type = CommandType::SPAWN;
+            cmd.m_entity = Entity{spawnIndex, 0, Entity::Flags::kPendingDelete};
+            cmd.m_componentType = 0;
+            cmd.m_data = nullptr;
+            cmd.m_dataSize = 0;
 
-            commands_.PushBack(cmd);
+            m_commands.PushBack(cmd);
 
-            return SpawnCommandBuilder<Allocator>{*this, spawn_index};
+            return SpawnCommandBuilder<Allocator>{*this, spawnIndex};
         }
 
         /**
@@ -221,16 +209,15 @@ namespace queen
          *
          * @param entity Entity to despawn (must be alive at Flush time)
          */
-        void Despawn(Entity entity)
-        {
+        void Despawn(Entity entity) {
             detail::Command cmd{};
-            cmd.type = CommandType::Despawn;
-            cmd.entity = entity;
-            cmd.component_type = 0;
-            cmd.data = nullptr;
-            cmd.data_size = 0;
+            cmd.m_type = CommandType::DESPAWN;
+            cmd.m_entity = entity;
+            cmd.m_componentType = 0;
+            cmd.m_data = nullptr;
+            cmd.m_dataSize = 0;
 
-            commands_.PushBack(cmd);
+            m_commands.PushBack(cmd);
         }
 
         /**
@@ -242,23 +229,21 @@ namespace queen
          * @param entity Target entity
          * @param component Component value to add
          */
-        template<typename T>
-        void Add(Entity entity, T&& component)
-        {
+        template <typename T> void Add(Entity entity, T&& component) {
             using DecayedT = std::decay_t<T>;
 
             void* data = AllocateData(sizeof(DecayedT), alignof(DecayedT));
             new (data) DecayedT{std::forward<T>(component)};
 
             detail::Command cmd{};
-            cmd.type = CommandType::AddComponent;
-            cmd.entity = entity;
-            cmd.component_type = TypeIdOf<DecayedT>();
-            cmd.data = data;
-            cmd.data_size = sizeof(DecayedT);
-            cmd.meta = ComponentMeta::Of<DecayedT>();
+            cmd.m_type = CommandType::ADD_COMPONENT;
+            cmd.m_entity = entity;
+            cmd.m_componentType = TypeIdOf<DecayedT>();
+            cmd.m_data = data;
+            cmd.m_dataSize = sizeof(DecayedT);
+            cmd.m_meta = ComponentMeta::Of<DecayedT>();
 
-            commands_.PushBack(cmd);
+            m_commands.PushBack(cmd);
         }
 
         /**
@@ -267,17 +252,15 @@ namespace queen
          * @tparam T Component type to remove
          * @param entity Target entity
          */
-        template<typename T>
-        void Remove(Entity entity)
-        {
+        template <typename T> void Remove(Entity entity) {
             detail::Command cmd{};
-            cmd.type = CommandType::RemoveComponent;
-            cmd.entity = entity;
-            cmd.component_type = TypeIdOf<T>();
-            cmd.data = nullptr;
-            cmd.data_size = 0;
+            cmd.m_type = CommandType::REMOVE_COMPONENT;
+            cmd.m_entity = entity;
+            cmd.m_componentType = TypeIdOf<T>();
+            cmd.m_data = nullptr;
+            cmd.m_dataSize = 0;
 
-            commands_.PushBack(cmd);
+            m_commands.PushBack(cmd);
         }
 
         /**
@@ -287,23 +270,21 @@ namespace queen
          * @param entity Target entity
          * @param component Component value to set
          */
-        template<typename T>
-        void Set(Entity entity, T&& component)
-        {
+        template <typename T> void Set(Entity entity, T&& component) {
             using DecayedT = std::decay_t<T>;
 
             void* data = AllocateData(sizeof(DecayedT), alignof(DecayedT));
             new (data) DecayedT{std::forward<T>(component)};
 
             detail::Command cmd{};
-            cmd.type = CommandType::SetComponent;
-            cmd.entity = entity;
-            cmd.component_type = TypeIdOf<DecayedT>();
-            cmd.data = data;
-            cmd.data_size = sizeof(DecayedT);
-            cmd.meta = ComponentMeta::Of<DecayedT>();
+            cmd.m_type = CommandType::SET_COMPONENT;
+            cmd.m_entity = entity;
+            cmd.m_componentType = TypeIdOf<DecayedT>();
+            cmd.m_data = data;
+            cmd.m_dataSize = sizeof(DecayedT);
+            cmd.m_meta = ComponentMeta::Of<DecayedT>();
 
-            commands_.PushBack(cmd);
+            m_commands.PushBack(cmd);
         }
 
         /**
@@ -319,20 +300,19 @@ namespace queen
         /**
          * Clear all queued commands without applying them
          */
-        void Clear()
-        {
-            for (size_t i = 0; i < commands_.Size(); ++i)
+        void Clear() {
+            for (size_t i = 0; i < m_commands.Size(); ++i)
             {
-                const detail::Command& cmd = commands_[i];
-                if (cmd.data != nullptr && cmd.meta.destruct != nullptr)
+                const detail::Command& cmd = m_commands[i];
+                if (cmd.m_data != nullptr && cmd.m_meta.m_destruct != nullptr)
                 {
-                    cmd.meta.destruct(cmd.data);
+                    cmd.m_meta.m_destruct(cmd.m_data);
                 }
             }
 
-            commands_.Clear();
-            spawned_entities_.Clear();
-            spawn_count_ = 0;
+            m_commands.Clear();
+            m_spawnedEntities.Clear();
+            m_spawnCount = 0;
 
             ClearBlocks();
         }
@@ -340,18 +320,12 @@ namespace queen
         /**
          * Get the number of queued commands
          */
-        [[nodiscard]] size_t CommandCount() const noexcept
-        {
-            return commands_.Size();
-        }
+        [[nodiscard]] size_t CommandCount() const noexcept { return m_commands.Size(); }
 
         /**
          * Check if command buffer is empty
          */
-        [[nodiscard]] bool IsEmpty() const noexcept
-        {
-            return commands_.IsEmpty();
-        }
+        [[nodiscard]] bool IsEmpty() const noexcept { return m_commands.IsEmpty(); }
 
         /**
          * Get a spawned entity by its spawn index
@@ -361,11 +335,10 @@ namespace queen
          * @param spawn_index Index returned by SpawnCommandBuilder
          * @return The real entity if spawned, Entity::Invalid() otherwise
          */
-        [[nodiscard]] Entity GetSpawnedEntity(uint32_t spawn_index) const noexcept
-        {
-            if (spawn_index < spawned_entities_.Size())
+        [[nodiscard]] Entity GetSpawnedEntity(uint32_t spawnIndex) const noexcept {
+            if (spawnIndex < m_spawnedEntities.Size())
             {
-                return spawned_entities_[spawn_index];
+                return m_spawnedEntities[spawnIndex];
             }
             return Entity::Invalid();
         }
@@ -373,114 +346,105 @@ namespace queen
     private:
         friend class SpawnCommandBuilder<Allocator>;
 
-        void AddComponentToSpawn(uint32_t spawn_index, const ComponentMeta& meta, void* data)
-        {
-            Entity pending{spawn_index, 0, Entity::Flags::kPendingDelete};
+        void AddComponentToSpawn(uint32_t spawnIndex, const ComponentMeta& meta, void* data) {
+            Entity pending{spawnIndex, 0, Entity::Flags::kPendingDelete};
 
             detail::Command cmd{};
-            cmd.type = CommandType::AddComponent;
-            cmd.entity = pending;
-            cmd.component_type = meta.type_id;
-            cmd.data = data;
-            cmd.data_size = meta.size;
-            cmd.meta = meta;
+            cmd.m_type = CommandType::ADD_COMPONENT;
+            cmd.m_entity = pending;
+            cmd.m_componentType = meta.m_typeId;
+            cmd.m_data = data;
+            cmd.m_dataSize = meta.m_size;
+            cmd.m_meta = meta;
 
-            commands_.PushBack(cmd);
+            m_commands.PushBack(cmd);
         }
 
-        void* AllocateData(size_t size, size_t alignment)
-        {
-            if (current_block_ == nullptr)
+        void* AllocateData(size_t size, size_t alignment) {
+            if (m_currentBlock == nullptr)
             {
                 AllocateNewBlock();
             }
 
-            size_t aligned_offset = (current_block_->used + alignment - 1) & ~(alignment - 1);
+            size_t alignedOffset = (m_currentBlock->m_used + alignment - 1) & ~(alignment - 1);
 
-            if (aligned_offset + size > detail::kCommandBlockSize)
+            if (alignedOffset + size > detail::kCommandBlockSize)
             {
                 AllocateNewBlock();
-                aligned_offset = 0;
+                alignedOffset = 0;
             }
 
-            void* ptr = current_block_->data + aligned_offset;
-            current_block_->used = aligned_offset + size;
+            void* ptr = m_currentBlock->m_data + alignedOffset;
+            m_currentBlock->m_used = alignedOffset + size;
             return ptr;
         }
 
-        void AllocateNewBlock()
-        {
-            void* memory = allocator_->Allocate(sizeof(detail::CommandDataBlock), alignof(detail::CommandDataBlock));
+        void AllocateNewBlock() {
+            void* memory = m_allocator->Allocate(sizeof(detail::CommandDataBlock), alignof(detail::CommandDataBlock));
             hive::Assert(memory != nullptr, "Failed to allocate command data block");
 
             auto* block = new (memory) detail::CommandDataBlock{};
 
-            if (current_block_ != nullptr)
+            if (m_currentBlock != nullptr)
             {
-                current_block_->next = block;
+                m_currentBlock->m_next = block;
             }
             else
             {
-                head_block_ = block;
+                m_headBlock = block;
             }
 
-            current_block_ = block;
+            m_currentBlock = block;
         }
 
-        void ClearBlocks()
-        {
-            detail::CommandDataBlock* block = head_block_;
+        void ClearBlocks() {
+            detail::CommandDataBlock* block = m_headBlock;
             while (block != nullptr)
             {
-                detail::CommandDataBlock* next = block->next;
-                allocator_->Deallocate(block);
+                detail::CommandDataBlock* next = block->m_next;
+                m_allocator->Deallocate(block);
                 block = next;
             }
 
-            head_block_ = nullptr;
-            current_block_ = nullptr;
+            m_headBlock = nullptr;
+            m_currentBlock = nullptr;
         }
 
-        bool IsPendingEntity(Entity entity) const noexcept
-        {
-            return entity.HasFlag(Entity::Flags::kPendingDelete);
-        }
+        bool IsPendingEntity(Entity entity) const noexcept { return entity.HasFlag(Entity::Flags::kPendingDelete); }
 
-        Entity ResolveEntity(Entity entity) const noexcept
-        {
+        Entity ResolveEntity(Entity entity) const noexcept {
             if (IsPendingEntity(entity))
             {
-                uint32_t spawn_index = entity.Index();
-                if (spawn_index < spawned_entities_.Size())
+                uint32_t spawnIndex = entity.Index();
+                if (spawnIndex < m_spawnedEntities.Size())
                 {
-                    return spawned_entities_[spawn_index];
+                    return m_spawnedEntities[spawnIndex];
                 }
                 return Entity::Invalid();
             }
             return entity;
         }
 
-        Allocator* allocator_;
-        wax::Vector<detail::Command> commands_;
-        wax::Vector<Entity> spawned_entities_;
-        detail::CommandDataBlock* head_block_;
-        detail::CommandDataBlock* current_block_;
-        uint32_t spawn_count_;
+        Allocator* m_allocator;
+        wax::Vector<detail::Command> m_commands;
+        wax::Vector<Entity> m_spawnedEntities;
+        detail::CommandDataBlock* m_headBlock;
+        detail::CommandDataBlock* m_currentBlock;
+        uint32_t m_spawnCount;
     };
 
-    template<comb::Allocator Allocator>
-    template<typename T>
-    SpawnCommandBuilder<Allocator>& SpawnCommandBuilder<Allocator>::With(T&& component)
-    {
+    template <comb::Allocator Allocator>
+    template <typename T>
+    SpawnCommandBuilder<Allocator>& SpawnCommandBuilder<Allocator>::With(T&& component) {
         using DecayedT = std::decay_t<T>;
 
-        void* data = buffer_->AllocateData(sizeof(DecayedT), alignof(DecayedT));
+        void* data = m_buffer->AllocateData(sizeof(DecayedT), alignof(DecayedT));
         new (data) DecayedT{std::forward<T>(component)};
 
-        buffer_->AddComponentToSpawn(spawn_index_, ComponentMeta::Of<DecayedT>(), data);
+        m_buffer->AddComponentToSpawn(m_spawnIndex, ComponentMeta::Of<DecayedT>(), data);
 
         return *this;
     }
-}
+} // namespace queen
 
 // Note: CommandBuffer::Flush implementation is in world.h to avoid circular dependency

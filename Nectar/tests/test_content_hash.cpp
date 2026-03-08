@@ -1,11 +1,17 @@
-#include <larvae/larvae.h>
-#include <nectar/core/content_hash.h>
 #include <wax/serialization/byte_span.h>
+
+#include <nectar/core/content_hash.h>
+
+#include <larvae/larvae.h>
+
 #include <cstring>
 
-namespace {
+namespace
+{
 
-    constexpr size_t operator""_KB(unsigned long long kb) { return kb * 1024; }
+    constexpr size_t operator""_KB(unsigned long long kb) {
+        return kb * 1024;
+    }
 
     // =========================================================================
     // Construction
@@ -150,4 +156,4 @@ namespace {
         larvae::AssertEqual(result, h.Hash());
     });
 
-}
+} // namespace

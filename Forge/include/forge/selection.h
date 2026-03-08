@@ -1,6 +1,7 @@
 #pragma once
 
 #include <queen/core/entity.h>
+
 #include <vector>
 
 namespace forge
@@ -17,12 +18,12 @@ namespace forge
         void Clear();
 
         [[nodiscard]] bool IsSelected(queen::Entity entity) const noexcept;
-        [[nodiscard]] queen::Entity Primary() const noexcept { return primary_; }
-        [[nodiscard]] const std::vector<queen::Entity>& All() const noexcept { return selected_; }
-        [[nodiscard]] bool IsEmpty() const noexcept { return selected_.empty(); }
+        [[nodiscard]] queen::Entity Primary() const noexcept { return m_primary; }
+        [[nodiscard]] const std::vector<queen::Entity>& All() const noexcept { return m_selected; }
+        [[nodiscard]] bool IsEmpty() const noexcept { return m_selected.empty(); }
 
     private:
-        queen::Entity primary_{};
-        std::vector<queen::Entity> selected_;
+        queen::Entity m_primary{};
+        std::vector<queen::Entity> m_selected;
     };
-}
+} // namespace forge

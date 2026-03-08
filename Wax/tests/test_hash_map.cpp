@@ -1,7 +1,9 @@
-#include <larvae/larvae.h>
-#include <wax/containers/hash_map.h>
-#include <comb/linear_allocator.h>
 #include <comb/buddy_allocator.h>
+#include <comb/linear_allocator.h>
+
+#include <wax/containers/hash_map.h>
+
+#include <larvae/larvae.h>
 
 namespace
 {
@@ -129,7 +131,7 @@ namespace
         int sum_values = 0;
         int count = 0;
 
-        for (auto it = map.begin(); it != map.end(); ++it)
+        for (auto it = map.Begin(); it != map.End(); ++it)
         {
             sum_keys += it.Key();
             sum_values += it.Value();
@@ -199,12 +201,24 @@ namespace
         static int destructor_count;
         int value;
 
-        NonTrivialValue(int v = 0) : value{v} {}
+        NonTrivialValue(int v = 0)
+            : value{v} {}
         ~NonTrivialValue() { ++destructor_count; }
-        NonTrivialValue(const NonTrivialValue& other) : value{other.value} {}
-        NonTrivialValue(NonTrivialValue&& other) noexcept : value{other.value} { other.value = 0; }
-        NonTrivialValue& operator=(const NonTrivialValue& other) { value = other.value; return *this; }
-        NonTrivialValue& operator=(NonTrivialValue&& other) noexcept { value = other.value; other.value = 0; return *this; }
+        NonTrivialValue(const NonTrivialValue& other)
+            : value{other.value} {}
+        NonTrivialValue(NonTrivialValue&& other) noexcept
+            : value{other.value} {
+            other.value = 0;
+        }
+        NonTrivialValue& operator=(const NonTrivialValue& other) {
+            value = other.value;
+            return *this;
+        }
+        NonTrivialValue& operator=(NonTrivialValue&& other) noexcept {
+            value = other.value;
+            other.value = 0;
+            return *this;
+        }
     };
 
     int NonTrivialValue::destructor_count = 0;
@@ -265,7 +279,7 @@ namespace
         wax::HashMap<int, int> map{alloc, 16};
 
         int count = 0;
-        for (auto it = map.begin(); it != map.end(); ++it)
+        for (auto it = map.Begin(); it != map.End(); ++it)
         {
             ++count;
         }
@@ -315,8 +329,9 @@ namespace
 
         int sum_keys = 0;
         int sum_values = 0;
-        for (const auto& [key, value] : map)
+        for (auto it = map.Begin(); it != map.End(); ++it)
         {
+            const auto [key, value] = *it;
             sum_keys += key;
             sum_values += value;
         }
@@ -324,4 +339,4 @@ namespace
         larvae::AssertEqual(sum_keys, 6);
         larvae::AssertEqual(sum_values, 60);
     });
-}
+} // namespace

@@ -1,31 +1,28 @@
 #pragma once
 
+#include <comb/default_allocator.h>
+
 #include <wax/containers/string.h>
 #include <wax/containers/string_view.h>
-#include <comb/default_allocator.h>
 
 namespace waggle
 {
     struct CMakeGenConfig
     {
-        wax::StringView project_name;
-        wax::StringView project_root;
-        wax::StringView engine_path;
+        wax::StringView m_projectName;
+        wax::StringView m_projectRoot;
+        wax::StringView m_enginePath;
 
-        bool link_swarm{false};
-        bool link_terra{false};
-        bool link_antennae{false};
+        bool m_linkSwarm{false};
+        bool m_linkTerra{false};
+        bool m_linkAntennae{false};
     };
 
     class CMakeGenerator
     {
     public:
-        [[nodiscard]] static wax::String Generate(
-            const CMakeGenConfig& config,
-            comb::DefaultAllocator& alloc);
+        [[nodiscard]] static wax::String Generate(const CMakeGenConfig& config, comb::DefaultAllocator& alloc);
 
-        [[nodiscard]] static bool WriteToProject(
-            const CMakeGenConfig& config,
-            comb::DefaultAllocator& alloc);
+        [[nodiscard]] static bool WriteToProject(const CMakeGenConfig& config, comb::DefaultAllocator& alloc);
     };
-}
+} // namespace waggle

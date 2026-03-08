@@ -1,7 +1,9 @@
-#include <larvae/larvae.h>
 #include <wax/vector_types.h>
 
-namespace {
+#include <larvae/larvae.h>
+
+namespace
+{
 
     // =============================================================================
     // Construction and Basic Properties
@@ -349,7 +351,10 @@ namespace {
     });
 
     auto test22 = larvae::RegisterTest("WaxVector", "EmplaceBackStruct", []() {
-        struct Point { int x, y; };
+        struct Point
+        {
+            int x, y;
+        };
 
         comb::LinearAllocator alloc{1024};
         wax::LinearVector<Point> vec{alloc};
@@ -373,7 +378,7 @@ namespace {
         vec.PushBack(2);
         vec.PushBack(3);
 
-        auto it = vec.begin();
+        auto it = vec.Begin();
         larvae::AssertEqual(*it, 1);
 
         ++it;
@@ -383,7 +388,7 @@ namespace {
         larvae::AssertEqual(*it, 3);
 
         ++it;
-        larvae::AssertTrue(it == vec.end());
+        larvae::AssertTrue(it == vec.End());
     });
 
     auto test24 = larvae::RegisterTest("WaxVector", "RangeForLoop", []() {
@@ -395,9 +400,9 @@ namespace {
         vec.PushBack(3);
 
         int sum = 0;
-        for (int val : vec)
+        for (auto it = vec.Begin(); it != vec.End(); ++it)
         {
-            sum += val;
+            sum += *it;
         }
 
         larvae::AssertEqual(sum, 6);
@@ -411,9 +416,9 @@ namespace {
         vec.PushBack(2);
         vec.PushBack(3);
 
-        for (int& val : vec)
+        for (auto it = vec.Begin(); it != vec.End(); ++it)
         {
-            val *= 2;
+            *it *= 2;
         }
 
         larvae::AssertEqual(vec[0], 2);
@@ -483,7 +488,11 @@ namespace {
     });
 
     auto test29 = larvae::RegisterTest("WaxVector", "StructVector", []() {
-        struct Data { int id; float value; };
+        struct Data
+        {
+            int id;
+            float value;
+        };
 
         comb::LinearAllocator alloc{1024};
         wax::LinearVector<Data> vec{alloc};
@@ -605,12 +614,29 @@ namespace {
         static int alive_count;
         int value;
 
-        Tracked(int v = 0) : value{v} { ++alive_count; }
+        Tracked(int v = 0)
+            : value{v} {
+            ++alive_count;
+        }
         ~Tracked() { --alive_count; }
-        Tracked(const Tracked& o) : value{o.value} { ++alive_count; }
-        Tracked(Tracked&& o) noexcept : value{o.value} { o.value = -1; ++alive_count; }
-        Tracked& operator=(const Tracked& o) { value = o.value; return *this; }
-        Tracked& operator=(Tracked&& o) noexcept { value = o.value; o.value = -1; return *this; }
+        Tracked(const Tracked& o)
+            : value{o.value} {
+            ++alive_count;
+        }
+        Tracked(Tracked&& o) noexcept
+            : value{o.value} {
+            o.value = -1;
+            ++alive_count;
+        }
+        Tracked& operator=(const Tracked& o) {
+            value = o.value;
+            return *this;
+        }
+        Tracked& operator=(Tracked&& o) noexcept {
+            value = o.value;
+            o.value = -1;
+            return *this;
+        }
     };
 
     int Tracked::alive_count = 0;
@@ -690,4 +716,4 @@ namespace {
         larvae::AssertEqual(Tracked::alive_count, before - 1);
         larvae::AssertEqual(vec.Size(), 2u);
     });
-}
+} // namespace

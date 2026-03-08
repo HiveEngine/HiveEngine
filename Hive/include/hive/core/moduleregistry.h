@@ -13,7 +13,7 @@ namespace hive
         ModuleRegistry() = default;
         ~ModuleRegistry() = default;
 
-        using ModuleFactoryFn = std::unique_ptr<Module>(*)();
+        using ModuleFactoryFn = std::unique_ptr<Module> (*)();
         void RegisterModule(ModuleFactoryFn fn);
 
         void CreateModules();
@@ -22,30 +22,22 @@ namespace hive
         void ShutdownModules();
 
     private:
-        std::vector<ModuleFactoryFn> m_ModuleFactories;
-        std::vector<std::unique_ptr<Module>> m_Modules;
+        std::vector<ModuleFactoryFn> m_moduleFactories;
+        std::vector<std::unique_ptr<Module>> m_modules;
     };
 
-    template<typename ModuleClass>
-    class ModuleRegistrar
+    template <typename ModuleClass> class ModuleRegistrar
     {
     public:
-        ModuleRegistrar()
-        {
-            ModuleRegistry::GetInstance().RegisterModule([]() -> std::unique_ptr<Module>
-            {
-                return std::make_unique<ModuleClass>();
-            });
+        ModuleRegistrar() {
+            ModuleRegistry::GetInstance().RegisterModule(
+                []() -> std::unique_ptr<Module> { return std::make_unique<ModuleClass>(); });
         }
     };
-}
+} // namespace hive
 
-#define REGISTER_MODULE(ModuleClass)                                                                \
-    void Register##ModuleClass()                                                                    \
-    {                                                                                               \
-        hive::ModuleRegistry::GetInstance().RegisterModule([]() -> std::unique_ptr<hive::Module>    \
-        {                                                                                           \
-            return std::make_unique<ModuleClass>();                                                 \
-        });                                                                                         \
-    }                                                                                               \
-
+#define REGISTER_MODULE(ModuleClass)                                                                                   \
+    void Register##ModuleClass() {                                                                                     \
+        hive::ModuleRegistry::GetInstance().RegisterModule(                                                            \
+            []() -> std::unique_ptr<hive::Module> { return std::make_unique<ModuleClass>(); });                        \
+    }

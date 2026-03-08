@@ -1,10 +1,12 @@
 #pragma once
 
-#include <nectar/vfs/file_info.h>
+#include <comb/default_allocator.h>
+
 #include <wax/containers/string_view.h>
 #include <wax/containers/vector.h>
 #include <wax/serialization/byte_buffer.h>
-#include <comb/default_allocator.h>
+
+#include <nectar/vfs/file_info.h>
 
 namespace nectar
 {
@@ -16,16 +18,13 @@ namespace nectar
     public:
         virtual ~MountSource() = default;
 
-        [[nodiscard]] virtual wax::ByteBuffer ReadFile(
-            wax::StringView path, comb::DefaultAllocator& alloc) = 0;
+        [[nodiscard]] virtual wax::ByteBuffer ReadFile(wax::StringView path, comb::DefaultAllocator& alloc) = 0;
 
         [[nodiscard]] virtual bool Exists(wax::StringView path) const = 0;
 
         [[nodiscard]] virtual FileInfo Stat(wax::StringView path) const = 0;
 
-        virtual void ListDirectory(
-            wax::StringView path,
-            wax::Vector<DirectoryEntry>& out,
-            comb::DefaultAllocator& alloc) const = 0;
+        virtual void ListDirectory(wax::StringView path, wax::Vector<DirectoryEntry>& out,
+                                   comb::DefaultAllocator& alloc) const = 0;
     };
-}
+} // namespace nectar

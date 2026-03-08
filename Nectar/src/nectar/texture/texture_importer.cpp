@@ -1,209 +1,226 @@
+#include <nectar/texture/texture_importer.h>
+
 #define STB_IMAGE_IMPLEMENTATION
 #define STBI_NO_STDIO
-#include <stb_image.h>
-
-#include <nectar/texture/texture_importer.h>
-#include <nectar/hive/hive_document.h>
+#include <cstdlib>
 #include <cstring>
+#include <stb_image.h>
 
 namespace nectar
 {
-    wax::Span<const char* const> TextureImporter::SourceExtensions() const
+    namespace
     {
-        static const char* const exts[] = {".png", ".jpg", ".jpeg", ".bmp", ".tga", ".hdr"};
-        return {exts, 6};
-    }
-
-    uint32_t TextureImporter::Version() const { return 2; }
-
-    wax::StringView TextureImporter::TypeName() const { return "Texture"; }
-
-    // Box-filter downscale by half (RGBA)
-    static void DownscaleHalf(const uint8_t* src, uint32_t src_w, uint32_t src_h,
-                               uint8_t* dst, uint32_t channels)
-    {
-        uint32_t dst_w = src_w / 2;
-        uint32_t dst_h = src_h / 2;
-        for (uint32_t y = 0; y < dst_h; ++y)
-        {
-            for (uint32_t x = 0; x < dst_w; ++x)
+        void DownscaleHalf(const uint8_t* src, uint32_t srcW, uint32_t srcH, uint8_t* dst, uint32_t channels) {
+            const uint32_t dstW = srcW / 2;
+            const uint32_t dstH = srcH / 2;
+            for (uint32_t y = 0; y < dstH; ++y)
             {
-                for (uint32_t c = 0; c < channels; ++c)
+                for (uint32_t x = 0; x < dstW; ++x)
                 {
-                    uint32_t sum = 0;
-                    sum += src[((y * 2) * src_w + (x * 2)) * channels + c];
-                    sum += src[((y * 2) * src_w + (x * 2 + 1)) * channels + c];
-                    sum += src[((y * 2 + 1) * src_w + (x * 2)) * channels + c];
-                    sum += src[((y * 2 + 1) * src_w + (x * 2 + 1)) * channels + c];
-                    dst[(y * dst_w + x) * channels + c] = static_cast<uint8_t>(sum / 4);
+                    for (uint32_t c = 0; c < channels; ++c)
+                    {
+                        uint32_t sum = 0;
+                        sum += src[((y * 2) * srcW + (x * 2)) * channels + c];
+                        sum += src[((y * 2) * srcW + (x * 2 + 1)) * channels + c];
+                        sum += src[((y * 2 + 1) * srcW + (x * 2)) * channels + c];
+                        sum += src[((y * 2 + 1) * srcW + (x * 2 + 1)) * channels + c];
+                        dst[(y * dstW + x) * channels + c] = static_cast<uint8_t>(sum / 4);
+                    }
                 }
             }
         }
-    }
 
-    static void FlipVertical(uint8_t* data, uint32_t w, uint32_t h, uint32_t channels)
-    {
-        uint32_t row_bytes = w * channels;
-        for (uint32_t y = 0; y < h / 2; ++y)
-        {
-            uint8_t* row_a = data + y * row_bytes;
-            uint8_t* row_b = data + (h - 1 - y) * row_bytes;
-            for (uint32_t i = 0; i < row_bytes; ++i)
+        void FlipVertical(uint8_t* data, uint32_t width, uint32_t height, uint32_t channels) {
+            const uint32_t rowBytes = width * channels;
+            for (uint32_t y = 0; y < height / 2; ++y)
             {
-                uint8_t tmp = row_a[i];
-                row_a[i] = row_b[i];
-                row_b[i] = tmp;
+                uint8_t* rowA = data + y * rowBytes;
+                uint8_t* rowB = data + (height - 1 - y) * rowBytes;
+                for (uint32_t i = 0; i < rowBytes; ++i)
+                {
+                    const uint8_t tmp = rowA[i];
+                    rowA[i] = rowB[i];
+                    rowB[i] = tmp;
+                }
             }
         }
+    } // namespace
+
+    wax::Span<const char* const> TextureImporter::SourceExtensions() const {
+        static const char* const kExtensions[] = {".png", ".jpg", ".jpeg", ".bmp", ".tga", ".hdr"};
+        return {kExtensions, 6};
     }
 
-    ImportResult TextureImporter::Import(wax::ByteSpan source_data,
-                                          const HiveDocument& settings,
-                                          ImportContext& /*context*/)
-    {
+    uint32_t TextureImporter::Version() const {
+        return 2;
+    }
+
+    wax::StringView TextureImporter::TypeName() const {
+        return "Texture";
+    }
+
+    ImportResult TextureImporter::Import(wax::ByteSpan sourceData, const HiveDocument& settings,
+                                         ImportContext& /*context*/) {
         ImportResult result{};
 
-        // Decode with stb_image — force 4 channels (RGBA)
-        int w = 0, h = 0, original_channels = 0;
-        uint8_t* pixels = stbi_load_from_memory(
-            source_data.Data(), static_cast<int>(source_data.Size()),
-            &w, &h, &original_channels, 4);
+        int widthInt = 0;
+        int heightInt = 0;
+        int originalChannels = 0;
+        uint8_t* pixels = stbi_load_from_memory(sourceData.Data(), static_cast<int>(sourceData.Size()), &widthInt,
+                                                &heightInt, &originalChannels, 4);
 
-        if (!pixels || w <= 0 || h <= 0)
+        if (pixels == nullptr || widthInt <= 0 || heightInt <= 0)
         {
-            if (pixels) stbi_image_free(pixels);
-            result.error_message = wax::String{"Failed to decode image"};
+            if (pixels != nullptr)
+            {
+                stbi_image_free(pixels);
+            }
+            result.m_errorMessage = wax::String{"Failed to decode image"};
             return result;
         }
 
-        uint32_t width = static_cast<uint32_t>(w);
-        uint32_t height = static_cast<uint32_t>(h);
-        constexpr uint32_t channels = 4;
+        uint32_t width = static_cast<uint32_t>(widthInt);
+        uint32_t height = static_cast<uint32_t>(heightInt);
+        constexpr uint32_t kChannels = 4;
 
-        // Read settings
-        bool srgb = settings.GetBool("import", "srgb", true);
-        bool gen_mipmaps = settings.GetBool("import", "generate_mipmaps", true);
-        bool flip_y = settings.GetBool("import", "flip_y", false);
-        int64_t max_size = settings.GetInt("import", "max_size", 0);
+        const bool srgb = settings.GetBool("import", "srgb", true);
+        const bool genMipmaps = settings.GetBool("import", "generate_mipmaps", true);
+        const bool flipY = settings.GetBool("import", "flip_y", false);
+        const int64_t maxSize = settings.GetInt("import", "max_size", 0);
 
-        // Flip Y
-        if (flip_y)
-            FlipVertical(pixels, width, height, channels);
+        if (flipY)
+        {
+            FlipVertical(pixels, width, height, kChannels);
+        }
 
-        // Downscale to max_size (halve until within bounds)
         uint8_t* current = pixels;
-        uint32_t cur_w = width, cur_h = height;
+        uint32_t currentWidth = width;
+        uint32_t currentHeight = height;
         uint8_t* downscaled = nullptr;
 
-        if (max_size > 0)
+        if (maxSize > 0)
         {
-            while (cur_w > static_cast<uint32_t>(max_size) ||
-                   cur_h > static_cast<uint32_t>(max_size))
+            while (currentWidth > static_cast<uint32_t>(maxSize) || currentHeight > static_cast<uint32_t>(maxSize))
             {
-                if (cur_w < 2 || cur_h < 2) break;
+                if (currentWidth < 2 || currentHeight < 2)
+                {
+                    break;
+                }
 
-                uint32_t new_w = cur_w / 2;
-                uint32_t new_h = cur_h / 2;
-                auto* dst = static_cast<uint8_t*>(std::malloc(new_w * new_h * channels));
-                DownscaleHalf(current, cur_w, cur_h, dst, channels);
+                const uint32_t newWidth = currentWidth / 2;
+                const uint32_t newHeight = currentHeight / 2;
+                auto* dst = static_cast<uint8_t*>(std::malloc(newWidth * newHeight * kChannels));
+                if (dst == nullptr)
+                {
+                    stbi_image_free(pixels);
+                    if (downscaled != nullptr)
+                    {
+                        std::free(downscaled);
+                    }
+                    result.m_errorMessage = wax::String{"Failed to allocate downscale buffer"};
+                    return result;
+                }
 
-                if (downscaled) std::free(downscaled);
+                DownscaleHalf(current, currentWidth, currentHeight, dst, kChannels);
+
+                if (downscaled != nullptr)
+                {
+                    std::free(downscaled);
+                }
                 downscaled = dst;
                 current = dst;
-                cur_w = new_w;
-                cur_h = new_h;
+                currentWidth = newWidth;
+                currentHeight = newHeight;
             }
         }
 
-        width = cur_w;
-        height = cur_h;
+        width = currentWidth;
+        height = currentHeight;
 
-        // Count mip levels
-        uint8_t mip_count = 1;
-        if (gen_mipmaps)
+        uint8_t mipCount = 1;
+        if (genMipmaps)
         {
-            uint32_t mw = width, mh = height;
-            while (mw > 1 || mh > 1)
+            uint32_t mipWidth = width;
+            uint32_t mipHeight = height;
+            while (mipWidth > 1 || mipHeight > 1)
             {
-                mw = (mw > 1) ? mw / 2 : 1;
-                mh = (mh > 1) ? mh / 2 : 1;
-                ++mip_count;
+                mipWidth = (mipWidth > 1) ? mipWidth / 2 : 1;
+                mipHeight = (mipHeight > 1) ? mipHeight / 2 : 1;
+                ++mipCount;
             }
         }
 
-        // Build NTEX blob
         NtexHeader header{};
-        header.width = width;
-        header.height = height;
-        header.channels = channels;
-        header.format = PixelFormat::RGBA8;
-        header.srgb = srgb;
-        header.mip_count = mip_count;
+        header.m_width = width;
+        header.m_height = height;
+        header.m_channels = kChannels;
+        header.m_format = PixelFormat::RGBA8;
+        header.m_srgb = srgb;
+        header.m_mipCount = mipCount;
 
-        // Compute total pixel data size
-        size_t total_pixel_bytes = 0;
+        size_t totalPixelBytes = 0;
         {
-            uint32_t mw = width, mh = height;
-            for (uint8_t i = 0; i < mip_count; ++i)
+            uint32_t mipWidth = width;
+            uint32_t mipHeight = height;
+            for (uint8_t i = 0; i < mipCount; ++i)
             {
-                total_pixel_bytes += mw * mh * channels;
-                mw = (mw > 1) ? mw / 2 : 1;
-                mh = (mh > 1) ? mh / 2 : 1;
+                totalPixelBytes += static_cast<size_t>(mipWidth) * mipHeight * kChannels;
+                mipWidth = (mipWidth > 1) ? mipWidth / 2 : 1;
+                mipHeight = (mipHeight > 1) ? mipHeight / 2 : 1;
             }
         }
 
-        size_t header_size = sizeof(NtexHeader);
-        size_t mip_table_size = sizeof(TextureMipLevel) * mip_count;
-        size_t total_size = header_size + mip_table_size + total_pixel_bytes;
+        const size_t headerSize = sizeof(NtexHeader);
+        const size_t mipTableSize = sizeof(TextureMipLevel) * mipCount;
+        const size_t totalSize = headerSize + mipTableSize + totalPixelBytes;
 
-        result.intermediate_data.Resize(total_size);
-        uint8_t* blob = result.intermediate_data.Data();
+        result.m_intermediateData.Resize(totalSize);
+        uint8_t* blob = result.m_intermediateData.Data();
 
-        // Write header
-        std::memcpy(blob, &header, header_size);
-        size_t offset = header_size;
+        std::memcpy(blob, &header, headerSize);
+        size_t offset = headerSize;
 
-        // Build mip table and pixel data
-        auto* mip_table = reinterpret_cast<TextureMipLevel*>(blob + offset);
-        offset += mip_table_size;
+        auto* mipTable = reinterpret_cast<TextureMipLevel*>(blob + offset);
+        offset += mipTableSize;
 
-        // Mip 0 = the (potentially downscaled) base image
-        uint32_t mip_data_offset = 0;
-        size_t base_size = static_cast<size_t>(width) * height * channels;
-        mip_table[0] = TextureMipLevel{width, height, 0, static_cast<uint32_t>(base_size)};
-        std::memcpy(blob + offset, current, base_size);
+        uint32_t mipDataOffset = 0;
+        const size_t baseSize = static_cast<size_t>(width) * height * kChannels;
+        mipTable[0] = TextureMipLevel{width, height, 0, static_cast<uint32_t>(baseSize)};
+        std::memcpy(blob + offset, current, baseSize);
+        mipDataOffset += static_cast<uint32_t>(baseSize);
 
-        mip_data_offset += static_cast<uint32_t>(base_size);
-
-        // Generate remaining mip levels
-        if (mip_count > 1)
+        if (mipCount > 1)
         {
             const uint8_t* prev = current;
-            uint32_t prev_w = width, prev_h = height;
+            uint32_t prevWidth = width;
+            uint32_t prevHeight = height;
 
-            for (uint8_t m = 1; m < mip_count; ++m)
+            for (uint8_t mipIndex = 1; mipIndex < mipCount; ++mipIndex)
             {
-                uint32_t new_w = (prev_w > 1) ? prev_w / 2 : 1;
-                uint32_t new_h = (prev_h > 1) ? prev_h / 2 : 1;
-                size_t mip_size = static_cast<size_t>(new_w) * new_h * channels;
+                const uint32_t newWidth = (prevWidth > 1) ? prevWidth / 2 : 1;
+                const uint32_t newHeight = (prevHeight > 1) ? prevHeight / 2 : 1;
+                const size_t mipSize = static_cast<size_t>(newWidth) * newHeight * kChannels;
 
-                uint8_t* mip_dst = blob + offset + mip_data_offset;
-                DownscaleHalf(prev, prev_w, prev_h, mip_dst, channels);
+                uint8_t* mipDst = blob + offset + mipDataOffset;
+                DownscaleHalf(prev, prevWidth, prevHeight, mipDst, kChannels);
 
-                mip_table[m] = TextureMipLevel{new_w, new_h, mip_data_offset,
-                                                static_cast<uint32_t>(mip_size)};
-                mip_data_offset += static_cast<uint32_t>(mip_size);
+                mipTable[mipIndex] =
+                    TextureMipLevel{newWidth, newHeight, mipDataOffset, static_cast<uint32_t>(mipSize)};
+                mipDataOffset += static_cast<uint32_t>(mipSize);
 
-                prev = mip_dst;
-                prev_w = new_w;
-                prev_h = new_h;
+                prev = mipDst;
+                prevWidth = newWidth;
+                prevHeight = newHeight;
             }
         }
 
         stbi_image_free(pixels);
-        if (downscaled) std::free(downscaled);
+        if (downscaled != nullptr)
+        {
+            std::free(downscaled);
+        }
 
-        result.success = true;
+        result.m_success = true;
         return result;
     }
-}
+} // namespace nectar

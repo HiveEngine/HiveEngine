@@ -11,22 +11,20 @@ namespace queen
      */
     enum class FieldFlag : uint32_t
     {
-        None     = 0,
-        Hidden   = 1 << 0,   // Not shown in inspector
-        ReadOnly = 1 << 1,   // Shown but not editable
-        Color    = 1 << 2,   // Display as color picker (Float3/Float4)
-        Angle    = 1 << 3,   // Display in degrees (stored as radians)
-        FilePath = 1 << 4,   // Display file browser dialog
-        NoDelta  = 1 << 5,   // Excluded from network delta compression
+        NONE = 0,
+        HIDDEN = 1 << 0,    // Not shown in inspector
+        READ_ONLY = 1 << 1, // Shown but not editable
+        COLOR = 1 << 2,     // Display as color picker (Float3/Float4)
+        ANGLE = 1 << 3,     // Display in degrees (stored as radians)
+        FILE_PATH = 1 << 4, // Display file browser dialog
+        NO_DELTA = 1 << 5,  // Excluded from network delta compression
     };
 
-    [[nodiscard]] constexpr FieldFlag operator|(FieldFlag a, FieldFlag b) noexcept
-    {
+    [[nodiscard]] constexpr FieldFlag operator|(FieldFlag a, FieldFlag b) noexcept {
         return static_cast<FieldFlag>(static_cast<uint32_t>(a) | static_cast<uint32_t>(b));
     }
 
-    [[nodiscard]] constexpr FieldFlag operator&(FieldFlag a, FieldFlag b) noexcept
-    {
+    [[nodiscard]] constexpr FieldFlag operator&(FieldFlag a, FieldFlag b) noexcept {
         return static_cast<FieldFlag>(static_cast<uint32_t>(a) & static_cast<uint32_t>(b));
     }
 
@@ -40,22 +38,18 @@ namespace queen
      */
     struct FieldAttributes
     {
-        float min = 0.f;
-        float max = 0.f;
-        float step = 0.f;
-        const char* tooltip = nullptr;
-        const char* category = nullptr;
-        const char* display_name = nullptr;
-        uint32_t flags = 0;
+        float m_min = 0.f;
+        float m_max = 0.f;
+        float m_step = 0.f;
+        const char* m_tooltip = nullptr;
+        const char* m_category = nullptr;
+        const char* m_displayName = nullptr;
+        uint32_t m_flags = 0;
 
-        [[nodiscard]] constexpr bool HasRange() const noexcept
-        {
-            return min != max;
-        }
+        [[nodiscard]] constexpr bool HasRange() const noexcept { return m_min != m_max; }
 
-        [[nodiscard]] constexpr bool HasFlag(FieldFlag flag) const noexcept
-        {
-            return (flags & static_cast<uint32_t>(flag)) != 0;
+        [[nodiscard]] constexpr bool HasFlag(FieldFlag flag) const noexcept {
+            return (m_flags & static_cast<uint32_t>(flag)) != 0;
         }
     };
-}
+} // namespace queen

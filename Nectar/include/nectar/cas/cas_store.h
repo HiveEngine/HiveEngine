@@ -1,11 +1,13 @@
 #pragma once
 
-#include <nectar/core/content_hash.h>
-#include <wax/serialization/byte_buffer.h>
-#include <wax/serialization/byte_span.h>
+#include <comb/default_allocator.h>
+
 #include <wax/containers/string.h>
 #include <wax/containers/string_view.h>
-#include <comb/default_allocator.h>
+#include <wax/serialization/byte_buffer.h>
+#include <wax/serialization/byte_span.h>
+
+#include <nectar/core/content_hash.h>
 
 namespace nectar
 {
@@ -15,7 +17,7 @@ namespace nectar
     class CasStore
     {
     public:
-        CasStore(comb::DefaultAllocator& alloc, wax::StringView root_dir);
+        CasStore(comb::DefaultAllocator& alloc, wax::StringView rootDir);
 
         /// Store a blob. Returns its ContentHash.
         /// If the blob already exists (same hash), this is a no-op.
@@ -34,9 +36,9 @@ namespace nectar
 
     private:
         void BuildBlobPath(ContentHash hash, wax::String& out) const;
-        void EnsureDirectoryExists(wax::StringView dir_path) const;
+        void EnsureDirectoryExists(wax::StringView dirPath) const;
 
-        comb::DefaultAllocator* alloc_;
-        wax::String root_dir_;
+        comb::DefaultAllocator* m_alloc;
+        wax::String m_rootDir;
     };
-}
+} // namespace nectar

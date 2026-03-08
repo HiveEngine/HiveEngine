@@ -1,5 +1,7 @@
-#include <larvae/larvae.h>
 #include <wax/vector_types.h>
+
+#include <larvae/larvae.h>
+
 #include <vector>
 
 namespace
@@ -318,4 +320,4 @@ namespace
 
         state.SetItemsProcessed(state.iterations() * 1000);
     });
-}
+} // namespace

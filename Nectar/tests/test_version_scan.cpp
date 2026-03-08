@@ -1,35 +1,36 @@
 #define _CRT_SECURE_NO_WARNINGS
-#include <larvae/larvae.h>
+#include <comb/default_allocator.h>
+
+#include <nectar/cas/cas_store.h>
 #include <nectar/core/asset_blob_header.h>
+#include <nectar/database/asset_database.h>
+#include <nectar/pipeline/asset_importer.h>
 #include <nectar/pipeline/import_pipeline.h>
 #include <nectar/pipeline/importer_registry.h>
-#include <nectar/pipeline/asset_importer.h>
-#include <nectar/cas/cas_store.h>
-#include <nectar/vfs/virtual_filesystem.h>
 #include <nectar/vfs/memory_mount.h>
-#include <nectar/database/asset_database.h>
-#include <comb/default_allocator.h>
-#include <cstring>
+#include <nectar/vfs/virtual_filesystem.h>
+
+#include <larvae/larvae.h>
+
 #include <cstdio>
+#include <cstring>
 #include <filesystem>
 
-namespace {
+namespace
+{
 
-    auto& GetVScanAlloc()
-    {
+    auto& GetVScanAlloc() {
         static comb::ModuleAllocator alloc{"TestVersionScan", 8 * 1024 * 1024};
         return alloc.Get();
     }
 
-    nectar::AssetId MakeId(uint64_t v)
-    {
+    nectar::AssetId MakeId(uint64_t v) {
         uint8_t bytes[16] = {};
         std::memcpy(bytes, &v, sizeof(v));
         return nectar::AssetId::FromBytes(bytes);
     }
 
-    const char* CasRoot()
-    {
+    const char* CasRoot() {
 #ifdef _WIN32
         return "test_vscan_cas";
 #else
@@ -37,8 +38,7 @@ namespace {
 #endif
     }
 
-    void CleanupCas()
-    {
+    void CleanupCas() {
         std::error_code ec;
         std::filesystem::remove_all(CasRoot(), ec);
     }
@@ -49,8 +49,7 @@ namespace {
     public:
         uint32_t ver{1};
 
-        wax::Span<const char* const> SourceExtensions() const override
-        {
+        wax::Span<const char* const> SourceExtensions() const override {
             static const char* const exts[] = {".test"};
             return wax::Span<const char* const>{exts, 1};
         }
@@ -58,13 +57,11 @@ namespace {
         uint32_t Version() const override { return ver; }
         wax::StringView TypeName() const override { return "TestAsset"; }
 
-        nectar::ImportResult Import(wax::ByteSpan source,
-                                     const nectar::HiveDocument&,
-                                     nectar::ImportContext&) override
-        {
+        nectar::ImportResult Import(wax::ByteSpan source, const nectar::HiveDocument&,
+                                    nectar::ImportContext&) override {
             nectar::ImportResult r{};
-            r.success = true;
-            r.intermediate_data.Append(source.Data(), source.Size());
+            r.m_success = true;
+            r.m_intermediateData.Append(source.Data(), source.Size());
             return r;
         }
     };
@@ -89,8 +86,7 @@ namespace {
             , db{a}
             , importer{}
             , registry{a}
-            , pipeline{a, registry, cas, vfs, db}
-        {
+            , pipeline{a, registry, cas, vfs, db} {
             CleanupCas();
             registry.Register(&importer);
             vfs.Mount("", &mem);
@@ -98,18 +94,15 @@ namespace {
 
         ~PipelineFixture() { CleanupCas(); }
 
-        void AddFile(const char* path, const char* data)
-        {
-            mem.AddFile(path, wax::ByteSpan{
-                reinterpret_cast<const uint8_t*>(data), std::strlen(data)});
+        void AddFile(const char* path, const char* data) {
+            mem.AddFile(path, wax::ByteSpan{reinterpret_cast<const uint8_t*>(data), std::strlen(data)});
         }
 
-        bool Import(uint64_t id, const char* path)
-        {
+        bool Import(uint64_t id, const char* path) {
             nectar::ImportRequest req;
-            req.source_path = path;
-            req.asset_id = MakeId(id);
-            return pipeline.ImportAsset(req).success;
+            req.m_sourcePath = path;
+            req.m_assetId = MakeId(id);
+            return pipeline.ImportAsset(req).m_success;
         }
     };
 
@@ -225,8 +218,7 @@ namespace {
         auto& alloc = GetVScanAlloc();
 
         const char* payload_str = "test payload data 12345";
-        wax::ByteSpan payload{reinterpret_cast<const uint8_t*>(payload_str),
-                              std::strlen(payload_str)};
+        wax::ByteSpan payload{reinterpret_cast<const uint8_t*>(payload_str), std::strlen(payload_str)};
 
         constexpr uint32_t kMagic = 0x54455354; // "TEST"
 

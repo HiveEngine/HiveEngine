@@ -1,13 +1,27 @@
-#include <larvae/larvae.h>
 #include <queen/query/query_term.h>
+
+#include <larvae/larvae.h>
 
 namespace
 {
-    struct Position { float x, y, z; };
-    struct Velocity { float dx, dy, dz; };
-    struct Health { int current, max; };
-    struct Player {};
-    struct Dead {};
+    struct Position
+    {
+        float x, y, z;
+    };
+    struct Velocity
+    {
+        float dx, dy, dz;
+    };
+    struct Health
+    {
+        int current, max;
+    };
+    struct Player
+    {
+    };
+    struct Dead
+    {
+    };
 
     // ─────────────────────────────────────────────────────────────
     // Term struct tests
@@ -17,26 +31,23 @@ namespace
         queen::Term term = queen::Term::Create<Position>();
 
         larvae::AssertTrue(term.IsValid());
-        larvae::AssertEqual(term.type_id, queen::TypeIdOf<Position>());
-        larvae::AssertEqual(static_cast<int>(term.op), static_cast<int>(queen::TermOperator::With));
-        larvae::AssertEqual(static_cast<int>(term.access), static_cast<int>(queen::TermAccess::Read));
+        larvae::AssertEqual(term.m_typeId, queen::TypeIdOf<Position>());
+        larvae::AssertEqual(static_cast<int>(term.m_op), static_cast<int>(queen::TermOperator::WITH));
+        larvae::AssertEqual(static_cast<int>(term.m_access), static_cast<int>(queen::TermAccess::READ));
     });
 
     auto test2 = larvae::RegisterTest("QueenQueryTerm", "TermCreateWithOptions", []() {
-        queen::Term term = queen::Term::Create<Velocity>(
-            queen::TermOperator::Without,
-            queen::TermAccess::None
-        );
+        queen::Term term = queen::Term::Create<Velocity>(queen::TermOperator::WITHOUT, queen::TermAccess::NONE);
 
         larvae::AssertTrue(term.IsValid());
-        larvae::AssertEqual(term.type_id, queen::TypeIdOf<Velocity>());
+        larvae::AssertEqual(term.m_typeId, queen::TypeIdOf<Velocity>());
         larvae::AssertTrue(term.IsExcluded());
         larvae::AssertFalse(term.HasDataAccess());
     });
 
     auto test3 = larvae::RegisterTest("QueenQueryTerm", "TermIsRequired", []() {
-        queen::Term with = queen::Term::Create<Position>(queen::TermOperator::With);
-        queen::Term without = queen::Term::Create<Position>(queen::TermOperator::Without);
+        queen::Term with = queen::Term::Create<Position>(queen::TermOperator::WITH);
+        queen::Term without = queen::Term::Create<Position>(queen::TermOperator::WITHOUT);
         queen::Term optional = queen::Term::Create<Position>(queen::TermOperator::Optional);
 
         larvae::AssertTrue(with.IsRequired());
@@ -45,15 +56,15 @@ namespace
     });
 
     auto test4 = larvae::RegisterTest("QueenQueryTerm", "TermIsExcluded", []() {
-        queen::Term with = queen::Term::Create<Position>(queen::TermOperator::With);
-        queen::Term without = queen::Term::Create<Position>(queen::TermOperator::Without);
+        queen::Term with = queen::Term::Create<Position>(queen::TermOperator::WITH);
+        queen::Term without = queen::Term::Create<Position>(queen::TermOperator::WITHOUT);
 
         larvae::AssertFalse(with.IsExcluded());
         larvae::AssertTrue(without.IsExcluded());
     });
 
     auto test5 = larvae::RegisterTest("QueenQueryTerm", "TermIsOptional", []() {
-        queen::Term with = queen::Term::Create<Position>(queen::TermOperator::With);
+        queen::Term with = queen::Term::Create<Position>(queen::TermOperator::WITH);
         queen::Term optional = queen::Term::Create<Position>(queen::TermOperator::Optional);
 
         larvae::AssertFalse(with.IsOptional());
@@ -61,9 +72,9 @@ namespace
     });
 
     auto test6 = larvae::RegisterTest("QueenQueryTerm", "TermAccessModes", []() {
-        queen::Term read = queen::Term::Create<Position>(queen::TermOperator::With, queen::TermAccess::Read);
-        queen::Term write = queen::Term::Create<Position>(queen::TermOperator::With, queen::TermAccess::Write);
-        queen::Term none = queen::Term::Create<Position>(queen::TermOperator::With, queen::TermAccess::None);
+        queen::Term read = queen::Term::Create<Position>(queen::TermOperator::WITH, queen::TermAccess::READ);
+        queen::Term write = queen::Term::Create<Position>(queen::TermOperator::WITH, queen::TermAccess::WRITE);
+        queen::Term none = queen::Term::Create<Position>(queen::TermOperator::WITH, queen::TermAccess::NONE);
 
         larvae::AssertTrue(read.IsReadOnly());
         larvae::AssertFalse(read.IsWritable());
@@ -85,9 +96,9 @@ namespace
     auto test7 = larvae::RegisterTest("QueenQueryTerm", "ReadWrapper", []() {
         using ReadPos = queen::Read<Position>;
 
-        larvae::AssertEqual(ReadPos::type_id, queen::TypeIdOf<Position>());
-        larvae::AssertEqual(static_cast<int>(ReadPos::op), static_cast<int>(queen::TermOperator::With));
-        larvae::AssertEqual(static_cast<int>(ReadPos::access), static_cast<int>(queen::TermAccess::Read));
+        larvae::AssertEqual(ReadPos::typeId, queen::TypeIdOf<Position>());
+        larvae::AssertEqual(static_cast<int>(ReadPos::op), static_cast<int>(queen::TermOperator::WITH));
+        larvae::AssertEqual(static_cast<int>(ReadPos::access), static_cast<int>(queen::TermAccess::READ));
 
         queen::Term term = ReadPos::ToTerm();
         larvae::AssertTrue(term.IsValid());
@@ -102,9 +113,9 @@ namespace
     auto test8 = larvae::RegisterTest("QueenQueryTerm", "WriteWrapper", []() {
         using WriteVel = queen::Write<Velocity>;
 
-        larvae::AssertEqual(WriteVel::type_id, queen::TypeIdOf<Velocity>());
-        larvae::AssertEqual(static_cast<int>(WriteVel::op), static_cast<int>(queen::TermOperator::With));
-        larvae::AssertEqual(static_cast<int>(WriteVel::access), static_cast<int>(queen::TermAccess::Write));
+        larvae::AssertEqual(WriteVel::typeId, queen::TypeIdOf<Velocity>());
+        larvae::AssertEqual(static_cast<int>(WriteVel::op), static_cast<int>(queen::TermOperator::WITH));
+        larvae::AssertEqual(static_cast<int>(WriteVel::access), static_cast<int>(queen::TermAccess::WRITE));
 
         queen::Term term = WriteVel::ToTerm();
         larvae::AssertTrue(term.IsWritable());
@@ -118,9 +129,9 @@ namespace
     auto test9 = larvae::RegisterTest("QueenQueryTerm", "WithWrapper", []() {
         using WithPlayer = queen::With<Player>;
 
-        larvae::AssertEqual(WithPlayer::type_id, queen::TypeIdOf<Player>());
-        larvae::AssertEqual(static_cast<int>(WithPlayer::op), static_cast<int>(queen::TermOperator::With));
-        larvae::AssertEqual(static_cast<int>(WithPlayer::access), static_cast<int>(queen::TermAccess::None));
+        larvae::AssertEqual(WithPlayer::typeId, queen::TypeIdOf<Player>());
+        larvae::AssertEqual(static_cast<int>(WithPlayer::op), static_cast<int>(queen::TermOperator::WITH));
+        larvae::AssertEqual(static_cast<int>(WithPlayer::access), static_cast<int>(queen::TermAccess::NONE));
 
         queen::Term term = WithPlayer::ToTerm();
         larvae::AssertTrue(term.IsRequired());
@@ -134,9 +145,9 @@ namespace
     auto test10 = larvae::RegisterTest("QueenQueryTerm", "WithoutWrapper", []() {
         using WithoutDead = queen::Without<Dead>;
 
-        larvae::AssertEqual(WithoutDead::type_id, queen::TypeIdOf<Dead>());
-        larvae::AssertEqual(static_cast<int>(WithoutDead::op), static_cast<int>(queen::TermOperator::Without));
-        larvae::AssertEqual(static_cast<int>(WithoutDead::access), static_cast<int>(queen::TermAccess::None));
+        larvae::AssertEqual(WithoutDead::typeId, queen::TypeIdOf<Dead>());
+        larvae::AssertEqual(static_cast<int>(WithoutDead::op), static_cast<int>(queen::TermOperator::WITHOUT));
+        larvae::AssertEqual(static_cast<int>(WithoutDead::access), static_cast<int>(queen::TermAccess::NONE));
 
         queen::Term term = WithoutDead::ToTerm();
         larvae::AssertTrue(term.IsExcluded());
@@ -150,9 +161,9 @@ namespace
     auto test11 = larvae::RegisterTest("QueenQueryTerm", "MaybeWrapper", []() {
         using MaybeHealth = queen::Maybe<Health>;
 
-        larvae::AssertEqual(MaybeHealth::type_id, queen::TypeIdOf<Health>());
+        larvae::AssertEqual(MaybeHealth::typeId, queen::TypeIdOf<Health>());
         larvae::AssertEqual(static_cast<int>(MaybeHealth::op), static_cast<int>(queen::TermOperator::Optional));
-        larvae::AssertEqual(static_cast<int>(MaybeHealth::access), static_cast<int>(queen::TermAccess::Read));
+        larvae::AssertEqual(static_cast<int>(MaybeHealth::access), static_cast<int>(queen::TermAccess::READ));
 
         queen::Term term = MaybeHealth::ToTerm();
         larvae::AssertTrue(term.IsOptional());
@@ -163,9 +174,9 @@ namespace
     auto test12 = larvae::RegisterTest("QueenQueryTerm", "MaybeWriteWrapper", []() {
         using MaybeWriteHealth = queen::MaybeWrite<Health>;
 
-        larvae::AssertEqual(MaybeWriteHealth::type_id, queen::TypeIdOf<Health>());
+        larvae::AssertEqual(MaybeWriteHealth::typeId, queen::TypeIdOf<Health>());
         larvae::AssertEqual(static_cast<int>(MaybeWriteHealth::op), static_cast<int>(queen::TermOperator::Optional));
-        larvae::AssertEqual(static_cast<int>(MaybeWriteHealth::access), static_cast<int>(queen::TermAccess::Write));
+        larvae::AssertEqual(static_cast<int>(MaybeWriteHealth::access), static_cast<int>(queen::TermAccess::WRITE));
 
         queen::Term term = MaybeWriteHealth::ToTerm();
         larvae::AssertTrue(term.IsOptional());
@@ -177,34 +188,34 @@ namespace
     // ─────────────────────────────────────────────────────────────
 
     auto test13 = larvae::RegisterTest("QueenQueryTerm", "IsQueryTermTrait", []() {
-        larvae::AssertTrue(queen::detail::IsQueryTermV<queen::Read<Position>>);
-        larvae::AssertTrue(queen::detail::IsQueryTermV<queen::Write<Velocity>>);
-        larvae::AssertTrue(queen::detail::IsQueryTermV<queen::With<Player>>);
-        larvae::AssertTrue(queen::detail::IsQueryTermV<queen::Without<Dead>>);
-        larvae::AssertTrue(queen::detail::IsQueryTermV<queen::Maybe<Health>>);
-        larvae::AssertTrue(queen::detail::IsQueryTermV<queen::MaybeWrite<Health>>);
+        larvae::AssertTrue(queen::detail::isQueryTermV<queen::Read<Position>>);
+        larvae::AssertTrue(queen::detail::isQueryTermV<queen::Write<Velocity>>);
+        larvae::AssertTrue(queen::detail::isQueryTermV<queen::With<Player>>);
+        larvae::AssertTrue(queen::detail::isQueryTermV<queen::Without<Dead>>);
+        larvae::AssertTrue(queen::detail::isQueryTermV<queen::Maybe<Health>>);
+        larvae::AssertTrue(queen::detail::isQueryTermV<queen::MaybeWrite<Health>>);
 
-        larvae::AssertFalse(queen::detail::IsQueryTermV<Position>);
-        larvae::AssertFalse(queen::detail::IsQueryTermV<int>);
+        larvae::AssertFalse(queen::detail::isQueryTermV<Position>);
+        larvae::AssertFalse(queen::detail::isQueryTermV<int>);
     });
 
     auto test14 = larvae::RegisterTest("QueenQueryTerm", "HasDataAccessTrait", []() {
-        larvae::AssertTrue(queen::detail::HasDataAccessV<queen::Read<Position>>);
-        larvae::AssertTrue(queen::detail::HasDataAccessV<queen::Write<Velocity>>);
-        larvae::AssertTrue(queen::detail::HasDataAccessV<queen::Maybe<Health>>);
+        larvae::AssertTrue(queen::detail::hasDataAccessV<queen::Read<Position>>);
+        larvae::AssertTrue(queen::detail::hasDataAccessV<queen::Write<Velocity>>);
+        larvae::AssertTrue(queen::detail::hasDataAccessV<queen::Maybe<Health>>);
 
-        larvae::AssertFalse(queen::detail::HasDataAccessV<queen::With<Player>>);
-        larvae::AssertFalse(queen::detail::HasDataAccessV<queen::Without<Dead>>);
+        larvae::AssertFalse(queen::detail::hasDataAccessV<queen::With<Player>>);
+        larvae::AssertFalse(queen::detail::hasDataAccessV<queen::Without<Dead>>);
     });
 
     auto test15 = larvae::RegisterTest("QueenQueryTerm", "IsOptionalTermTrait", []() {
-        larvae::AssertTrue(queen::detail::IsOptionalTermV<queen::Maybe<Health>>);
-        larvae::AssertTrue(queen::detail::IsOptionalTermV<queen::MaybeWrite<Health>>);
+        larvae::AssertTrue(queen::detail::isOptionalTermV<queen::Maybe<Health>>);
+        larvae::AssertTrue(queen::detail::isOptionalTermV<queen::MaybeWrite<Health>>);
 
-        larvae::AssertFalse(queen::detail::IsOptionalTermV<queen::Read<Position>>);
-        larvae::AssertFalse(queen::detail::IsOptionalTermV<queen::Write<Velocity>>);
-        larvae::AssertFalse(queen::detail::IsOptionalTermV<queen::With<Player>>);
-        larvae::AssertFalse(queen::detail::IsOptionalTermV<queen::Without<Dead>>);
+        larvae::AssertFalse(queen::detail::isOptionalTermV<queen::Read<Position>>);
+        larvae::AssertFalse(queen::detail::isOptionalTermV<queen::Write<Velocity>>);
+        larvae::AssertFalse(queen::detail::isOptionalTermV<queen::With<Player>>);
+        larvae::AssertFalse(queen::detail::isOptionalTermV<queen::Without<Dead>>);
     });
 
     // ─────────────────────────────────────────────────────────────
@@ -253,4 +264,4 @@ namespace
 
         larvae::AssertTrue(true);
     });
-}
+} // namespace

@@ -1,34 +1,35 @@
-#include <larvae/larvae.h>
-#include <nectar/database/asset_database.h>
+#include <comb/default_allocator.h>
+
 #include <nectar/core/asset_id.h>
 #include <nectar/core/content_hash.h>
-#include <comb/default_allocator.h>
+#include <nectar/database/asset_database.h>
+
+#include <larvae/larvae.h>
+
 #include <cstring>
 
-namespace {
+namespace
+{
 
-    auto& GetDbAlloc()
-    {
+    auto& GetDbAlloc() {
         static comb::ModuleAllocator alloc{"TestAssetDB", 4 * 1024 * 1024};
         return alloc.Get();
     }
 
-    nectar::AssetId MakeId(uint64_t v)
-    {
+    nectar::AssetId MakeId(uint64_t v) {
         uint8_t bytes[16] = {};
         std::memcpy(bytes, &v, sizeof(v));
         return nectar::AssetId::FromBytes(bytes);
     }
 
-    nectar::AssetRecord MakeRecord(uint64_t id, const char* path, const char* type, const char* name)
-    {
+    nectar::AssetRecord MakeRecord(uint64_t id, const char* path, const char* type, const char* name) {
         auto& alloc = GetDbAlloc();
         nectar::AssetRecord r{};
-        r.uuid = MakeId(id);
-        r.path = wax::String{alloc, path};
-        r.type = wax::String{alloc, type};
-        r.name = wax::String{alloc, name};
-        r.content_hash = nectar::ContentHash::FromData(path, std::strlen(path));
+        r.m_uuid = MakeId(id);
+        r.m_path = wax::String{alloc, path};
+        r.m_type = wax::String{alloc, type};
+        r.m_name = wax::String{alloc, name};
+        r.m_contentHash = nectar::ContentHash::FromData(path, std::strlen(path));
         return r;
     }
 
@@ -45,7 +46,7 @@ namespace {
 
         auto* found = db.FindByUuid(MakeId(1));
         larvae::AssertNotNull(found);
-        larvae::AssertTrue(found->path.View().Equals("textures/hero.png"));
+        larvae::AssertTrue(found->m_path.View().Equals("textures/hero.png"));
     });
 
     auto t2 = larvae::RegisterTest("NectarAssetDB", "FindByPath", []() {
@@ -55,7 +56,7 @@ namespace {
 
         auto* found = db.FindByPath("textures/hero.png");
         larvae::AssertNotNull(found);
-        larvae::AssertTrue(found->uuid == MakeId(1));
+        larvae::AssertTrue(found->m_uuid == MakeId(1));
     });
 
     auto t3 = larvae::RegisterTest("NectarAssetDB", "FindByUuidNotFound", []() {
@@ -127,7 +128,7 @@ namespace {
         larvae::AssertNull(db.FindByPath("old.png"));
         auto* found = db.FindByPath("new.png");
         larvae::AssertNotNull(found);
-        larvae::AssertTrue(found->name.View().Equals("new"));
+        larvae::AssertTrue(found->m_name.View().Equals("new"));
     });
 
     auto t10 = larvae::RegisterTest("NectarAssetDB", "UpdateNonExistent", []() {
@@ -157,12 +158,12 @@ namespace {
         nectar::AssetDatabase db{alloc};
 
         auto r1 = MakeRecord(1, "a.png", "Texture", "a");
-        r1.labels.PushBack(wax::String{alloc, "hero"});
-        r1.labels.PushBack(wax::String{alloc, "character"});
+        r1.m_labels.PushBack(wax::String{alloc, "hero"});
+        r1.m_labels.PushBack(wax::String{alloc, "character"});
         db.Insert(static_cast<nectar::AssetRecord&&>(r1));
 
         auto r2 = MakeRecord(2, "b.png", "Texture", "b");
-        r2.labels.PushBack(wax::String{alloc, "environment"});
+        r2.m_labels.PushBack(wax::String{alloc, "environment"});
         db.Insert(static_cast<nectar::AssetRecord&&>(r2));
 
         wax::Vector<nectar::AssetRecord*> results{alloc};
@@ -196,10 +197,10 @@ namespace {
         db.Insert(MakeRecord(2, "tex.png", "Texture", "tex"));
 
         auto& graph = db.GetDependencyGraph();
-        larvae::AssertTrue(graph.AddEdge(MakeId(1), MakeId(2), nectar::DepKind::Hard));
+        larvae::AssertTrue(graph.AddEdge(MakeId(1), MakeId(2), nectar::DepKind::HARD));
 
         wax::Vector<nectar::AssetId> deps{alloc};
-        graph.GetDependencies(MakeId(1), nectar::DepKind::All, deps);
+        graph.GetDependencies(MakeId(1), nectar::DepKind::ALL, deps);
         larvae::AssertEqual(deps.Size(), size_t{1});
         larvae::AssertTrue(deps[0] == MakeId(2));
     });
@@ -210,7 +211,7 @@ namespace {
         db.Insert(MakeRecord(1, "a.mat", "Material", "a"));
         db.Insert(MakeRecord(2, "b.png", "Texture", "b"));
 
-        db.GetDependencyGraph().AddEdge(MakeId(1), MakeId(2), nectar::DepKind::Hard);
+        db.GetDependencyGraph().AddEdge(MakeId(1), MakeId(2), nectar::DepKind::HARD);
         db.Remove(MakeId(1));
 
         larvae::AssertFalse(db.GetDependencyGraph().HasEdge(MakeId(1), MakeId(2)));
@@ -235,4 +236,4 @@ namespace {
         larvae::AssertEqual(results.Size(), size_t{0});
     });
 
-}
+} // namespace

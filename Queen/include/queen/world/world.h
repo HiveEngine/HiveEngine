@@ -1,28 +1,32 @@
 #pragma once
 
-#include <queen/core/type_id.h>
+#include <hive/core/assert.h>
+#include <hive/profiling/profiler.h>
+
+#include <comb/allocator_concepts.h>
+
+#include <wax/containers/hash_map.h>
+#include <wax/containers/vector.h>
+
+#include <queen/command/commands.h>
+#include <queen/core/component_info.h>
 #include <queen/core/entity.h>
 #include <queen/core/entity_allocator.h>
 #include <queen/core/entity_location.h>
-#include <queen/core/component_info.h>
 #include <queen/core/tick.h>
+#include <queen/core/type_id.h>
+#include <queen/event/events.h>
+#include <queen/hierarchy/hierarchy.h>
+#include <queen/observer/observers.h>
+#include <queen/query/query.h>
+#include <queen/scheduler/parallel_scheduler.h>
+#include <queen/scheduler/scheduler.h>
 #include <queen/storage/archetype.h>
 #include <queen/storage/archetype_graph.h>
 #include <queen/storage/component_index.h>
-#include <queen/query/query.h>
 #include <queen/system/system_storage.h>
-#include <queen/scheduler/scheduler.h>
-#include <queen/scheduler/parallel_scheduler.h>
-#include <queen/command/commands.h>
-#include <queen/event/events.h>
-#include <queen/observer/observers.h>
-#include <queen/hierarchy/hierarchy.h>
 #include <queen/world/world_allocators.h>
-#include <comb/allocator_concepts.h>
-#include <wax/containers/vector.h>
-#include <wax/containers/hash_map.h>
-#include <hive/core/assert.h>
-#include <hive/profiling/profiler.h>
+
 #include <cstring>
 #include <mutex>
 
@@ -30,8 +34,7 @@ namespace queen
 {
     class EntityBuilder;
 
-    template<comb::Allocator Allocator>
-    class CommandBuffer;
+    template <comb::Allocator Allocator> class CommandBuffer;
 
     using PersistentAllocator = comb::BuddyAllocator;
     using ComponentAllocator = comb::BuddyAllocator;
@@ -126,281 +129,244 @@ namespace queen
          * Create World with default allocator configuration
          */
         World()
-            : World(WorldAllocatorConfig{})
-        {
-        }
+            : World(WorldAllocatorConfig{}) {}
 
         /**
          * Create World with custom allocator configuration
          */
         explicit World(const WorldAllocatorConfig& config)
-            : allocators_{
-                config.persistent_size,
-                config.component_size,
-                config.frame_size,
-                config.thread_frame_size,
-                config.thread_count
-            }
-            , entity_allocator_{allocators_.Components()}
-            , entity_locations_{allocators_.Components()}
-            , archetype_graph_{allocators_.Components()}
-            , component_index_{allocators_.Persistent()}
-            , resources_{allocators_.Persistent()}
-            , resource_metas_{allocators_.Persistent()}
-            , systems_{allocators_.Persistent()}
-            , scheduler_{allocators_.Persistent()}
-            , commands_{allocators_.Persistent()}
-            , events_{allocators_.Persistent()}
-            , observers_{allocators_.Persistent()}
-        {
-            component_index_.RegisterArchetype(archetype_graph_.GetEmptyArchetype());
+            : m_allocators{config.m_persistentSize, config.m_componentSize, config.m_frameSize,
+                           config.m_threadFrameSize, config.m_threadCount}
+            , m_entityAllocator{m_allocators.Components()}
+            , m_entityLocations{m_allocators.Components()}
+            , m_archetypeGraph{m_allocators.Components()}
+            , m_componentIndex{m_allocators.Persistent()}
+            , m_resources{m_allocators.Persistent()}
+            , m_resourceMetas{m_allocators.Persistent()}
+            , m_systems{m_allocators.Persistent()}
+            , m_scheduler{m_allocators.Persistent()}
+            , m_commands{m_allocators.Persistent()}
+            , m_events{m_allocators.Persistent()}
+            , m_observers{m_allocators.Persistent()} {
+            m_componentIndex.RegisterArchetype(m_archetypeGraph.GetEmptyArchetype());
         }
 
-        ~World()
-        {
-            if (parallel_scheduler_ != nullptr)
+        ~World() {
+            if (m_parallelScheduler != nullptr)
             {
-                parallel_scheduler_->~ParallelScheduler<PersistentAllocator>();
-                allocators_.Persistent().Deallocate(parallel_scheduler_);
-                parallel_scheduler_ = nullptr;
+                m_parallelScheduler->~ParallelScheduler<PersistentAllocator>();
+                m_allocators.Persistent().Deallocate(m_parallelScheduler);
+                m_parallelScheduler = nullptr;
             }
 
-            for (auto it = resources_.begin(); it != resources_.end(); ++it)
+            for (auto it = m_resources.Begin(); it != m_resources.End(); ++it)
             {
-                TypeId type_id = it.Key();
+                TypeId typeId = it.Key();
                 void* data = it.Value();
 
-                for (size_t i = 0; i < resource_metas_.Size(); ++i)
+                for (size_t i = 0; i < m_resourceMetas.Size(); ++i)
                 {
-                    if (resource_metas_[i].type_id == type_id)
+                    if (m_resourceMetas[i].m_typeId == typeId)
                     {
-                        if (resource_metas_[i].destruct != nullptr)
+                        if (m_resourceMetas[i].m_destruct != nullptr)
                         {
-                            resource_metas_[i].destruct(data);
+                            m_resourceMetas[i].m_destruct(data);
                         }
                         break;
                     }
                 }
 
-                allocators_.Persistent().Deallocate(data);
+                m_allocators.Persistent().Deallocate(data);
             }
         }
 
         World(const World&) = delete;
         World& operator=(const World&) = delete;
-        World(World&&) = delete;  // WorldAllocators contains mutex (not movable)
+        World(World&&) = delete; // WorldAllocators contains mutex (not movable)
         World& operator=(World&&) = delete;
 
         [[nodiscard]] EntityBuilder Spawn();
 
-        template<typename... Components>
-        [[nodiscard]] Entity Spawn(Components&&... components);
+        template <typename... Components> [[nodiscard]] Entity Spawn(Components&&... components);
 
-        void Despawn(Entity entity)
-        {
+        void Despawn(Entity entity) {
             HIVE_PROFILE_SCOPE_N("World::Despawn");
             if (!IsAlive(entity))
             {
                 return;
             }
 
-            EntityRecord* record = entity_locations_.Get(entity);
+            EntityRecord* record = m_entityLocations.Get(entity);
             if (record == nullptr)
             {
                 return;
             }
 
-            Archetype<ComponentAllocator>* archetype = record->archetype;
-            uint32_t row = record->row;
+            Archetype<ComponentAllocator>* archetype = record->m_archetype;
+            uint32_t row = record->m_row;
 
             Entity moved = archetype->FreeRow(row);
 
             if (!moved.IsNull() && !(moved == entity))
             {
-                EntityRecord* moved_record = entity_locations_.Get(moved);
-                if (moved_record != nullptr)
+                EntityRecord* movedRecord = m_entityLocations.Get(moved);
+                if (movedRecord != nullptr)
                 {
-                    moved_record->row = row;
+                    movedRecord->m_row = row;
                 }
             }
 
-            entity_locations_.Remove(entity);
-            entity_allocator_.Deallocate(entity);
+            m_entityLocations.Remove(entity);
+            m_entityAllocator.Deallocate(entity);
         }
 
-        [[nodiscard]] bool IsAlive(Entity entity) const noexcept
-        {
-            return entity_allocator_.IsAlive(entity);
-        }
+        [[nodiscard]] bool IsAlive(Entity entity) const noexcept { return m_entityAllocator.IsAlive(entity); }
 
-        template<typename T>
-        [[nodiscard]] T* Get(Entity entity) noexcept
-        {
+        template <typename T> [[nodiscard]] T* Get(Entity entity) noexcept {
             if (!IsAlive(entity))
             {
                 return nullptr;
             }
 
-            EntityRecord* record = entity_locations_.Get(entity);
-            if (record == nullptr || record->archetype == nullptr)
+            EntityRecord* record = m_entityLocations.Get(entity);
+            if (record == nullptr || record->m_archetype == nullptr)
             {
                 return nullptr;
             }
 
-            return record->archetype->template GetComponent<T>(record->row);
+            return record->m_archetype->template GetComponent<T>(record->m_row);
         }
 
-        template<typename T>
-        [[nodiscard]] const T* Get(Entity entity) const noexcept
-        {
+        template <typename T> [[nodiscard]] const T* Get(Entity entity) const noexcept {
             if (!IsAlive(entity))
             {
                 return nullptr;
             }
 
-            const EntityRecord* record = entity_locations_.Get(entity);
-            if (record == nullptr || record->archetype == nullptr)
+            const EntityRecord* record = m_entityLocations.Get(entity);
+            if (record == nullptr || record->m_archetype == nullptr)
             {
                 return nullptr;
             }
 
-            return record->archetype->template GetComponent<T>(record->row);
+            return record->m_archetype->template GetComponent<T>(record->m_row);
         }
 
-        template<typename T>
-        [[nodiscard]] bool Has(Entity entity) const noexcept
-        {
+        template <typename T> [[nodiscard]] bool Has(Entity entity) const noexcept {
             if (!IsAlive(entity))
             {
                 return false;
             }
 
-            const EntityRecord* record = entity_locations_.Get(entity);
-            if (record == nullptr || record->archetype == nullptr)
+            const EntityRecord* record = m_entityLocations.Get(entity);
+            if (record == nullptr || record->m_archetype == nullptr)
             {
                 return false;
             }
 
-            return record->archetype->template HasComponent<T>();
+            return record->m_archetype->template HasComponent<T>();
         }
 
-        [[nodiscard]] bool HasComponent(Entity entity, TypeId type_id) const noexcept
-        {
+        [[nodiscard]] bool HasComponent(Entity entity, TypeId typeId) const noexcept {
             if (!IsAlive(entity))
             {
                 return false;
             }
 
-            const EntityRecord* record = entity_locations_.Get(entity);
-            if (record == nullptr || record->archetype == nullptr)
+            const EntityRecord* record = m_entityLocations.Get(entity);
+            if (record == nullptr || record->m_archetype == nullptr)
             {
                 return false;
             }
 
-            return record->archetype->HasComponent(type_id);
+            return record->m_archetype->HasComponent(typeId);
         }
 
-        template<typename T>
-        void Add(Entity entity, T&& component)
-        {
+        template <typename T> void Add(Entity entity, T&& component) {
             HIVE_PROFILE_SCOPE_N("World::Add");
             if (!IsAlive(entity))
             {
                 return;
             }
 
-            EntityRecord* record = entity_locations_.Get(entity);
-            if (record == nullptr || record->archetype == nullptr)
+            EntityRecord* record = m_entityLocations.Get(entity);
+            if (record == nullptr || record->m_archetype == nullptr)
             {
                 return;
             }
 
-            Archetype<ComponentAllocator>* old_arch = record->archetype;
+            Archetype<ComponentAllocator>* oldArch = record->m_archetype;
 
-            if (old_arch->template HasComponent<T>())
+            if (oldArch->template HasComponent<T>())
             {
-                old_arch->template SetComponent<T>(record->row, std::forward<T>(component));
-                const T* comp = old_arch->template GetComponent<T>(record->row);
-                observers_.template Trigger<OnSet<T>>(*this, entity, comp);
+                oldArch->template SetComponent<T>(record->m_row, std::forward<T>(component));
+                const T* comp = oldArch->template GetComponent<T>(record->m_row);
+                m_observers.template Trigger<OnSet<T>>(*this, entity, comp);
                 return;
             }
 
-            Archetype<ComponentAllocator>* new_arch = archetype_graph_.template GetOrCreateAddTarget<T>(*old_arch);
+            Archetype<ComponentAllocator>* newArch = m_archetypeGraph.template GetOrCreateAddTarget<T>(*oldArch);
 
-            if (new_arch != old_arch)
+            if (newArch != oldArch)
             {
-                RegisterNewArchetype(new_arch);
+                RegisterNewArchetype(newArch);
             }
 
-            MoveEntity(entity, *record, old_arch, new_arch);
+            MoveEntity(entity, *record, oldArch, newArch);
 
-            new_arch->template SetComponent<T>(record->row, std::forward<T>(component));
+            newArch->template SetComponent<T>(record->m_row, std::forward<T>(component));
 
-            const T* comp = new_arch->template GetComponent<T>(record->row);
-            observers_.template Trigger<OnAdd<T>>(*this, entity, comp);
+            const T* comp = newArch->template GetComponent<T>(record->m_row);
+            m_observers.template Trigger<OnAdd<T>>(*this, entity, comp);
         }
 
-        template<typename T>
-        void Remove(Entity entity)
-        {
+        template <typename T> void Remove(Entity entity) {
             HIVE_PROFILE_SCOPE_N("World::Remove");
             if (!IsAlive(entity))
             {
                 return;
             }
 
-            EntityRecord* record = entity_locations_.Get(entity);
-            if (record == nullptr || record->archetype == nullptr)
+            EntityRecord* record = m_entityLocations.Get(entity);
+            if (record == nullptr || record->m_archetype == nullptr)
             {
                 return;
             }
 
-            Archetype<ComponentAllocator>* old_arch = record->archetype;
+            Archetype<ComponentAllocator>* oldArch = record->m_archetype;
 
-            if (!old_arch->template HasComponent<T>())
+            if (!oldArch->template HasComponent<T>())
             {
                 return;
             }
 
             // Trigger OnRemove observers BEFORE removing (so they can access the data)
-            const T* comp = old_arch->template GetComponent<T>(record->row);
-            observers_.template Trigger<OnRemove<T>>(*this, entity, comp);
+            const T* comp = oldArch->template GetComponent<T>(record->m_row);
+            m_observers.template Trigger<OnRemove<T>>(*this, entity, comp);
 
-            Archetype<ComponentAllocator>* new_arch = archetype_graph_.template GetOrCreateRemoveTarget<T>(*old_arch);
+            Archetype<ComponentAllocator>* newArch = m_archetypeGraph.template GetOrCreateRemoveTarget<T>(*oldArch);
 
-            if (new_arch != old_arch)
+            if (newArch != oldArch)
             {
-                RegisterNewArchetype(new_arch);
+                RegisterNewArchetype(newArch);
             }
 
-            MoveEntity(entity, *record, old_arch, new_arch);
+            MoveEntity(entity, *record, oldArch, newArch);
         }
 
-        template<typename T>
-        void Set(Entity entity, T&& component)
-        {
-            Add<T>(entity, std::forward<T>(component));
-        }
+        template <typename T> void Set(Entity entity, T&& component) { Add<T>(entity, std::forward<T>(component)); }
 
-        [[nodiscard]] size_t EntityCount() const noexcept
-        {
-            return entity_allocator_.AliveCount();
-        }
+        [[nodiscard]] size_t EntityCount() const noexcept { return m_entityAllocator.AliveCount(); }
 
-        [[nodiscard]] size_t ArchetypeCount() const noexcept
-        {
-            return archetype_graph_.ArchetypeCount();
-        }
+        [[nodiscard]] size_t ArchetypeCount() const noexcept { return m_archetypeGraph.ArchetypeCount(); }
 
         /**
          * Iterate over all non-empty archetypes
          *
          * @param callback Called for each archetype that contains at least one entity
          */
-        template<typename F>
-        void ForEachArchetype(F&& callback) const
-        {
-            const auto& archetypes = archetype_graph_.GetArchetypes();
+        template <typename F> void ForEachArchetype(F&& callback) const {
+            const auto& archetypes = m_archetypeGraph.GetArchetypes();
             for (size_t i = 0; i < archetypes.Size(); ++i)
             {
                 if (archetypes[i]->EntityCount() > 0)
@@ -415,14 +381,15 @@ namespace queen
          *
          * @return Pointer to component data, or nullptr if entity doesn't have that component
          */
-        [[nodiscard]] void* GetComponentRaw(Entity entity, TypeId type_id) noexcept
-        {
-            if (!IsAlive(entity)) return nullptr;
+        [[nodiscard]] void* GetComponentRaw(Entity entity, TypeId typeId) noexcept {
+            if (!IsAlive(entity))
+                return nullptr;
 
-            EntityRecord* record = entity_locations_.Get(entity);
-            if (record == nullptr || record->archetype == nullptr) return nullptr;
+            EntityRecord* record = m_entityLocations.Get(entity);
+            if (record == nullptr || record->m_archetype == nullptr)
+                return nullptr;
 
-            return record->archetype->GetComponentRaw(record->row, type_id);
+            return record->m_archetype->GetComponentRaw(record->m_row, typeId);
         }
 
         /**
@@ -431,13 +398,13 @@ namespace queen
          * Callback receives each TypeId in the entity's archetype.
          * Useful for generic inspection (editor, serialization).
          */
-        template<typename F>
-        void ForEachComponentType(Entity entity, F&& callback) const
-        {
-            if (!IsAlive(entity)) return;
-            const EntityRecord* record = entity_locations_.Get(entity);
-            if (record == nullptr || record->archetype == nullptr) return;
-            const auto& types = record->archetype->GetComponentTypes();
+        template <typename F> void ForEachComponentType(Entity entity, F&& callback) const {
+            if (!IsAlive(entity))
+                return;
+            const EntityRecord* record = m_entityLocations.Get(entity);
+            if (record == nullptr || record->m_archetype == nullptr)
+                return;
+            const auto& types = record->m_archetype->GetComponentTypes();
             for (size_t i = 0; i < types.Size(); ++i)
                 callback(types[i]);
         }
@@ -446,13 +413,11 @@ namespace queen
         // Resources (global singletons)
         // ─────────────────────────────────────────────────────────────
 
-        template<typename T>
-        void InsertResource(T&& resource)
-        {
+        template <typename T> void InsertResource(T&& resource) {
             using DecayedT = std::decay_t<T>;
-            TypeId type_id = TypeIdOf<DecayedT>();
+            TypeId typeId = TypeIdOf<DecayedT>();
 
-            void** existing = resources_.Find(type_id);
+            void** existing = m_resources.Find(typeId);
             if (existing != nullptr)
             {
                 auto* typed = static_cast<DecayedT*>(*existing);
@@ -460,21 +425,19 @@ namespace queen
                 return;
             }
 
-            void* data = allocators_.Persistent().Allocate(sizeof(DecayedT), alignof(DecayedT));
+            void* data = m_allocators.Persistent().Allocate(sizeof(DecayedT), alignof(DecayedT));
             hive::Assert(data != nullptr, "Failed to allocate resource");
 
             new (data) DecayedT{std::forward<T>(resource)};
 
-            resources_.Insert(type_id, data);
-            resource_metas_.PushBack(ComponentMeta::Of<DecayedT>());
+            m_resources.Insert(typeId, data);
+            m_resourceMetas.PushBack(ComponentMeta::Of<DecayedT>());
         }
 
-        template<typename T>
-        [[nodiscard]] T* Resource() noexcept
-        {
-            TypeId type_id = TypeIdOf<T>();
+        template <typename T> [[nodiscard]] T* Resource() noexcept {
+            TypeId typeId = TypeIdOf<T>();
 
-            void** found = resources_.Find(type_id);
+            void** found = m_resources.Find(typeId);
             if (found == nullptr)
             {
                 return nullptr;
@@ -483,12 +446,10 @@ namespace queen
             return static_cast<T*>(*found);
         }
 
-        template<typename T>
-        [[nodiscard]] const T* Resource() const noexcept
-        {
-            TypeId type_id = TypeIdOf<T>();
+        template <typename T> [[nodiscard]] const T* Resource() const noexcept {
+            TypeId typeId = TypeIdOf<T>();
 
-            void* const* found = resources_.Find(type_id);
+            void* const* found = m_resources.Find(typeId);
             if (found == nullptr)
             {
                 return nullptr;
@@ -497,19 +458,15 @@ namespace queen
             return static_cast<const T*>(*found);
         }
 
-        template<typename T>
-        [[nodiscard]] bool HasResource() const noexcept
-        {
-            TypeId type_id = TypeIdOf<T>();
-            return resources_.Contains(type_id);
+        template <typename T> [[nodiscard]] bool HasResource() const noexcept {
+            TypeId typeId = TypeIdOf<T>();
+            return m_resources.Contains(typeId);
         }
 
-        template<typename T>
-        void RemoveResource()
-        {
-            TypeId type_id = TypeIdOf<T>();
+        template <typename T> void RemoveResource() {
+            TypeId typeId = TypeIdOf<T>();
 
-            void** found = resources_.Find(type_id);
+            void** found = m_resources.Find(typeId);
             if (found == nullptr)
             {
                 return;
@@ -517,88 +474,63 @@ namespace queen
 
             void* data = *found;
 
-            for (size_t i = 0; i < resource_metas_.Size(); ++i)
+            for (size_t i = 0; i < m_resourceMetas.Size(); ++i)
             {
-                if (resource_metas_[i].type_id == type_id)
+                if (m_resourceMetas[i].m_typeId == typeId)
                 {
-                    if (resource_metas_[i].destruct != nullptr)
+                    if (m_resourceMetas[i].m_destruct != nullptr)
                     {
-                        resource_metas_[i].destruct(data);
+                        m_resourceMetas[i].m_destruct(data);
                     }
 
-                    if (i < resource_metas_.Size() - 1)
+                    if (i < m_resourceMetas.Size() - 1)
                     {
-                        resource_metas_[i] = resource_metas_[resource_metas_.Size() - 1];
+                        m_resourceMetas[i] = m_resourceMetas[m_resourceMetas.Size() - 1];
                     }
-                    resource_metas_.PopBack();
+                    m_resourceMetas.PopBack();
                     break;
                 }
             }
 
-            allocators_.Persistent().Deallocate(data);
-            resources_.Remove(type_id);
+            m_allocators.Persistent().Deallocate(data);
+            m_resources.Remove(typeId);
         }
 
-        [[nodiscard]] size_t ResourceCount() const noexcept
-        {
-            return resources_.Count();
-        }
+        [[nodiscard]] size_t ResourceCount() const noexcept { return m_resources.Count(); }
 
         // ─────────────────────────────────────────────────────────────
         // Allocator Access
         // ─────────────────────────────────────────────────────────────
 
-        [[nodiscard]] WorldAllocators& GetAllocators() noexcept
-        {
-            return allocators_;
-        }
+        [[nodiscard]] WorldAllocators& GetAllocators() noexcept { return m_allocators; }
 
-        [[nodiscard]] const WorldAllocators& GetAllocators() const noexcept
-        {
-            return allocators_;
-        }
+        [[nodiscard]] const WorldAllocators& GetAllocators() const noexcept { return m_allocators; }
 
         /**
          * Get the persistent allocator (for long-lived metadata)
          */
-        [[nodiscard]] PersistentAllocator& GetPersistentAllocator() noexcept
-        {
-            return allocators_.Persistent();
-        }
+        [[nodiscard]] PersistentAllocator& GetPersistentAllocator() noexcept { return m_allocators.Persistent(); }
 
         /**
          * Get the component allocator (for entity data)
          */
-        [[nodiscard]] ComponentAllocator& GetComponentAllocator() noexcept
-        {
-            return allocators_.Components();
-        }
+        [[nodiscard]] ComponentAllocator& GetComponentAllocator() noexcept { return m_allocators.Components(); }
 
         /**
          * Get the frame allocator (for per-frame temporary data)
          */
-        [[nodiscard]] FrameAllocator& GetFrameAllocator() noexcept
-        {
-            return allocators_.Frame();
-        }
+        [[nodiscard]] FrameAllocator& GetFrameAllocator() noexcept { return m_allocators.Frame(); }
 
         /**
          * Get a thread-local allocator for parallel execution
          */
-        [[nodiscard]] FrameAllocator& GetThreadAllocator(size_t thread_index) noexcept
-        {
-            return allocators_.ThreadFrame(thread_index);
+        [[nodiscard]] FrameAllocator& GetThreadAllocator(size_t threadIndex) noexcept {
+            return m_allocators.ThreadFrame(threadIndex);
         }
 
-        [[nodiscard]] ArchetypeGraph<ComponentAllocator>& GetArchetypeGraph() noexcept
-        {
-            return archetype_graph_;
-        }
+        [[nodiscard]] ArchetypeGraph<ComponentAllocator>& GetArchetypeGraph() noexcept { return m_archetypeGraph; }
 
-        [[nodiscard]] ComponentIndex<PersistentAllocator>& GetComponentIndex() noexcept
-        {
-            return component_index_;
-        }
+        [[nodiscard]] ComponentIndex<PersistentAllocator>& GetComponentIndex() noexcept { return m_componentIndex; }
 
         // ─────────────────────────────────────────────────────────────
         // Queries
@@ -618,11 +550,9 @@ namespace queen
          *       });
          * @endcode
          */
-        template<typename... Terms>
-        [[nodiscard]] queen::Query<PersistentAllocator, Terms...> Query()
-        {
-            std::lock_guard<HIVE_PROFILE_LOCKABLE_BASE(std::mutex)> lock{allocators_.PersistentMutex()};
-            return queen::Query<PersistentAllocator, Terms...>{allocators_.Persistent(), component_index_};
+        template <typename... Terms> [[nodiscard]] queen::Query<PersistentAllocator, Terms...> Query() {
+            std::lock_guard<HIVE_PROFILE_LOCKABLE_BASE(std::mutex)> lock{m_allocators.PersistentMutex()};
+            return queen::Query<PersistentAllocator, Terms...>{m_allocators.Persistent(), m_componentIndex};
         }
 
         /**
@@ -633,11 +563,9 @@ namespace queen
          *
          * @param callback Function to call with the query (e.g., query.Each(...))
          */
-        template<typename... Terms, typename Callback>
-        void QueryEach(Callback&& callback)
-        {
-            std::lock_guard<HIVE_PROFILE_LOCKABLE_BASE(std::mutex)> lock{allocators_.PersistentMutex()};
-            queen::Query<PersistentAllocator, Terms...> query{allocators_.Persistent(), component_index_};
+        template <typename... Terms, typename Callback> void QueryEach(Callback&& callback) {
+            std::lock_guard<HIVE_PROFILE_LOCKABLE_BASE(std::mutex)> lock{m_allocators.PersistentMutex()};
+            queen::Query<PersistentAllocator, Terms...> query{m_allocators.Persistent(), m_componentIndex};
             callback(query);
             // Query destructor runs here while still holding the lock
         }
@@ -647,11 +575,9 @@ namespace queen
          *
          * Thread-safe version for parallel execution.
          */
-        template<typename... Terms, typename F>
-        void QueryEachLocked(F&& func)
-        {
-            std::lock_guard<HIVE_PROFILE_LOCKABLE_BASE(std::mutex)> lock{allocators_.PersistentMutex()};
-            queen::Query<PersistentAllocator, Terms...> query{allocators_.Persistent(), component_index_};
+        template <typename... Terms, typename F> void QueryEachLocked(F&& func) {
+            std::lock_guard<HIVE_PROFILE_LOCKABLE_BASE(std::mutex)> lock{m_allocators.PersistentMutex()};
+            queen::Query<PersistentAllocator, Terms...> query{m_allocators.Persistent(), m_componentIndex};
             query.Each(std::forward<F>(func));
         }
 
@@ -660,11 +586,9 @@ namespace queen
          *
          * Thread-safe version for parallel execution.
          */
-        template<typename... Terms, typename F>
-        void QueryEachWithEntityLocked(F&& func)
-        {
-            std::lock_guard<HIVE_PROFILE_LOCKABLE_BASE(std::mutex)> lock{allocators_.PersistentMutex()};
-            queen::Query<PersistentAllocator, Terms...> query{allocators_.Persistent(), component_index_};
+        template <typename... Terms, typename F> void QueryEachWithEntityLocked(F&& func) {
+            std::lock_guard<HIVE_PROFILE_LOCKABLE_BASE(std::mutex)> lock{m_allocators.PersistentMutex()};
+            queen::Query<PersistentAllocator, Terms...> query{m_allocators.Persistent(), m_componentIndex};
             query.EachWithEntity(std::forward<F>(func));
         }
 
@@ -683,41 +607,22 @@ namespace queen
          *       });
          * @endcode
          */
-        template<typename... Terms>
-        [[nodiscard]] SystemBuilder<PersistentAllocator, Terms...> System(const char* name)
-        {
-            return systems_.template Register<Terms...>(*this, name);
+        template <typename... Terms>
+        [[nodiscard]] SystemBuilder<PersistentAllocator, Terms...> System(const char* name) {
+            return m_systems.template Register<Terms...>(*this, name);
         }
 
-        void RunSystem(SystemId id)
-        {
-            systems_.RunSystem(*this, id, current_tick_);
-        }
+        void RunSystem(SystemId id) { m_systems.RunSystem(*this, id, m_currentTick); }
 
-        void RunAllSystems()
-        {
-            systems_.RunAll(*this, current_tick_);
-        }
+        void RunAllSystems() { m_systems.RunAll(*this, m_currentTick); }
 
-        [[nodiscard]] size_t SystemCount() const noexcept
-        {
-            return systems_.SystemCount();
-        }
+        [[nodiscard]] size_t SystemCount() const noexcept { return m_systems.SystemCount(); }
 
-        void SetSystemEnabled(SystemId id, bool enabled)
-        {
-            systems_.SetSystemEnabled(id, enabled);
-        }
+        void SetSystemEnabled(SystemId id, bool enabled) { m_systems.SetSystemEnabled(id, enabled); }
 
-        [[nodiscard]] bool IsSystemEnabled(SystemId id) const noexcept
-        {
-            return systems_.IsSystemEnabled(id);
-        }
+        [[nodiscard]] bool IsSystemEnabled(SystemId id) const noexcept { return m_systems.IsSystemEnabled(id); }
 
-        [[nodiscard]] SystemStorage<PersistentAllocator>& GetSystemStorage() noexcept
-        {
-            return systems_;
-        }
+        [[nodiscard]] SystemStorage<PersistentAllocator>& GetSystemStorage() noexcept { return m_systems; }
 
         /**
          * Advance the world by one tick (run all systems, no frame marker)
@@ -726,13 +631,12 @@ namespace queen
          * fixed-timestep loops where multiple advances happen per rendered frame.
          * The caller is responsible for emitting HIVE_PROFILE_FRAME once per frame.
          */
-        void Advance()
-        {
+        void Advance() {
             HIVE_PROFILE_SCOPE_N("World::Advance");
             IncrementTick();
-            events_.SwapBuffers();
-            scheduler_.RunAll(*this, systems_);
-            allocators_.ResetFrame();
+            m_events.SwapBuffers();
+            m_scheduler.RunAll(*this, m_systems);
+            m_allocators.ResetFrame();
             HIVE_PROFILE_PLOT("World::EntityCount", static_cast<int64_t>(EntityCount()));
             HIVE_PROFILE_PLOT("World::ArchetypeCount", static_cast<int64_t>(ArchetypeCount()));
         }
@@ -744,24 +648,22 @@ namespace queen
          *
          * @param worker_count Number of worker threads (0 = auto-detect)
          */
-        void AdvanceParallel(size_t worker_count = 0)
-        {
+        void AdvanceParallel(size_t workerCount = 0) {
             HIVE_PROFILE_SCOPE_N("World::AdvanceParallel");
             IncrementTick();
-            events_.SwapBuffers();
+            m_events.SwapBuffers();
 
-            if (parallel_scheduler_ == nullptr)
+            if (m_parallelScheduler == nullptr)
             {
-                void* mem = allocators_.Persistent().Allocate(
-                    sizeof(ParallelScheduler<PersistentAllocator>),
-                    alignof(ParallelScheduler<PersistentAllocator>)
-                );
-                parallel_scheduler_ = new (mem) ParallelScheduler<PersistentAllocator>{allocators_.Persistent(), worker_count};
+                void* mem = m_allocators.Persistent().Allocate(sizeof(ParallelScheduler<PersistentAllocator>),
+                                                               alignof(ParallelScheduler<PersistentAllocator>));
+                m_parallelScheduler =
+                    new (mem) ParallelScheduler<PersistentAllocator>{m_allocators.Persistent(), workerCount};
             }
 
-            parallel_scheduler_->RunAll(*this, systems_);
-            allocators_.ResetFrame();
-            allocators_.ResetThreadFrames();
+            m_parallelScheduler->RunAll(*this, m_systems);
+            m_allocators.ResetFrame();
+            m_allocators.ResetThreadFrames();
             HIVE_PROFILE_PLOT("World::EntityCount", static_cast<int64_t>(EntityCount()));
             HIVE_PROFILE_PLOT("World::ArchetypeCount", static_cast<int64_t>(ArchetypeCount()));
         }
@@ -774,8 +676,7 @@ namespace queen
          * The world tick is incremented at the start of each Update().
          * The frame allocator is reset at the end.
          */
-        void Update()
-        {
+        void Update() {
             Advance();
             HIVE_PROFILE_FRAME;
         }
@@ -790,36 +691,24 @@ namespace queen
          *
          * @param worker_count Number of worker threads (0 = auto-detect)
          */
-        void UpdateParallel(size_t worker_count = 0)
-        {
-            AdvanceParallel(worker_count);
+        void UpdateParallel(size_t workerCount = 0) {
+            AdvanceParallel(workerCount);
             HIVE_PROFILE_FRAME;
         }
 
-        [[nodiscard]] Scheduler<PersistentAllocator>& GetScheduler() noexcept
-        {
-            return scheduler_;
+        [[nodiscard]] Scheduler<PersistentAllocator>& GetScheduler() noexcept { return m_scheduler; }
+
+        [[nodiscard]] const Scheduler<PersistentAllocator>& GetScheduler() const noexcept { return m_scheduler; }
+
+        [[nodiscard]] ParallelScheduler<PersistentAllocator>* GetParallelScheduler() noexcept {
+            return m_parallelScheduler;
         }
 
-        [[nodiscard]] const Scheduler<PersistentAllocator>& GetScheduler() const noexcept
-        {
-            return scheduler_;
+        [[nodiscard]] const ParallelScheduler<PersistentAllocator>* GetParallelScheduler() const noexcept {
+            return m_parallelScheduler;
         }
 
-        [[nodiscard]] ParallelScheduler<PersistentAllocator>* GetParallelScheduler() noexcept
-        {
-            return parallel_scheduler_;
-        }
-
-        [[nodiscard]] const ParallelScheduler<PersistentAllocator>* GetParallelScheduler() const noexcept
-        {
-            return parallel_scheduler_;
-        }
-
-        [[nodiscard]] bool HasParallelScheduler() const noexcept
-        {
-            return parallel_scheduler_ != nullptr;
-        }
+        [[nodiscard]] bool HasParallelScheduler() const noexcept { return m_parallelScheduler != nullptr; }
 
         /**
          * Invalidate the scheduler's dependency graph
@@ -827,12 +716,11 @@ namespace queen
          * Call this when systems are added or modified to force rebuild.
          * Invalidates both sequential and parallel schedulers.
          */
-        void InvalidateScheduler() noexcept
-        {
-            scheduler_.Invalidate();
-            if (parallel_scheduler_ != nullptr)
+        void InvalidateScheduler() noexcept {
+            m_scheduler.Invalidate();
+            if (m_parallelScheduler != nullptr)
             {
-                parallel_scheduler_->Invalidate();
+                m_parallelScheduler->Invalidate();
             }
         }
 
@@ -842,29 +730,17 @@ namespace queen
          * Use this to get a CommandBuffer for the current thread.
          * Commands are automatically flushed at the end of Update().
          */
-        [[nodiscard]] Commands<PersistentAllocator>& GetCommands() noexcept
-        {
-            return commands_;
-        }
+        [[nodiscard]] Commands<PersistentAllocator>& GetCommands() noexcept { return m_commands; }
 
-        [[nodiscard]] const Commands<PersistentAllocator>& GetCommands() const noexcept
-        {
-            return commands_;
-        }
+        [[nodiscard]] const Commands<PersistentAllocator>& GetCommands() const noexcept { return m_commands; }
 
         // ─────────────────────────────────────────────────────────────
         // Events
         // ─────────────────────────────────────────────────────────────
 
-        [[nodiscard]] Events<PersistentAllocator>& GetEvents() noexcept
-        {
-            return events_;
-        }
+        [[nodiscard]] Events<PersistentAllocator>& GetEvents() noexcept { return m_events; }
 
-        [[nodiscard]] const Events<PersistentAllocator>& GetEvents() const noexcept
-        {
-            return events_;
-        }
+        [[nodiscard]] const Events<PersistentAllocator>& GetEvents() const noexcept { return m_events; }
 
         /**
          * Send an event (adds to current frame's queue)
@@ -872,10 +748,8 @@ namespace queen
          * @tparam E Event type
          * @param event The event to send
          */
-        template<typename E>
-        void SendEvent(E&& event)
-        {
-            events_.template Send<std::decay_t<E>>(std::forward<E>(event));
+        template <typename E> void SendEvent(E&& event) {
+            m_events.template Send<std::decay_t<E>>(std::forward<E>(event));
         }
 
         /**
@@ -884,10 +758,8 @@ namespace queen
          * @tparam E Event type
          * @return EventWriter for sending events
          */
-        template<typename E>
-        [[nodiscard]] EventWriter<E, PersistentAllocator> EventWriter()
-        {
-            return events_.template Writer<E>();
+        template <typename E> [[nodiscard]] EventWriter<E, PersistentAllocator> EventWriter() {
+            return m_events.template Writer<E>();
         }
 
         /**
@@ -896,10 +768,8 @@ namespace queen
          * @tparam E Event type
          * @return EventReader for reading events
          */
-        template<typename E>
-        [[nodiscard]] queen::EventReader<E, PersistentAllocator> EventReader()
-        {
-            return events_.template Reader<E>();
+        template <typename E> [[nodiscard]] queen::EventReader<E, PersistentAllocator> EventReader() {
+            return m_events.template Reader<E>();
         }
 
         // ─────────────────────────────────────────────────────────────
@@ -921,36 +791,22 @@ namespace queen
          *       });
          * @endcode
          */
-        template<ObserverTrigger TriggerEvent>
-        [[nodiscard]] ObserverBuilder<TriggerEvent, PersistentAllocator> Observer(const char* name)
-        {
-            return observers_.template Register<TriggerEvent>(*this, name);
+        template <ObserverTrigger TriggerEvent>
+        [[nodiscard]] ObserverBuilder<TriggerEvent, PersistentAllocator> Observer(const char* name) {
+            return m_observers.template Register<TriggerEvent>(*this, name);
         }
 
-        [[nodiscard]] ObserverStorage<PersistentAllocator>& GetObserverStorage() noexcept
-        {
-            return observers_;
+        [[nodiscard]] ObserverStorage<PersistentAllocator>& GetObserverStorage() noexcept { return m_observers; }
+
+        [[nodiscard]] const ObserverStorage<PersistentAllocator>& GetObserverStorage() const noexcept {
+            return m_observers;
         }
 
-        [[nodiscard]] const ObserverStorage<PersistentAllocator>& GetObserverStorage() const noexcept
-        {
-            return observers_;
-        }
+        void SetObserverEnabled(ObserverId id, bool enabled) { m_observers.SetEnabled(id, enabled); }
 
-        void SetObserverEnabled(ObserverId id, bool enabled)
-        {
-            observers_.SetEnabled(id, enabled);
-        }
+        [[nodiscard]] bool IsObserverEnabled(ObserverId id) const noexcept { return m_observers.IsEnabled(id); }
 
-        [[nodiscard]] bool IsObserverEnabled(ObserverId id) const noexcept
-        {
-            return observers_.IsEnabled(id);
-        }
-
-        [[nodiscard]] size_t ObserverCount() const noexcept
-        {
-            return observers_.ObserverCount();
-        }
+        [[nodiscard]] size_t ObserverCount() const noexcept { return m_observers.ObserverCount(); }
 
         // ─────────────────────────────────────────────────────────────
         // Hierarchy
@@ -965,26 +821,25 @@ namespace queen
          * @param child Entity to set parent for
          * @param parent Parent entity (must be alive)
          */
-        void SetParent(Entity child, Entity parent)
-        {
+        void SetParent(Entity child, Entity parent) {
             hive::Assert(IsAlive(child), "Child entity must be alive");
             hive::Assert(IsAlive(parent), "Parent entity must be alive");
             hive::Assert(!(child == parent), "Entity cannot be its own parent");
             hive::Assert(!IsDescendantOf(parent, child), "SetParent would create a cycle");
 
             // 1. If child already has a parent, remove from old parent's children
-            if (Parent* old_parent_comp = Get<Parent>(child))
+            if (Parent* oldParentComp = Get<Parent>(child))
             {
-                Entity old_parent = old_parent_comp->entity;
-                if (IsAlive(old_parent))
+                Entity oldParent = oldParentComp->m_entity;
+                if (IsAlive(oldParent))
                 {
-                    if (Children* old_children = Get<Children>(old_parent))
+                    if (Children* oldChildren = Get<Children>(oldParent))
                     {
-                        old_children->Remove(child);
+                        oldChildren->Remove(child);
 
-                        if (old_children->IsEmpty())
+                        if (oldChildren->IsEmpty())
                         {
-                            Remove<Children>(old_parent);
+                            Remove<Children>(oldParent);
                         }
                     }
                 }
@@ -1004,9 +859,9 @@ namespace queen
             }
             else
             {
-                Children new_children{allocators_.Persistent()};
-                new_children.Add(child);
-                Add<Children>(parent, std::move(new_children));
+                Children newChildren{m_allocators.Persistent()};
+                newChildren.Add(child);
+                Add<Children>(parent, std::move(newChildren));
             }
         }
 
@@ -1015,20 +870,19 @@ namespace queen
          *
          * @param child Entity to remove parent from
          */
-        void RemoveParent(Entity child)
-        {
+        void RemoveParent(Entity child) {
             if (!IsAlive(child))
             {
                 return;
             }
 
-            Parent* parent_comp = Get<Parent>(child);
-            if (parent_comp == nullptr)
+            Parent* parentComp = Get<Parent>(child);
+            if (parentComp == nullptr)
             {
                 return;
             }
 
-            Entity parent = parent_comp->entity;
+            Entity parent = parentComp->m_entity;
 
             if (IsAlive(parent))
             {
@@ -1052,20 +906,16 @@ namespace queen
          * @param child Entity to get parent of
          * @return Parent entity, or Entity::Invalid() if no parent
          */
-        [[nodiscard]] Entity GetParent(Entity child) const noexcept
-        {
-            const Parent* parent_comp = Get<Parent>(child);
-            if (parent_comp == nullptr)
+        [[nodiscard]] Entity GetParent(Entity child) const noexcept {
+            const Parent* parentComp = Get<Parent>(child);
+            if (parentComp == nullptr)
             {
                 return Entity::Invalid();
             }
-            return parent_comp->entity;
+            return parentComp->m_entity;
         }
 
-        [[nodiscard]] bool HasParent(Entity child) const noexcept
-        {
-            return Has<Parent>(child);
-        }
+        [[nodiscard]] bool HasParent(Entity child) const noexcept { return Has<Parent>(child); }
 
         /**
          * Get children component of an entity
@@ -1073,18 +923,11 @@ namespace queen
          * @param parent Entity to get children of
          * @return Pointer to Children component, or nullptr if no children
          */
-        [[nodiscard]] Children* GetChildren(Entity parent) noexcept
-        {
-            return Get<Children>(parent);
-        }
+        [[nodiscard]] Children* GetChildren(Entity parent) noexcept { return Get<Children>(parent); }
 
-        [[nodiscard]] const Children* GetChildren(Entity parent) const noexcept
-        {
-            return Get<Children>(parent);
-        }
+        [[nodiscard]] const Children* GetChildren(Entity parent) const noexcept { return Get<Children>(parent); }
 
-        [[nodiscard]] size_t ChildCount(Entity parent) const noexcept
-        {
+        [[nodiscard]] size_t ChildCount(Entity parent) const noexcept {
             const Children* children = Get<Children>(parent);
             if (children == nullptr)
             {
@@ -1099,9 +942,7 @@ namespace queen
          * @param parent Parent entity
          * @param callback Called for each child
          */
-        template<typename F>
-        void ForEachChild(Entity parent, F&& callback)
-        {
+        template <typename F> void ForEachChild(Entity parent, F&& callback) {
             const Children* children = Get<Children>(parent);
             if (children == nullptr)
             {
@@ -1120,18 +961,16 @@ namespace queen
          * @param root Root entity
          * @param callback Called for each descendant (not including root)
          */
-        template<typename F>
-        void ForEachDescendant(Entity root, F&& callback)
-        {
+        template <typename F> void ForEachDescendant(Entity root, F&& callback) {
             // Depth-first traversal using frame allocator stack
             wax::Vector<Entity> stack{GetFrameAllocator()};
 
-            const Children* root_children = Get<Children>(root);
-            if (root_children != nullptr)
+            const Children* rootChildren = Get<Children>(root);
+            if (rootChildren != nullptr)
             {
-                for (size_t i = 0; i < root_children->Count(); ++i)
+                for (size_t i = 0; i < rootChildren->Count(); ++i)
                 {
-                    stack.PushBack(root_children->At(i));
+                    stack.PushBack(rootChildren->At(i));
                 }
             }
 
@@ -1156,60 +995,57 @@ namespace queen
         /**
          * Check if an entity is a descendant of another
          */
-        [[nodiscard]] bool IsDescendantOf(Entity entity, Entity ancestor) const noexcept
-        {
+        [[nodiscard]] bool IsDescendantOf(Entity entity, Entity ancestor) const noexcept {
             static constexpr uint32_t kMaxHierarchyDepth = 1024;
             Entity current = entity;
             for (uint32_t i = 0; i < kMaxHierarchyDepth; ++i)
             {
-                const Parent* parent_comp = Get<Parent>(current);
-                if (parent_comp == nullptr || !parent_comp->IsValid())
+                const Parent* parentComp = Get<Parent>(current);
+                if (parentComp == nullptr || !parentComp->IsValid())
                 {
                     return false;
                 }
 
-                if (parent_comp->entity == ancestor)
+                if (parentComp->m_entity == ancestor)
                 {
                     return true;
                 }
 
-                current = parent_comp->entity;
+                current = parentComp->m_entity;
             }
             hive::Assert(false, "Hierarchy depth exceeds maximum - possible cycle");
             return false;
         }
 
-        [[nodiscard]] Entity GetRoot(Entity entity) const noexcept
-        {
+        [[nodiscard]] Entity GetRoot(Entity entity) const noexcept {
             static constexpr uint32_t kMaxHierarchyDepth = 1024;
             Entity current = entity;
             for (uint32_t i = 0; i < kMaxHierarchyDepth; ++i)
             {
-                const Parent* parent_comp = Get<Parent>(current);
-                if (parent_comp == nullptr || !parent_comp->IsValid())
+                const Parent* parentComp = Get<Parent>(current);
+                if (parentComp == nullptr || !parentComp->IsValid())
                 {
                     return current;
                 }
-                current = parent_comp->entity;
+                current = parentComp->m_entity;
             }
             hive::Assert(false, "Hierarchy depth exceeds maximum - possible cycle");
             return entity;
         }
 
-        [[nodiscard]] uint32_t GetDepth(Entity entity) const noexcept
-        {
+        [[nodiscard]] uint32_t GetDepth(Entity entity) const noexcept {
             static constexpr uint32_t kMaxHierarchyDepth = 1024;
             uint32_t depth = 0;
             Entity current = entity;
             for (uint32_t i = 0; i < kMaxHierarchyDepth; ++i)
             {
-                const Parent* parent_comp = Get<Parent>(current);
-                if (parent_comp == nullptr || !parent_comp->IsValid())
+                const Parent* parentComp = Get<Parent>(current);
+                if (parentComp == nullptr || !parentComp->IsValid())
                 {
                     return depth;
                 }
                 ++depth;
-                current = parent_comp->entity;
+                current = parentComp->m_entity;
             }
             hive::Assert(false, "Hierarchy depth exceeds maximum - possible cycle");
             return depth;
@@ -1220,8 +1056,7 @@ namespace queen
          *
          * Children are despawned first (depth-first), then the entity itself.
          */
-        void DespawnRecursive(Entity entity)
-        {
+        void DespawnRecursive(Entity entity) {
             HIVE_PROFILE_SCOPE_N("World::DespawnRecursive");
             if (!IsAlive(entity))
             {
@@ -1229,15 +1064,13 @@ namespace queen
             }
 
             // Collect all descendants first to avoid modification during iteration
-            wax::Vector<Entity> to_despawn{GetFrameAllocator()};
-            ForEachDescendant(entity, [&to_despawn](Entity descendant) {
-                to_despawn.PushBack(descendant);
-            });
+            wax::Vector<Entity> toDespawn{GetFrameAllocator()};
+            ForEachDescendant(entity, [&toDespawn](Entity descendant) { toDespawn.PushBack(descendant); });
 
             // Despawn in reverse order (deepest first)
-            for (size_t i = to_despawn.Size(); i > 0; --i)
+            for (size_t i = toDespawn.Size(); i > 0; --i)
             {
-                Entity descendant = to_despawn[i - 1];
+                Entity descendant = toDespawn[i - 1];
                 // Remove from parent's children (parent is still alive at this point)
                 RemoveParent(descendant);
                 Despawn(descendant);
@@ -1254,10 +1087,7 @@ namespace queen
         /**
          * Get the current world tick
          */
-        [[nodiscard]] Tick CurrentTick() const noexcept
-        {
-            return current_tick_;
-        }
+        [[nodiscard]] Tick CurrentTick() const noexcept { return m_currentTick; }
 
         /**
          * Increment the world tick
@@ -1265,108 +1095,98 @@ namespace queen
          * Called automatically at the start of Update(). Can also be called
          * manually to advance the tick without running systems.
          */
-        void IncrementTick() noexcept
-        {
-            ++current_tick_;
-        }
+        void IncrementTick() noexcept { ++m_currentTick; }
 
     private:
         friend class EntityBuilder;
 
-        template<comb::Allocator OtherAlloc>
-        friend class CommandBuffer;
+        template <comb::Allocator OtherAlloc> friend class CommandBuffer;
 
-        Entity AllocateEntity()
-        {
-            return entity_allocator_.Allocate();
+        Entity AllocateEntity() { return m_entityAllocator.Allocate(); }
+
+        void PlaceEntity(Entity entity, Archetype<ComponentAllocator>* archetype) {
+            uint32_t row = archetype->AllocateRow(entity, m_currentTick);
+            m_entityLocations.Set(entity, EntityRecord{archetype, row});
         }
 
-        void PlaceEntity(Entity entity, Archetype<ComponentAllocator>* archetype)
-        {
-            uint32_t row = archetype->AllocateRow(entity, current_tick_);
-            entity_locations_.Set(entity, EntityRecord{archetype, row});
-        }
-
-        void RegisterNewArchetype(Archetype<ComponentAllocator>* archetype)
-        {
+        void RegisterNewArchetype(Archetype<ComponentAllocator>* archetype) {
             if (archetype->ComponentCount() > 0)
             {
-                bool already_registered = false;
-                const auto* list = component_index_.GetArchetypesWith(archetype->GetComponentTypes()[0]);
+                bool alreadyRegistered = false;
+                const auto* list = m_componentIndex.GetArchetypesWith(archetype->GetComponentTypes()[0]);
                 if (list != nullptr)
                 {
                     for (size_t i = 0; i < list->Size(); ++i)
                     {
                         if ((*list)[i] == archetype)
                         {
-                            already_registered = true;
+                            alreadyRegistered = true;
                             break;
                         }
                     }
                 }
 
-                if (!already_registered)
+                if (!alreadyRegistered)
                 {
-                    component_index_.RegisterArchetype(archetype);
+                    m_componentIndex.RegisterArchetype(archetype);
                 }
             }
         }
 
-        void MoveEntity(Entity entity, EntityRecord& record,
-                       Archetype<ComponentAllocator>* old_arch, Archetype<ComponentAllocator>* new_arch)
-        {
+        void MoveEntity(Entity entity, EntityRecord& record, Archetype<ComponentAllocator>* oldArch,
+                        Archetype<ComponentAllocator>* newArch) {
             HIVE_PROFILE_SCOPE_N("World::MoveEntity");
-            uint32_t old_row = record.row;
+            uint32_t oldRow = record.m_row;
 
-            uint32_t new_row = new_arch->AllocateRow(entity, current_tick_);
+            uint32_t newRow = newArch->AllocateRow(entity, m_currentTick);
 
-            const auto& old_metas = old_arch->GetComponentMetas();
+            const auto& oldMetas = oldArch->GetComponentMetas();
 
-            for (size_t i = 0; i < old_metas.Size(); ++i)
+            for (size_t i = 0; i < oldMetas.Size(); ++i)
             {
-                TypeId type_id = old_metas[i].type_id;
+                TypeId typeId = oldMetas[i].m_typeId;
 
-                if (new_arch->HasComponent(type_id))
+                if (newArch->HasComponent(typeId))
                 {
-                    void* src = old_arch->GetComponentRaw(old_row, type_id);
-                    void* dst = new_arch->GetComponentRaw(new_row, type_id);
-                    old_metas[i].move(dst, src);
+                    void* src = oldArch->GetComponentRaw(oldRow, typeId);
+                    void* dst = newArch->GetComponentRaw(newRow, typeId);
+                    oldMetas[i].m_move(dst, src);
                 }
             }
 
-            Entity moved = old_arch->FreeRow(old_row);
+            Entity moved = oldArch->FreeRow(oldRow);
 
             if (!moved.IsNull() && !(moved == entity))
             {
-                EntityRecord* moved_record = entity_locations_.Get(moved);
-                if (moved_record != nullptr)
+                EntityRecord* movedRecord = m_entityLocations.Get(moved);
+                if (movedRecord != nullptr)
                 {
-                    moved_record->row = old_row;
+                    movedRecord->m_row = oldRow;
                 }
             }
 
-            record.archetype = new_arch;
-            record.row = new_row;
+            record.m_archetype = newArch;
+            record.m_row = newRow;
         }
 
         // IMPORTANT: allocators_ MUST be first for initialization order
-        WorldAllocators allocators_;
+        WorldAllocators m_allocators;
 
-        EntityAllocator<ComponentAllocator> entity_allocator_;
-        EntityLocationMap<ComponentAllocator, Archetype<ComponentAllocator>> entity_locations_;
-        ArchetypeGraph<ComponentAllocator> archetype_graph_;
-        ComponentIndex<PersistentAllocator> component_index_;
+        EntityAllocator<ComponentAllocator> m_entityAllocator;
+        EntityLocationMap<ComponentAllocator, Archetype<ComponentAllocator>> m_entityLocations;
+        ArchetypeGraph<ComponentAllocator> m_archetypeGraph;
+        ComponentIndex<PersistentAllocator> m_componentIndex;
 
-        wax::HashMap<TypeId, void*> resources_;
-        wax::Vector<ComponentMeta> resource_metas_;
+        wax::HashMap<TypeId, void*> m_resources;
+        wax::Vector<ComponentMeta> m_resourceMetas;
 
-        SystemStorage<PersistentAllocator> systems_;
-        Scheduler<PersistentAllocator> scheduler_;
-        ParallelScheduler<PersistentAllocator>* parallel_scheduler_{nullptr};
-        Commands<PersistentAllocator> commands_;
-        Events<PersistentAllocator> events_;
-        ObserverStorage<PersistentAllocator> observers_;
-        Tick current_tick_{1};  // Start at 1 so tick 0 means "never changed"
+        SystemStorage<PersistentAllocator> m_systems;
+        Scheduler<PersistentAllocator> m_scheduler;
+        ParallelScheduler<PersistentAllocator>* m_parallelScheduler{nullptr};
+        Commands<PersistentAllocator> m_commands;
+        Events<PersistentAllocator> m_events;
+        ObserverStorage<PersistentAllocator> m_observers;
+        Tick m_currentTick{1}; // Start at 1 so tick 0 means "never changed"
     };
 
     /**
@@ -1384,120 +1204,111 @@ namespace queen
     {
     public:
         explicit EntityBuilder(World& world)
-            : world_{&world}
-            , pending_metas_{world.GetFrameAllocator()}
-            , pending_data_{world.GetFrameAllocator()}
-        {
-        }
+            : m_world{&world}
+            , m_pendingMetas{world.GetFrameAllocator()}
+            , m_pendingData{world.GetFrameAllocator()} {}
 
-        template<typename T>
-        EntityBuilder& With(T&& component)
-        {
-            TypeId type_id = TypeIdOf<T>();
+        template <typename T> EntityBuilder& With(T&& component) {
+            TypeId typeId = TypeIdOf<T>();
 
-            for (size_t i = 0; i < pending_metas_.Size(); ++i)
+            for (size_t i = 0; i < m_pendingMetas.Size(); ++i)
             {
-                if (pending_metas_[i].type_id == type_id)
+                if (m_pendingMetas[i].m_typeId == typeId)
                 {
-                    T* existing = static_cast<T*>(pending_data_[i]);
+                    T* existing = static_cast<T*>(m_pendingData[i]);
                     *existing = std::forward<T>(component);
                     return *this;
                 }
             }
 
-            pending_metas_.PushBack(ComponentMeta::Of<T>());
+            m_pendingMetas.PushBack(ComponentMeta::Of<T>());
 
-            void* data = world_->GetFrameAllocator().Allocate(sizeof(T), alignof(T));
+            void* data = m_world->GetFrameAllocator().Allocate(sizeof(T), alignof(T));
             new (data) T{std::forward<T>(component)};
-            pending_data_.PushBack(data);
+            m_pendingData.PushBack(data);
 
             return *this;
         }
 
-        EntityBuilder& WithRaw(const ComponentMeta& meta, void* source_data)
-        {
-            TypeId type_id = meta.type_id;
+        EntityBuilder& WithRaw(const ComponentMeta& meta, void* sourceData) {
+            TypeId typeId = meta.m_typeId;
 
-            for (size_t i = 0; i < pending_metas_.Size(); ++i)
+            for (size_t i = 0; i < m_pendingMetas.Size(); ++i)
             {
-                if (pending_metas_[i].type_id == type_id)
+                if (m_pendingMetas[i].m_typeId == typeId)
                 {
-                    if (meta.move != nullptr)
+                    if (meta.m_move != nullptr)
                     {
-                        meta.move(pending_data_[i], source_data);
+                        meta.m_move(m_pendingData[i], sourceData);
                     }
                     else
                     {
-                        std::memcpy(pending_data_[i], source_data, meta.size);
+                        std::memcpy(m_pendingData[i], sourceData, meta.m_size);
                     }
                     return *this;
                 }
             }
 
-            pending_metas_.PushBack(meta);
+            m_pendingMetas.PushBack(meta);
 
-            void* data = world_->GetFrameAllocator().Allocate(meta.size, meta.alignment);
-            if (meta.move != nullptr)
+            void* data = m_world->GetFrameAllocator().Allocate(meta.m_size, meta.m_alignment);
+            if (meta.m_move != nullptr)
             {
-                meta.move(data, source_data);
+                meta.m_move(data, sourceData);
             }
             else
             {
-                std::memcpy(data, source_data, meta.size);
+                std::memcpy(data, sourceData, meta.m_size);
             }
-            pending_data_.PushBack(data);
+            m_pendingData.PushBack(data);
 
             return *this;
         }
 
-        Entity Build()
-        {
+        Entity Build() {
             HIVE_PROFILE_SCOPE_N("World::Spawn");
-            Entity entity = world_->AllocateEntity();
+            Entity entity = m_world->AllocateEntity();
 
-            Archetype<ComponentAllocator>* archetype = world_->archetype_graph_.GetEmptyArchetype();
+            Archetype<ComponentAllocator>* archetype = m_world->m_archetypeGraph.GetEmptyArchetype();
 
-            for (size_t i = 0; i < pending_metas_.Size(); ++i)
+            for (size_t i = 0; i < m_pendingMetas.Size(); ++i)
             {
-                archetype = world_->archetype_graph_.GetOrCreateAddTarget(*archetype, pending_metas_[i]);
+                archetype = m_world->m_archetypeGraph.GetOrCreateAddTarget(*archetype, m_pendingMetas[i]);
             }
 
-            world_->RegisterNewArchetype(archetype);
+            m_world->RegisterNewArchetype(archetype);
 
-            world_->PlaceEntity(entity, archetype);
+            m_world->PlaceEntity(entity, archetype);
 
-            auto* record = world_->entity_locations_.Get(entity);
-            for (size_t i = 0; i < pending_metas_.Size(); ++i)
+            auto* record = m_world->m_entityLocations.Get(entity);
+            for (size_t i = 0; i < m_pendingMetas.Size(); ++i)
             {
-                TypeId type_id = pending_metas_[i].type_id;
-                archetype->SetComponent(record->row, type_id, pending_data_[i]);
+                TypeId typeId = m_pendingMetas[i].m_typeId;
+                archetype->SetComponent(record->m_row, typeId, m_pendingData[i]);
 
-                if (pending_metas_[i].destruct != nullptr)
+                if (m_pendingMetas[i].m_destruct != nullptr)
                 {
-                    pending_metas_[i].destruct(pending_data_[i]);
+                    m_pendingMetas[i].m_destruct(m_pendingData[i]);
                 }
             }
 
-            pending_metas_.Clear();
-            pending_data_.Clear();
+            m_pendingMetas.Clear();
+            m_pendingData.Clear();
 
             return entity;
         }
 
     private:
-        World* world_;
-        wax::Vector<ComponentMeta> pending_metas_;
-        wax::Vector<void*> pending_data_;
+        World* m_world;
+        wax::Vector<ComponentMeta> m_pendingMetas;
+        wax::Vector<void*> m_pendingData;
     };
 
-    inline EntityBuilder World::Spawn()
-    {
+    inline EntityBuilder World::Spawn() {
         return EntityBuilder{*this};
     }
 
-    template<typename... Components>
-    Entity World::Spawn(Components&&... components)
-    {
+    template <typename... Components> Entity World::Spawn(Components&&... components) {
         EntityBuilder builder{*this};
         (builder.With(std::forward<Components>(components)), ...);
         return builder.Build();
@@ -1507,159 +1318,153 @@ namespace queen
     // CommandBuffer::Flush implementation (here to avoid circular dependency)
     // ─────────────────────────────────────────────────────────────
 
-    template<comb::Allocator Allocator>
-    void CommandBuffer<Allocator>::Flush(World& world)
-    {
+    template <comb::Allocator Allocator> void CommandBuffer<Allocator>::Flush(World& world) {
         HIVE_PROFILE_SCOPE_N("CommandBuffer::Flush");
-        spawned_entities_.Clear();
-        spawned_entities_.Reserve(spawn_count_);
+        m_spawnedEntities.Clear();
+        m_spawnedEntities.Reserve(m_spawnCount);
 
-        for (uint32_t i = 0; i < spawn_count_; ++i)
+        for (uint32_t i = 0; i < m_spawnCount; ++i)
         {
-            spawned_entities_.PushBack(Entity::Invalid());
+            m_spawnedEntities.PushBack(Entity::Invalid());
         }
 
-        for (size_t i = 0; i < commands_.Size(); ++i)
+        for (size_t i = 0; i < m_commands.Size(); ++i)
         {
-            const detail::Command& cmd = commands_[i];
+            const detail::Command& cmd = m_commands[i];
 
-            if (cmd.type == CommandType::Spawn)
+            if (cmd.m_type == CommandType::SPAWN)
             {
-                uint32_t spawn_index = cmd.entity.Index();
+                uint32_t spawnIndex = cmd.m_entity.Index();
 
                 auto builder = world.Spawn();
 
-                for (size_t j = i + 1; j < commands_.Size(); ++j)
+                for (size_t j = i + 1; j < m_commands.Size(); ++j)
                 {
-                    const detail::Command& other = commands_[j];
-                    if (other.type == CommandType::AddComponent &&
-                        IsPendingEntity(other.entity) &&
-                        other.entity.Index() == spawn_index)
+                    const detail::Command& other = m_commands[j];
+                    if (other.m_type == CommandType::ADD_COMPONENT && IsPendingEntity(other.m_entity) &&
+                        other.m_entity.Index() == spawnIndex)
                     {
-                        builder.WithRaw(other.meta, other.data);
+                        builder.WithRaw(other.m_meta, other.m_data);
                     }
                 }
 
-                Entity real_entity = builder.Build();
-                spawned_entities_[spawn_index] = real_entity;
+                Entity realEntity = builder.Build();
+                m_spawnedEntities[spawnIndex] = realEntity;
             }
         }
 
-        for (size_t i = 0; i < commands_.Size(); ++i)
+        for (size_t i = 0; i < m_commands.Size(); ++i)
         {
-            const detail::Command& cmd = commands_[i];
+            const detail::Command& cmd = m_commands[i];
 
-            switch (cmd.type)
+            switch (cmd.m_type)
             {
-                case CommandType::Spawn:
+                case CommandType::SPAWN:
                     break;
 
-                case CommandType::Despawn:
-                    world.Despawn(cmd.entity);
+                case CommandType::DESPAWN:
+                    world.Despawn(cmd.m_entity);
                     break;
 
-                case CommandType::AddComponent:
-                {
-                    if (IsPendingEntity(cmd.entity))
+                case CommandType::ADD_COMPONENT: {
+                    if (IsPendingEntity(cmd.m_entity))
                     {
                         break;
                     }
 
-                    Entity entity = cmd.entity;
+                    Entity entity = cmd.m_entity;
                     if (!world.IsAlive(entity))
                     {
                         break;
                     }
 
-                    auto* record = world.entity_locations_.Get(entity);
-                    if (record == nullptr || record->archetype == nullptr)
+                    auto* record = world.m_entityLocations.Get(entity);
+                    if (record == nullptr || record->m_archetype == nullptr)
                     {
                         break;
                     }
 
-                    auto* old_arch = record->archetype;
+                    auto* oldArch = record->m_archetype;
 
-                    if (old_arch->HasComponent(cmd.component_type))
+                    if (oldArch->HasComponent(cmd.m_componentType))
                     {
-                        old_arch->SetComponent(record->row, cmd.component_type, cmd.data);
+                        oldArch->SetComponent(record->m_row, cmd.m_componentType, cmd.m_data);
                     }
                     else
                     {
-                        auto* new_arch = world.archetype_graph_.GetOrCreateAddTarget(*old_arch, cmd.meta);
+                        auto* newArch = world.m_archetypeGraph.GetOrCreateAddTarget(*oldArch, cmd.m_meta);
 
-                        if (new_arch != old_arch)
+                        if (newArch != oldArch)
                         {
-                            world.RegisterNewArchetype(new_arch);
-                            world.MoveEntity(entity, *record, old_arch, new_arch);
+                            world.RegisterNewArchetype(newArch);
+                            world.MoveEntity(entity, *record, oldArch, newArch);
                         }
 
-                        new_arch->SetComponent(record->row, cmd.component_type, cmd.data);
+                        newArch->SetComponent(record->m_row, cmd.m_componentType, cmd.m_data);
                     }
                     break;
                 }
 
-                case CommandType::RemoveComponent:
-                {
-                    Entity entity = ResolveEntity(cmd.entity);
+                case CommandType::REMOVE_COMPONENT: {
+                    Entity entity = ResolveEntity(cmd.m_entity);
                     if (!world.IsAlive(entity))
                     {
                         break;
                     }
 
-                    auto* record = world.entity_locations_.Get(entity);
-                    if (record == nullptr || record->archetype == nullptr)
+                    auto* record = world.m_entityLocations.Get(entity);
+                    if (record == nullptr || record->m_archetype == nullptr)
                     {
                         break;
                     }
 
-                    auto* old_arch = record->archetype;
+                    auto* oldArch = record->m_archetype;
 
-                    if (!old_arch->HasComponent(cmd.component_type))
+                    if (!oldArch->HasComponent(cmd.m_componentType))
                     {
                         break;
                     }
 
-                    auto* new_arch = world.archetype_graph_.GetOrCreateRemoveTarget(*old_arch, cmd.component_type);
+                    auto* newArch = world.m_archetypeGraph.GetOrCreateRemoveTarget(*oldArch, cmd.m_componentType);
 
-                    if (new_arch != old_arch)
+                    if (newArch != oldArch)
                     {
-                        world.RegisterNewArchetype(new_arch);
-                        world.MoveEntity(entity, *record, old_arch, new_arch);
+                        world.RegisterNewArchetype(newArch);
+                        world.MoveEntity(entity, *record, oldArch, newArch);
                     }
                     break;
                 }
 
-                case CommandType::SetComponent:
-                {
-                    Entity entity = ResolveEntity(cmd.entity);
+                case CommandType::SET_COMPONENT: {
+                    Entity entity = ResolveEntity(cmd.m_entity);
                     if (!world.IsAlive(entity))
                     {
                         break;
                     }
 
-                    auto* record = world.entity_locations_.Get(entity);
-                    if (record == nullptr || record->archetype == nullptr)
+                    auto* record = world.m_entityLocations.Get(entity);
+                    if (record == nullptr || record->m_archetype == nullptr)
                     {
                         break;
                     }
 
-                    auto* old_arch = record->archetype;
+                    auto* oldArch = record->m_archetype;
 
-                    if (old_arch->HasComponent(cmd.component_type))
+                    if (oldArch->HasComponent(cmd.m_componentType))
                     {
-                        old_arch->SetComponent(record->row, cmd.component_type, cmd.data);
+                        oldArch->SetComponent(record->m_row, cmd.m_componentType, cmd.m_data);
                     }
                     else
                     {
-                        auto* new_arch = world.archetype_graph_.GetOrCreateAddTarget(*old_arch, cmd.meta);
+                        auto* newArch = world.m_archetypeGraph.GetOrCreateAddTarget(*oldArch, cmd.m_meta);
 
-                        if (new_arch != old_arch)
+                        if (newArch != oldArch)
                         {
-                            world.RegisterNewArchetype(new_arch);
-                            world.MoveEntity(entity, *record, old_arch, new_arch);
+                            world.RegisterNewArchetype(newArch);
+                            world.MoveEntity(entity, *record, oldArch, newArch);
                         }
 
-                        new_arch->SetComponent(record->row, cmd.component_type, cmd.data);
+                        newArch->SetComponent(record->m_row, cmd.m_componentType, cmd.m_data);
                     }
                     break;
                 }
@@ -1667,23 +1472,23 @@ namespace queen
         }
 
         // Clear commands but preserve spawned_entities_ for GetSpawnedEntity() calls
-        for (size_t i = 0; i < commands_.Size(); ++i)
+        for (size_t i = 0; i < m_commands.Size(); ++i)
         {
-            const detail::Command& cmd = commands_[i];
-            if (cmd.data != nullptr && cmd.meta.destruct != nullptr)
+            const detail::Command& cmd = m_commands[i];
+            if (cmd.m_data != nullptr && cmd.m_meta.m_destruct != nullptr)
             {
-                cmd.meta.destruct(cmd.data);
+                cmd.m_meta.m_destruct(cmd.m_data);
             }
         }
 
-        commands_.Clear();
-        spawn_count_ = 0;
+        m_commands.Clear();
+        m_spawnCount = 0;
         ClearBlocks();
     }
-}
+} // namespace queen
 
 // Include method implementations now that World is complete
-#include <queen/system/system_builder_impl.h>
 #include <queen/observer/observer_storage_impl.h>
-#include <queen/scheduler/scheduler_impl.h>
 #include <queen/scheduler/parallel_scheduler_impl.h>
+#include <queen/scheduler/scheduler_impl.h>
+#include <queen/system/system_builder_impl.h>

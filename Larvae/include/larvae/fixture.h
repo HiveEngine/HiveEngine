@@ -13,4 +13,4 @@ namespace larvae
         static void SetUpTestSuite() {}
         static void TearDownTestSuite() {}
     };
-}
+} // namespace larvae

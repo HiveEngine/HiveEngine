@@ -1,8 +1,11 @@
-#include <larvae/larvae.h>
 #include <comb/platform.h>
+
+#include <larvae/larvae.h>
+
 #include <cstring>
 
-namespace {
+namespace
+{
     auto test1 = larvae::RegisterTest("MemoryPlatform", "GetPageSizeReturnsValidValue", []() {
         const auto page_size = comb::GetPageSize();
 
@@ -84,11 +87,11 @@ namespace {
 
         // Write to different pages
         auto* byte_ptr = static_cast<unsigned char*>(ptr);
-        byte_ptr[0] = 1;                           // First page
-        byte_ptr[page_size] = 2;                   // Second page
-        byte_ptr[page_size * 2] = 3;               // Third page
-        byte_ptr[page_size * 3] = 4;               // Fourth page
-        byte_ptr[alloc_size - 1] = 5;              // Last byte
+        byte_ptr[0] = 1;              // First page
+        byte_ptr[page_size] = 2;      // Second page
+        byte_ptr[page_size * 2] = 3;  // Third page
+        byte_ptr[page_size * 3] = 4;  // Fourth page
+        byte_ptr[alloc_size - 1] = 5; // Last byte
 
         // Verify all writes
         larvae::AssertEqual(byte_ptr[0], static_cast<unsigned char>(1));
@@ -213,17 +216,17 @@ namespace {
     class PlatformFixture : public larvae::TestFixture
     {
     public:
-        void SetUp() override
-        {
+        void SetUp() override {
             page_size = comb::GetPageSize();
             ptr1 = comb::AllocatePages(page_size);
             ptr2 = comb::AllocatePages(page_size * 2);
         }
 
-        void TearDown() override
-        {
-            if (ptr1) comb::FreePages(ptr1, page_size);
-            if (ptr2) comb::FreePages(ptr2, page_size * 2);
+        void TearDown() override {
+            if (ptr1)
+                comb::FreePages(ptr1, page_size);
+            if (ptr2)
+                comb::FreePages(ptr2, page_size * 2);
         }
 
         size_t page_size{0};
@@ -232,8 +235,7 @@ namespace {
     };
 
     auto test12 = larvae::RegisterTestWithFixture<PlatformFixture>(
-        "PlatformFixture", "AllocationsInFixture",
-        [](PlatformFixture& f) {
+        "PlatformFixture", "AllocationsInFixture", [](PlatformFixture& f) {
             larvae::AssertNotNull(f.ptr1);
             larvae::AssertNotNull(f.ptr2);
             larvae::AssertNotEqual(f.ptr1, f.ptr2);
@@ -246,10 +248,9 @@ namespace {
             larvae::AssertEqual(static_cast<unsigned char*>(f.ptr2)[0], static_cast<unsigned char>(200));
         });
 
-    auto test13 = larvae::RegisterTestWithFixture<PlatformFixture>(
-        "PlatformFixture", "PageSizeIsConsistent",
-        [](PlatformFixture& f) {
-            const auto page_size2 = comb::GetPageSize();
-            larvae::AssertEqual(f.page_size, page_size2);
-        });
-}
+    auto test13 = larvae::RegisterTestWithFixture<PlatformFixture>("PlatformFixture", "PageSizeIsConsistent",
+                                                                   [](PlatformFixture& f) {
+                                                                       const auto page_size2 = comb::GetPageSize();
+                                                                       larvae::AssertEqual(f.page_size, page_size2);
+                                                                   });
+} // namespace

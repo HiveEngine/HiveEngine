@@ -10,22 +10,22 @@ namespace forge
 
     enum class GizmoMode : uint8_t
     {
-        Translate,
-        Rotate,
-        Scale,
+        TRANSLATE,
+        ROTATE,
+        SCALE,
     };
 
     enum class GizmoSpace : uint8_t
     {
-        World,
-        Local,
+        WORLD,
+        LOCAL,
     };
 
     struct GizmoState
     {
-        GizmoMode mode{GizmoMode::Translate};
-        GizmoSpace space{GizmoSpace::World};
-        bool is_using{false};       // true while user is dragging a gizmo
+        GizmoMode m_mode{GizmoMode::TRANSLATE};
+        GizmoSpace m_space{GizmoSpace::WORLD};
+        bool m_isUsing{false}; // true while user is dragging a gizmo
     };
 
     // Draw the gizmo for the selected entity.
@@ -35,13 +35,10 @@ namespace forge
     // out_position/out_rotation_quat/out_scale: decomposed transform written on manipulation
     //
     // Returns true if the transform was modified this frame.
-    bool DrawGizmo(GizmoState& state,
-                   const hive::math::Mat4& view,
-                   const hive::math::Mat4& projection,
-                   float* world_matrix,
-                   float* out_position,       // float[3]
-                   float* out_rotation_quat,  // float[4] (x,y,z,w)
-                   float* out_scale,           // float[3]
-                   float viewport_x, float viewport_y,
-                   float viewport_w, float viewport_h);
-}
+    bool DrawGizmo(GizmoState& state, const hive::math::Mat4& view, const hive::math::Mat4& projection,
+                   float* worldMatrix,
+                   float* outPosition,     // float[3]
+                   float* outRotationQuat, // float[4] (x,y,z,w)
+                   float* outScale,        // float[3]
+                   float viewportX, float viewportY, float viewportW, float viewportH);
+} // namespace forge

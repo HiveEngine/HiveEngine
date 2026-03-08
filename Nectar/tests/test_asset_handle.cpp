@@ -1,11 +1,15 @@
-#include <larvae/larvae.h>
-#include <nectar/server/asset_server.h>
-#include <nectar/server/asset_loader.h>
 #include <comb/default_allocator.h>
 #include <comb/new.h>
+
+#include <nectar/server/asset_loader.h>
+#include <nectar/server/asset_server.h>
+
+#include <larvae/larvae.h>
+
 #include <cstring>
 
-namespace {
+namespace
+{
 
     struct HandleTestAsset
     {
@@ -15,21 +19,20 @@ namespace {
     class HandleTestLoader final : public nectar::AssetLoader<HandleTestAsset>
     {
     public:
-        HandleTestAsset* Load(wax::ByteSpan data, comb::DefaultAllocator& alloc) override
-        {
-            if (data.Size() < sizeof(int)) return nullptr;
+        HandleTestAsset* Load(wax::ByteSpan data, comb::DefaultAllocator& alloc) override {
+            if (data.Size() < sizeof(int))
+                return nullptr;
             auto* a = comb::New<HandleTestAsset>(alloc);
             a->val = data.Read<int>(0);
             return a;
         }
-        void Unload(HandleTestAsset* asset, comb::DefaultAllocator& alloc) override
-        {
-            if (asset) comb::Delete(alloc, asset);
+        void Unload(HandleTestAsset* asset, comb::DefaultAllocator& alloc) override {
+            if (asset)
+                comb::Delete(alloc, asset);
         }
     };
 
-    auto& GetHandleTestAlloc()
-    {
+    auto& GetHandleTestAlloc() {
         static comb::ModuleAllocator alloc{"TestHandle", 4 * 1024 * 1024};
         return alloc.Get();
     }
@@ -163,7 +166,7 @@ namespace {
         auto strong = server.LoadFromMemory<HandleTestAsset>("weak_test", wax::ByteSpan{buf, sizeof(buf)});
         auto weak = strong.MakeWeak();
 
-        larvae::AssertTrue(strong.Raw() == weak.raw);
+        larvae::AssertTrue(strong.Raw() == weak.m_raw);
     });
 
     auto t11 = larvae::RegisterTest("NectarAssetHandle", "SelfAssignment", []() {
@@ -231,4 +234,4 @@ namespace {
         larvae::AssertTrue(server.IsReady(h2));
     });
 
-}
+} // namespace

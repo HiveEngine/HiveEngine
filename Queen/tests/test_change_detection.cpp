@@ -1,9 +1,11 @@
-#include <larvae/larvae.h>
+#include <comb/linear_allocator.h>
+
 #include <queen/core/tick.h>
 #include <queen/query/change_filter.h>
 #include <queen/query/mut.h>
 #include <queen/world/world.h>
-#include <comb/linear_allocator.h>
+
+#include <larvae/larvae.h>
 
 namespace
 {
@@ -28,20 +30,20 @@ namespace
 
     auto test1 = larvae::RegisterTest("QueenChangeDetection", "TickConstruction", []() {
         queen::Tick tick{};
-        larvae::AssertEqual(tick.value, uint32_t{0});
+        larvae::AssertEqual(tick.m_value, uint32_t{0});
 
         queen::Tick tick2{42};
-        larvae::AssertEqual(tick2.value, uint32_t{42});
+        larvae::AssertEqual(tick2.m_value, uint32_t{42});
     });
 
     auto test2 = larvae::RegisterTest("QueenChangeDetection", "TickIncrement", []() {
         queen::Tick tick{10};
         ++tick;
-        larvae::AssertEqual(tick.value, uint32_t{11});
+        larvae::AssertEqual(tick.m_value, uint32_t{11});
 
         queen::Tick copy = tick++;
-        larvae::AssertEqual(copy.value, uint32_t{11});
-        larvae::AssertEqual(tick.value, uint32_t{12});
+        larvae::AssertEqual(copy.m_value, uint32_t{11});
+        larvae::AssertEqual(tick.m_value, uint32_t{12});
     });
 
     auto test3 = larvae::RegisterTest("QueenChangeDetection", "TickIsNewerThan", []() {
@@ -80,16 +82,16 @@ namespace
 
     auto test6 = larvae::RegisterTest("QueenChangeDetection", "ComponentTicksConstruction", []() {
         queen::ComponentTicks ticks{};
-        larvae::AssertEqual(ticks.added.value, uint32_t{0});
-        larvae::AssertEqual(ticks.changed.value, uint32_t{0});
+        larvae::AssertEqual(ticks.m_added.m_value, uint32_t{0});
+        larvae::AssertEqual(ticks.m_changed.m_value, uint32_t{0});
     });
 
     auto test7 = larvae::RegisterTest("QueenChangeDetection", "ComponentTicksFromTick", []() {
         queen::Tick tick{42};
         queen::ComponentTicks ticks{tick};
 
-        larvae::AssertEqual(ticks.added.value, uint32_t{42});
-        larvae::AssertEqual(ticks.changed.value, uint32_t{42});
+        larvae::AssertEqual(ticks.m_added.m_value, uint32_t{42});
+        larvae::AssertEqual(ticks.m_changed.m_value, uint32_t{42});
     });
 
     auto test8 = larvae::RegisterTest("QueenChangeDetection", "ComponentTicksWasAdded", []() {
@@ -112,16 +114,16 @@ namespace
         queen::ComponentTicks ticks{queen::Tick{5}, queen::Tick{5}};
         ticks.MarkChanged(queen::Tick{20});
 
-        larvae::AssertEqual(ticks.added.value, uint32_t{5});
-        larvae::AssertEqual(ticks.changed.value, uint32_t{20});
+        larvae::AssertEqual(ticks.m_added.m_value, uint32_t{5});
+        larvae::AssertEqual(ticks.m_changed.m_value, uint32_t{20});
     });
 
     auto test11 = larvae::RegisterTest("QueenChangeDetection", "ComponentTicksSetAdded", []() {
         queen::ComponentTicks ticks{queen::Tick{5}, queen::Tick{5}};
         ticks.SetAdded(queen::Tick{20});
 
-        larvae::AssertEqual(ticks.added.value, uint32_t{20});
-        larvae::AssertEqual(ticks.changed.value, uint32_t{20});
+        larvae::AssertEqual(ticks.m_added.m_value, uint32_t{20});
+        larvae::AssertEqual(ticks.m_changed.m_value, uint32_t{20});
     });
 
     auto test12 = larvae::RegisterTest("QueenChangeDetection", "ComponentTicksWasAddedOrChanged", []() {
@@ -146,7 +148,7 @@ namespace
         queen::World world{};
 
         // World starts at tick 1 (0 means "never changed")
-        larvae::AssertEqual(world.CurrentTick().value, uint32_t{1});
+        larvae::AssertEqual(world.CurrentTick().m_value, uint32_t{1});
     });
 
     auto test14 = larvae::RegisterTest("QueenChangeDetection", "WorldIncrementTick", []() {
@@ -154,23 +156,23 @@ namespace
         queen::World world{};
 
         world.IncrementTick();
-        larvae::AssertEqual(world.CurrentTick().value, uint32_t{2});
+        larvae::AssertEqual(world.CurrentTick().m_value, uint32_t{2});
 
         world.IncrementTick();
-        larvae::AssertEqual(world.CurrentTick().value, uint32_t{3});
+        larvae::AssertEqual(world.CurrentTick().m_value, uint32_t{3});
     });
 
     auto test15 = larvae::RegisterTest("QueenChangeDetection", "WorldUpdateIncrementsTick", []() {
         comb::LinearAllocator alloc{262144};
         queen::World world{};
 
-        uint32_t initial_tick = world.CurrentTick().value;
+        uint32_t initial_tick = world.CurrentTick().m_value;
 
         world.Update();
-        larvae::AssertEqual(world.CurrentTick().value, initial_tick + 1);
+        larvae::AssertEqual(world.CurrentTick().m_value, initial_tick + 1);
 
         world.Update();
-        larvae::AssertEqual(world.CurrentTick().value, initial_tick + 2);
+        larvae::AssertEqual(world.CurrentTick().m_value, initial_tick + 2);
     });
 
     // ─────────────────────────────────────────────────────────────
@@ -178,10 +180,10 @@ namespace
     // ─────────────────────────────────────────────────────────────
 
     auto test16 = larvae::RegisterTest("QueenChangeDetection", "ChangeFilterTermAdded", []() {
-        auto filter = queen::ChangeFilterTerm::Create<Position>(queen::ChangeFilterMode::Added);
+        auto filter = queen::ChangeFilterTerm::Create<Position>(queen::ChangeFilterMode::ADDED);
 
-        larvae::AssertEqual(filter.type_id, queen::TypeIdOf<Position>());
-        larvae::AssertTrue(filter.mode == queen::ChangeFilterMode::Added);
+        larvae::AssertEqual(filter.m_typeId, queen::TypeIdOf<Position>());
+        larvae::AssertTrue(filter.m_mode == queen::ChangeFilterMode::ADDED);
 
         // Component added at tick 10
         queen::ComponentTicks ticks{queen::Tick{10}, queen::Tick{10}};
@@ -192,7 +194,7 @@ namespace
     });
 
     auto test17 = larvae::RegisterTest("QueenChangeDetection", "ChangeFilterTermChanged", []() {
-        auto filter = queen::ChangeFilterTerm::Create<Position>(queen::ChangeFilterMode::Changed);
+        auto filter = queen::ChangeFilterTerm::Create<Position>(queen::ChangeFilterMode::CHANGED);
 
         // Component added at tick 5, changed at tick 15
         queen::ComponentTicks ticks{queen::Tick{5}, queen::Tick{15}};
@@ -207,24 +209,24 @@ namespace
     // ─────────────────────────────────────────────────────────────
 
     auto test18 = larvae::RegisterTest("QueenChangeDetection", "AddedTypeTraits", []() {
-        larvae::AssertEqual(queen::Added<Position>::type_id, queen::TypeIdOf<Position>());
-        larvae::AssertTrue(queen::Added<Position>::mode == queen::ChangeFilterMode::Added);
-        larvae::AssertTrue(queen::Added<Position>::access == queen::TermAccess::Read);
+        larvae::AssertEqual(queen::Added<Position>::typeId, queen::TypeIdOf<Position>());
+        larvae::AssertTrue(queen::Added<Position>::mode == queen::ChangeFilterMode::ADDED);
+        larvae::AssertTrue(queen::Added<Position>::access == queen::TermAccess::READ);
     });
 
     auto test19 = larvae::RegisterTest("QueenChangeDetection", "ChangedTypeTraits", []() {
-        larvae::AssertEqual(queen::Changed<Position>::type_id, queen::TypeIdOf<Position>());
-        larvae::AssertTrue(queen::Changed<Position>::mode == queen::ChangeFilterMode::Changed);
-        larvae::AssertTrue(queen::Changed<Position>::access == queen::TermAccess::Read);
+        larvae::AssertEqual(queen::Changed<Position>::typeId, queen::TypeIdOf<Position>());
+        larvae::AssertTrue(queen::Changed<Position>::mode == queen::ChangeFilterMode::CHANGED);
+        larvae::AssertTrue(queen::Changed<Position>::access == queen::TermAccess::READ);
     });
 
     auto test20 = larvae::RegisterTest("QueenChangeDetection", "IsChangeFilterV", []() {
-        larvae::AssertTrue(queen::detail::IsChangeFilterV<queen::Added<Position>>);
-        larvae::AssertTrue(queen::detail::IsChangeFilterV<queen::Changed<Position>>);
-        larvae::AssertTrue(queen::detail::IsChangeFilterV<queen::AddedOrChanged<Position>>);
-        larvae::AssertFalse(queen::detail::IsChangeFilterV<queen::Read<Position>>);
-        larvae::AssertFalse(queen::detail::IsChangeFilterV<queen::Write<Position>>);
-        larvae::AssertFalse(queen::detail::IsChangeFilterV<Position>);
+        larvae::AssertTrue(queen::detail::isChangeFilterV<queen::Added<Position>>);
+        larvae::AssertTrue(queen::detail::isChangeFilterV<queen::Changed<Position>>);
+        larvae::AssertTrue(queen::detail::isChangeFilterV<queen::AddedOrChanged<Position>>);
+        larvae::AssertFalse(queen::detail::isChangeFilterV<queen::Read<Position>>);
+        larvae::AssertFalse(queen::detail::isChangeFilterV<queen::Write<Position>>);
+        larvae::AssertFalse(queen::detail::isChangeFilterV<Position>);
     });
 
     // ─────────────────────────────────────────────────────────────
@@ -239,8 +241,8 @@ namespace
         column.PushCopy(&pos, queen::Tick{42});
 
         larvae::AssertEqual(column.Size(), size_t{1});
-        larvae::AssertEqual(column.GetTicks(0).added.value, uint32_t{42});
-        larvae::AssertEqual(column.GetTicks(0).changed.value, uint32_t{42});
+        larvae::AssertEqual(column.GetTicks(0).m_added.m_value, uint32_t{42});
+        larvae::AssertEqual(column.GetTicks(0).m_changed.m_value, uint32_t{42});
     });
 
     auto test22 = larvae::RegisterTest("QueenChangeDetection", "ColumnMarkChanged", []() {
@@ -252,8 +254,8 @@ namespace
 
         column.MarkChanged(0, queen::Tick{20});
 
-        larvae::AssertEqual(column.GetTicks(0).added.value, uint32_t{10});
-        larvae::AssertEqual(column.GetTicks(0).changed.value, uint32_t{20});
+        larvae::AssertEqual(column.GetTicks(0).m_added.m_value, uint32_t{10});
+        larvae::AssertEqual(column.GetTicks(0).m_changed.m_value, uint32_t{20});
     });
 
     auto test23 = larvae::RegisterTest("QueenChangeDetection", "ColumnSwapRemovePreservesTicks", []() {
@@ -273,9 +275,9 @@ namespace
 
         larvae::AssertEqual(column.Size(), size_t{2});
         // Index 0 unchanged
-        larvae::AssertEqual(column.GetTicks(0).added.value, uint32_t{10});
+        larvae::AssertEqual(column.GetTicks(0).m_added.m_value, uint32_t{10});
         // Index 1 now has ticks from element that was at index 2
-        larvae::AssertEqual(column.GetTicks(1).added.value, uint32_t{30});
+        larvae::AssertEqual(column.GetTicks(1).m_added.m_value, uint32_t{30});
     });
 
     auto test24 = larvae::RegisterTest("QueenChangeDetection", "ColumnTicksDataPointer", []() {
@@ -290,8 +292,8 @@ namespace
 
         const queen::ComponentTicks* ticks = column.TicksData();
         larvae::AssertNotNull(ticks);
-        larvae::AssertEqual(ticks[0].added.value, uint32_t{10});
-        larvae::AssertEqual(ticks[1].added.value, uint32_t{20});
+        larvae::AssertEqual(ticks[0].m_added.m_value, uint32_t{10});
+        larvae::AssertEqual(ticks[1].m_added.m_value, uint32_t{20});
     });
 
     auto test25 = larvae::RegisterTest("QueenChangeDetection", "ColumnDefaultTick", []() {
@@ -302,7 +304,7 @@ namespace
         // Push without tick - should default to tick 0
         column.PushCopy(&pos);
 
-        larvae::AssertEqual(column.GetTicks(0).added.value, uint32_t{0});
+        larvae::AssertEqual(column.GetTicks(0).m_added.m_value, uint32_t{0});
     });
 
     // ─────────────────────────────────────────────────────────────
@@ -313,12 +315,11 @@ namespace
         comb::LinearAllocator alloc{262144};
         queen::World world{};
 
-        queen::SystemId id = world.System<queen::Read<Position>>("TestSystem")
-            .Each([](const Position&) {});
+        queen::SystemId id = world.System<queen::Read<Position>>("TestSystem").Each([](const Position&) {});
 
         auto* desc = world.GetSystemStorage().GetSystem(id);
         larvae::AssertNotNull(desc);
-        larvae::AssertEqual(desc->LastRunTick().value, uint32_t{0});
+        larvae::AssertEqual(desc->LastRunTick().m_value, uint32_t{0});
     });
 
     auto test27 = larvae::RegisterTest("QueenChangeDetection", "SystemLastRunTickUpdatedAfterExecution", []() {
@@ -328,13 +329,13 @@ namespace
         (void)world.Spawn(Position{1.0f, 2.0f, 3.0f});
 
         int run_count = 0;
-        queen::SystemId id = world.System<queen::Read<Position>>("TestSystem")
-            .Each([&](const Position&) { ++run_count; });
+        queen::SystemId id =
+            world.System<queen::Read<Position>>("TestSystem").Each([&](const Position&) { ++run_count; });
 
         larvae::AssertEqual(run_count, 0);
 
         // Get initial tick before Update
-        uint32_t tick_before = world.CurrentTick().value;
+        uint32_t tick_before = world.CurrentTick().m_value;
 
         // Run the system via Update
         world.Update();
@@ -343,7 +344,7 @@ namespace
 
         // System's last_run_tick should equal the tick at start of Update
         auto* desc = world.GetSystemStorage().GetSystem(id);
-        larvae::AssertEqual(desc->LastRunTick().value, tick_before + 1);
+        larvae::AssertEqual(desc->LastRunTick().m_value, tick_before + 1);
     });
 
     auto test28 = larvae::RegisterTest("QueenChangeDetection", "SystemLastRunTickTracksMultipleUpdates", []() {
@@ -352,18 +353,17 @@ namespace
 
         (void)world.Spawn(Position{1.0f, 2.0f, 3.0f});
 
-        queen::SystemId id = world.System<queen::Read<Position>>("TestSystem")
-            .Each([](const Position&) {});
+        queen::SystemId id = world.System<queen::Read<Position>>("TestSystem").Each([](const Position&) {});
 
         auto* desc = world.GetSystemStorage().GetSystem(id);
 
         // First update
         world.Update();
-        uint32_t tick_after_first = desc->LastRunTick().value;
+        uint32_t tick_after_first = desc->LastRunTick().m_value;
 
         // Second update
         world.Update();
-        uint32_t tick_after_second = desc->LastRunTick().value;
+        uint32_t tick_after_second = desc->LastRunTick().m_value;
 
         larvae::AssertTrue(tick_after_second > tick_after_first);
         larvae::AssertEqual(tick_after_second, tick_after_first + 1);
@@ -376,20 +376,20 @@ namespace
         (void)world.Spawn(Position{1.0f, 2.0f, 3.0f});
 
         int run_count = 0;
-        queen::SystemId id = world.System<queen::Read<Position>>("TestSystem")
-            .Each([&](const Position&) { ++run_count; });
+        queen::SystemId id =
+            world.System<queen::Read<Position>>("TestSystem").Each([&](const Position&) { ++run_count; });
 
         // Disable the system
         world.SetSystemEnabled(id, false);
 
         auto* desc = world.GetSystemStorage().GetSystem(id);
-        uint32_t tick_before = desc->LastRunTick().value;
+        uint32_t tick_before = desc->LastRunTick().m_value;
 
         // Update should not run disabled system
         world.Update();
 
         larvae::AssertEqual(run_count, 0);
-        larvae::AssertEqual(desc->LastRunTick().value, tick_before);
+        larvae::AssertEqual(desc->LastRunTick().m_value, tick_before);
     });
 
     // ─────────────────────────────────────────────────────────────
@@ -414,14 +414,14 @@ namespace
         Position pos{1.0f, 2.0f, 3.0f};
         queen::ComponentTicks ticks{queen::Tick{10}};
 
-        larvae::AssertEqual(ticks.changed.value, uint32_t{10});
+        larvae::AssertEqual(ticks.m_changed.m_value, uint32_t{10});
 
         queen::Mut<Position> mut{&pos, &ticks, queen::Tick{20}};
 
         // Access via arrow - should mark changed
         mut->x = 5.0f;
 
-        larvae::AssertEqual(ticks.changed.value, uint32_t{20});
+        larvae::AssertEqual(ticks.m_changed.m_value, uint32_t{20});
         larvae::AssertEqual(pos.x, 5.0f);
     });
 
@@ -435,7 +435,7 @@ namespace
         Position& ref = *mut;
         ref.y = 10.0f;
 
-        larvae::AssertEqual(ticks.changed.value, uint32_t{25});
+        larvae::AssertEqual(ticks.m_changed.m_value, uint32_t{25});
         larvae::AssertEqual(pos.y, 10.0f);
     });
 
@@ -448,7 +448,7 @@ namespace
         Position* ptr = mut.Get();
         ptr->z = 15.0f;
 
-        larvae::AssertEqual(ticks.changed.value, uint32_t{30});
+        larvae::AssertEqual(ticks.m_changed.m_value, uint32_t{30});
         larvae::AssertEqual(pos.z, 15.0f);
     });
 
@@ -464,7 +464,7 @@ namespace
         (void)x;
 
         // Changed tick should remain 10, not 30
-        larvae::AssertEqual(ticks.changed.value, uint32_t{10});
+        larvae::AssertEqual(ticks.m_changed.m_value, uint32_t{10});
     });
 
     auto test36 = larvae::RegisterTest("QueenChangeDetection", "MutConstArrowDoesNotMarkChanged", []() {
@@ -477,7 +477,7 @@ namespace
         float x = mut->x;
         (void)x;
 
-        larvae::AssertEqual(ticks.changed.value, uint32_t{10});
+        larvae::AssertEqual(ticks.m_changed.m_value, uint32_t{10});
     });
 
     auto test37 = larvae::RegisterTest("QueenChangeDetection", "MutWasAddedWasChanged", []() {
@@ -596,9 +596,7 @@ namespace
         query.SetLastRunTick(queen::Tick{3});
 
         int count = 0;
-        query.Each([&](const Position&) {
-            ++count;
-        });
+        query.Each([&](const Position&) { ++count; });
 
         larvae::AssertEqual(count, 3);
     });
@@ -651,7 +649,7 @@ namespace
         });
 
         larvae::AssertEqual(count, 1);
-        larvae::AssertEqual(sum, 3.0f);  // Just e3
+        larvae::AssertEqual(sum, 3.0f); // Just e3
     });
 
     auto test45 = larvae::RegisterTest("QueenChangeDetection", "QueryWithEntityAndChangeFilter", []() {
@@ -670,10 +668,8 @@ namespace
         query.SetLastRunTick(queen::Tick{1});
 
         queen::Entity found_entity;
-        query.EachWithEntity([&](queen::Entity e, const Position&) {
-            found_entity = e;
-        });
+        query.EachWithEntity([&](queen::Entity e, const Position&) { found_entity = e; });
 
         larvae::AssertEqual(found_entity.Index(), e2.Index());
     });
-}
+} // namespace

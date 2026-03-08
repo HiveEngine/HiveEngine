@@ -1,24 +1,26 @@
-#include <larvae/larvae.h>
-#include <nectar/texture/texture_importer.h>
-#include <nectar/texture/texture_data.h>
-#include <nectar/pipeline/import_context.h>
+#include <comb/default_allocator.h>
+
+#include <nectar/core/asset_id.h>
 #include <nectar/database/asset_database.h>
 #include <nectar/hive/hive_document.h>
-#include <nectar/core/asset_id.h>
-#include <comb/default_allocator.h>
-#include <cstring>
+#include <nectar/pipeline/import_context.h>
+#include <nectar/texture/texture_data.h>
+#include <nectar/texture/texture_importer.h>
+
+#include <larvae/larvae.h>
+
 #include <cstdlib>
+#include <cstring>
 
-namespace {
+namespace
+{
 
-    auto& GetTexAlloc()
-    {
+    auto& GetTexAlloc() {
         static comb::ModuleAllocator alloc{"TestTexture", 8 * 1024 * 1024};
         return alloc.Get();
     }
 
-    nectar::AssetId MakeId(uint64_t v)
-    {
+    nectar::AssetId MakeId(uint64_t v) {
         uint8_t bytes[16] = {};
         std::memcpy(bytes, &v, sizeof(v));
         return nectar::AssetId::FromBytes(bytes);
@@ -31,11 +33,9 @@ namespace {
         wax::Vector<uint8_t> data;
 
         explicit BmpBuilder(comb::DefaultAllocator& alloc)
-            : data{alloc}
-        {}
+            : data{alloc} {}
 
-        void Build(uint32_t w, uint32_t h, const uint8_t* rgba_pixels)
-        {
+        void Build(uint32_t w, uint32_t h, const uint8_t* rgba_pixels) {
             // BMP header (14 bytes) + DIB header (40 bytes BITMAPINFOHEADER)
             uint32_t pixel_data_size = w * h * 4;
             uint32_t file_size = 14 + 40 + pixel_data_size;
@@ -43,21 +43,25 @@ namespace {
             data.Reserve(file_size);
 
             // BMP file header (14 bytes)
-            PushU8('B'); PushU8('M');
+            PushU8('B');
+            PushU8('M');
             PushU32(file_size);
-            PushU16(0); PushU16(0);     // reserved
-            PushU32(14 + 40);           // pixel data offset
+            PushU16(0);
+            PushU16(0);       // reserved
+            PushU32(14 + 40); // pixel data offset
 
             // BITMAPINFOHEADER (40 bytes)
-            PushU32(40);                // header size
+            PushU32(40); // header size
             PushI32(static_cast<int32_t>(w));
-            PushI32(-static_cast<int32_t>(h));  // negative = top-down
-            PushU16(1);                 // planes
-            PushU16(32);                // bits per pixel
-            PushU32(0);                 // compression (BI_RGB)
+            PushI32(-static_cast<int32_t>(h)); // negative = top-down
+            PushU16(1);                        // planes
+            PushU16(32);                       // bits per pixel
+            PushU32(0);                        // compression (BI_RGB)
             PushU32(pixel_data_size);
-            PushI32(2835); PushI32(2835); // px/m
-            PushU32(0); PushU32(0);     // colors
+            PushI32(2835);
+            PushI32(2835); // px/m
+            PushU32(0);
+            PushU32(0); // colors
 
             // Pixel data: BMP 32-bit is BGRA, not RGBA
             for (uint32_t i = 0; i < w * h; ++i)
@@ -70,13 +74,18 @@ namespace {
         }
 
         void PushU8(uint8_t v) { data.PushBack(v); }
-        void PushU16(uint16_t v) { PushU8(v & 0xFF); PushU8((v >> 8) & 0xFF); }
-        void PushU32(uint32_t v) { PushU16(v & 0xFFFF); PushU16((v >> 16) & 0xFFFF); }
+        void PushU16(uint16_t v) {
+            PushU8(v & 0xFF);
+            PushU8((v >> 8) & 0xFF);
+        }
+        void PushU32(uint32_t v) {
+            PushU16(v & 0xFFFF);
+            PushU16((v >> 16) & 0xFFFF);
+        }
         void PushI32(int32_t v) { PushU32(static_cast<uint32_t>(v)); }
     };
 
-    wax::ByteSpan MakeBmp(BmpBuilder& b, uint32_t w, uint32_t h, const uint8_t* rgba)
-    {
+    wax::ByteSpan MakeBmp(BmpBuilder& b, uint32_t w, uint32_t h, const uint8_t* rgba) {
         b.Build(w, h, rgba);
         return wax::ByteSpan{b.data.Data(), b.data.Size()};
     }
@@ -104,15 +113,15 @@ namespace {
         nectar::HiveDocument settings{alloc};
 
         auto result = importer.Import(span, settings, ctx);
-        larvae::AssertTrue(result.success);
-        larvae::AssertTrue(result.intermediate_data.Size() > sizeof(nectar::NtexHeader));
+        larvae::AssertTrue(result.m_success);
+        larvae::AssertTrue(result.m_intermediateData.Size() > sizeof(nectar::NtexHeader));
 
         // Parse header
-        auto* header = reinterpret_cast<const nectar::NtexHeader*>(result.intermediate_data.Data());
-        larvae::AssertEqual(header->magic, nectar::kNtexMagic);
-        larvae::AssertEqual(header->width, uint32_t{4});
-        larvae::AssertEqual(header->height, uint32_t{4});
-        larvae::AssertEqual(header->channels, uint32_t{4});
+        auto* header = reinterpret_cast<const nectar::NtexHeader*>(result.m_intermediateData.Data());
+        larvae::AssertEqual(header->m_magic, nectar::kNtexMagic);
+        larvae::AssertEqual(header->m_width, uint32_t{4});
+        larvae::AssertEqual(header->m_height, uint32_t{4});
+        larvae::AssertEqual(header->m_channels, uint32_t{4});
     });
 
     auto t2 = larvae::RegisterTest("NectarTexture", "MipMapGeneration", []() {
@@ -131,23 +140,23 @@ namespace {
         // default: generate_mipmaps = true
 
         auto result = importer.Import(span, settings, ctx);
-        larvae::AssertTrue(result.success);
+        larvae::AssertTrue(result.m_success);
 
-        auto* header = reinterpret_cast<const nectar::NtexHeader*>(result.intermediate_data.Data());
+        auto* header = reinterpret_cast<const nectar::NtexHeader*>(result.m_intermediateData.Data());
         // 8x8 -> 4x4 -> 2x2 -> 1x1 = 4 mip levels
-        larvae::AssertEqual(header->mip_count, uint8_t{4});
+        larvae::AssertEqual(header->m_mipCount, uint8_t{4});
 
         // Check mip table
-        auto* mips = reinterpret_cast<const nectar::TextureMipLevel*>(
-            result.intermediate_data.Data() + sizeof(nectar::NtexHeader));
-        larvae::AssertEqual(mips[0].width, uint32_t{8});
-        larvae::AssertEqual(mips[0].height, uint32_t{8});
-        larvae::AssertEqual(mips[1].width, uint32_t{4});
-        larvae::AssertEqual(mips[1].height, uint32_t{4});
-        larvae::AssertEqual(mips[2].width, uint32_t{2});
-        larvae::AssertEqual(mips[2].height, uint32_t{2});
-        larvae::AssertEqual(mips[3].width, uint32_t{1});
-        larvae::AssertEqual(mips[3].height, uint32_t{1});
+        auto* mips = reinterpret_cast<const nectar::TextureMipLevel*>(result.m_intermediateData.Data() +
+                                                                      sizeof(nectar::NtexHeader));
+        larvae::AssertEqual(mips[0].m_width, uint32_t{8});
+        larvae::AssertEqual(mips[0].m_height, uint32_t{8});
+        larvae::AssertEqual(mips[1].m_width, uint32_t{4});
+        larvae::AssertEqual(mips[1].m_height, uint32_t{4});
+        larvae::AssertEqual(mips[2].m_width, uint32_t{2});
+        larvae::AssertEqual(mips[2].m_height, uint32_t{2});
+        larvae::AssertEqual(mips[3].m_width, uint32_t{1});
+        larvae::AssertEqual(mips[3].m_height, uint32_t{1});
     });
 
     auto t3 = larvae::RegisterTest("NectarTexture", "MipMapDisabled", []() {
@@ -162,14 +171,13 @@ namespace {
         nectar::AssetDatabase db{alloc};
         nectar::ImportContext ctx{alloc, db, MakeId(3)};
         nectar::HiveDocument settings{alloc};
-        settings.SetValue("import", "generate_mipmaps",
-                          nectar::HiveValue::MakeBool(false));
+        settings.SetValue("import", "generate_mipmaps", nectar::HiveValue::MakeBool(false));
 
         auto result = importer.Import(span, settings, ctx);
-        larvae::AssertTrue(result.success);
+        larvae::AssertTrue(result.m_success);
 
-        auto* header = reinterpret_cast<const nectar::NtexHeader*>(result.intermediate_data.Data());
-        larvae::AssertEqual(header->mip_count, uint8_t{1});
+        auto* header = reinterpret_cast<const nectar::NtexHeader*>(result.m_intermediateData.Data());
+        larvae::AssertEqual(header->m_mipCount, uint8_t{1});
     });
 
     auto t4 = larvae::RegisterTest("NectarTexture", "MaxSizeClamp", []() {
@@ -187,15 +195,14 @@ namespace {
         nectar::ImportContext ctx{alloc, db, MakeId(4)};
         nectar::HiveDocument settings{alloc};
         settings.SetValue("import", "max_size", nectar::HiveValue::MakeInt(8));
-        settings.SetValue("import", "generate_mipmaps",
-                          nectar::HiveValue::MakeBool(false));
+        settings.SetValue("import", "generate_mipmaps", nectar::HiveValue::MakeBool(false));
 
         auto result = importer.Import(span, settings, ctx);
-        larvae::AssertTrue(result.success);
+        larvae::AssertTrue(result.m_success);
 
-        auto* header = reinterpret_cast<const nectar::NtexHeader*>(result.intermediate_data.Data());
-        larvae::AssertTrue(header->width <= 8);
-        larvae::AssertTrue(header->height <= 8);
+        auto* header = reinterpret_cast<const nectar::NtexHeader*>(result.m_intermediateData.Data());
+        larvae::AssertTrue(header->m_width <= 8);
+        larvae::AssertTrue(header->m_height <= 8);
     });
 
     auto t5 = larvae::RegisterTest("NectarTexture", "SrgbFlag", []() {
@@ -213,14 +220,13 @@ namespace {
         // srgb=false
         nectar::HiveDocument settings{alloc};
         settings.SetValue("import", "srgb", nectar::HiveValue::MakeBool(false));
-        settings.SetValue("import", "generate_mipmaps",
-                          nectar::HiveValue::MakeBool(false));
+        settings.SetValue("import", "generate_mipmaps", nectar::HiveValue::MakeBool(false));
 
         auto result = importer.Import(span, settings, ctx);
-        larvae::AssertTrue(result.success);
+        larvae::AssertTrue(result.m_success);
 
-        auto* header = reinterpret_cast<const nectar::NtexHeader*>(result.intermediate_data.Data());
-        larvae::AssertFalse(header->srgb);
+        auto* header = reinterpret_cast<const nectar::NtexHeader*>(result.m_intermediateData.Data());
+        larvae::AssertFalse(header->m_srgb);
     });
 
     auto t6 = larvae::RegisterTest("NectarTexture", "InvalidData", []() {
@@ -233,8 +239,8 @@ namespace {
         nectar::HiveDocument settings{alloc};
 
         auto result = importer.Import(wax::ByteSpan{garbage, sizeof(garbage)}, settings, ctx);
-        larvae::AssertFalse(result.success);
-        larvae::AssertTrue(result.error_message.View().Size() > 0);
+        larvae::AssertFalse(result.m_success);
+        larvae::AssertTrue(result.m_errorMessage.View().Size() > 0);
     });
 
     auto t7 = larvae::RegisterTest("NectarTexture", "NtexHeaderValid", []() {
@@ -249,17 +255,16 @@ namespace {
         nectar::AssetDatabase db{alloc};
         nectar::ImportContext ctx{alloc, db, MakeId(7)};
         nectar::HiveDocument settings{alloc};
-        settings.SetValue("import", "generate_mipmaps",
-                          nectar::HiveValue::MakeBool(false));
+        settings.SetValue("import", "generate_mipmaps", nectar::HiveValue::MakeBool(false));
 
         auto result = importer.Import(span, settings, ctx);
-        larvae::AssertTrue(result.success);
+        larvae::AssertTrue(result.m_success);
 
-        auto* header = reinterpret_cast<const nectar::NtexHeader*>(result.intermediate_data.Data());
-        larvae::AssertEqual(header->magic, nectar::kNtexMagic);
-        larvae::AssertEqual(header->version, uint32_t{1});
-        larvae::AssertTrue(header->format == nectar::PixelFormat::RGBA8);
-        larvae::AssertTrue(header->srgb);  // default
+        auto* header = reinterpret_cast<const nectar::NtexHeader*>(result.m_intermediateData.Data());
+        larvae::AssertEqual(header->m_magic, nectar::kNtexMagic);
+        larvae::AssertEqual(header->m_version, uint32_t{1});
+        larvae::AssertTrue(header->m_format == nectar::PixelFormat::RGBA8);
+        larvae::AssertTrue(header->m_srgb); // default
     });
 
     auto t8 = larvae::RegisterTest("NectarTexture", "Extensions", []() {
@@ -276,4 +281,4 @@ namespace {
         larvae::AssertTrue(importer.TypeName().Equals("Texture"));
     });
 
-}
+} // namespace

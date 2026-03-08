@@ -1,68 +1,75 @@
 #pragma once
 
 #include <waggle/app.h>
+
 #include <cstdint>
 
 #if HIVE_FEATURE_GLFW
-namespace terra { struct WindowContext; }
+namespace terra
+{
+    struct WindowContext;
+}
 #endif
 
 #if HIVE_FEATURE_VULKAN || HIVE_FEATURE_D3D12
-namespace swarm { struct RenderContext; }
+namespace swarm
+{
+    struct RenderContext;
+}
 #endif
 
 namespace waggle
 {
     enum class EngineMode : uint8_t
     {
-        Game,
-        Editor,
-        Headless
+        GAME,
+        EDITOR,
+        HEADLESS
     };
 
     struct EngineConfig
     {
-        const char* window_title{"HiveEngine"};
-        uint32_t window_width{1280};
-        uint32_t window_height{720};
-        EngineMode mode{EngineMode::Game};
-        bool auto_tick{true};
-        bool auto_renderer{true};
-        bool auto_systems{true};
-        AppConfig app{};
+        const char* m_windowTitle{"HiveEngine"};
+        uint32_t m_windowWidth{1280};
+        uint32_t m_windowHeight{720};
+        EngineMode m_mode{EngineMode::GAME};
+        bool m_autoTick{true};
+        bool m_autoRenderer{true};
+        bool m_autoSystems{true};
+        AppConfig m_app{};
     };
 
     struct EngineContext
     {
-        waggle::App*   app{nullptr};
-        queen::World*  world{nullptr};
+        waggle::App* m_app{nullptr};
+        queen::World* m_world{nullptr};
 
 #if HIVE_FEATURE_GLFW
-        terra::WindowContext* window{nullptr};
+        terra::WindowContext* m_window{nullptr};
 #endif
 
 #if HIVE_FEATURE_VULKAN || HIVE_FEATURE_D3D12
-        swarm::RenderContext* render_context{nullptr};
+        swarm::RenderContext* m_renderContext{nullptr};
 #endif
     };
 
     struct EngineCallbacks
     {
-        using RegisterModulesFn = void(*)();
-        using SetupFn    = bool(*)(EngineContext& ctx, void* user_data);
-        using FrameFn    = void(*)(EngineContext& ctx, void* user_data);
-        using ShutdownFn = void(*)(EngineContext& ctx, void* user_data);
+        using RegisterModulesFn = void (*)();
+        using SetupFn = bool (*)(EngineContext& ctx, void* userData);
+        using FrameFn = void (*)(EngineContext& ctx, void* userData);
+        using ShutdownFn = void (*)(EngineContext& ctx, void* userData);
 
-        RegisterModulesFn on_register_modules{nullptr};
-        SetupFn    on_setup{nullptr};
-        FrameFn    on_frame{nullptr};
-        ShutdownFn on_shutdown{nullptr};
+        RegisterModulesFn m_onRegisterModules{nullptr};
+        SetupFn m_onSetup{nullptr};
+        FrameFn m_onFrame{nullptr};
+        ShutdownFn m_onShutdown{nullptr};
 
-        void* user_data{nullptr};
+        void* m_userData{nullptr};
     };
 
     // Main engine entry point.
     // Manages the full lifecycle: modules -> window -> device -> swapchain -> loop -> cleanup.
     // Returns 0 on success.
     int Run(const EngineConfig& config, const EngineCallbacks& callbacks);
-}
+} // namespace waggle

@@ -1,6 +1,8 @@
-#include <larvae/larvae.h>
-#include <queen/core/entity_allocator.h>
 #include <comb/linear_allocator.h>
+
+#include <queen/core/entity_allocator.h>
+
+#include <larvae/larvae.h>
 
 namespace
 {
@@ -175,4 +177,4 @@ namespace
 
         larvae::AssertEqual(allocator.FreeListSize(), size_t{1});
     });
-}
+} // namespace

@@ -1,10 +1,12 @@
 #pragma once
 
-#include <nectar/pipeline/i_asset_cooker.h>
+#include <comb/default_allocator.h>
+
 #include <wax/containers/hash_map.h>
 #include <wax/containers/string.h>
 #include <wax/containers/string_view.h>
-#include <comb/default_allocator.h>
+
+#include <nectar/pipeline/i_asset_cooker.h>
 
 namespace nectar
 {
@@ -18,12 +20,12 @@ namespace nectar
         void Register(IAssetCooker* cooker);
 
         /// Find cooker by type name. nullptr if not found.
-        [[nodiscard]] IAssetCooker* FindByType(wax::StringView type_name) const;
+        [[nodiscard]] IAssetCooker* FindByType(wax::StringView typeName) const;
 
         [[nodiscard]] size_t Count() const noexcept;
 
     private:
-        comb::DefaultAllocator* alloc_;
-        wax::HashMap<wax::String, IAssetCooker*> type_map_;
+        comb::DefaultAllocator* m_alloc;
+        wax::HashMap<wax::String, IAssetCooker*> m_typeMap;
     };
-}
+} // namespace nectar

@@ -1,0 +1,82 @@
+---
+BasedOnStyle: LLVM
+Language: Cpp
+Standard: c++20
+UseTab: Never
+IndentWidth: 4
+TabWidth: 4
+ColumnLimit: 120
+PointerAlignment: Left
+ReferenceAlignment: Left
+NamespaceIndentation: All
+AccessModifierOffset: -4
+IndentCaseLabels: true
+IncludeBlocks: Regroup
+SortIncludes: true
+IncludeCategories:
+  - Regex: '^<hive/.*>'
+    Priority: 1
+  - Regex: '^<comb/.*>'
+    Priority: 2
+  - Regex: '^<wax/.*>'
+    Priority: 3
+  - Regex: '^<queen/.*>'
+    Priority: 4
+  - Regex: '^<nectar/.*>'
+    Priority: 5
+  - Regex: '^<waggle/.*>'
+    Priority: 6
+  - Regex: '^<swarm/.*>'
+    Priority: 7
+  - Regex: '^<terra/.*>'
+    Priority: 8
+  - Regex: '^<forge/.*>'
+    Priority: 9
+  - Regex: '^<antennae/.*>'
+    Priority: 10
+  - Regex: '^<larvae/.*>'
+    Priority: 11
+  - Regex: 'imgui\.h'
+    Priority: 20
+  - Regex: 'imgui_internal\.h'
+    Priority: 21
+  - Regex: 'ImGuizmo\.h'
+    Priority: 22
+  - Regex: 'imgui_impl_.*'
+    Priority: 23
+  - Regex: '^<tracy/.*>'
+    Priority: 24
+  - Regex: '^<fmt/.*>'
+    Priority: 25
+  - Regex: '^<[A-Z].*>'
+    Priority: 26
+  - Regex: '^<[[:alnum:]_]+(\.h|\.hpp)?>$'
+    Priority: 30
+  - Regex: '.*'
+    Priority: 40
+EmptyLineBeforeAccessModifier: LogicalBlock
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
+AllowShortBlocksOnASingleLine: Never
+AllowShortFunctionsOnASingleLine: Inline
+AllowShortLambdasOnASingleLine: Inline
+BreakBeforeBraces: Custom
+BraceWrapping:
+  AfterCaseLabel: false
+  AfterClass: true
+  AfterControlStatement: Always
+  AfterEnum: true
+  AfterFunction: false
+  AfterNamespace: true
+  AfterStruct: true
+  AfterUnion: true
+  BeforeCatch: true
+  BeforeElse: true
+  IndentBraces: false
+BreakConstructorInitializers: BeforeComma
+PackConstructorInitializers: Never
+ConstructorInitializerIndentWidth: 4
+SpaceBeforeParens: ControlStatements
+SpacesInParentheses: false
+Cpp11BracedListStyle: true
+...

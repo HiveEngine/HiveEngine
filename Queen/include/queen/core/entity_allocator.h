@@ -1,9 +1,12 @@
 #pragma once
 
-#include <queen/core/entity.h>
-#include <comb/allocator_concepts.h>
-#include <wax/containers/vector.h>
 #include <hive/core/assert.h>
+
+#include <comb/allocator_concepts.h>
+
+#include <wax/containers/vector.h>
+
+#include <queen/core/entity.h>
 
 namespace queen
 {
@@ -44,43 +47,39 @@ namespace queen
      *   assert(recycled.Generation() > e.Generation());
      * @endcode
      */
-    template<comb::Allocator Allocator>
-    class EntityAllocator
+    template <comb::Allocator Allocator> class EntityAllocator
     {
     public:
-        explicit EntityAllocator(Allocator& allocator, size_t initial_capacity = 1000)
-            : generations_{allocator}
-            , free_list_{allocator}
-            , next_index_{0}
-        {
-            generations_.Reserve(initial_capacity);
-            free_list_.Reserve(initial_capacity / 4);
+        explicit EntityAllocator(Allocator& allocator, size_t initialCapacity = 1000)
+            : m_generations{allocator}
+            , m_freeList{allocator}
+            , m_nextIndex{0} {
+            m_generations.Reserve(initialCapacity);
+            m_freeList.Reserve(initialCapacity / 4);
         }
 
-        Entity Allocate()
-        {
-            if (!free_list_.IsEmpty())
+        Entity Allocate() {
+            if (!m_freeList.IsEmpty())
             {
-                uint32_t index = free_list_.Back();
-                free_list_.PopBack();
+                uint32_t index = m_freeList.Back();
+                m_freeList.PopBack();
 
-                Entity::GenerationType gen = generations_[index];
+                Entity::GenerationType gen = m_generations[index];
                 return Entity{index, gen, Entity::Flags::kAlive};
             }
 
-            uint32_t index = next_index_++;
+            uint32_t index = m_nextIndex++;
             hive::Assert(index <= Entity::kMaxIndex, "Entity index overflow");
 
-            if (index >= generations_.Size())
+            if (index >= m_generations.Size())
             {
-                generations_.PushBack(0);
+                m_generations.PushBack(0);
             }
 
             return Entity{index, 0, Entity::Flags::kAlive};
         }
 
-        void Deallocate(Entity entity)
-        {
+        void Deallocate(Entity entity) {
             if (!IsAlive(entity))
             {
                 return;
@@ -88,58 +87,44 @@ namespace queen
 
             uint32_t index = entity.Index();
 
-            Entity::GenerationType& gen = generations_[index];
+            Entity::GenerationType& gen = m_generations[index];
             ++gen;
 
-            free_list_.PushBack(index);
+            m_freeList.PushBack(index);
         }
 
-        [[nodiscard]] bool IsAlive(Entity entity) const noexcept
-        {
+        [[nodiscard]] bool IsAlive(Entity entity) const noexcept {
             if (entity.IsNull())
             {
                 return false;
             }
 
             uint32_t index = entity.Index();
-            if (index >= generations_.Size())
+            if (index >= m_generations.Size())
             {
                 return false;
             }
 
-            return generations_[index] == entity.Generation();
+            return m_generations[index] == entity.Generation();
         }
 
-        [[nodiscard]] size_t AliveCount() const noexcept
-        {
-            return next_index_ - free_list_.Size();
-        }
+        [[nodiscard]] size_t AliveCount() const noexcept { return m_nextIndex - m_freeList.Size(); }
 
-        [[nodiscard]] size_t Capacity() const noexcept
-        {
-            return generations_.Capacity();
-        }
+        [[nodiscard]] size_t Capacity() const noexcept { return m_generations.Capacity(); }
 
-        [[nodiscard]] size_t TotalAllocated() const noexcept
-        {
-            return next_index_;
-        }
+        [[nodiscard]] size_t TotalAllocated() const noexcept { return m_nextIndex; }
 
-        [[nodiscard]] size_t FreeListSize() const noexcept
-        {
-            return free_list_.Size();
-        }
+        [[nodiscard]] size_t FreeListSize() const noexcept { return m_freeList.Size(); }
 
-        void Clear()
-        {
-            generations_.Clear();
-            free_list_.Clear();
-            next_index_ = 0;
+        void Clear() {
+            m_generations.Clear();
+            m_freeList.Clear();
+            m_nextIndex = 0;
         }
 
     private:
-        wax::Vector<Entity::GenerationType> generations_;
-        wax::Vector<uint32_t> free_list_;
-        uint32_t next_index_;
+        wax::Vector<Entity::GenerationType> m_generations;
+        wax::Vector<uint32_t> m_freeList;
+        uint32_t m_nextIndex;
     };
-}
+} // namespace queen

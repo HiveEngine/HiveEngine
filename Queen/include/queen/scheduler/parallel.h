@@ -1,7 +1,9 @@
 #pragma once
 
-#include <queen/scheduler/thread_pool.h>
 #include <hive/core/assert.h>
+
+#include <queen/scheduler/thread_pool.h>
+
 #include <atomic>
 #include <cstddef>
 
@@ -32,30 +34,24 @@ namespace queen
     class WaitGroup
     {
     public:
-        WaitGroup() : counter_{0} {}
+        WaitGroup()
+            : m_counter{0} {}
 
         /**
          * Add to the counter (call before submitting tasks)
          */
-        void Add(int64_t delta = 1) noexcept
-        {
-            counter_.fetch_add(delta, std::memory_order_release);
-        }
+        void Add(int64_t delta = 1) noexcept { m_counter.fetch_add(delta, std::memory_order_release); }
 
         /**
          * Decrement the counter (call when task completes)
          */
-        void Done() noexcept
-        {
-            counter_.fetch_sub(1, std::memory_order_release);
-        }
+        void Done() noexcept { m_counter.fetch_sub(1, std::memory_order_release); }
 
         /**
          * Wait for counter to reach zero
          */
-        void Wait() const noexcept
-        {
-            while (counter_.load(std::memory_order_acquire) > 0)
+        void Wait() const noexcept {
+            while (m_counter.load(std::memory_order_acquire) > 0)
             {
                 std::this_thread::yield();
             }
@@ -64,21 +60,15 @@ namespace queen
         /**
          * Check if all tasks are done without blocking
          */
-        [[nodiscard]] bool IsDone() const noexcept
-        {
-            return counter_.load(std::memory_order_acquire) <= 0;
-        }
+        [[nodiscard]] bool IsDone() const noexcept { return m_counter.load(std::memory_order_acquire) <= 0; }
 
         /**
          * Get the current count
          */
-        [[nodiscard]] int64_t Count() const noexcept
-        {
-            return counter_.load(std::memory_order_acquire);
-        }
+        [[nodiscard]] int64_t Count() const noexcept { return m_counter.load(std::memory_order_acquire); }
 
     private:
-        std::atomic<int64_t> counter_;
+        std::atomic<int64_t> m_counter;
     };
 
     /**
@@ -86,12 +76,12 @@ namespace queen
      */
     struct ParallelForContext
     {
-        using Func = void(*)(size_t index, void* user_data);
+        using Func = void (*)(size_t index, void* userData);
 
-        Func func;
-        void* user_data;
-        size_t index;
-        WaitGroup* wait_group;
+        Func m_func;
+        void* m_userData;
+        size_t m_index;
+        WaitGroup* m_waitGroup;
     };
 
     /**
@@ -120,15 +110,9 @@ namespace queen
      *       }, &data);
      * @endcode
      */
-    template<comb::Allocator Allocator>
-    void parallel_for(
-        ThreadPool<Allocator>& pool,
-        size_t begin,
-        size_t end,
-        void(*func)(size_t index, void* user_data),
-        void* user_data,
-        size_t chunk_size = 0)
-    {
+    template <comb::Allocator Allocator>
+    void ParallelFor(ThreadPool<Allocator>& pool, size_t begin, size_t end, void (*func)(size_t index, void* userData),
+                     void* userData, size_t chunkSize = 0) {
         if (begin >= end)
         {
             return;
@@ -137,57 +121,60 @@ namespace queen
         const size_t total = end - begin;
 
         // Auto chunk size: divide work among workers
-        if (chunk_size == 0)
+        if (chunkSize == 0)
         {
             size_t workers = pool.WorkerCount();
-            chunk_size = (total + workers - 1) / workers;
-            if (chunk_size == 0) chunk_size = 1;
+            chunkSize = (total + workers - 1) / workers;
+            if (chunkSize == 0)
+                chunkSize = 1;
         }
 
         // Calculate number of chunks
-        const size_t num_chunks = (total + chunk_size - 1) / chunk_size;
+        const size_t numChunks = (total + chunkSize - 1) / chunkSize;
 
         WaitGroup wg;
-        wg.Add(static_cast<int64_t>(num_chunks));
+        wg.Add(static_cast<int64_t>(numChunks));
 
         // Submit chunk tasks
-        for (size_t chunk = 0; chunk < num_chunks; ++chunk)
+        for (size_t chunk = 0; chunk < numChunks; ++chunk)
         {
-            const size_t chunk_begin = begin + chunk * chunk_size;
-            const size_t chunk_end = (chunk_begin + chunk_size < end) ? (chunk_begin + chunk_size) : end;
+            const size_t chunkBegin = begin + chunk * chunkSize;
+            const size_t chunkEnd = (chunkBegin + chunkSize < end) ? (chunkBegin + chunkSize) : end;
 
             // Pack chunk info into task
             struct ChunkData
             {
-                void(*func)(size_t, void*);
-                void* user_data;
-                size_t begin;
-                size_t end;
-                WaitGroup* wg;
+                void (*m_func)(size_t, void*);
+                void* m_userData;
+                size_t m_begin;
+                size_t m_end;
+                WaitGroup* m_wg;
             };
 
-                static constexpr size_t kMaxChunks = 1024;
-            thread_local ChunkData chunks[kMaxChunks];
-            thread_local size_t chunk_idx = 0;
+            static constexpr size_t kMaxChunks = 1024;
+            thread_local ChunkData s_chunks[kMaxChunks];
+            thread_local size_t s_chunkIdx = 0;
 
-            hive::Assert(num_chunks <= kMaxChunks, "parallel_for: too many chunks, increase kMaxChunks or chunk_size");
-            auto& cd = chunks[chunk_idx % kMaxChunks];
-            chunk_idx++;
+            hive::Assert(numChunks <= kMaxChunks, "parallel_for: too many chunks, increase kMaxChunks or chunk_size");
+            auto& cd = s_chunks[s_chunkIdx % kMaxChunks];
+            s_chunkIdx++;
 
-            cd.func = func;
-            cd.user_data = user_data;
-            cd.begin = chunk_begin;
-            cd.end = chunk_end;
-            cd.wg = &wg;
+            cd.m_func = func;
+            cd.m_userData = userData;
+            cd.m_begin = chunkBegin;
+            cd.m_end = chunkEnd;
+            cd.m_wg = &wg;
 
-            pool.Submit([](void* data) {
-                auto* cd = static_cast<ChunkData*>(data);
-                for (size_t i = cd->begin; i < cd->end; ++i)
-                {
-                    cd->func(i, cd->user_data);
-                }
-                cd->wg->Done();
-            }, &cd);
+            pool.Submit(
+                [](void* data) {
+                    auto* cd = static_cast<ChunkData*>(data);
+                    for (size_t i = cd->m_begin; i < cd->m_end; ++i)
+                    {
+                        cd->m_func(i, cd->m_userData);
+                    }
+                    cd->m_wg->Done();
+                },
+                &cd);
         }
 
         wg.Wait();
@@ -206,15 +193,10 @@ namespace queen
      * @param func Function to call
      * @param user_data User data
      */
-    template<comb::Allocator Allocator>
-    void parallel_for_each(
-        ThreadPool<Allocator>& pool,
-        size_t begin,
-        size_t end,
-        void(*func)(size_t index, void* user_data),
-        void* user_data)
-    {
-        parallel_for(pool, begin, end, func, user_data, 1);
+    template <comb::Allocator Allocator>
+    void ParallelForEach(ThreadPool<Allocator>& pool, size_t begin, size_t end,
+                         void (*func)(size_t index, void* userData), void* userData) {
+        ParallelFor(pool, begin, end, func, userData, 1);
     }
 
     /**
@@ -241,62 +223,53 @@ namespace queen
         /**
          * Submit a task to the batch
          */
-        template<comb::Allocator Allocator>
-        void Submit(ThreadPool<Allocator>& pool, Task::Func func, void* user_data)
-        {
-            wg_.Add(1);
+        template <comb::Allocator Allocator> void Submit(ThreadPool<Allocator>& pool, Task::Func func, void* userData) {
+            m_wg.Add(1);
 
             // Wrap the task to call Done() on completion
             struct WrappedTask
             {
-                Task::Func func;
-                void* user_data;
-                WaitGroup* wg;
+                Task::Func m_func;
+                void* m_userData;
+                WaitGroup* m_wg;
             };
 
             static constexpr size_t kMaxWrapped = 1024;
-            thread_local WrappedTask wrapped_tasks[kMaxWrapped];
-            thread_local size_t wrapped_idx = 0;
+            thread_local WrappedTask s_wrappedTasks[kMaxWrapped];
+            thread_local size_t s_wrappedIdx = 0;
 
-            auto& wt = wrapped_tasks[wrapped_idx % kMaxWrapped];
-            wrapped_idx++;
+            auto& wt = s_wrappedTasks[s_wrappedIdx % kMaxWrapped];
+            s_wrappedIdx++;
 
-            wt.func = func;
-            wt.user_data = user_data;
-            wt.wg = &wg_;
+            wt.m_func = func;
+            wt.m_userData = userData;
+            wt.m_wg = &m_wg;
 
-            pool.Submit([](void* data) {
-                auto* wt = static_cast<WrappedTask*>(data);
-                wt->func(wt->user_data);
-                wt->wg->Done();
-            }, &wt);
+            pool.Submit(
+                [](void* data) {
+                    auto* wt = static_cast<WrappedTask*>(data);
+                    wt->m_func(wt->m_userData);
+                    wt->m_wg->Done();
+                },
+                &wt);
         }
 
         /**
          * Wait for all submitted tasks to complete
          */
-        void Wait()
-        {
-            wg_.Wait();
-        }
+        void Wait() { m_wg.Wait(); }
 
         /**
          * Check if all tasks are done
          */
-        [[nodiscard]] bool IsDone() const noexcept
-        {
-            return wg_.IsDone();
-        }
+        [[nodiscard]] bool IsDone() const noexcept { return m_wg.IsDone(); }
 
         /**
          * Get the number of pending tasks
          */
-        [[nodiscard]] int64_t PendingCount() const noexcept
-        {
-            return wg_.Count();
-        }
+        [[nodiscard]] int64_t PendingCount() const noexcept { return m_wg.Count(); }
 
     private:
-        WaitGroup wg_;
+        WaitGroup m_wg;
     };
-}
+} // namespace queen

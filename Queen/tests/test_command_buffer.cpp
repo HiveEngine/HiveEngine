@@ -1,8 +1,10 @@
-#include <larvae/larvae.h>
-#include <queen/command/command_buffer.h>
-#include <queen/world/world.h>
-#include <queen/query/query.h>
 #include <comb/linear_allocator.h>
+
+#include <queen/command/command_buffer.h>
+#include <queen/query/query.h>
+#include <queen/world/world.h>
+
+#include <larvae/larvae.h>
 
 namespace
 {
@@ -21,7 +23,9 @@ namespace
         int current, max;
     };
 
-    struct Tag {};
+    struct Tag
+    {
+    };
 
     // ─────────────────────────────────────────────────────────────────────────
     // Basic CommandBuffer Tests
@@ -53,9 +57,7 @@ namespace
 
         queen::CommandBuffer<comb::LinearAllocator> cmd{alloc};
 
-        cmd.Spawn()
-            .With(Position{1.0f, 2.0f, 3.0f})
-            .With(Velocity{0.1f, 0.2f, 0.3f});
+        cmd.Spawn().With(Position{1.0f, 2.0f, 3.0f}).With(Velocity{0.1f, 0.2f, 0.3f});
 
         larvae::AssertEqual(cmd.CommandCount(), size_t{3});
     });
@@ -145,8 +147,7 @@ namespace
         queen::World world{};
         queen::CommandBuffer<comb::LinearAllocator> cmd{alloc};
 
-        auto builder = cmd.Spawn()
-            .With(Position{1.0f, 2.0f, 3.0f});
+        auto builder = cmd.Spawn().With(Position{1.0f, 2.0f, 3.0f});
 
         cmd.Flush(world);
 
@@ -167,10 +168,8 @@ namespace
         queen::World world{};
         queen::CommandBuffer<comb::LinearAllocator> cmd{alloc};
 
-        auto builder = cmd.Spawn()
-            .With(Position{1.0f, 2.0f, 3.0f})
-            .With(Velocity{0.1f, 0.2f, 0.3f})
-            .With(Health{100, 100});
+        auto builder =
+            cmd.Spawn().With(Position{1.0f, 2.0f, 3.0f}).With(Velocity{0.1f, 0.2f, 0.3f}).With(Health{100, 100});
 
         cmd.Flush(world);
 
@@ -408,9 +407,8 @@ namespace
 
         queen::CommandBuffer<comb::LinearAllocator> cmd{alloc};
 
-        world.Query<queen::Read<Position>>().Each([&](const Position& pos) {
-            cmd.Spawn().With(Position{pos.x * 2.0f, pos.y, pos.z});
-        });
+        world.Query<queen::Read<Position>>().Each(
+            [&](const Position& pos) { cmd.Spawn().With(Position{pos.x * 2.0f, pos.y, pos.z}); });
 
         cmd.Flush(world);
 
@@ -427,9 +425,8 @@ namespace
 
         queen::CommandBuffer<comb::LinearAllocator> cmd{alloc};
 
-        world.Query<queen::Read<Position>>().EachWithEntity([&](queen::Entity e, const Position& pos) {
-            cmd.Add(e, Velocity{pos.x, 0.0f, 0.0f});
-        });
+        world.Query<queen::Read<Position>>().EachWithEntity(
+            [&](queen::Entity e, const Position& pos) { cmd.Add(e, Velocity{pos.x, 0.0f, 0.0f}); });
 
         cmd.Flush(world);
 
@@ -515,4 +512,4 @@ namespace
 
         larvae::AssertEqual(world.EntityCount(), size_t{100});
     });
-}
+} // namespace

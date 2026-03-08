@@ -1,31 +1,32 @@
 #pragma once
 
-#include <queen/reflect/field_info.h>
-#include <queen/reflect/field_attributes.h>
-#include <queen/reflect/enum_reflection.h>
-#include <queen/core/type_id.h>
-#include <queen/core/entity.h>
 #include <hive/core/assert.h>
+
+#include <queen/core/entity.h>
+#include <queen/core/type_id.h>
+#include <queen/reflect/enum_reflection.h>
+#include <queen/reflect/field_attributes.h>
+#include <queen/reflect/field_info.h>
+
 #include <cstddef>
 #include <type_traits>
 
 namespace queen
 {
     // Forward declaration
-    template<size_t MaxFields>
-    class ComponentReflector;
+    template <size_t MaxFields> class ComponentReflector;
 
     namespace detail
     {
         // Detect wax::FixedString without including the header.
         // FixedString has: static constexpr size_t MaxCapacity = 22, CStr(), Size()
-        template<typename T>
+        template <typename T>
         concept IsFixedString = requires(const T& s) {
             { T::MaxCapacity } -> std::convertible_to<size_t>;
             { s.CStr() } -> std::same_as<const char*>;
             { s.Size() } -> std::same_as<size_t>;
         } && (sizeof(T) == 24) && std::is_trivially_copyable_v<T>;
-    }
+    } // namespace detail
 
     /**
      * Chaining builder for field annotations
@@ -44,58 +45,51 @@ namespace queen
     {
     public:
         constexpr FieldBuilder(FieldInfo& info, FieldAttributes& attrs) noexcept
-            : info_{info}
-            , attrs_{attrs}
-        {}
+            : m_info{info}
+            , m_attrs{attrs} {}
 
-        FieldBuilder& Range(float min, float max, float step = 0.f) noexcept
-        {
+        FieldBuilder& Range(float min, float max, float step = 0.f) noexcept {
             EnsureAttributes();
-            attrs_.min = min;
-            attrs_.max = max;
-            attrs_.step = step;
+            m_attrs.m_min = min;
+            m_attrs.m_max = max;
+            m_attrs.m_step = step;
             return *this;
         }
 
-        FieldBuilder& Tooltip(const char* text) noexcept
-        {
+        FieldBuilder& Tooltip(const char* text) noexcept {
             EnsureAttributes();
-            attrs_.tooltip = text;
+            m_attrs.m_tooltip = text;
             return *this;
         }
 
-        FieldBuilder& Category(const char* cat) noexcept
-        {
+        FieldBuilder& Category(const char* cat) noexcept {
             EnsureAttributes();
-            attrs_.category = cat;
+            m_attrs.m_category = cat;
             return *this;
         }
 
-        FieldBuilder& DisplayName(const char* name) noexcept
-        {
+        FieldBuilder& DisplayName(const char* name) noexcept {
             EnsureAttributes();
-            attrs_.display_name = name;
+            m_attrs.m_displayName = name;
             return *this;
         }
 
-        FieldBuilder& Flag(FieldFlag flag) noexcept
-        {
+        FieldBuilder& Flag(FieldFlag flag) noexcept {
             EnsureAttributes();
-            attrs_.flags |= static_cast<uint32_t>(flag);
+            m_attrs.m_flags |= static_cast<uint32_t>(flag);
             return *this;
         }
 
     private:
-        void EnsureAttributes() noexcept
-        {
-            if (info_.attributes == nullptr)
+        void EnsureAttributes() noexcept {
+            if (m_info.m_attributes == nullptr)
             {
-                info_.attributes = &attrs_;
+                m_info.m_attributes = &m_attrs;
             }
         }
 
-        FieldInfo& info_;
-        FieldAttributes& attrs_;
+        FieldInfo& m_info;
+        FieldAttributes& m_attrs;
     };
 
     /**
@@ -142,8 +136,7 @@ namespace queen
      *
      * @tparam MaxFields Maximum number of fields to support (default 32)
      */
-    template<size_t MaxFields = 32>
-    class ComponentReflector
+    template <size_t MaxFields = 32> class ComponentReflector
     {
     public:
         constexpr ComponentReflector() noexcept = default;
@@ -158,51 +151,49 @@ namespace queen
          * @param member_ptr Pointer-to-member for the field
          * @return FieldBuilder for chaining annotations
          */
-        template<typename T, typename C>
-        FieldBuilder Field(const char* name, T C::* member_ptr) noexcept
-        {
-            hive::Assert(count_ < MaxFields, "Too many fields, increase MaxFields");
+        template <typename T, typename C> FieldBuilder Field(const char* name, T C::* memberPtr) noexcept {
+            hive::Assert(m_count < MaxFields, "Too many fields, increase MaxFields");
 
-            size_t idx = count_++;
-            FieldInfo& info = fields_[idx];
-            info.name = name;
-            info.offset = GetMemberOffset(member_ptr);
-            info.size = sizeof(T);
+            size_t idx = m_count++;
+            FieldInfo& info = m_fields[idx];
+            info.m_name = name;
+            info.m_offset = GetMemberOffset(memberPtr);
+            info.m_size = sizeof(T);
 
             // Type deduction
             if constexpr (std::is_same_v<T, Entity>)
             {
-                info.type = FieldType::Entity;
+                info.m_type = FieldType::ENTITY;
             }
             else if constexpr (std::is_enum_v<T>)
             {
-                info.type = FieldType::Enum;
+                info.m_type = FieldType::ENUM;
 
                 // Auto-lookup EnumInfo<T> if specialized
                 if constexpr (ReflectableEnum<T>)
                 {
-                    info.enum_info = &EnumInfo<T>::Get();
+                    info.m_enumInfo = &EnumInfo<T>::Get();
                 }
             }
             else if constexpr (detail::IsFixedString<T>)
             {
-                info.type = FieldType::String;
+                info.m_type = FieldType::STRING;
             }
             else if constexpr (std::is_array_v<T>)
             {
-                info.type = FieldType::FixedArray;
-                info.element_count = std::extent_v<T>;
-                info.element_type = detail::GetFieldType<std::remove_extent_t<T>>();
+                info.m_type = FieldType::FIXED_ARRAY;
+                info.m_elementCount = std::extent_v<T>;
+                info.m_elementType = detail::GetFieldType<std::remove_extent_t<T>>();
             }
             else
             {
-                info.type = detail::GetFieldType<T>();
+                info.m_type = detail::GetFieldType<T>();
             }
 
             // For struct types, store the nested type ID and reflection data if available
-            if (info.type == FieldType::Struct)
+            if (info.m_type == FieldType::STRUCT)
             {
-                info.nested_type_id = TypeIdOf<T>();
+                info.m_nestedTypeId = TypeIdOf<T>();
 
                 // If the nested type is Reflectable, capture its field layout
                 if constexpr (requires(ComponentReflector<MaxFields>& r) { T::Reflect(r); })
@@ -211,46 +202,39 @@ namespace queen
                     // FieldInfo::attributes pointers dangling).
                     struct NestedHolder
                     {
-                        ComponentReflector<MaxFields> reflector;
-                        NestedHolder() { T::Reflect(reflector); }
+                        ComponentReflector<MaxFields> m_reflector;
+                        NestedHolder() { T::Reflect(m_reflector); }
                     };
-                    static NestedHolder nested;
-                    info.nested_fields = nested.reflector.Data();
-                    info.nested_field_count = nested.reflector.Count();
+                    static NestedHolder s_nested;
+                    info.m_nestedFields = s_nested.m_reflector.Data();
+                    info.m_nestedFieldCount = s_nested.m_reflector.Count();
                 }
             }
 
-            return FieldBuilder{info, attributes_[idx]};
+            return FieldBuilder{info, m_attributes[idx]};
         }
 
         /**
          * Get number of registered fields
          */
-        [[nodiscard]] constexpr size_t Count() const noexcept
-        {
-            return count_;
-        }
+        [[nodiscard]] constexpr size_t Count() const noexcept { return m_count; }
 
         /**
          * Get field info by index
          */
-        [[nodiscard]] constexpr const FieldInfo& operator[](size_t index) const noexcept
-        {
-            return fields_[index];
-        }
+        [[nodiscard]] constexpr const FieldInfo& operator[](size_t index) const noexcept { return m_fields[index]; }
 
         /**
          * Get field info by name (linear search)
          *
          * @return Pointer to FieldInfo or nullptr if not found
          */
-        [[nodiscard]] constexpr const FieldInfo* FindField(const char* name) const noexcept
-        {
-            for (size_t i = 0; i < count_; ++i)
+        [[nodiscard]] constexpr const FieldInfo* FindField(const char* name) const noexcept {
+            for (size_t i = 0; i < m_count; ++i)
             {
-                if (detail::StringsEqual(fields_[i].name, name))
+                if (detail::StringsEqual(m_fields[i].m_name, name))
                 {
-                    return &fields_[i];
+                    return &m_fields[i];
                 }
             }
             return nullptr;
@@ -259,40 +243,26 @@ namespace queen
         /**
          * Get pointer to fields array
          */
-        [[nodiscard]] constexpr const FieldInfo* Data() const noexcept
-        {
-            return fields_;
-        }
+        [[nodiscard]] constexpr const FieldInfo* Data() const noexcept { return m_fields; }
 
         /**
          * Iterate over all fields
          */
-        [[nodiscard]] constexpr const FieldInfo* begin() const noexcept
-        {
-            return fields_;
-        }
+        [[nodiscard]] constexpr const FieldInfo* Begin() const noexcept { return m_fields; }
 
-        [[nodiscard]] constexpr const FieldInfo* end() const noexcept
-        {
-            return fields_ + count_;
-        }
+        [[nodiscard]] constexpr const FieldInfo* End() const noexcept { return m_fields + m_count; }
 
     private:
-        template<typename T, typename C>
-        static size_t GetMemberOffset(T C::* member_ptr) noexcept
-        {
+        template <typename T, typename C> static size_t GetMemberOffset(T C::* memberPtr) noexcept {
             // Use stack-allocated storage to avoid nullptr dereference UB
             alignas(C) unsigned char storage[sizeof(C)]{};
             return static_cast<size_t>(
-                reinterpret_cast<const unsigned char*>(
-                    &(reinterpret_cast<C*>(storage)->*member_ptr)
-                ) - storage
-            );
+                reinterpret_cast<const unsigned char*>(&(reinterpret_cast<C*>(storage)->*memberPtr)) - storage);
         }
 
-        FieldInfo fields_[MaxFields]{};
-        FieldAttributes attributes_[MaxFields]{};
-        size_t count_ = 0;
+        FieldInfo m_fields[MaxFields]{};
+        FieldAttributes m_attributes[MaxFields]{};
+        size_t m_count = 0;
     };
 
     /**
@@ -303,36 +273,26 @@ namespace queen
      */
     struct ComponentReflection
     {
-        const FieldInfo* fields = nullptr;
-        size_t field_count = 0;
-        TypeId type_id = 0;
-        const char* name = nullptr;
+        const FieldInfo* m_fields = nullptr;
+        size_t m_fieldCount = 0;
+        TypeId m_typeId = 0;
+        const char* m_name = nullptr;
 
-        [[nodiscard]] constexpr bool IsValid() const noexcept
-        {
-            return type_id != 0 && fields != nullptr;
-        }
+        [[nodiscard]] constexpr bool IsValid() const noexcept { return m_typeId != 0 && m_fields != nullptr; }
 
-        [[nodiscard]] constexpr const FieldInfo* FindField(const char* field_name) const noexcept
-        {
-            for (size_t i = 0; i < field_count; ++i)
+        [[nodiscard]] constexpr const FieldInfo* FindField(const char* fieldName) const noexcept {
+            for (size_t i = 0; i < m_fieldCount; ++i)
             {
-                if (detail::StringsEqual(fields[i].name, field_name))
+                if (detail::StringsEqual(m_fields[i].m_name, fieldName))
                 {
-                    return &fields[i];
+                    return &m_fields[i];
                 }
             }
             return nullptr;
         }
 
-        [[nodiscard]] constexpr const FieldInfo* begin() const noexcept
-        {
-            return fields;
-        }
+        [[nodiscard]] constexpr const FieldInfo* Begin() const noexcept { return m_fields; }
 
-        [[nodiscard]] constexpr const FieldInfo* end() const noexcept
-        {
-            return fields + field_count;
-        }
+        [[nodiscard]] constexpr const FieldInfo* End() const noexcept { return m_fields + m_fieldCount; }
     };
-}
+} // namespace queen

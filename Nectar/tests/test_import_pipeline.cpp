@@ -1,22 +1,25 @@
-#include <larvae/larvae.h>
-#include <nectar/pipeline/import_pipeline.h>
-#include <nectar/pipeline/importer_registry.h>
-#include <nectar/pipeline/asset_importer.h>
+#include <comb/default_allocator.h>
+
 #include <nectar/cas/cas_store.h>
-#include <nectar/vfs/virtual_filesystem.h>
-#include <nectar/vfs/memory_mount.h>
-#include <nectar/database/asset_database.h>
 #include <nectar/core/asset_id.h>
 #include <nectar/core/content_hash.h>
+#include <nectar/database/asset_database.h>
 #include <nectar/hive/hive_document.h>
-#include <comb/default_allocator.h>
+#include <nectar/pipeline/asset_importer.h>
+#include <nectar/pipeline/import_pipeline.h>
+#include <nectar/pipeline/importer_registry.h>
+#include <nectar/vfs/memory_mount.h>
+#include <nectar/vfs/virtual_filesystem.h>
+
+#include <larvae/larvae.h>
+
 #include <cstring>
 #include <filesystem>
 
-namespace {
+namespace
+{
 
-    auto& GetPipeAlloc()
-    {
+    auto& GetPipeAlloc() {
         static comb::ModuleAllocator alloc{"TestPipeline", 4 * 1024 * 1024};
         return alloc.Get();
     }
@@ -24,52 +27,47 @@ namespace {
     struct TempDir
     {
         std::filesystem::path path;
-        explicit TempDir(const char* name)
-        {
+        explicit TempDir(const char* name) {
             path = std::filesystem::temp_directory_path() / name;
             std::filesystem::create_directories(path);
         }
-        ~TempDir()
-        {
+        ~TempDir() {
             std::error_code ec;
             std::filesystem::remove_all(path, ec);
         }
-        wax::StringView View() const
-        {
+        wax::StringView View() const {
             static thread_local std::string s;
             s = path.string();
             return wax::StringView{s.c_str()};
         }
     };
 
-    nectar::AssetId MakeId(uint64_t v)
-    {
+    nectar::AssetId MakeId(uint64_t v) {
         uint8_t bytes[16] = {};
         std::memcpy(bytes, &v, sizeof(v));
         return nectar::AssetId::FromBytes(bytes);
     }
 
     // Simple pass-through importer
-    struct DummyAsset {};
+    struct DummyAsset
+    {
+    };
 
     class PassthroughImporter final : public nectar::AssetImporter<DummyAsset>
     {
     public:
-        wax::Span<const char* const> SourceExtensions() const override
-        {
+        wax::Span<const char* const> SourceExtensions() const override {
             static const char* const exts[] = {".dat"};
             return {exts, 1};
         }
         uint32_t Version() const override { return version_; }
         wax::StringView TypeName() const override { return "DummyAsset"; }
-        nectar::ImportResult Import(wax::ByteSpan source_data,
-                                     const nectar::HiveDocument&,
-                                     nectar::ImportContext&) override
-        {
+        nectar::ImportResult Import(wax::ByteSpan source_data, const nectar::HiveDocument&,
+                                    nectar::ImportContext&) override {
             nectar::ImportResult r{};
-            r.success = true;
-            r.intermediate_data = wax::ByteBuffer{GetPipeAlloc()};
-            r.intermediate_data.Append(source_data.Data(), source_data.Size());
+            r.m_success = true;
+            r.m_intermediateData = wax::ByteBuffer{GetPipeAlloc()};
+            r.m_intermediateData.Append(source_data.Data(), source_data.Size());
             return r;
         }
 
@@ -80,18 +78,15 @@ namespace {
     class FailingImporter final : public nectar::AssetImporter<DummyAsset>
     {
     public:
-        wax::Span<const char* const> SourceExtensions() const override
-        {
+        wax::Span<const char* const> SourceExtensions() const override {
             static const char* const exts[] = {".fail"};
             return {exts, 1};
         }
         uint32_t Version() const override { return 1; }
         wax::StringView TypeName() const override { return "FailAsset"; }
-        nectar::ImportResult Import(wax::ByteSpan, const nectar::HiveDocument&,
-                                     nectar::ImportContext&) override
-        {
+        nectar::ImportResult Import(wax::ByteSpan, const nectar::HiveDocument&, nectar::ImportContext&) override {
             nectar::ImportResult r{};
-            r.error_message = wax::String{GetPipeAlloc(), "import failed on purpose"};
+            r.m_errorMessage = wax::String{GetPipeAlloc(), "import failed on purpose"};
             return r;
         }
     };
@@ -100,8 +95,7 @@ namespace {
     class DepImporter final : public nectar::AssetImporter<DummyAsset>
     {
     public:
-        wax::Span<const char* const> SourceExtensions() const override
-        {
+        wax::Span<const char* const> SourceExtensions() const override {
             static const char* const exts[] = {".dep"};
             return {exts, 1};
         }
@@ -110,15 +104,13 @@ namespace {
 
         nectar::AssetId dep_target;
 
-        nectar::ImportResult Import(wax::ByteSpan source_data,
-                                     const nectar::HiveDocument&,
-                                     nectar::ImportContext& ctx) override
-        {
+        nectar::ImportResult Import(wax::ByteSpan source_data, const nectar::HiveDocument&,
+                                    nectar::ImportContext& ctx) override {
             ctx.DeclareHardDep(dep_target);
             nectar::ImportResult r{};
-            r.success = true;
-            r.intermediate_data = wax::ByteBuffer{GetPipeAlloc()};
-            r.intermediate_data.Append(source_data.Data(), source_data.Size());
+            r.m_success = true;
+            r.m_intermediateData = wax::ByteBuffer{GetPipeAlloc()};
+            r.m_intermediateData.Append(source_data.Data(), source_data.Size());
             return r;
         }
     };
@@ -147,9 +139,9 @@ namespace {
         nectar::ImportRequest req{"data/test.dat", id};
         auto output = pipeline.ImportAsset(req);
 
-        larvae::AssertTrue(output.success);
-        larvae::AssertTrue(output.content_hash.IsValid());
-        larvae::AssertEqual(output.import_version, uint32_t{1});
+        larvae::AssertTrue(output.m_success);
+        larvae::AssertTrue(output.m_contentHash.IsValid());
+        larvae::AssertEqual(output.m_importVersion, uint32_t{1});
     });
 
     auto t2 = larvae::RegisterTest("NectarPipeline", "ImportNoImporter", []() {
@@ -164,15 +156,15 @@ namespace {
 
         nectar::AssetDatabase db{alloc};
         nectar::CasStore cas{alloc, cas_dir.View()};
-        nectar::ImporterRegistry registry{alloc};  // nothing registered
+        nectar::ImporterRegistry registry{alloc}; // nothing registered
 
         nectar::ImportPipeline pipeline{alloc, registry, cas, vfs, db};
 
         nectar::ImportRequest req{"test.xyz", MakeId(200)};
         auto output = pipeline.ImportAsset(req);
 
-        larvae::AssertFalse(output.success);
-        larvae::AssertTrue(output.error_message.View().Size() > 0);
+        larvae::AssertFalse(output.m_success);
+        larvae::AssertTrue(output.m_errorMessage.View().Size() > 0);
     });
 
     auto t3 = larvae::RegisterTest("NectarPipeline", "ImportSourceNotFound", []() {
@@ -194,7 +186,7 @@ namespace {
         nectar::ImportRequest req{"missing.dat", MakeId(300)};
         auto output = pipeline.ImportAsset(req);
 
-        larvae::AssertFalse(output.success);
+        larvae::AssertFalse(output.m_success);
     });
 
     auto t4 = larvae::RegisterTest("NectarPipeline", "ImportFailure", []() {
@@ -218,8 +210,8 @@ namespace {
         nectar::ImportRequest req{"bad.fail", MakeId(400)};
         auto output = pipeline.ImportAsset(req);
 
-        larvae::AssertFalse(output.success);
-        larvae::AssertTrue(output.error_message.View().Size() > 0);
+        larvae::AssertFalse(output.m_success);
+        larvae::AssertTrue(output.m_errorMessage.View().Size() > 0);
     });
 
     auto t5 = larvae::RegisterTest("NectarPipeline", "StoreInCas", []() {
@@ -243,12 +235,12 @@ namespace {
 
         nectar::ImportRequest req{"blob.dat", MakeId(500)};
         auto output = pipeline.ImportAsset(req);
-        larvae::AssertTrue(output.success);
+        larvae::AssertTrue(output.m_success);
 
         // Verify the blob is in the CAS
-        larvae::AssertTrue(cas.Contains(output.content_hash));
+        larvae::AssertTrue(cas.Contains(output.m_contentHash));
 
-        auto loaded = cas.Load(output.content_hash);
+        auto loaded = cas.Load(output.m_contentHash);
         larvae::AssertEqual(loaded.Size(), std::strlen(content));
         larvae::AssertTrue(std::memcmp(loaded.Data(), content, loaded.Size()) == 0);
     });
@@ -274,16 +266,16 @@ namespace {
         auto id = MakeId(600);
         nectar::ImportRequest req{"rec.dat", id};
         auto output = pipeline.ImportAsset(req);
-        larvae::AssertTrue(output.success);
+        larvae::AssertTrue(output.m_success);
 
         // Record should be in the database
         auto* record = db.FindByUuid(id);
         larvae::AssertTrue(record != nullptr);
         // record.content_hash = source hash (for change detection)
         auto source_hash = nectar::ContentHash::FromData("record", 6);
-        larvae::AssertTrue(record->content_hash == source_hash);
-        larvae::AssertEqual(record->import_version, uint32_t{1});
-        larvae::AssertTrue(record->type.View().Equals("DummyAsset"));
+        larvae::AssertTrue(record->m_contentHash == source_hash);
+        larvae::AssertEqual(record->m_importVersion, uint32_t{1});
+        larvae::AssertTrue(record->m_type.View().Equals("DummyAsset"));
     });
 
     auto t7 = larvae::RegisterTest("NectarPipeline", "DependenciesRecorded", []() {
@@ -308,13 +300,13 @@ namespace {
         auto id = MakeId(700);
         nectar::ImportRequest req{"a.dep", id};
         auto output = pipeline.ImportAsset(req);
-        larvae::AssertTrue(output.success);
+        larvae::AssertTrue(output.m_success);
 
         // Should have one dependency
-        larvae::AssertEqual(output.dependencies.Size(), size_t{1});
-        larvae::AssertTrue(output.dependencies[0].from == id);
-        larvae::AssertTrue(output.dependencies[0].to == MakeId(999));
-        larvae::AssertTrue(output.dependencies[0].kind == nectar::DepKind::Hard);
+        larvae::AssertEqual(output.m_dependencies.Size(), size_t{1});
+        larvae::AssertTrue(output.m_dependencies[0].m_from == id);
+        larvae::AssertTrue(output.m_dependencies[0].m_to == MakeId(999));
+        larvae::AssertTrue(output.m_dependencies[0].m_kind == nectar::DepKind::HARD);
 
         // Graph should also have it
         auto& graph = db.GetDependencyGraph();
@@ -399,4 +391,4 @@ namespace {
         larvae::AssertTrue(pipeline.NeedsReimport(id));
     });
 
-}
+} // namespace

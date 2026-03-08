@@ -1,7 +1,9 @@
-#include <larvae/larvae.h>
-#include <queen/world/world.h>
-#include <queen/command/commands.h>
 #include <comb/linear_allocator.h>
+
+#include <queen/command/commands.h>
+#include <queen/world/world.h>
+
+#include <larvae/larvae.h>
 
 namespace
 {
@@ -20,7 +22,9 @@ namespace
         int current, max;
     };
 
-    struct Tag {};
+    struct Tag
+    {
+    };
 
     // ─────────────────────────────────────────────────────────────
     // Commands Basic Tests
@@ -86,9 +90,7 @@ namespace
         queen::World world{};
 
         auto& commands = world.GetCommands();
-        auto builder = commands.Get().Spawn()
-            .With(Position{1.0f, 2.0f, 3.0f})
-            .With(Velocity{0.1f, 0.2f, 0.3f});
+        auto builder = commands.Get().Spawn().With(Position{1.0f, 2.0f, 3.0f}).With(Velocity{0.1f, 0.2f, 0.3f});
 
         larvae::AssertEqual(world.EntityCount(), size_t{0});
 
@@ -181,17 +183,16 @@ namespace
 
         queen::Entity e = world.Spawn(Position{1.0f, 0.0f, 0.0f}, Health{0, 100});
 
-        world.System<queen::Read<Health>>("DespawnDead")
-            .EachWithEntity([&](queen::Entity entity, const Health& hp) {
-                if (hp.current <= 0)
-                {
-                    world.GetCommands().Get().Despawn(entity);
-                }
-            });
+        world.System<queen::Read<Health>>("DespawnDead").EachWithEntity([&](queen::Entity entity, const Health& hp) {
+            if (hp.current <= 0)
+            {
+                world.GetCommands().Get().Despawn(entity);
+            }
+        });
 
         larvae::AssertTrue(world.IsAlive(e));
 
-        world.Update();  // Scheduler should flush commands after all systems run
+        world.Update(); // Scheduler should flush commands after all systems run
 
         larvae::AssertFalse(world.IsAlive(e));
     });
@@ -250,9 +251,10 @@ namespace
         larvae::AssertFalse(world.Has<Velocity>(e));
 
         world.System<queen::Read<Position>>("AddVelocity")
-            .EachWithCommands([](queen::Entity entity, const Position& pos, queen::Commands<queen::PersistentAllocator>& cmd) {
-                cmd.Get().Add(entity, Velocity{pos.x * 0.1f, 0.0f, 0.0f});
-            });
+            .EachWithCommands(
+                [](queen::Entity entity, const Position& pos, queen::Commands<queen::PersistentAllocator>& cmd) {
+                    cmd.Get().Add(entity, Velocity{pos.x * 0.1f, 0.0f, 0.0f});
+                });
 
         world.Update();
 
@@ -271,10 +273,7 @@ namespace
         world.Spawn(Position{3.0f, 0.0f, 0.0f}, Health{100, 100});
 
         // System that reduces health each frame
-        world.System<queen::Write<Health>>("DamageSystem")
-            .Each([](Health& hp) {
-                hp.current -= 40;
-            });
+        world.System<queen::Write<Health>>("DamageSystem").Each([](Health& hp) { hp.current -= 40; });
 
         // System that despawns dead entities
         world.System<queen::Read<Health>>("DeathSystem")
@@ -373,4 +372,4 @@ namespace
         larvae::AssertTrue(world.Has<Health>(e));
         larvae::AssertEqual(world.Get<Position>(e)->x, 5.0f);
     });
-}
+} // namespace

@@ -1,6 +1,8 @@
-#include <larvae/larvae.h>
-#include <queen/world/world.h>
 #include <comb/linear_allocator.h>
+
+#include <queen/world/world.h>
+
+#include <larvae/larvae.h>
 
 namespace
 {
@@ -19,7 +21,9 @@ namespace
         int current, max;
     };
 
-    struct Tag {};
+    struct Tag
+    {
+    };
 
     auto test1 = larvae::RegisterTest("QueenWorld", "Creation", []() {
         comb::LinearAllocator alloc{65536};
@@ -47,9 +51,7 @@ namespace
 
         queen::World world{};
 
-        queen::Entity e = world.Spawn()
-            .With(Position{1.0f, 2.0f, 3.0f})
-            .Build();
+        queen::Entity e = world.Spawn().With(Position{1.0f, 2.0f, 3.0f}).Build();
 
         larvae::AssertTrue(world.Has<Position>(e));
 
@@ -65,10 +67,7 @@ namespace
 
         queen::World world{};
 
-        queen::Entity e = world.Spawn()
-            .With(Position{1.0f, 2.0f, 3.0f})
-            .With(Velocity{0.1f, 0.2f, 0.3f})
-            .Build();
+        queen::Entity e = world.Spawn().With(Position{1.0f, 2.0f, 3.0f}).With(Velocity{0.1f, 0.2f, 0.3f}).Build();
 
         larvae::AssertTrue(world.Has<Position>(e));
         larvae::AssertTrue(world.Has<Velocity>(e));
@@ -272,4 +271,4 @@ namespace
         larvae::AssertNotNull(world.Get<Position>(e2));
         larvae::AssertEqual(world.Get<Position>(e2)->x, 2.0f);
     });
-}
+} // namespace

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <queen/reflect/component_reflector.h>
+
 #include <concepts>
 #include <type_traits>
 
@@ -33,7 +34,7 @@ namespace queen
      *   static_assert(Reflectable<Position>);
      * @endcode
      */
-    template<typename T>
+    template <typename T>
     concept Reflectable = requires(ComponentReflector<32>& reflector) {
         { T::Reflect(reflector) } -> std::same_as<void>;
     };
@@ -48,9 +49,7 @@ namespace queen
      * @tparam MaxFields Maximum number of fields (default 32)
      * @return ComponentReflector with registered fields
      */
-    template<Reflectable T, size_t MaxFields = 32>
-    constexpr ComponentReflector<MaxFields> GetReflection() noexcept
-    {
+    template <Reflectable T, size_t MaxFields = 32> constexpr ComponentReflector<MaxFields> GetReflection() noexcept {
         ComponentReflector<MaxFields> reflector;
         T::Reflect(reflector);
         return reflector;
@@ -68,9 +67,7 @@ namespace queen
      * @tparam T The component type (must satisfy Reflectable)
      * @return ComponentReflection with type-erased field data
      */
-    template<Reflectable T>
-    ComponentReflection GetReflectionData() noexcept
-    {
+    template <Reflectable T> ComponentReflection GetReflectionData() noexcept {
         // Holder struct ensures the reflector is constructed in-place (no copy).
         // A copy would leave FieldInfo::attributes pointers dangling because
         // they point into the reflector's internal attributes_ array.
@@ -79,33 +76,33 @@ namespace queen
         // include trailing characters from the original __PRETTY_FUNCTION__.
         struct Holder
         {
-            ComponentReflector<32> reflector;
-            char name[128]{};
-            Holder()
-            {
-                T::Reflect(reflector);
+            ComponentReflector<32> m_reflector;
+            char m_name[128]{};
+            Holder() {
+                T::Reflect(m_reflector);
                 auto sv = TypeNameOf<T>();
                 auto len = sv.size() < 127 ? sv.size() : size_t{127};
-                for (size_t i = 0; i < len; ++i) name[i] = sv[i];
-                name[len] = '\0';
+                for (size_t i = 0; i < len; ++i)
+                    m_name[i] = sv[i];
+                m_name[len] = '\0';
             }
         };
-        static Holder holder;
+        static Holder s_holder;
 
         ComponentReflection result;
-        result.fields = holder.reflector.Data();
-        result.field_count = holder.reflector.Count();
-        result.type_id = TypeIdOf<T>();
-        result.name = holder.name;
+        result.m_fields = s_holder.m_reflector.Data();
+        result.m_fieldCount = s_holder.m_reflector.Count();
+        result.m_typeId = TypeIdOf<T>();
+        result.m_name = s_holder.m_name;
         return result;
     }
 
     /**
      * Check if a type is reflectable at compile-time
      */
-    template<typename T>
-    struct IsReflectable : std::bool_constant<Reflectable<T>> {};
+    template <typename T> struct IsReflectable : std::bool_constant<Reflectable<T>>
+    {
+    };
 
-    template<typename T>
-    inline constexpr bool IsReflectable_v = IsReflectable<T>::value;
-}
+    template <typename T> inline constexpr bool isReflectableV = IsReflectable<T>::value;
+} // namespace queen

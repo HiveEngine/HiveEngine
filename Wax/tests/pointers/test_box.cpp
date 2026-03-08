@@ -1,21 +1,25 @@
-#include <larvae/larvae.h>
-#include <wax/pointers/box.h>
 #include <comb/linear_allocator.h>
 
-namespace {
-    struct TestStruct {
+#include <wax/pointers/box.h>
+
+#include <larvae/larvae.h>
+
+namespace
+{
+    struct TestStruct
+    {
         int value;
         float data;
         static int construct_count;
         static int destruct_count;
 
-        TestStruct(int v = 0, float d = 0.0f) : value{v}, data{d} {
+        TestStruct(int v = 0, float d = 0.0f)
+            : value{v}
+            , data{d} {
             ++construct_count;
         }
 
-        ~TestStruct() {
-            ++destruct_count;
-        }
+        ~TestStruct() { ++destruct_count; }
     };
 
     int TestStruct::construct_count = 0;
@@ -129,9 +133,12 @@ namespace {
 
         auto box = wax::MakeBox<int>(alloc, 42);
 
-        if (box) {
+        if (box)
+        {
             larvae::AssertEqual(*box, 42);
-        } else {
+        }
+        else
+        {
             larvae::AssertTrue(false); // Box should be valid
         }
     });
@@ -139,9 +146,12 @@ namespace {
     auto test10 = larvae::RegisterTest("WaxBox", "BoolConversionNull", []() {
         wax::Box<int, comb::LinearAllocator> box;
 
-        if (box) {
+        if (box)
+        {
             larvae::AssertTrue(false); // Box should be null
-        } else {
+        }
+        else
+        {
             larvae::AssertTrue(true);
         }
     });
@@ -160,7 +170,7 @@ namespace {
         larvae::AssertTrue(box.IsNull());
         larvae::AssertNotNull(raw);
         larvae::AssertEqual(raw->value, 10);
-        larvae::AssertEqual(TestStruct::destruct_count, 0);  // Not destroyed yet
+        larvae::AssertEqual(TestStruct::destruct_count, 0); // Not destroyed yet
 
         // Manual cleanup
         comb::Delete(alloc, raw);
@@ -234,7 +244,7 @@ namespace {
         auto box1 = wax::MakeBox<int>(alloc, 42);
         auto box2 = wax::MakeBox<int>(alloc, 42);
 
-        larvae::AssertTrue(box1 != box2);  // Different objects
+        larvae::AssertTrue(box1 != box2); // Different objects
     });
 
     auto test17 = larvae::RegisterTest("WaxBox", "CompareWithNullptr", []() {
@@ -276,4 +286,4 @@ namespace {
         larvae::AssertEqual(box2->value, 1);
         larvae::AssertTrue(box1.IsNull());
     });
-}
+} // namespace

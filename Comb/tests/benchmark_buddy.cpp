@@ -1,82 +1,92 @@
-#include <larvae/larvae.h>
 #include <comb/buddy_allocator.h>
+
+#include <larvae/larvae.h>
+
 #include <cstdlib>
 #include <vector>
 
 namespace
 {
-    constexpr size_t operator""_KB(unsigned long long kb) { return kb * 1024; }
-    constexpr size_t operator""_MB(unsigned long long mb) { return mb * 1024 * 1024; }
+    constexpr size_t operator""_KB(unsigned long long kb) {
+        return kb * 1024;
+    }
+    constexpr size_t operator""_MB(unsigned long long mb) {
+        return mb * 1024 * 1024;
+    }
 
-    auto bench1 = larvae::RegisterBenchmark("BuddyAllocator", "SmallAllocations_64B", [](larvae::BenchmarkState& state) {
-        comb::BuddyAllocator allocator{100_MB};
+    auto bench1 =
+        larvae::RegisterBenchmark("BuddyAllocator", "SmallAllocations_64B", [](larvae::BenchmarkState& state) {
+            comb::BuddyAllocator allocator{100_MB};
 
-        while (state.KeepRunning())
-        {
-            void* ptr = allocator.Allocate(64, 8);
-            larvae::DoNotOptimize(ptr);
-
-            if (allocator.GetUsedMemory() > 90_MB)
+            while (state.KeepRunning())
             {
-                // Can't reset BuddyAllocator easily, so we'll need to track and free
-                // For benchmark, we'll just break and restart
-                break;
+                void* ptr = allocator.Allocate(64, 8);
+                larvae::DoNotOptimize(ptr);
+
+                if (allocator.GetUsedMemory() > 90_MB)
+                {
+                    // Can't reset BuddyAllocator easily, so we'll need to track and free
+                    // For benchmark, we'll just break and restart
+                    break;
+                }
             }
-        }
 
-        state.SetBytesProcessed(state.iterations() * 64);
-        state.SetItemsProcessed(state.iterations());
-    });
+            state.SetBytesProcessed(state.iterations() * 64);
+            state.SetItemsProcessed(state.iterations());
+        });
 
-    auto bench2 = larvae::RegisterBenchmark("BuddyAllocator", "MediumAllocations_256B", [](larvae::BenchmarkState& state) {
-        comb::BuddyAllocator allocator{100_MB};
+    auto bench2 =
+        larvae::RegisterBenchmark("BuddyAllocator", "MediumAllocations_256B", [](larvae::BenchmarkState& state) {
+            comb::BuddyAllocator allocator{100_MB};
 
-        while (state.KeepRunning())
-        {
-            void* ptr = allocator.Allocate(256, 8);
-            larvae::DoNotOptimize(ptr);
-
-            if (allocator.GetUsedMemory() > 90_MB)
+            while (state.KeepRunning())
             {
-                break;
+                void* ptr = allocator.Allocate(256, 8);
+                larvae::DoNotOptimize(ptr);
+
+                if (allocator.GetUsedMemory() > 90_MB)
+                {
+                    break;
+                }
             }
-        }
 
-        state.SetBytesProcessed(state.iterations() * 256);
-        state.SetItemsProcessed(state.iterations());
-    });
+            state.SetBytesProcessed(state.iterations() * 256);
+            state.SetItemsProcessed(state.iterations());
+        });
 
-    auto bench3 = larvae::RegisterBenchmark("BuddyAllocator", "LargeAllocations_4KB", [](larvae::BenchmarkState& state) {
-        comb::BuddyAllocator allocator{500_MB};
+    auto bench3 =
+        larvae::RegisterBenchmark("BuddyAllocator", "LargeAllocations_4KB", [](larvae::BenchmarkState& state) {
+            comb::BuddyAllocator allocator{500_MB};
 
-        while (state.KeepRunning())
-        {
-            void* ptr = allocator.Allocate(4_KB, 8);
-            larvae::DoNotOptimize(ptr);
-
-            if (allocator.GetUsedMemory() > 450_MB)
+            while (state.KeepRunning())
             {
-                break;
+                void* ptr = allocator.Allocate(4_KB, 8);
+                larvae::DoNotOptimize(ptr);
+
+                if (allocator.GetUsedMemory() > 450_MB)
+                {
+                    break;
+                }
             }
-        }
 
-        state.SetBytesProcessed(state.iterations() * 4_KB);
-        state.SetItemsProcessed(state.iterations());
-    });
+            state.SetBytesProcessed(state.iterations() * 4_KB);
+            state.SetItemsProcessed(state.iterations());
+        });
 
-    auto bench4 = larvae::RegisterBenchmark("BuddyAllocator", "AllocationAndDeallocation", [](larvae::BenchmarkState& state) {
-        comb::BuddyAllocator allocator{100_MB};
+    auto bench4 =
+        larvae::RegisterBenchmark("BuddyAllocator", "AllocationAndDeallocation", [](larvae::BenchmarkState& state) {
+            comb::BuddyAllocator allocator{100_MB};
 
-        while (state.KeepRunning())
-        {
-            void* ptr = allocator.Allocate(128, 8);
-            larvae::DoNotOptimize(ptr);
-            allocator.Deallocate(ptr);
-        }
+            while (state.KeepRunning())
+            {
+                void* ptr = allocator.Allocate(128, 8);
+                larvae::DoNotOptimize(ptr);
+                allocator.Deallocate(ptr);
+            }
 
-        state.SetBytesProcessed(state.iterations() * 128);
-        state.SetItemsProcessed(state.iterations());
-    });
+            state.SetBytesProcessed(state.iterations() * 128);
+            state.SetItemsProcessed(state.iterations());
+        });
 
     auto bench5 = larvae::RegisterBenchmark("BuddyAllocator", "RapidRecycling", [](larvae::BenchmarkState& state) {
         comb::BuddyAllocator allocator{10_MB};
@@ -94,27 +104,28 @@ namespace
         state.SetItemsProcessed(state.iterations() * 10);
     });
 
-    auto bench6 = larvae::RegisterBenchmark("BuddyAllocator", "MixedSizeAllocations", [](larvae::BenchmarkState& state) {
-        comb::BuddyAllocator allocator{100_MB};
-        const size_t sizes[] = {32, 64, 128, 256, 512, 1024};
-        const int num_sizes = sizeof(sizes) / sizeof(sizes[0]);
+    auto bench6 =
+        larvae::RegisterBenchmark("BuddyAllocator", "MixedSizeAllocations", [](larvae::BenchmarkState& state) {
+            comb::BuddyAllocator allocator{100_MB};
+            const size_t sizes[] = {32, 64, 128, 256, 512, 1024};
+            const int num_sizes = sizeof(sizes) / sizeof(sizes[0]);
 
-        size_t i = 0;
-        while (state.KeepRunning())
-        {
-            size_t size = sizes[i % num_sizes];
-            void* ptr = allocator.Allocate(size, 8);
-            larvae::DoNotOptimize(ptr);
-            ++i;
-
-            if (allocator.GetUsedMemory() > 90_MB)
+            size_t i = 0;
+            while (state.KeepRunning())
             {
-                break;
-            }
-        }
+                size_t size = sizes[i % num_sizes];
+                void* ptr = allocator.Allocate(size, 8);
+                larvae::DoNotOptimize(ptr);
+                ++i;
 
-        state.SetItemsProcessed(state.iterations());
-    });
+                if (allocator.GetUsedMemory() > 90_MB)
+                {
+                    break;
+                }
+            }
+
+            state.SetItemsProcessed(state.iterations());
+        });
 
     auto bench7 = larvae::RegisterBenchmark("BuddyAllocator", "CoalescingPattern", [](larvae::BenchmarkState& state) {
         comb::BuddyAllocator allocator{10_MB};
@@ -153,33 +164,34 @@ namespace
         state.SetItemsProcessed(state.iterations());
     });
 
-    auto bench9 = larvae::RegisterBenchmark("BuddyAllocator", "WorstCaseFragmentation", [](larvae::BenchmarkState& state) {
-        comb::BuddyAllocator allocator{10_MB};
+    auto bench9 =
+        larvae::RegisterBenchmark("BuddyAllocator", "WorstCaseFragmentation", [](larvae::BenchmarkState& state) {
+            comb::BuddyAllocator allocator{10_MB};
 
-        while (state.KeepRunning())
-        {
-            // Create worst-case fragmentation
-            void* p1 = allocator.Allocate(256, 8);
-            void* p2 = allocator.Allocate(256, 8);
-            void* p3 = allocator.Allocate(256, 8);
-            void* p4 = allocator.Allocate(256, 8);
+            while (state.KeepRunning())
+            {
+                // Create worst-case fragmentation
+                void* p1 = allocator.Allocate(256, 8);
+                void* p2 = allocator.Allocate(256, 8);
+                void* p3 = allocator.Allocate(256, 8);
+                void* p4 = allocator.Allocate(256, 8);
 
-            larvae::DoNotOptimize(p1);
-            larvae::DoNotOptimize(p2);
-            larvae::DoNotOptimize(p3);
-            larvae::DoNotOptimize(p4);
+                larvae::DoNotOptimize(p1);
+                larvae::DoNotOptimize(p2);
+                larvae::DoNotOptimize(p3);
+                larvae::DoNotOptimize(p4);
 
-            // Free alternating
-            allocator.Deallocate(p1);
-            allocator.Deallocate(p3);
+                // Free alternating
+                allocator.Deallocate(p1);
+                allocator.Deallocate(p3);
 
-            // Free remaining
-            allocator.Deallocate(p2);
-            allocator.Deallocate(p4);
-        }
+                // Free remaining
+                allocator.Deallocate(p2);
+                allocator.Deallocate(p4);
+            }
 
-        state.SetItemsProcessed(state.iterations() * 4);
-    });
+            state.SetItemsProcessed(state.iterations() * 4);
+        });
 
     auto bench10 = larvae::RegisterBenchmark("malloc", "MixedSizeAllocations", [](larvae::BenchmarkState& state) {
         const size_t sizes[] = {32, 64, 128, 256, 512, 1024};
@@ -271,4 +283,4 @@ namespace
 
         state.SetItemsProcessed(state.iterations());
     });
-}
+} // namespace

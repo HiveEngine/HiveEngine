@@ -1,6 +1,8 @@
-#include <larvae/larvae.h>
-#include <queen/world/world.h>
 #include <comb/linear_allocator.h>
+
+#include <queen/world/world.h>
+
+#include <larvae/larvae.h>
 
 namespace
 {
@@ -19,7 +21,9 @@ namespace
         int current, max;
     };
 
-    struct Tag {};
+    struct Tag
+    {
+    };
 
     // ─────────────────────────────────────────────────────────────
     // SystemNode Tests
@@ -29,7 +33,7 @@ namespace
         queen::SystemNode node{};
 
         larvae::AssertFalse(node.Id().IsValid());
-        larvae::AssertTrue(node.State() == queen::SystemState::Pending);
+        larvae::AssertTrue(node.State() == queen::SystemState::PENDING);
         larvae::AssertEqual(node.DependencyCount(), uint16_t{0});
         larvae::AssertEqual(node.UnfinishedDeps(), uint16_t{0});
     });
@@ -68,11 +72,11 @@ namespace
 
         node.DecrementDeps();
         node.DecrementDeps();
-        node.SetState(queen::SystemState::Complete);
+        node.SetState(queen::SystemState::COMPLETE);
 
         node.Reset();
 
-        larvae::AssertTrue(node.State() == queen::SystemState::Pending);
+        larvae::AssertTrue(node.State() == queen::SystemState::PENDING);
         larvae::AssertEqual(node.UnfinishedDeps(), uint16_t{3});
     });
 
@@ -87,7 +91,7 @@ namespace
         node.DecrementDeps();
         larvae::AssertTrue(node.IsReady());
 
-        node.SetState(queen::SystemState::Running);
+        node.SetState(queen::SystemState::RUNNING);
         larvae::AssertFalse(node.IsReady());
     });
 
@@ -110,8 +114,7 @@ namespace
         comb::LinearAllocator alloc{262144};
         queen::World world{};
 
-        world.System<queen::Read<Position>>("TestSystem")
-            .Each([](const Position&) {});
+        world.System<queen::Read<Position>>("TestSystem").Each([](const Position&) {});
 
         auto& scheduler = world.GetScheduler();
         scheduler.Build(world.GetSystemStorage());
@@ -125,11 +128,9 @@ namespace
         comb::LinearAllocator alloc{262144};
         queen::World world{};
 
-        world.System<queen::Read<Position>>("System1")
-            .Each([](const Position&) {});
+        world.System<queen::Read<Position>>("System1").Each([](const Position&) {});
 
-        world.System<queen::Read<Velocity>>("System2")
-            .Each([](const Velocity&) {});
+        world.System<queen::Read<Velocity>>("System2").Each([](const Velocity&) {});
 
         auto& scheduler = world.GetScheduler();
         scheduler.Build(world.GetSystemStorage());
@@ -143,11 +144,9 @@ namespace
         comb::LinearAllocator alloc{262144};
         queen::World world{};
 
-        world.System<queen::Write<Position>>("Writer")
-            .Each([](Position&) {});
+        world.System<queen::Write<Position>>("Writer").Each([](Position&) {});
 
-        world.System<queen::Read<Position>>("Reader")
-            .Each([](const Position&) {});
+        world.System<queen::Read<Position>>("Reader").Each([](const Position&) {});
 
         auto& scheduler = world.GetScheduler();
         scheduler.Build(world.GetSystemStorage());
@@ -165,14 +164,11 @@ namespace
         comb::LinearAllocator alloc{262144};
         queen::World world{};
 
-        world.System<queen::Write<Position>>("A")
-            .Each([](Position&) {});
+        world.System<queen::Write<Position>>("A").Each([](Position&) {});
 
-        world.System<queen::Read<Position>, queen::Write<Velocity>>("B")
-            .Each([](const Position&, Velocity&) {});
+        world.System<queen::Read<Position>, queen::Write<Velocity>>("B").Each([](const Position&, Velocity&) {});
 
-        world.System<queen::Read<Velocity>>("C")
-            .Each([](const Velocity&) {});
+        world.System<queen::Read<Velocity>>("C").Each([](const Velocity&) {});
 
         auto& scheduler = world.GetScheduler();
         scheduler.Build(world.GetSystemStorage());
@@ -196,10 +192,7 @@ namespace
 
         int count = 0;
 
-        world.System<queen::Read<Position>>("Counter")
-            .Each([&](const Position&) {
-                ++count;
-            });
+        world.System<queen::Read<Position>>("Counter").Each([&](const Position&) { ++count; });
 
         world.Update();
 
@@ -212,15 +205,9 @@ namespace
 
         queen::Entity e = world.Spawn(Position{1.0f, 0.0f, 0.0f});
 
-        world.System<queen::Write<Position>>("Add")
-            .Each([](Position& pos) {
-                pos.x += 1.0f;
-            });
+        world.System<queen::Write<Position>>("Add").Each([](Position& pos) { pos.x += 1.0f; });
 
-        world.System<queen::Write<Position>>("Multiply")
-            .Each([](Position& pos) {
-                pos.x *= 2.0f;
-            });
+        world.System<queen::Write<Position>>("Multiply").Each([](Position& pos) { pos.x *= 2.0f; });
 
         world.Update();
 
@@ -241,12 +228,11 @@ namespace
                 pos.z += vel.dz;
             });
 
-        world.System<queen::Read<Position>>("CheckPosition")
-            .EachWithEntity([&](queen::Entity, const Position& pos) {
-                larvae::AssertEqual(pos.x, 1.0f);
-                larvae::AssertEqual(pos.y, 2.0f);
-                larvae::AssertEqual(pos.z, 3.0f);
-            });
+        world.System<queen::Read<Position>>("CheckPosition").EachWithEntity([&](queen::Entity, const Position& pos) {
+            larvae::AssertEqual(pos.x, 1.0f);
+            larvae::AssertEqual(pos.y, 2.0f);
+            larvae::AssertEqual(pos.z, 3.0f);
+        });
 
         world.Update();
 
@@ -260,10 +246,7 @@ namespace
 
         queen::Entity e = world.Spawn(Position{0.0f, 0.0f, 0.0f});
 
-        world.System<queen::Write<Position>>("Increment")
-            .Each([](Position& pos) {
-                pos.x += 1.0f;
-            });
+        world.System<queen::Write<Position>>("Increment").Each([](Position& pos) { pos.x += 1.0f; });
 
         world.Update();
         world.Update();
@@ -281,10 +264,7 @@ namespace
 
         int count = 0;
 
-        queen::SystemId id = world.System<queen::Read<Position>>("Disabled")
-            .Each([&](const Position&) {
-                ++count;
-            });
+        queen::SystemId id = world.System<queen::Read<Position>>("Disabled").Each([&](const Position&) { ++count; });
 
         world.SetSystemEnabled(id, false);
         world.Update();
@@ -296,8 +276,7 @@ namespace
         comb::LinearAllocator alloc{262144};
         queen::World world{};
 
-        world.System<queen::Read<Position>>("First")
-            .Each([](const Position&) {});
+        world.System<queen::Read<Position>>("First").Each([](const Position&) {});
 
         world.Update();
 
@@ -316,15 +295,9 @@ namespace
 
         queen::Entity e = world.Spawn(Position{0.0f, 0.0f, 0.0f}, Velocity{0.0f, 0.0f, 0.0f}, Health{100, 100});
 
-        world.System<queen::Write<Position>>("SetPosition")
-            .Each([](Position& pos) {
-                pos.x = 1.0f;
-            });
+        world.System<queen::Write<Position>>("SetPosition").Each([](Position& pos) { pos.x = 1.0f; });
 
-        world.System<queen::Write<Velocity>>("SetVelocity")
-            .Each([](Velocity& vel) {
-                vel.dx = 2.0f;
-            });
+        world.System<queen::Write<Velocity>>("SetVelocity").Each([](Velocity& vel) { vel.dx = 2.0f; });
 
         world.System<queen::Read<Position>, queen::Read<Velocity>, queen::Write<Health>>("CombineIntoHealth")
             .Each([](const Position& pos, const Velocity& vel, Health& hp) {
@@ -345,15 +318,9 @@ namespace
         int order_b = -1;
         int counter = 0;
 
-        world.System<queen::Read<Position>>("BranchA")
-            .Each([&](const Position&) {
-                order_a = counter++;
-            });
+        world.System<queen::Read<Position>>("BranchA").Each([&](const Position&) { order_a = counter++; });
 
-        world.System<queen::Read<Velocity>>("BranchB")
-            .Each([&](const Velocity&) {
-                order_b = counter++;
-            });
+        world.System<queen::Read<Velocity>>("BranchB").Each([&](const Velocity&) { order_b = counter++; });
 
         world.Spawn(Position{1.0f, 0.0f, 0.0f});
         world.Spawn(Velocity{1.0f, 0.0f, 0.0f});
@@ -370,10 +337,7 @@ namespace
 
         queen::Entity e = world.Spawn(Position{0.0f, 0.0f, 0.0f});
 
-        world.System<queen::Write<Position>>("Increment")
-            .Each([](Position& pos) {
-                pos.x += 1.0f;
-            });
+        world.System<queen::Write<Position>>("Increment").Each([](Position& pos) { pos.x += 1.0f; });
 
         world.Update();
         Position* pos1 = world.Get<Position>(e);
@@ -397,12 +361,9 @@ namespace
         int a_order = 0;
         int b_order = 0;
 
-        auto id_a = world.System("A")
-            .Run([&](queen::World&) { a_order = ++order; });
+        auto id_a = world.System("A").Run([&](queen::World&) { a_order = ++order; });
 
-        world.System("B")
-            .After(id_a)
-            .Run([&](queen::World&) { b_order = ++order; });
+        world.System("B").After(id_a).Run([&](queen::World&) { b_order = ++order; });
 
         world.Update();
 
@@ -416,12 +377,9 @@ namespace
         int a_order = 0;
         int b_order = 0;
 
-        world.System("A")
-            .Run([&](queen::World&) { a_order = ++order; });
+        world.System("A").Run([&](queen::World&) { a_order = ++order; });
 
-        world.System("B")
-            .After("A")
-            .Run([&](queen::World&) { b_order = ++order; });
+        world.System("B").After("A").Run([&](queen::World&) { b_order = ++order; });
 
         world.Update();
 
@@ -434,13 +392,10 @@ namespace
         int a_order = 0;
         int b_order = 0;
 
-        auto id_b = world.System("B")
-            .Run([&](queen::World&) { b_order = ++order; });
+        auto id_b = world.System("B").Run([&](queen::World&) { b_order = ++order; });
 
         // A registered after B, but must run before B
-        world.System("A")
-            .Before(id_b)
-            .Run([&](queen::World&) { a_order = ++order; });
+        world.System("A").Before(id_b).Run([&](queen::World&) { a_order = ++order; });
 
         world.Update();
 
@@ -454,16 +409,11 @@ namespace
         int b_order = 0;
         int c_order = 0;
 
-        auto id_a = world.System("A")
-            .Run([&](queen::World&) { a_order = ++order; });
+        auto id_a = world.System("A").Run([&](queen::World&) { a_order = ++order; });
 
-        auto id_b = world.System("B")
-            .After(id_a)
-            .Run([&](queen::World&) { b_order = ++order; });
+        auto id_b = world.System("B").After(id_a).Run([&](queen::World&) { b_order = ++order; });
 
-        world.System("C")
-            .After(id_b)
-            .Run([&](queen::World&) { c_order = ++order; });
+        world.System("C").After(id_b).Run([&](queen::World&) { c_order = ++order; });
 
         world.Update();
 
@@ -471,4 +421,4 @@ namespace
         larvae::AssertTrue(a_order < b_order);
         larvae::AssertTrue(b_order < c_order);
     });
-}
+} // namespace

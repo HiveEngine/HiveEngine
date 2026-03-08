@@ -1,7 +1,13 @@
 #pragma once
 
-namespace queen { class World; }
-namespace terra { struct WindowContext; }
+namespace queen
+{
+    class World;
+}
+namespace terra
+{
+    struct WindowContext;
+}
 
 namespace antennae
 {
@@ -9,4 +15,4 @@ namespace antennae
     // Inserts Keyboard and Mouse resources if they don't exist yet.
     // Call once per frame, after PollEvents(), before simulation.
     void UpdateInput(queen::World& world, terra::WindowContext* window);
-}
+} // namespace antennae

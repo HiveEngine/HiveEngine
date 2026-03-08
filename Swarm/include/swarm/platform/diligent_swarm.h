@@ -4,12 +4,12 @@ namespace swarm
 {
     struct RenderContext
     {
-        Diligent::IRenderDevice *device_{nullptr};
-        Diligent::IDeviceContext *context_{nullptr};
+        Diligent::IRenderDevice* m_device{nullptr};
+        Diligent::IDeviceContext* m_context{nullptr};
 
-        Diligent::ISwapChain *swapchain_{nullptr}; //Can be null if offscreen rendering
+        Diligent::ISwapChain* m_swapchain{nullptr}; // Can be null if offscreen rendering
 
-        //TEMP
-        Diligent::IPipelineState *pipeline_{nullptr};
+        // TEMP
+        Diligent::IPipelineState* m_pipeline{nullptr};
     };
-}
+} // namespace swarm

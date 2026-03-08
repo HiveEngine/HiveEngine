@@ -1,15 +1,18 @@
-#include <larvae/larvae.h>
+#include <comb/linear_allocator.h>
+
+#include <wax/containers/hash_set.h>
+
+#include <queen/command/command_buffer.h>
+#include <queen/core/component_info.h>
 #include <queen/core/entity.h>
 #include <queen/core/tick.h>
-#include <queen/core/component_info.h>
+#include <queen/event/events.h>
+#include <queen/scheduler/work_stealing_deque.h>
 #include <queen/storage/column.h>
 #include <queen/storage/table.h>
-#include <queen/command/command_buffer.h>
-#include <queen/scheduler/work_stealing_deque.h>
-#include <queen/event/events.h>
 #include <queen/world/world.h>
-#include <wax/containers/hash_set.h>
-#include <comb/linear_allocator.h>
+
+#include <larvae/larvae.h>
 
 namespace
 {
@@ -110,9 +113,7 @@ namespace
 
         Tracked::destruct_count = 0;
 
-        queen::Column<comb::LinearAllocator> column{
-            alloc, queen::ComponentMeta::Of<Tracked>(), 8
-        };
+        queen::Column<comb::LinearAllocator> column{alloc, queen::ComponentMeta::Of<Tracked>(), 8};
 
         Tracked t0{10};
         Tracked t1{20};
@@ -180,8 +181,8 @@ namespace
         // Check that ticks were transferred for Position
         queen::Column<comb::LinearAllocator>* dst_pos = target.GetColumn<Position>();
         queen::ComponentTicks& ticks = dst_pos->GetTicks(dst_row);
-        larvae::AssertEqual(ticks.added.value, uint32_t{42});
-        larvae::AssertEqual(ticks.changed.value, uint32_t{50});
+        larvae::AssertEqual(ticks.m_added.m_value, uint32_t{42});
+        larvae::AssertEqual(ticks.m_changed.m_value, uint32_t{50});
     });
 
     // ============================================================================
@@ -192,10 +193,22 @@ namespace
     // invalidating those pointers. Now uses index-based lookup.
     // ============================================================================
 
-    struct EventA { int value; };
-    struct EventB { float value; };
-    struct EventC { int x, y; };
-    struct EventD { int data; };
+    struct EventA
+    {
+        int value;
+    };
+    struct EventB
+    {
+        float value;
+    };
+    struct EventC
+    {
+        int x, y;
+    };
+    struct EventD
+    {
+        int data;
+    };
 
     auto test_events_realloc = larvae::RegisterTest("QueenRegression", "EventsStableAfterReallocation", []() {
         comb::LinearAllocator alloc{1024 * 1024};
@@ -210,9 +223,9 @@ namespace
         // After multiple queue creations, reading the first type should still work
         auto reader_a = events.Reader<EventA>();
         size_t count_a = 0;
-        for (const auto& e : reader_a)
+        for (auto it = reader_a.Begin(); it != reader_a.End(); ++it)
         {
-            larvae::AssertEqual(e.value, 1);
+            larvae::AssertEqual(it->value, 1);
             ++count_a;
         }
         larvae::AssertEqual(count_a, size_t{1});
@@ -222,9 +235,9 @@ namespace
 
         auto reader_a2 = events.Reader<EventA>();
         size_t count_a2 = 0;
-        for (const auto& e : reader_a2)
+        for (auto it = reader_a2.Begin(); it != reader_a2.End(); ++it)
         {
-            (void)e;
+            (void)*it;
             ++count_a2;
         }
         larvae::AssertEqual(count_a2, size_t{2});
@@ -250,7 +263,8 @@ namespace
         larvae::AssertTrue(cmd1.CommandCount() > 0);
 
         // Move construct
-        queen::CommandBuffer<comb::LinearAllocator> cmd2{static_cast<queen::CommandBuffer<comb::LinearAllocator>&&>(cmd1)};
+        queen::CommandBuffer<comb::LinearAllocator> cmd2{
+            static_cast<queen::CommandBuffer<comb::LinearAllocator>&&>(cmd1)};
 
         // Source should be empty after move
         larvae::AssertEqual(cmd1.CommandCount(), size_t{0});
@@ -262,20 +276,21 @@ namespace
         // Destroying both should not crash (no double-free)
     });
 
-    auto test_cmdbuf_move_assign = larvae::RegisterTest("QueenRegression", "CommandBufferMoveAssignNullifiesSource", []() {
-        comb::LinearAllocator alloc{65536};
+    auto test_cmdbuf_move_assign =
+        larvae::RegisterTest("QueenRegression", "CommandBufferMoveAssignNullifiesSource", []() {
+            comb::LinearAllocator alloc{65536};
 
-        queen::CommandBuffer<comb::LinearAllocator> cmd1{alloc};
-        queen::CommandBuffer<comb::LinearAllocator> cmd2{alloc};
+            queen::CommandBuffer<comb::LinearAllocator> cmd1{alloc};
+            queen::CommandBuffer<comb::LinearAllocator> cmd2{alloc};
 
-        cmd1.Spawn().With(Position{1.0f, 2.0f, 3.0f});
+            cmd1.Spawn().With(Position{1.0f, 2.0f, 3.0f});
 
-        // Move assign
-        cmd2 = static_cast<queen::CommandBuffer<comb::LinearAllocator>&&>(cmd1);
+            // Move assign
+            cmd2 = static_cast<queen::CommandBuffer<comb::LinearAllocator>&&>(cmd1);
 
-        larvae::AssertEqual(cmd1.CommandCount(), size_t{0});
-        larvae::AssertTrue(cmd2.CommandCount() > 0);
-    });
+            larvae::AssertEqual(cmd1.CommandCount(), size_t{0});
+            larvae::AssertTrue(cmd2.CommandCount() > 0);
+        });
 
     // ============================================================================
     // Regression: WorkStealingDeque retired buffers (was leak)
@@ -418,4 +433,4 @@ namespace
         // Root traversal from deepest node
         larvae::AssertTrue(world.GetRoot(entities[kDepth - 1]) == entities[0]);
     });
-}
+} // namespace

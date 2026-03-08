@@ -1,6 +1,8 @@
-#include <larvae/larvae.h>
-#include <queen/storage/sparse_set.h>
 #include <comb/linear_allocator.h>
+
+#include <queen/storage/sparse_set.h>
+
+#include <larvae/larvae.h>
 
 namespace
 {
@@ -8,10 +10,7 @@ namespace
     {
         float x, y, z;
 
-        bool operator==(const Position& other) const
-        {
-            return x == other.x && y == other.y && z == other.z;
-        }
+        bool operator==(const Position& other) const { return x == other.x && y == other.y && z == other.z; }
     };
 
     auto test1 = larvae::RegisterTest("QueenSparseSet", "InsertAndContains", []() {
@@ -181,11 +180,16 @@ namespace
         static int destructor_count;
         int value;
 
-        NonTrivial(int v) : value{v} {}
+        NonTrivial(int v)
+            : value{v} {}
         ~NonTrivial() { ++destructor_count; }
 
-        NonTrivial(const NonTrivial& other) : value{other.value} {}
-        NonTrivial(NonTrivial&& other) noexcept : value{other.value} { other.value = 0; }
+        NonTrivial(const NonTrivial& other)
+            : value{other.value} {}
+        NonTrivial(NonTrivial&& other) noexcept
+            : value{other.value} {
+            other.value = 0;
+        }
     };
 
     int NonTrivial::destructor_count = 0;
@@ -218,4 +222,4 @@ namespace
         larvae::AssertTrue(set.Contains(e));
         larvae::AssertEqual(set.Get(e)->x, 4.0f);
     });
-}
+} // namespace

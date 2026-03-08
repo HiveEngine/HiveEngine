@@ -1,7 +1,9 @@
-#include <larvae/larvae.h>
-#include <wax/containers/hash_set.h>
-#include <comb/linear_allocator.h>
 #include <comb/buddy_allocator.h>
+#include <comb/linear_allocator.h>
+
+#include <wax/containers/hash_set.h>
+
+#include <larvae/larvae.h>
 
 namespace
 {
@@ -111,7 +113,7 @@ namespace
         int sum = 0;
         int count = 0;
 
-        for (auto it = set.begin(); it != set.end(); ++it)
+        for (auto it = set.Begin(); it != set.End(); ++it)
         {
             sum += *it;
             ++count;
@@ -153,12 +155,24 @@ namespace
         static int destructor_count;
         int value;
 
-        NonTrivialKey(int v = 0) : value{v} {}
+        NonTrivialKey(int v = 0)
+            : value{v} {}
         ~NonTrivialKey() { ++destructor_count; }
-        NonTrivialKey(const NonTrivialKey& other) : value{other.value} {}
-        NonTrivialKey(NonTrivialKey&& other) noexcept : value{other.value} { other.value = 0; }
-        NonTrivialKey& operator=(const NonTrivialKey& other) { value = other.value; return *this; }
-        NonTrivialKey& operator=(NonTrivialKey&& other) noexcept { value = other.value; other.value = 0; return *this; }
+        NonTrivialKey(const NonTrivialKey& other)
+            : value{other.value} {}
+        NonTrivialKey(NonTrivialKey&& other) noexcept
+            : value{other.value} {
+            other.value = 0;
+        }
+        NonTrivialKey& operator=(const NonTrivialKey& other) {
+            value = other.value;
+            return *this;
+        }
+        NonTrivialKey& operator=(NonTrivialKey&& other) noexcept {
+            value = other.value;
+            other.value = 0;
+            return *this;
+        }
         bool operator==(const NonTrivialKey& other) const { return value == other.value; }
     };
 
@@ -228,7 +242,7 @@ namespace
         wax::HashSet<int> set{alloc, 16};
 
         int count = 0;
-        for (auto it = set.begin(); it != set.end(); ++it)
+        for (auto it = set.Begin(); it != set.End(); ++it)
         {
             ++count;
         }
@@ -248,7 +262,7 @@ namespace
 
         int sum = 0;
         int count = 0;
-        for (auto it = const_set.begin(); it != const_set.end(); ++it)
+        for (auto it = const_set.Begin(); it != const_set.End(); ++it)
         {
             sum += *it;
             ++count;
@@ -267,11 +281,11 @@ namespace
         set.Insert(15);
 
         int sum = 0;
-        for (int val : set)
+        for (auto it = set.Begin(); it != set.End(); ++it)
         {
-            sum += val;
+            sum += *it;
         }
 
         larvae::AssertEqual(sum, 30);
     });
-}
+} // namespace

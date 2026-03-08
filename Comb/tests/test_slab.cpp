@@ -1,7 +1,8 @@
-#include <larvae/larvae.h>
-#include <comb/slab_allocator.h>
 #include <comb/allocator_concepts.h>
 #include <comb/new.h>
+#include <comb/slab_allocator.h>
+
+#include <larvae/larvae.h>
 
 namespace
 {
@@ -278,7 +279,9 @@ namespace
             int value;
             float data;
 
-            TestStruct(int v, float d) : value{v}, data{d} {}
+            TestStruct(int v, float d)
+                : value{v}
+                , data{d} {}
         };
 
         TestStruct* obj = comb::New<TestStruct>(slabs, 42, 3.14f);
@@ -320,4 +323,4 @@ namespace
 
         larvae::AssertEqual(slabs.GetUsedMemory(), 0u);
     });
-}
+} // namespace

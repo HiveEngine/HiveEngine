@@ -1,14 +1,19 @@
-#include <larvae/larvae.h>
 #include <hive/math/math.h>
+
+#include <larvae/larvae.h>
+
 #include <cmath>
 
-namespace {
+namespace
+{
 
     using namespace hive::math;
 
     constexpr float kTol = 1e-4f;
 
-    bool Near(float a, float b) { return std::fabs(a - b) < kTol; }
+    bool Near(float a, float b) {
+        return std::fabs(a - b) < kTol;
+    }
 
     // =========================================================================
     // AABB
@@ -16,15 +21,15 @@ namespace {
 
     auto t_aabb_default = larvae::RegisterTest("Geometry", "AABB_Default", []() {
         AABB box{};
-        larvae::AssertTrue(Near(box.min.x, 0.f));
-        larvae::AssertTrue(Near(box.max.x, 0.f));
+        larvae::AssertTrue(Near(box.m_min.m_x, 0.f));
+        larvae::AssertTrue(Near(box.m_max.m_x, 0.f));
     });
 
     auto t_aabb_construct = larvae::RegisterTest("Geometry", "AABB_Construction", []() {
         AABB box{{-1.f, -2.f, -3.f}, {4.f, 5.f, 6.f}};
-        larvae::AssertTrue(Near(box.min.x, -1.f));
-        larvae::AssertTrue(Near(box.min.y, -2.f));
-        larvae::AssertTrue(Near(box.max.z, 6.f));
+        larvae::AssertTrue(Near(box.m_min.m_x, -1.f));
+        larvae::AssertTrue(Near(box.m_min.m_y, -2.f));
+        larvae::AssertTrue(Near(box.m_max.m_z, 6.f));
     });
 
     // =========================================================================
@@ -34,36 +39,36 @@ namespace {
     auto t_xform_identity = larvae::RegisterTest("Geometry", "TransformAABB_Identity", []() {
         AABB box{{-1.f, -1.f, -1.f}, {1.f, 1.f, 1.f}};
         AABB result = TransformAABB(Mat4::Identity(), box);
-        larvae::AssertTrue(Near(result.min.x, -1.f));
-        larvae::AssertTrue(Near(result.min.y, -1.f));
-        larvae::AssertTrue(Near(result.min.z, -1.f));
-        larvae::AssertTrue(Near(result.max.x, 1.f));
-        larvae::AssertTrue(Near(result.max.y, 1.f));
-        larvae::AssertTrue(Near(result.max.z, 1.f));
+        larvae::AssertTrue(Near(result.m_min.m_x, -1.f));
+        larvae::AssertTrue(Near(result.m_min.m_y, -1.f));
+        larvae::AssertTrue(Near(result.m_min.m_z, -1.f));
+        larvae::AssertTrue(Near(result.m_max.m_x, 1.f));
+        larvae::AssertTrue(Near(result.m_max.m_y, 1.f));
+        larvae::AssertTrue(Near(result.m_max.m_z, 1.f));
     });
 
     auto t_xform_translate = larvae::RegisterTest("Geometry", "TransformAABB_Translation", []() {
         AABB box{{0.f, 0.f, 0.f}, {1.f, 1.f, 1.f}};
         Mat4 m = Translation({10.f, 20.f, 30.f});
         AABB result = TransformAABB(m, box);
-        larvae::AssertTrue(Near(result.min.x, 10.f));
-        larvae::AssertTrue(Near(result.min.y, 20.f));
-        larvae::AssertTrue(Near(result.min.z, 30.f));
-        larvae::AssertTrue(Near(result.max.x, 11.f));
-        larvae::AssertTrue(Near(result.max.y, 21.f));
-        larvae::AssertTrue(Near(result.max.z, 31.f));
+        larvae::AssertTrue(Near(result.m_min.m_x, 10.f));
+        larvae::AssertTrue(Near(result.m_min.m_y, 20.f));
+        larvae::AssertTrue(Near(result.m_min.m_z, 30.f));
+        larvae::AssertTrue(Near(result.m_max.m_x, 11.f));
+        larvae::AssertTrue(Near(result.m_max.m_y, 21.f));
+        larvae::AssertTrue(Near(result.m_max.m_z, 31.f));
     });
 
     auto t_xform_scale = larvae::RegisterTest("Geometry", "TransformAABB_Scale", []() {
         AABB box{{-1.f, -1.f, -1.f}, {1.f, 1.f, 1.f}};
         Mat4 m = Scale({2.f, 3.f, 4.f});
         AABB result = TransformAABB(m, box);
-        larvae::AssertTrue(Near(result.min.x, -2.f));
-        larvae::AssertTrue(Near(result.min.y, -3.f));
-        larvae::AssertTrue(Near(result.min.z, -4.f));
-        larvae::AssertTrue(Near(result.max.x, 2.f));
-        larvae::AssertTrue(Near(result.max.y, 3.f));
-        larvae::AssertTrue(Near(result.max.z, 4.f));
+        larvae::AssertTrue(Near(result.m_min.m_x, -2.f));
+        larvae::AssertTrue(Near(result.m_min.m_y, -3.f));
+        larvae::AssertTrue(Near(result.m_min.m_z, -4.f));
+        larvae::AssertTrue(Near(result.m_max.m_x, 2.f));
+        larvae::AssertTrue(Near(result.m_max.m_y, 3.f));
+        larvae::AssertTrue(Near(result.m_max.m_z, 4.f));
     });
 
     auto t_xform_rotation = larvae::RegisterTest("Geometry", "TransformAABB_Rotation45Y", []() {
@@ -75,22 +80,22 @@ namespace {
         AABB result = TransformAABB(m, box);
 
         float c = Cos(Radians(45.f)); // ~0.707
-        larvae::AssertTrue(Near(result.min.x, 0.f));
-        larvae::AssertTrue(Near(result.max.x, c + c)); // ~1.414
-        larvae::AssertTrue(Near(result.min.y, 0.f));
-        larvae::AssertTrue(Near(result.max.y, 1.f));
-        larvae::AssertTrue(Near(result.min.z, -c));     // ~-0.707
-        larvae::AssertTrue(Near(result.max.z, c));       // ~0.707
+        larvae::AssertTrue(Near(result.m_min.m_x, 0.f));
+        larvae::AssertTrue(Near(result.m_max.m_x, c + c)); // ~1.414
+        larvae::AssertTrue(Near(result.m_min.m_y, 0.f));
+        larvae::AssertTrue(Near(result.m_max.m_y, 1.f));
+        larvae::AssertTrue(Near(result.m_min.m_z, -c)); // ~-0.707
+        larvae::AssertTrue(Near(result.m_max.m_z, c));  // ~0.707
     });
 
     auto t_xform_trs = larvae::RegisterTest("Geometry", "TransformAABB_TRS", []() {
         AABB box{{0.f, 0.f, 0.f}, {1.f, 1.f, 1.f}};
         Mat4 m = TRS({5.f, 0.f, 0.f}, Quat{}, {2.f, 2.f, 2.f});
         AABB result = TransformAABB(m, box);
-        larvae::AssertTrue(Near(result.min.x, 5.f));
-        larvae::AssertTrue(Near(result.max.x, 7.f)); // 5 + 2*1
-        larvae::AssertTrue(Near(result.min.y, 0.f));
-        larvae::AssertTrue(Near(result.max.y, 2.f));
+        larvae::AssertTrue(Near(result.m_min.m_x, 5.f));
+        larvae::AssertTrue(Near(result.m_max.m_x, 7.f)); // 5 + 2*1
+        larvae::AssertTrue(Near(result.m_min.m_y, 0.f));
+        larvae::AssertTrue(Near(result.m_max.m_y, 2.f));
     });
 
     // =========================================================================
@@ -98,8 +103,7 @@ namespace {
     // =========================================================================
 
     // Helper: build a known view_proj from LookAt + Perspective
-    Frustum MakeTestFrustum()
-    {
+    Frustum MakeTestFrustum() {
         // Camera at origin looking down -Z
         Mat4 view = LookAt({0.f, 0.f, 0.f}, {0.f, 0.f, -1.f}, {0.f, 1.f, 0.f});
         Mat4 proj = Perspective(Radians(90.f), 1.f, 0.1f, 100.f);
@@ -110,9 +114,8 @@ namespace {
         Frustum f = MakeTestFrustum();
         for (int i = 0; i < 6; ++i)
         {
-            float len = Sqrt(f.planes[i].a * f.planes[i].a +
-                             f.planes[i].b * f.planes[i].b +
-                             f.planes[i].c * f.planes[i].c);
+            float len = Sqrt(f.m_planes[i].m_a * f.m_planes[i].m_a + f.m_planes[i].m_b * f.m_planes[i].m_b +
+                             f.m_planes[i].m_c * f.m_planes[i].m_c);
             larvae::AssertTrue(Near(len, 1.f));
         }
     });

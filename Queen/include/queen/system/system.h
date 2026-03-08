@@ -1,10 +1,12 @@
 #pragma once
 
-#include <queen/system/system_id.h>
-#include <queen/system/access_descriptor.h>
-#include <queen/query/query_descriptor.h>
-#include <queen/core/tick.h>
 #include <comb/allocator_concepts.h>
+
+#include <queen/core/tick.h>
+#include <queen/query/query_descriptor.h>
+#include <queen/system/access_descriptor.h>
+#include <queen/system/system_id.h>
+
 #include <cstring>
 
 namespace queen
@@ -16,9 +18,9 @@ namespace queen
      */
     enum class SystemExecutor : uint8_t
     {
-        Sequential, // Runs on main thread only
-        Parallel,   // Can run with non-conflicting systems
-        Exclusive,  // Requires exclusive world access
+        SEQUENTIAL, // Runs on main thread only
+        PARALLEL,   // Can run with non-conflicting systems
+        EXCLUSIVE,  // Requires exclusive world access
     };
 
     /**
@@ -27,7 +29,7 @@ namespace queen
      * The executor is a type-erased callable that executes the system logic.
      * It receives a World reference and performs the system's work.
      */
-    using SystemExecutorFn = void (*)(World& world, void* user_data);
+    using SystemExecutorFn = void (*)(World& world, void* userData);
 
     /**
      * Describes a registered system
@@ -62,144 +64,135 @@ namespace queen
      *       .each([](const Position& pos) { ... });
      * @endcode
      */
-    template<comb::Allocator Allocator>
-    class SystemDescriptor
+    template <comb::Allocator Allocator> class SystemDescriptor
     {
     public:
         static constexpr size_t kMaxNameLength = 63;
         static constexpr size_t kMaxExplicitDeps = 8;
 
         SystemDescriptor(Allocator& allocator, SystemId id, const char* name)
-            : id_{id}
-            , allocator_{&allocator}
-            , access_{allocator}
-            , query_{allocator}
-            , executor_fn_{nullptr}
-            , user_data_{nullptr}
-            , destructor_fn_{nullptr}
-            , executor_mode_{SystemExecutor::Parallel}
-            , enabled_{true}
-        {
+            : m_id{id}
+            , m_allocator{&allocator}
+            , m_access{allocator}
+            , m_query{allocator}
+            , m_executorFn{nullptr}
+            , m_userData{nullptr}
+            , m_destructorFn{nullptr}
+            , m_executorMode{SystemExecutor::PARALLEL}
+            , m_enabled{true} {
             if (name != nullptr)
             {
                 size_t len = std::strlen(name);
-                if (len > kMaxNameLength) len = kMaxNameLength;
-                std::memcpy(name_, name, len);
-                name_[len] = '\0';
+                if (len > kMaxNameLength)
+                    len = kMaxNameLength;
+                std::memcpy(m_name, name, len);
+                m_name[len] = '\0';
             }
             else
             {
-                name_[0] = '\0';
+                m_name[0] = '\0';
             }
         }
 
-        ~SystemDescriptor()
-        {
-            if (user_data_ != nullptr)
+        ~SystemDescriptor() {
+            if (m_userData != nullptr)
             {
-                if (destructor_fn_ != nullptr)
+                if (m_destructorFn != nullptr)
                 {
-                    destructor_fn_(user_data_);
+                    m_destructorFn(m_userData);
                 }
-                allocator_->Deallocate(user_data_);
+                m_allocator->Deallocate(m_userData);
             }
         }
 
         SystemDescriptor(const SystemDescriptor&) = delete;
         SystemDescriptor& operator=(const SystemDescriptor&) = delete;
         SystemDescriptor(SystemDescriptor&& other) noexcept
-            : id_{other.id_}
-            , allocator_{other.allocator_}
-            , access_{std::move(other.access_)}
-            , query_{std::move(other.query_)}
-            , executor_fn_{other.executor_fn_}
-            , user_data_{other.user_data_}
-            , destructor_fn_{other.destructor_fn_}
-            , executor_mode_{other.executor_mode_}
-            , enabled_{other.enabled_}
-            , after_count_{other.after_count_}
-            , before_count_{other.before_count_}
-            , last_run_tick_{other.last_run_tick_}
-        {
-            std::memcpy(name_, other.name_, sizeof(name_));
-            std::memcpy(explicit_after_, other.explicit_after_, sizeof(SystemId) * after_count_);
-            std::memcpy(explicit_before_, other.explicit_before_, sizeof(SystemId) * before_count_);
-            other.user_data_ = nullptr;
-            other.destructor_fn_ = nullptr;
+            : m_id{other.m_id}
+            , m_allocator{other.m_allocator}
+            , m_access{std::move(other.m_access)}
+            , m_query{std::move(other.m_query)}
+            , m_executorFn{other.m_executorFn}
+            , m_userData{other.m_userData}
+            , m_destructorFn{other.m_destructorFn}
+            , m_executorMode{other.m_executorMode}
+            , m_enabled{other.m_enabled}
+            , m_afterCount{other.m_afterCount}
+            , m_beforeCount{other.m_beforeCount}
+            , m_lastRunTick{other.m_lastRunTick} {
+            std::memcpy(m_name, other.m_name, sizeof(m_name));
+            std::memcpy(m_explicitAfter, other.m_explicitAfter, sizeof(SystemId) * m_afterCount);
+            std::memcpy(m_explicitBefore, other.m_explicitBefore, sizeof(SystemId) * m_beforeCount);
+            other.m_userData = nullptr;
+            other.m_destructorFn = nullptr;
         }
 
-        SystemDescriptor& operator=(SystemDescriptor&& other) noexcept
-        {
+        SystemDescriptor& operator=(SystemDescriptor&& other) noexcept {
             if (this != &other)
             {
-                if (user_data_ != nullptr)
+                if (m_userData != nullptr)
                 {
-                    if (destructor_fn_ != nullptr)
+                    if (m_destructorFn != nullptr)
                     {
-                        destructor_fn_(user_data_);
+                        m_destructorFn(m_userData);
                     }
-                    allocator_->Deallocate(user_data_);
+                    m_allocator->Deallocate(m_userData);
                 }
 
-                id_ = other.id_;
-                allocator_ = other.allocator_;
-                std::memcpy(name_, other.name_, sizeof(name_));
-                access_ = std::move(other.access_);
-                query_ = std::move(other.query_);
-                executor_fn_ = other.executor_fn_;
-                user_data_ = other.user_data_;
-                destructor_fn_ = other.destructor_fn_;
-                executor_mode_ = other.executor_mode_;
-                enabled_ = other.enabled_;
-                after_count_ = other.after_count_;
-                before_count_ = other.before_count_;
-                std::memcpy(explicit_after_, other.explicit_after_, sizeof(SystemId) * after_count_);
-                std::memcpy(explicit_before_, other.explicit_before_, sizeof(SystemId) * before_count_);
-                last_run_tick_ = other.last_run_tick_;
+                m_id = other.m_id;
+                m_allocator = other.m_allocator;
+                std::memcpy(m_name, other.m_name, sizeof(m_name));
+                m_access = std::move(other.m_access);
+                m_query = std::move(other.m_query);
+                m_executorFn = other.m_executorFn;
+                m_userData = other.m_userData;
+                m_destructorFn = other.m_destructorFn;
+                m_executorMode = other.m_executorMode;
+                m_enabled = other.m_enabled;
+                m_afterCount = other.m_afterCount;
+                m_beforeCount = other.m_beforeCount;
+                std::memcpy(m_explicitAfter, other.m_explicitAfter, sizeof(SystemId) * m_afterCount);
+                std::memcpy(m_explicitBefore, other.m_explicitBefore, sizeof(SystemId) * m_beforeCount);
+                m_lastRunTick = other.m_lastRunTick;
 
-                other.user_data_ = nullptr;
-                other.destructor_fn_ = nullptr;
+                other.m_userData = nullptr;
+                other.m_destructorFn = nullptr;
             }
             return *this;
         }
 
-        [[nodiscard]] SystemId Id() const noexcept { return id_; }
-        [[nodiscard]] const char* Name() const noexcept { return name_; }
-        [[nodiscard]] const AccessDescriptor<Allocator>& Access() const noexcept { return access_; }
-        [[nodiscard]] AccessDescriptor<Allocator>& Access() noexcept { return access_; }
-        [[nodiscard]] const QueryDescriptor<Allocator>& Query() const noexcept { return query_; }
-        [[nodiscard]] QueryDescriptor<Allocator>& Query() noexcept { return query_; }
-        [[nodiscard]] SystemExecutor ExecutorMode() const noexcept { return executor_mode_; }
-        [[nodiscard]] bool IsEnabled() const noexcept { return enabled_; }
-        [[nodiscard]] Tick LastRunTick() const noexcept { return last_run_tick_; }
+        [[nodiscard]] SystemId Id() const noexcept { return m_id; }
+        [[nodiscard]] const char* Name() const noexcept { return m_name; }
+        [[nodiscard]] const AccessDescriptor<Allocator>& Access() const noexcept { return m_access; }
+        [[nodiscard]] AccessDescriptor<Allocator>& Access() noexcept { return m_access; }
+        [[nodiscard]] const QueryDescriptor<Allocator>& Query() const noexcept { return m_query; }
+        [[nodiscard]] QueryDescriptor<Allocator>& Query() noexcept { return m_query; }
+        [[nodiscard]] SystemExecutor ExecutorMode() const noexcept { return m_executorMode; }
+        [[nodiscard]] bool IsEnabled() const noexcept { return m_enabled; }
+        [[nodiscard]] Tick LastRunTick() const noexcept { return m_lastRunTick; }
 
-        void SetExecutorMode(SystemExecutor mode) noexcept
-        {
-            executor_mode_ = mode;
-            if (mode == SystemExecutor::Exclusive)
+        void SetExecutorMode(SystemExecutor mode) noexcept {
+            m_executorMode = mode;
+            if (mode == SystemExecutor::EXCLUSIVE)
             {
-                access_.SetWorldAccess(WorldAccess::Exclusive);
+                m_access.SetWorldAccess(WorldAccess::EXCLUSIVE);
             }
         }
 
-        void SetEnabled(bool enabled) noexcept
-        {
-            enabled_ = enabled;
-        }
+        void SetEnabled(bool enabled) noexcept { m_enabled = enabled; }
 
-        void SetExecutor(SystemExecutorFn fn, void* user_data, void (*destructor)(void*))
-        {
-            if (user_data_ != nullptr)
+        void SetExecutor(SystemExecutorFn fn, void* userData, void (*destructor)(void*)) {
+            if (m_userData != nullptr)
             {
-                if (destructor_fn_ != nullptr)
+                if (m_destructorFn != nullptr)
                 {
-                    destructor_fn_(user_data_);
+                    m_destructorFn(m_userData);
                 }
-                allocator_->Deallocate(user_data_);
+                m_allocator->Deallocate(m_userData);
             }
-            executor_fn_ = fn;
-            user_data_ = user_data;
-            destructor_fn_ = destructor;
+            m_executorFn = fn;
+            m_userData = userData;
+            m_destructorFn = destructor;
         }
 
         /**
@@ -208,57 +201,50 @@ namespace queen
          * @param world The world to execute on
          * @param current_tick The current world tick (for change detection)
          */
-        void Execute(World& world, Tick current_tick)
-        {
-            if (executor_fn_ != nullptr && enabled_)
+        void Execute(World& world, Tick currentTick) {
+            if (m_executorFn != nullptr && m_enabled)
             {
-                executor_fn_(world, user_data_);
-                last_run_tick_ = current_tick;
+                m_executorFn(world, m_userData);
+                m_lastRunTick = currentTick;
             }
         }
 
+        [[nodiscard]] bool HasExecutor() const noexcept { return m_executorFn != nullptr; }
 
-        [[nodiscard]] bool HasExecutor() const noexcept
-        {
-            return executor_fn_ != nullptr;
-        }
-
-        void AddAfter(SystemId id) noexcept
-        {
-            if (after_count_ < kMaxExplicitDeps)
+        void AddAfter(SystemId id) noexcept {
+            if (m_afterCount < kMaxExplicitDeps)
             {
-                explicit_after_[after_count_++] = id;
+                m_explicitAfter[m_afterCount++] = id;
             }
         }
 
-        void AddBefore(SystemId id) noexcept
-        {
-            if (before_count_ < kMaxExplicitDeps)
+        void AddBefore(SystemId id) noexcept {
+            if (m_beforeCount < kMaxExplicitDeps)
             {
-                explicit_before_[before_count_++] = id;
+                m_explicitBefore[m_beforeCount++] = id;
             }
         }
 
-        [[nodiscard]] uint8_t AfterCount() const noexcept { return after_count_; }
-        [[nodiscard]] uint8_t BeforeCount() const noexcept { return before_count_; }
-        [[nodiscard]] SystemId AfterDep(uint8_t i) const noexcept { return explicit_after_[i]; }
-        [[nodiscard]] SystemId BeforeDep(uint8_t i) const noexcept { return explicit_before_[i]; }
+        [[nodiscard]] uint8_t AfterCount() const noexcept { return m_afterCount; }
+        [[nodiscard]] uint8_t BeforeCount() const noexcept { return m_beforeCount; }
+        [[nodiscard]] SystemId AfterDep(uint8_t i) const noexcept { return m_explicitAfter[i]; }
+        [[nodiscard]] SystemId BeforeDep(uint8_t i) const noexcept { return m_explicitBefore[i]; }
 
     private:
-        SystemId id_;
-        Allocator* allocator_;
-        char name_[kMaxNameLength + 1];
-        AccessDescriptor<Allocator> access_;
-        QueryDescriptor<Allocator> query_;
-        SystemExecutorFn executor_fn_;
-        void* user_data_;
-        void (*destructor_fn_)(void*);
-        SystemExecutor executor_mode_;
-        bool enabled_;
-        uint8_t after_count_{0};
-        uint8_t before_count_{0};
-        SystemId explicit_after_[kMaxExplicitDeps];
-        SystemId explicit_before_[kMaxExplicitDeps];
-        Tick last_run_tick_{0};
+        SystemId m_id;
+        Allocator* m_allocator;
+        char m_name[kMaxNameLength + 1];
+        AccessDescriptor<Allocator> m_access;
+        QueryDescriptor<Allocator> m_query;
+        SystemExecutorFn m_executorFn;
+        void* m_userData;
+        void (*m_destructorFn)(void*);
+        SystemExecutor m_executorMode;
+        bool m_enabled;
+        uint8_t m_afterCount{0};
+        uint8_t m_beforeCount{0};
+        SystemId m_explicitAfter[kMaxExplicitDeps];
+        SystemId m_explicitBefore[kMaxExplicitDeps];
+        Tick m_lastRunTick{0};
     };
-}
+} // namespace queen

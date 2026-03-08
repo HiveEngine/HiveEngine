@@ -1,8 +1,9 @@
 #pragma once
 
 #include <larvae/benchmark.h>
-#include <vector>
+
 #include <string>
+#include <vector>
 
 namespace larvae
 {
@@ -24,8 +25,7 @@ namespace larvae
 
     private:
         bool MatchesFilter(const std::string& full_name) const;
-        BenchmarkResult RunSingle(const char* suite_name,
-                                  const char* benchmark_name,
+        BenchmarkResult RunSingle(const char* suite_name, const char* benchmark_name,
                                   std::function<void(BenchmarkState&)> benchmark_func);
 
         size_t DetermineIterations(std::function<void(BenchmarkState&)> benchmark_func);
@@ -35,4 +35,4 @@ namespace larvae
 
     void PrintBenchmarkResults(const std::vector<BenchmarkResult>& results);
     BenchmarkConfig ParseBenchmarkCommandLine(int argc, char** argv);
-}
+} // namespace larvae

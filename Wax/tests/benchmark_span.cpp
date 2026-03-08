@@ -1,6 +1,8 @@
-#include <larvae/larvae.h>
-#include <wax/containers/span.h>
 #include <wax/containers/array.h>
+#include <wax/containers/span.h>
+
+#include <larvae/larvae.h>
+
 #include <span>
 
 namespace
@@ -11,7 +13,8 @@ namespace
 
     auto bench1 = larvae::RegisterBenchmark("WaxSpan", "Iteration_100", [](larvae::BenchmarkState& state) {
         int data[100];
-        for (int i = 0; i < 100; ++i) data[i] = i;
+        for (int i = 0; i < 100; ++i)
+            data[i] = i;
         wax::Span<int> span{data};
 
         while (state.KeepRunning())
@@ -29,7 +32,8 @@ namespace
 
     auto bench2 = larvae::RegisterBenchmark("WaxSpan", "Iteration_1000", [](larvae::BenchmarkState& state) {
         int data[1000];
-        for (int i = 0; i < 1000; ++i) data[i] = i;
+        for (int i = 0; i < 1000; ++i)
+            data[i] = i;
         wax::Span<int> span{data};
 
         while (state.KeepRunning())
@@ -47,7 +51,8 @@ namespace
 
     auto bench3 = larvae::RegisterBenchmark("WaxSpan", "RandomAccess_100", [](larvae::BenchmarkState& state) {
         int data[100];
-        for (int i = 0; i < 100; ++i) data[i] = i;
+        for (int i = 0; i < 100; ++i)
+            data[i] = i;
         wax::Span<int> span{data};
 
         while (state.KeepRunning())
@@ -64,7 +69,8 @@ namespace
 
     auto bench4 = larvae::RegisterBenchmark("WaxSpan", "RandomAccess_1000", [](larvae::BenchmarkState& state) {
         int data[1000];
-        for (int i = 0; i < 1000; ++i) data[i] = i;
+        for (int i = 0; i < 1000; ++i)
+            data[i] = i;
         wax::Span<int> span{data};
 
         while (state.KeepRunning())
@@ -81,7 +87,8 @@ namespace
 
     auto bench5 = larvae::RegisterBenchmark("WaxSpan", "Subspan_First", [](larvae::BenchmarkState& state) {
         int data[1000];
-        for (int i = 0; i < 1000; ++i) data[i] = i;
+        for (int i = 0; i < 1000; ++i)
+            data[i] = i;
         wax::Span<int> span{data};
 
         while (state.KeepRunning())
@@ -100,7 +107,8 @@ namespace
 
     auto bench6 = larvae::RegisterBenchmark("WaxSpan", "Subspan_Last", [](larvae::BenchmarkState& state) {
         int data[1000];
-        for (int i = 0; i < 1000; ++i) data[i] = i;
+        for (int i = 0; i < 1000; ++i)
+            data[i] = i;
         wax::Span<int> span{data};
 
         while (state.KeepRunning())
@@ -167,7 +175,8 @@ namespace
 
     auto bench10 = larvae::RegisterBenchmark("StdSpan", "Iteration_100", [](larvae::BenchmarkState& state) {
         int data[100];
-        for (int i = 0; i < 100; ++i) data[i] = i;
+        for (int i = 0; i < 100; ++i)
+            data[i] = i;
         std::span<int> span{data};
 
         while (state.KeepRunning())
@@ -185,7 +194,8 @@ namespace
 
     auto bench11 = larvae::RegisterBenchmark("StdSpan", "Iteration_1000", [](larvae::BenchmarkState& state) {
         int data[1000];
-        for (int i = 0; i < 1000; ++i) data[i] = i;
+        for (int i = 0; i < 1000; ++i)
+            data[i] = i;
         std::span<int> span{data};
 
         while (state.KeepRunning())
@@ -203,7 +213,8 @@ namespace
 
     auto bench12 = larvae::RegisterBenchmark("StdSpan", "RandomAccess_100", [](larvae::BenchmarkState& state) {
         int data[100];
-        for (int i = 0; i < 100; ++i) data[i] = i;
+        for (int i = 0; i < 100; ++i)
+            data[i] = i;
         std::span<int> span{data};
 
         while (state.KeepRunning())
@@ -220,7 +231,8 @@ namespace
 
     auto bench13 = larvae::RegisterBenchmark("StdSpan", "RandomAccess_1000", [](larvae::BenchmarkState& state) {
         int data[1000];
-        for (int i = 0; i < 1000; ++i) data[i] = i;
+        for (int i = 0; i < 1000; ++i)
+            data[i] = i;
         std::span<int> span{data};
 
         while (state.KeepRunning())
@@ -237,7 +249,8 @@ namespace
 
     auto bench14 = larvae::RegisterBenchmark("StdSpan", "Subspan_First", [](larvae::BenchmarkState& state) {
         int data[1000];
-        for (int i = 0; i < 1000; ++i) data[i] = i;
+        for (int i = 0; i < 1000; ++i)
+            data[i] = i;
         std::span<int> span{data};
 
         while (state.KeepRunning())
@@ -256,7 +269,8 @@ namespace
 
     auto bench15 = larvae::RegisterBenchmark("StdSpan", "Subspan_Last", [](larvae::BenchmarkState& state) {
         int data[1000];
-        for (int i = 0; i < 1000; ++i) data[i] = i;
+        for (int i = 0; i < 1000; ++i)
+            data[i] = i;
         std::span<int> span{data};
 
         while (state.KeepRunning())
@@ -316,4 +330,4 @@ namespace
 
         state.SetItemsProcessed(state.iterations());
     });
-}
+} // namespace

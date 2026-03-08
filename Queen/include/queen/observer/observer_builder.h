@@ -1,17 +1,18 @@
 #pragma once
 
-#include <queen/observer/observer_event.h>
-#include <queen/observer/observer.h>
-#include <queen/core/entity.h>
 #include <comb/allocator_concepts.h>
+
+#include <queen/core/entity.h>
+#include <queen/observer/observer.h>
+#include <queen/observer/observer_event.h>
+
 #include <type_traits>
 
 namespace queen
 {
     class World;
 
-    template<comb::Allocator Allocator>
-    class ObserverStorage;
+    template <comb::Allocator Allocator> class ObserverStorage;
 
     /**
      * Fluent API for registering observers
@@ -73,20 +74,17 @@ namespace queen
      *       });
      * @endcode
      */
-    template<ObserverTrigger TriggerEvent, comb::Allocator Allocator>
-    class ObserverBuilder
+    template <ObserverTrigger TriggerEvent, comb::Allocator Allocator> class ObserverBuilder
     {
     public:
         using ComponentType = typename TriggerEvent::ComponentType;
 
-        ObserverBuilder(World& world, Allocator& allocator,
-                       ObserverStorage<Allocator>& storage, Observer<Allocator>* observer)
-            : world_{&world}
-            , allocator_{&allocator}
-            , storage_{&storage}
-            , observer_{observer}
-        {
-        }
+        ObserverBuilder(World& world, Allocator& allocator, ObserverStorage<Allocator>& storage,
+                        Observer<Allocator>* observer)
+            : m_world{&world}
+            , m_allocator{&allocator}
+            , m_storage{&storage}
+            , m_observer{observer} {}
 
         /**
          * Add a filter component requirement
@@ -97,10 +95,8 @@ namespace queen
          * @tparam T Component type to require
          * @return Reference to this builder for chaining
          */
-        template<typename T>
-        ObserverBuilder& With()
-        {
-            observer_->AddFilter(TypeIdOf<T>());
+        template <typename T> ObserverBuilder& With() {
+            m_observer->AddFilter(TypeIdOf<T>());
             return *this;
         }
 
@@ -114,13 +110,11 @@ namespace queen
          * @param func Callback function
          * @return ObserverId for the registered observer
          */
-        template<typename F>
-        ObserverId Each(F&& func)
-        {
+        template <typename F> ObserverId Each(F&& func) {
             using FuncType = std::decay_t<F>;
 
-            void* user_data = allocator_->Allocate(sizeof(FuncType), alignof(FuncType));
-            new (user_data) FuncType{std::forward<F>(func)};
+            void* userData = m_allocator->Allocate(sizeof(FuncType), alignof(FuncType));
+            new (userData) FuncType{std::forward<F>(func)};
 
             auto callback = [](World& world, Entity entity, const void* component, void* data) {
                 (void)world;
@@ -137,8 +131,8 @@ namespace queen
                 fn->~FuncType();
             };
 
-            observer_->SetCallback(callback, user_data, destructor);
-            return observer_->Id();
+            m_observer->SetCallback(callback, userData, destructor);
+            return m_observer->Id();
         }
 
         /**
@@ -151,13 +145,11 @@ namespace queen
          * @param func Callback function
          * @return ObserverId for the registered observer
          */
-        template<typename F>
-        ObserverId EachEntity(F&& func)
-        {
+        template <typename F> ObserverId EachEntity(F&& func) {
             using FuncType = std::decay_t<F>;
 
-            void* user_data = allocator_->Allocate(sizeof(FuncType), alignof(FuncType));
-            new (user_data) FuncType{std::forward<F>(func)};
+            void* userData = m_allocator->Allocate(sizeof(FuncType), alignof(FuncType));
+            new (userData) FuncType{std::forward<F>(func)};
 
             auto callback = [](World& world, Entity entity, const void* component, void* data) {
                 (void)world;
@@ -171,8 +163,8 @@ namespace queen
                 fn->~FuncType();
             };
 
-            observer_->SetCallback(callback, user_data, destructor);
-            return observer_->Id();
+            m_observer->SetCallback(callback, userData, destructor);
+            return m_observer->Id();
         }
 
         /**
@@ -185,13 +177,11 @@ namespace queen
          * @param func Callback function
          * @return ObserverId for the registered observer
          */
-        template<typename F>
-        ObserverId EachWithWorld(F&& func)
-        {
+        template <typename F> ObserverId EachWithWorld(F&& func) {
             using FuncType = std::decay_t<F>;
 
-            void* user_data = allocator_->Allocate(sizeof(FuncType), alignof(FuncType));
-            new (user_data) FuncType{std::forward<F>(func)};
+            void* userData = m_allocator->Allocate(sizeof(FuncType), alignof(FuncType));
+            new (userData) FuncType{std::forward<F>(func)};
 
             auto callback = [](World& world, Entity entity, const void* component, void* data) {
                 FuncType* fn = static_cast<FuncType*>(data);
@@ -207,22 +197,19 @@ namespace queen
                 fn->~FuncType();
             };
 
-            observer_->SetCallback(callback, user_data, destructor);
-            return observer_->Id();
+            m_observer->SetCallback(callback, userData, destructor);
+            return m_observer->Id();
         }
 
         /**
          * Get the observer ID (before callback is registered)
          */
-        [[nodiscard]] ObserverId Id() const noexcept
-        {
-            return observer_->Id();
-        }
+        [[nodiscard]] ObserverId Id() const noexcept { return m_observer->Id(); }
 
     private:
-        World* world_;
-        Allocator* allocator_;
-        ObserverStorage<Allocator>* storage_;
-        Observer<Allocator>* observer_;
+        World* m_world;
+        Allocator* m_allocator;
+        ObserverStorage<Allocator>* m_storage;
+        Observer<Allocator>* m_observer;
     };
-}
+} // namespace queen

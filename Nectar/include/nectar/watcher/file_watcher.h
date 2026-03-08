@@ -1,25 +1,27 @@
 #pragma once
 
-#include <wax/containers/vector.h>
+#include <comb/default_allocator.h>
+
+#include <wax/containers/hash_map.h>
 #include <wax/containers/string.h>
 #include <wax/containers/string_view.h>
-#include <wax/containers/hash_map.h>
-#include <comb/default_allocator.h>
+#include <wax/containers/vector.h>
+
 #include <cstdint>
 
 namespace nectar
 {
     enum class FileChangeKind : uint8_t
     {
-        Created,
-        Modified,
-        Deleted,
+        CREATED,
+        MODIFIED,
+        DELETED,
     };
 
     struct FileChange
     {
-        wax::String path;
-        FileChangeKind kind;
+        wax::String m_path;
+        FileChangeKind m_kind;
     };
 
     /// Abstract file watcher interface.
@@ -33,15 +35,15 @@ namespace nectar
 
     struct FileSnapshot
     {
-        int64_t mtime{0};
-        int64_t size{0};
+        int64_t m_mtime{0};
+        int64_t m_size{0};
     };
 
     /// Polling-based file watcher using mtime + size checks.
     class PollingFileWatcher final : public IFileWatcher
     {
     public:
-        PollingFileWatcher(comb::DefaultAllocator& alloc, uint32_t interval_ms = 500);
+        PollingFileWatcher(comb::DefaultAllocator& alloc, uint32_t intervalMs = 500);
 
         void Watch(wax::StringView directory) override;
         void Poll(wax::Vector<FileChange>& changes) override;
@@ -55,10 +57,10 @@ namespace nectar
         void ScanDirectories(wax::Vector<FileChange>& changes);
         void ScanDirectory(wax::StringView dir, wax::Vector<FileChange>& changes);
 
-        comb::DefaultAllocator* alloc_;
-        uint32_t interval_ms_;
-        int64_t last_poll_time_{0};
-        wax::Vector<wax::String> watched_dirs_;
-        wax::HashMap<wax::String, FileSnapshot> known_files_;
+        comb::DefaultAllocator* m_alloc;
+        uint32_t m_intervalMs;
+        int64_t m_lastPollTime{0};
+        wax::Vector<wax::String> m_watchedDirs;
+        wax::HashMap<wax::String, FileSnapshot> m_knownFiles;
     };
-}
+} // namespace nectar

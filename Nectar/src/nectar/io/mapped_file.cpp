@@ -1,24 +1,24 @@
-#include <nectar/io/mapped_file.h>
 #include <hive/profiling/profiler.h>
 
+#include <nectar/io/mapped_file.h>
+
 #ifdef _WIN32
-#   ifndef WIN32_LEAN_AND_MEAN
-#       define WIN32_LEAN_AND_MEAN
-#   endif
-#   include <windows.h>
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <windows.h>
 #else
-#   include <sys/mman.h>
-#   include <sys/stat.h>
-#   include <fcntl.h>
-#   include <unistd.h>
+#include <fcntl.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
+#include <unistd.h>
 #endif
 
 namespace nectar
 {
 #ifdef _WIN32
 
-    MappedFile MappedFile::Open(wax::StringView path)
-    {
+    MappedFile MappedFile::Open(wax::StringView path) {
         HIVE_PROFILE_SCOPE_N("MappedFile::Open");
         MappedFile result;
 
@@ -31,16 +31,17 @@ namespace nectar
 
         wchar_t wide[1024];
         int wlen = MultiByteToWideChar(CP_UTF8, 0, narrow, static_cast<int>(len), wide, 1024);
-        if (wlen <= 0) return result;
+        if (wlen <= 0)
+            return result;
         wide[wlen] = L'\0';
 
-        HANDLE file = CreateFileW(wide, GENERIC_READ, FILE_SHARE_READ,
-                                   nullptr, OPEN_EXISTING,
-                                   FILE_ATTRIBUTE_NORMAL, nullptr);
-        if (file == INVALID_HANDLE_VALUE) return result;
+        HANDLE file =
+            CreateFileW(wide, GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+        if (file == INVALID_HANDLE_VALUE)
+            return result;
 
-        LARGE_INTEGER file_size;
-        if (!GetFileSizeEx(file, &file_size) || file_size.QuadPart == 0)
+        LARGE_INTEGER fileSize;
+        if (!GetFileSizeEx(file, &fileSize) || fileSize.QuadPart == 0)
         {
             CloseHandle(file);
             return result;
@@ -61,31 +62,29 @@ namespace nectar
             return result;
         }
 
-        result.data_ = view;
-        result.size_ = static_cast<size_t>(file_size.QuadPart);
-        result.file_handle_ = file;
-        result.mapping_handle_ = mapping;
+        result.m_data = view;
+        result.m_size = static_cast<size_t>(fileSize.QuadPart);
+        result.m_fileHandle = file;
+        result.m_mappingHandle = mapping;
         return result;
     }
 
-    void MappedFile::Close() noexcept
-    {
-        if (data_)
-            UnmapViewOfFile(data_);
-        if (mapping_handle_)
-            CloseHandle(mapping_handle_);
-        if (file_handle_)
-            CloseHandle(file_handle_);
-        data_ = nullptr;
-        size_ = 0;
-        file_handle_ = nullptr;
-        mapping_handle_ = nullptr;
+    void MappedFile::Close() noexcept {
+        if (m_data)
+            UnmapViewOfFile(m_data);
+        if (m_mappingHandle)
+            CloseHandle(m_mappingHandle);
+        if (m_fileHandle)
+            CloseHandle(m_fileHandle);
+        m_data = nullptr;
+        m_size = 0;
+        m_fileHandle = nullptr;
+        m_mappingHandle = nullptr;
     }
 
 #else // POSIX
 
-    MappedFile MappedFile::Open(wax::StringView path)
-    {
+    MappedFile MappedFile::Open(wax::StringView path) {
         HIVE_PROFILE_SCOPE_N("MappedFile::Open");
         MappedFile result;
 
@@ -97,7 +96,8 @@ namespace nectar
         buf[len] = '\0';
 
         int fd = ::open(buf, O_RDONLY);
-        if (fd < 0) return result;
+        if (fd < 0)
+            return result;
 
         struct stat st;
         if (::fstat(fd, &st) != 0 || st.st_size == 0)
@@ -106,8 +106,7 @@ namespace nectar
             return result;
         }
 
-        void* addr = ::mmap(nullptr, static_cast<size_t>(st.st_size),
-                            PROT_READ, MAP_PRIVATE, fd, 0);
+        void* addr = ::mmap(nullptr, static_cast<size_t>(st.st_size), PROT_READ, MAP_PRIVATE, fd, 0);
         if (addr == MAP_FAILED)
         {
             ::close(fd);
@@ -120,8 +119,7 @@ namespace nectar
         return result;
     }
 
-    void MappedFile::Close() noexcept
-    {
+    void MappedFile::Close() noexcept {
         if (data_)
             ::munmap(data_, size_);
         if (fd_ >= 0)
@@ -133,70 +131,64 @@ namespace nectar
 
 #endif // _WIN32
 
-    MappedFile::~MappedFile()
-    {
+    MappedFile::~MappedFile() {
         Close();
     }
 
     MappedFile::MappedFile(MappedFile&& other) noexcept
-        : data_{other.data_}
-        , size_{other.size_}
+        : m_data{other.m_data}
+        , m_size{other.m_size}
 #ifdef _WIN32
-        , file_handle_{other.file_handle_}
-        , mapping_handle_{other.mapping_handle_}
+        , m_fileHandle{other.m_fileHandle}
+        , m_mappingHandle{other.m_mappingHandle}
 #else
         , fd_{other.fd_}
 #endif
     {
-        other.data_ = nullptr;
-        other.size_ = 0;
+        other.m_data = nullptr;
+        other.m_size = 0;
 #ifdef _WIN32
-        other.file_handle_ = nullptr;
-        other.mapping_handle_ = nullptr;
+        other.m_fileHandle = nullptr;
+        other.m_mappingHandle = nullptr;
 #else
         other.fd_ = -1;
 #endif
     }
 
-    MappedFile& MappedFile::operator=(MappedFile&& other) noexcept
-    {
+    MappedFile& MappedFile::operator=(MappedFile&& other) noexcept {
         if (this != &other)
         {
             Close();
-            data_ = other.data_;
-            size_ = other.size_;
+            m_data = other.m_data;
+            m_size = other.m_size;
 #ifdef _WIN32
-            file_handle_ = other.file_handle_;
-            mapping_handle_ = other.mapping_handle_;
-            other.file_handle_ = nullptr;
-            other.mapping_handle_ = nullptr;
+            m_fileHandle = other.m_fileHandle;
+            m_mappingHandle = other.m_mappingHandle;
+            other.m_fileHandle = nullptr;
+            other.m_mappingHandle = nullptr;
 #else
             fd_ = other.fd_;
             other.fd_ = -1;
 #endif
-            other.data_ = nullptr;
-            other.size_ = 0;
+            other.m_data = nullptr;
+            other.m_size = 0;
         }
         return *this;
     }
 
-    bool MappedFile::IsValid() const noexcept
-    {
-        return data_ != nullptr;
+    bool MappedFile::IsValid() const noexcept {
+        return m_data != nullptr;
     }
 
-    const uint8_t* MappedFile::Data() const noexcept
-    {
-        return static_cast<const uint8_t*>(data_);
+    const uint8_t* MappedFile::Data() const noexcept {
+        return static_cast<const uint8_t*>(m_data);
     }
 
-    size_t MappedFile::Size() const noexcept
-    {
-        return size_;
+    size_t MappedFile::Size() const noexcept {
+        return m_size;
     }
 
-    wax::ByteSpan MappedFile::View() const noexcept
-    {
-        return wax::ByteSpan{static_cast<const uint8_t*>(data_), size_};
+    wax::ByteSpan MappedFile::View() const noexcept {
+        return wax::ByteSpan{static_cast<const uint8_t*>(m_data), m_size};
     }
-}
+} // namespace nectar

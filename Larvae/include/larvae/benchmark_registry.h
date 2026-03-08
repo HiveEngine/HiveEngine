@@ -1,9 +1,10 @@
 #pragma once
 
 #include <larvae/benchmark.h>
+
 #include <functional>
-#include <vector>
 #include <string>
+#include <vector>
 
 namespace larvae
 {
@@ -19,9 +20,8 @@ namespace larvae
     public:
         static BenchmarkRegistry& GetInstance();
 
-        void RegisterBenchmark(const char* suite_name,
-                              const char* benchmark_name,
-                              std::function<void(BenchmarkState&)> benchmark_func);
+        void RegisterBenchmark(const char* suite_name, const char* benchmark_name,
+                               std::function<void(BenchmarkState&)> benchmark_func);
 
         const std::vector<BenchmarkInfo>& GetBenchmarks() const { return benchmarks_; }
 
@@ -35,20 +35,14 @@ namespace larvae
     class BenchmarkRegistrar
     {
     public:
-        BenchmarkRegistrar(const char* suite_name,
-                          const char* benchmark_name,
-                          std::function<void(BenchmarkState&)> benchmark_func)
-        {
-            BenchmarkRegistry::GetInstance().RegisterBenchmark(
-                suite_name, benchmark_name, std::move(benchmark_func));
+        BenchmarkRegistrar(const char* suite_name, const char* benchmark_name,
+                           std::function<void(BenchmarkState&)> benchmark_func) {
+            BenchmarkRegistry::GetInstance().RegisterBenchmark(suite_name, benchmark_name, std::move(benchmark_func));
         }
     };
 
-    inline BenchmarkRegistrar RegisterBenchmark(
-        const char* suite_name,
-        const char* benchmark_name,
-        std::function<void(BenchmarkState&)> benchmark_func)
-    {
+    inline BenchmarkRegistrar RegisterBenchmark(const char* suite_name, const char* benchmark_name,
+                                                std::function<void(BenchmarkState&)> benchmark_func) {
         return {suite_name, benchmark_name, std::move(benchmark_func)};
     }
-}
+} // namespace larvae

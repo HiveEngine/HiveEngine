@@ -1,8 +1,9 @@
 #pragma once
 
+#include <hive/core/assert.h>
+
 #include <cstddef>
 #include <cstring>
-#include <hive/core/assert.h>
 
 namespace wax
 {
@@ -39,8 +40,7 @@ namespace wax
      *   int x = arr.At(1);  // Always bounds-checked
      * @endcode
      */
-    template<typename T, size_t N>
-    struct Array
+    template <typename T, size_t N> struct Array
     {
         static_assert(N > 0, "Array size must be greater than zero");
 
@@ -49,110 +49,70 @@ namespace wax
         using Iterator = T*;
         using ConstIterator = const T*;
 
-        T data_[N];
+        T m_data[N];
 
-        [[nodiscard]] constexpr T& operator[](size_t index) noexcept
-        {
+        [[nodiscard]] constexpr T& operator[](size_t index) noexcept {
             hive::Assert(index < N, "Array index out of bounds");
-            return data_[index];
+            return m_data[index];
         }
 
-        [[nodiscard]] constexpr const T& operator[](size_t index) const noexcept
-        {
+        [[nodiscard]] constexpr const T& operator[](size_t index) const noexcept {
             hive::Assert(index < N, "Array index out of bounds");
-            return data_[index];
+            return m_data[index];
         }
 
-        [[nodiscard]] constexpr T& At(size_t index)
-        {
+        [[nodiscard]] constexpr T& At(size_t index) {
             hive::Check(index < N, "Array index out of bounds");
-            return data_[index];
+            return m_data[index];
         }
 
-        [[nodiscard]] constexpr const T& At(size_t index) const
-        {
+        [[nodiscard]] constexpr const T& At(size_t index) const {
             hive::Check(index < N, "Array index out of bounds");
-            return data_[index];
+            return m_data[index];
         }
 
-        [[nodiscard]] constexpr T& Front() noexcept
-        {
-            return data_[0];
+        [[nodiscard]] constexpr T& Front() noexcept { return m_data[0]; }
+
+        [[nodiscard]] constexpr const T& Front() const noexcept { return m_data[0]; }
+
+        [[nodiscard]] constexpr T& Back() noexcept { return m_data[N - 1]; }
+
+        [[nodiscard]] constexpr const T& Back() const noexcept { return m_data[N - 1]; }
+
+        [[nodiscard]] constexpr T* Data() noexcept { return m_data; }
+
+        [[nodiscard]] constexpr const T* Data() const noexcept { return m_data; }
+
+        [[nodiscard]] constexpr size_t Size() const noexcept { return N; }
+
+        [[nodiscard]] constexpr bool IsEmpty() const noexcept {
+            return false; // Array is never empty (N > 0)
         }
 
-        [[nodiscard]] constexpr const T& Front() const noexcept
-        {
-            return data_[0];
-        }
+        [[nodiscard]] constexpr Iterator Begin() noexcept { return m_data; }
 
-        [[nodiscard]] constexpr T& Back() noexcept
-        {
-            return data_[N - 1];
-        }
+        [[nodiscard]] constexpr ConstIterator Begin() const noexcept { return m_data; }
 
-        [[nodiscard]] constexpr const T& Back() const noexcept
-        {
-            return data_[N - 1];
-        }
+        [[nodiscard]] constexpr Iterator End() noexcept { return m_data + N; }
 
-        [[nodiscard]] constexpr T* Data() noexcept
-        {
-            return data_;
-        }
+        [[nodiscard]] constexpr ConstIterator End() const noexcept { return m_data + N; }
 
-        [[nodiscard]] constexpr const T* Data() const noexcept
-        {
-            return data_;
-        }
-
-        [[nodiscard]] constexpr size_t Size() const noexcept
-        {
-            return N;
-        }
-
-        [[nodiscard]] constexpr bool IsEmpty() const noexcept
-        {
-            return false;  // Array is never empty (N > 0)
-        }
-
-        [[nodiscard]] constexpr Iterator begin() noexcept
-        {
-            return data_;
-        }
-
-        [[nodiscard]] constexpr ConstIterator begin() const noexcept
-        {
-            return data_;
-        }
-
-        [[nodiscard]] constexpr Iterator end() noexcept
-        {
-            return data_ + N;
-        }
-
-        [[nodiscard]] constexpr ConstIterator end() const noexcept
-        {
-            return data_ + N;
-        }
-
-        constexpr void Fill(const T& value)
-        {
+        constexpr void Fill(const T& value) {
             if constexpr (std::is_trivially_copyable_v<T> && sizeof(T) == 1)
             {
                 if (!std::is_constant_evaluated())
                 {
-                    std::memset(data_, static_cast<unsigned char>(value), N);
+                    std::memset(m_data, static_cast<unsigned char>(value), N);
                     return;
                 }
             }
 
             for (size_t i = 0; i < N; ++i)
             {
-                data_[i] = value;
+                m_data[i] = value;
             }
         }
     };
 
-    template<typename T, typename... U>
-    Array(T, U...) -> Array<T, 1 + sizeof...(U)>;
-}
+    template <typename T, typename... U> Array(T, U...) -> Array<T, 1 + sizeof...(U)>;
+} // namespace wax

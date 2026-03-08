@@ -1,5 +1,7 @@
-#include <larvae/larvae.h>
 #include <wax/containers/string_view.h>
+
+#include <larvae/larvae.h>
+
 #include <string_view>
 
 namespace
@@ -212,15 +214,16 @@ namespace
     // std::string_view Comparison Benchmarks
     // =============================================================================
 
-    auto bench17 = larvae::RegisterBenchmark("StdStringView", "ConstructFromLiteral", [](larvae::BenchmarkState& state) {
-        while (state.KeepRunning())
-        {
-            std::string_view sv{"Hello World"};
-            larvae::DoNotOptimize(sv.data());
-        }
+    auto bench17 =
+        larvae::RegisterBenchmark("StdStringView", "ConstructFromLiteral", [](larvae::BenchmarkState& state) {
+            while (state.KeepRunning())
+            {
+                std::string_view sv{"Hello World"};
+                larvae::DoNotOptimize(sv.data());
+            }
 
-        state.SetItemsProcessed(state.iterations());
-    });
+            state.SetItemsProcessed(state.iterations());
+        });
 
     auto bench18 = larvae::RegisterBenchmark("StdStringView", "FindChar", [](larvae::BenchmarkState& state) {
         std::string_view sv{"The quick brown fox jumps over the lazy dog"};
@@ -307,4 +310,4 @@ namespace
 
         state.SetItemsProcessed(state.iterations());
     });
-}
+} // namespace

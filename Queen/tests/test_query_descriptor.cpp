@@ -1,17 +1,33 @@
-#include <larvae/larvae.h>
+#include <comb/buddy_allocator.h>
+
 #include <queen/query/query_descriptor.h>
 #include <queen/world/world.h>
-#include <queen/world/world.h>
-#include <comb/buddy_allocator.h>
+
+#include <larvae/larvae.h>
 
 namespace
 {
-    struct Position { float x, y, z; };
-    struct Velocity { float dx, dy, dz; };
-    struct Health { int current, max; };
-    struct Player {};
-    struct Enemy {};
-    struct Dead {};
+    struct Position
+    {
+        float x, y, z;
+    };
+    struct Velocity
+    {
+        float dx, dy, dz;
+    };
+    struct Health
+    {
+        int current, max;
+    };
+    struct Player
+    {
+    };
+    struct Enemy
+    {
+    };
+    struct Dead
+    {
+    };
 
     // ─────────────────────────────────────────────────────────────
     // QueryDescriptor basic construction
@@ -61,11 +77,9 @@ namespace
     auto test4 = larvae::RegisterTest("QueenQueryDescriptor", "FromTermsFactory", []() {
         queen::PersistentAllocator alloc{65536};
 
-        auto desc = queen::QueryDescriptor<queen::PersistentAllocator>::FromTerms<
-            queen::Read<Position>,
-            queen::Write<Velocity>,
-            queen::Without<Dead>
-        >(alloc);
+        auto desc =
+            queen::QueryDescriptor<queen::PersistentAllocator>::FromTerms<queen::Read<Position>, queen::Write<Velocity>,
+                                                                          queen::Without<Dead>>(alloc);
 
         larvae::AssertEqual(desc.TermCount(), size_t{3});
         larvae::AssertEqual(desc.RequiredCount(), size_t{2});
@@ -82,11 +96,9 @@ namespace
     auto test5 = larvae::RegisterTest("QueenQueryDescriptor", "OptionalTerms", []() {
         queen::PersistentAllocator alloc{65536};
 
-        auto desc = queen::QueryDescriptor<queen::PersistentAllocator>::FromTerms<
-            queen::Read<Position>,
-            queen::Maybe<Health>,
-            queen::MaybeWrite<Velocity>
-        >(alloc);
+        auto desc =
+            queen::QueryDescriptor<queen::PersistentAllocator>::FromTerms<queen::Read<Position>, queen::Maybe<Health>,
+                                                                          queen::MaybeWrite<Velocity>>(alloc);
 
         larvae::AssertEqual(desc.TermCount(), size_t{3});
         larvae::AssertEqual(desc.RequiredCount(), size_t{1});
@@ -110,10 +122,9 @@ namespace
         record = world.GetArchetypeGraph().GetOrCreateAddTarget(*record, queen::ComponentMeta::Of<Position>());
         record = world.GetArchetypeGraph().GetOrCreateAddTarget(*record, queen::ComponentMeta::Of<Velocity>());
 
-        auto desc = queen::QueryDescriptor<queen::PersistentAllocator>::FromTerms<
-            queen::Read<Position>,
-            queen::Read<Velocity>
-        >(alloc);
+        auto desc =
+            queen::QueryDescriptor<queen::PersistentAllocator>::FromTerms<queen::Read<Position>, queen::Read<Velocity>>(
+                alloc);
 
         larvae::AssertTrue(desc.MatchesArchetype(*record));
 
@@ -130,10 +141,9 @@ namespace
         auto* record = world.GetArchetypeGraph().GetEmptyArchetype();
         record = world.GetArchetypeGraph().GetOrCreateAddTarget(*record, queen::ComponentMeta::Of<Position>());
 
-        auto desc = queen::QueryDescriptor<queen::PersistentAllocator>::FromTerms<
-            queen::Read<Position>,
-            queen::Read<Velocity>
-        >(alloc);
+        auto desc =
+            queen::QueryDescriptor<queen::PersistentAllocator>::FromTerms<queen::Read<Position>, queen::Read<Velocity>>(
+                alloc);
 
         larvae::AssertFalse(desc.MatchesArchetype(*record));
 
@@ -151,10 +161,9 @@ namespace
         record = world.GetArchetypeGraph().GetOrCreateAddTarget(*record, queen::ComponentMeta::Of<Position>());
         record = world.GetArchetypeGraph().GetOrCreateAddTarget(*record, queen::ComponentMeta::Of<Dead>());
 
-        auto desc = queen::QueryDescriptor<queen::PersistentAllocator>::FromTerms<
-            queen::Read<Position>,
-            queen::Without<Dead>
-        >(alloc);
+        auto desc =
+            queen::QueryDescriptor<queen::PersistentAllocator>::FromTerms<queen::Read<Position>, queen::Without<Dead>>(
+                alloc);
 
         larvae::AssertFalse(desc.MatchesArchetype(*record));
 
@@ -171,10 +180,9 @@ namespace
         auto* record = world.GetArchetypeGraph().GetEmptyArchetype();
         record = world.GetArchetypeGraph().GetOrCreateAddTarget(*record, queen::ComponentMeta::Of<Position>());
 
-        auto desc = queen::QueryDescriptor<queen::PersistentAllocator>::FromTerms<
-            queen::Read<Position>,
-            queen::Without<Dead>
-        >(alloc);
+        auto desc =
+            queen::QueryDescriptor<queen::PersistentAllocator>::FromTerms<queen::Read<Position>, queen::Without<Dead>>(
+                alloc);
 
         larvae::AssertTrue(desc.MatchesArchetype(*record));
 
@@ -187,16 +195,18 @@ namespace
         queen::World world{};
 
         auto* arch_with_health = world.GetArchetypeGraph().GetEmptyArchetype();
-        arch_with_health = world.GetArchetypeGraph().GetOrCreateAddTarget(*arch_with_health, queen::ComponentMeta::Of<Position>());
-        arch_with_health = world.GetArchetypeGraph().GetOrCreateAddTarget(*arch_with_health, queen::ComponentMeta::Of<Health>());
+        arch_with_health =
+            world.GetArchetypeGraph().GetOrCreateAddTarget(*arch_with_health, queen::ComponentMeta::Of<Position>());
+        arch_with_health =
+            world.GetArchetypeGraph().GetOrCreateAddTarget(*arch_with_health, queen::ComponentMeta::Of<Health>());
 
         auto* arch_without_health = world.GetArchetypeGraph().GetEmptyArchetype();
-        arch_without_health = world.GetArchetypeGraph().GetOrCreateAddTarget(*arch_without_health, queen::ComponentMeta::Of<Position>());
+        arch_without_health =
+            world.GetArchetypeGraph().GetOrCreateAddTarget(*arch_without_health, queen::ComponentMeta::Of<Position>());
 
-        auto desc = queen::QueryDescriptor<queen::PersistentAllocator>::FromTerms<
-            queen::Read<Position>,
-            queen::Maybe<Health>
-        >(alloc);
+        auto desc =
+            queen::QueryDescriptor<queen::PersistentAllocator>::FromTerms<queen::Read<Position>, queen::Maybe<Health>>(
+                alloc);
 
         larvae::AssertTrue(desc.MatchesArchetype(*arch_with_health));
         larvae::AssertTrue(desc.MatchesArchetype(*arch_without_health));
@@ -215,10 +225,9 @@ namespace
         auto e2 = world.Spawn(Position{5, 0, 0});
         auto e3 = world.Spawn(Position{10, 0, 0}, Velocity{-1, 0, 0}, Health{100, 100});
 
-        auto desc = queen::QueryDescriptor<queen::PersistentAllocator>::FromTerms<
-            queen::Read<Position>,
-            queen::Read<Velocity>
-        >(alloc);
+        auto desc =
+            queen::QueryDescriptor<queen::PersistentAllocator>::FromTerms<queen::Read<Position>, queen::Read<Velocity>>(
+                alloc);
 
         auto matching = desc.FindMatchingArchetypes(world.GetComponentIndex());
 
@@ -238,11 +247,9 @@ namespace
         auto e2 = world.Spawn(Position{5, 0, 0}, Velocity{2, 0, 0}, Dead{});
         auto e3 = world.Spawn(Position{10, 0, 0}, Velocity{-1, 0, 0});
 
-        auto desc = queen::QueryDescriptor<queen::PersistentAllocator>::FromTerms<
-            queen::Read<Position>,
-            queen::Read<Velocity>,
-            queen::Without<Dead>
-        >(alloc);
+        auto desc =
+            queen::QueryDescriptor<queen::PersistentAllocator>::FromTerms<queen::Read<Position>, queen::Read<Velocity>,
+                                                                          queen::Without<Dead>>(alloc);
 
         auto matching = desc.FindMatchingArchetypes(world.GetComponentIndex());
 
@@ -265,10 +272,9 @@ namespace
 
         auto e1 = world.Spawn(Position{0, 0, 0});
 
-        auto desc = queen::QueryDescriptor<queen::PersistentAllocator>::FromTerms<
-            queen::Read<Position>,
-            queen::Read<Velocity>
-        >(alloc);
+        auto desc =
+            queen::QueryDescriptor<queen::PersistentAllocator>::FromTerms<queen::Read<Position>, queen::Read<Velocity>>(
+                alloc);
 
         auto matching = desc.FindMatchingArchetypes(world.GetComponentIndex());
 
@@ -284,22 +290,19 @@ namespace
     auto test14 = larvae::RegisterTest("QueenQueryDescriptor", "DataAccessExtraction", []() {
         queen::PersistentAllocator alloc{65536};
 
-        auto desc = queen::QueryDescriptor<queen::PersistentAllocator>::FromTerms<
-            queen::Read<Position>,
-            queen::Write<Velocity>,
-            queen::With<Player>,
-            queen::Without<Dead>,
-            queen::Maybe<Health>
-        >(alloc);
+        auto desc =
+            queen::QueryDescriptor<queen::PersistentAllocator>::FromTerms<queen::Read<Position>, queen::Write<Velocity>,
+                                                                          queen::With<Player>, queen::Without<Dead>,
+                                                                          queen::Maybe<Health>>(alloc);
 
         larvae::AssertEqual(desc.DataAccessCount(), size_t{3});
 
         const auto& data_terms = desc.GetDataAccessTerms();
-        larvae::AssertEqual(data_terms[0].type_id, queen::TypeIdOf<Position>());
+        larvae::AssertEqual(data_terms[0].m_typeId, queen::TypeIdOf<Position>());
         larvae::AssertTrue(data_terms[0].IsReadOnly());
-        larvae::AssertEqual(data_terms[1].type_id, queen::TypeIdOf<Velocity>());
+        larvae::AssertEqual(data_terms[1].m_typeId, queen::TypeIdOf<Velocity>());
         larvae::AssertTrue(data_terms[1].IsWritable());
-        larvae::AssertEqual(data_terms[2].type_id, queen::TypeIdOf<Health>());
+        larvae::AssertEqual(data_terms[2].m_typeId, queen::TypeIdOf<Health>());
         larvae::AssertTrue(data_terms[2].IsOptional());
     });
 
@@ -311,11 +314,7 @@ namespace
         queen::PersistentAllocator alloc{65536};
 
         auto desc = queen::QueryDescriptor<queen::PersistentAllocator>::FromTerms<
-            queen::Read<Position>,
-            queen::Write<Velocity>,
-            queen::Without<Dead>,
-            queen::Maybe<Health>
-        >(alloc);
+            queen::Read<Position>, queen::Write<Velocity>, queen::Without<Dead>, queen::Maybe<Health>>(alloc);
 
         const auto& required = desc.GetRequired();
         larvae::AssertEqual(required.Size(), size_t{2});
@@ -349,4 +348,4 @@ namespace
 
         larvae::AssertEqual(desc.RequiredCount(), size_t{2});
     });
-}
+} // namespace

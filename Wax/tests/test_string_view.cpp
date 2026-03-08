@@ -1,7 +1,9 @@
-#include <larvae/larvae.h>
 #include <wax/containers/string_view.h>
 
-namespace {
+#include <larvae/larvae.h>
+
+namespace
+{
     // =============================================================================
     // Construction
     // =============================================================================
@@ -94,8 +96,9 @@ namespace {
 
         char result[3];
         size_t i = 0;
-        for (char ch : sv) {
-            result[i++] = ch;
+        for (auto it = sv.Begin(); it != sv.End(); ++it)
+        {
+            result[i++] = *it;
         }
 
         larvae::AssertEqual(result[0], 'a');
@@ -106,7 +109,7 @@ namespace {
     auto test11 = larvae::RegisterTest("WaxStringView", "IteratorAccess", []() {
         wax::StringView sv{"Test"};
 
-        auto it = sv.begin();
+        auto it = sv.Begin();
         larvae::AssertEqual(*it, 'T');
         ++it;
         larvae::AssertEqual(*it, 'e');
@@ -115,7 +118,7 @@ namespace {
         ++it;
         larvae::AssertEqual(*it, 't');
         ++it;
-        larvae::AssertTrue(it == sv.end());
+        larvae::AssertTrue(it == sv.End());
     });
 
     // =============================================================================
@@ -386,4 +389,4 @@ namespace {
         larvae::AssertTrue(sv.StartsWith('A'));
         larvae::AssertTrue(sv.EndsWith('A'));
     });
-}
+} // namespace

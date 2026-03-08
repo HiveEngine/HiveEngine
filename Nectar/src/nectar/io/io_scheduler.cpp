@@ -1,98 +1,94 @@
 #include <nectar/io/io_scheduler.h>
 #include <nectar/vfs/virtual_filesystem.h>
-#include <hive/profiling/profiler.h>
+
 #include <cstdio>
 
 namespace nectar
 {
-    IOScheduler::IOScheduler(VirtualFilesystem& vfs, comb::DefaultAllocator& alloc,
-                             IOSchedulerConfig config)
-        : vfs_{&vfs}
-        , alloc_{&alloc}
-        , request_queue_{alloc}
-        , completion_queue_{alloc}
-        , cancelled_ids_{alloc}
-    {
-        workers_.reserve(config.worker_count);
-        for (size_t i = 0; i < config.worker_count; ++i)
-            workers_.emplace_back(&IOScheduler::WorkerLoop, this);
-    }
-
-    IOScheduler::~IOScheduler()
-    {
-        Shutdown();
-    }
-
-    void IOScheduler::Shutdown()
-    {
-        bool expected = false;
-        if (!shutdown_.compare_exchange_strong(expected, true))
-            return;  // already shut down
-
-        request_cv_.notify_all();
-        for (auto& w : workers_)
+    IOScheduler::IOScheduler(VirtualFilesystem& vfs, comb::DefaultAllocator& alloc, IOSchedulerConfig config)
+        : m_vfs{&vfs}
+        , m_alloc{&alloc}
+        , m_requestQueue{alloc}
+        , m_completionQueue{alloc}
+        , m_cancelledIds{alloc} {
+        m_workers.reserve(config.m_workerCount);
+        for (size_t i = 0; i < config.m_workerCount; ++i)
         {
-            if (w.joinable())
-                w.join();
+            m_workers.emplace_back(&IOScheduler::WorkerLoop, this);
         }
     }
 
-    IORequestId IOScheduler::Submit(wax::StringView path, LoadPriority priority)
-    {
-        HIVE_PROFILE_SCOPE_N("IOScheduler::Submit");
-        std::lock_guard<std::mutex> lock{request_mutex_};
+    IOScheduler::~IOScheduler() {
+        Shutdown();
+    }
 
-        IORequestId id = next_id_++;
+    void IOScheduler::Shutdown() {
+        bool expected = false;
+        if (!m_shutdown.compare_exchange_strong(expected, true))
+        {
+            return;
+        }
+
+        m_requestCv.notify_all();
+        for (auto& worker : m_workers)
+        {
+            if (worker.joinable())
+            {
+                worker.join();
+            }
+        }
+    }
+
+    IORequestId IOScheduler::Submit(wax::StringView path, LoadPriority priority) {
+        HIVE_PROFILE_SCOPE_N("IOScheduler::Submit");
+        std::lock_guard<std::mutex> lock{m_requestMutex};
+
+        IORequestId id = m_nextId++;
 
         IORequest req;
-        req.id = id;
-        req.path = wax::String{*alloc_};
-        req.path.Append(path.Data(), path.Size());
-        req.priority = priority;
-        req.cancelled = false;
+        req.m_id = id;
+        req.m_path = wax::String{*m_alloc};
+        req.m_path.Append(path.Data(), path.Size());
+        req.m_priority = priority;
+        req.m_cancelled = false;
 
-        request_queue_.PushBack(static_cast<IORequest&&>(req));
-        request_cv_.notify_one();
+        m_requestQueue.PushBack(static_cast<IORequest&&>(req));
+        m_requestCv.notify_one();
         return id;
     }
 
-    void IOScheduler::Cancel(IORequestId id)
-    {
-        std::lock_guard<std::mutex> lock{request_mutex_};
+    void IOScheduler::Cancel(IORequestId id) {
+        std::lock_guard<std::mutex> lock{m_requestMutex};
 
-        // Try to find in pending queue
-        for (size_t i = 0; i < request_queue_.Size(); ++i)
+        for (size_t i = 0; i < m_requestQueue.Size(); ++i)
         {
-            if (request_queue_[i].id == id)
+            if (m_requestQueue[i].m_id == id)
             {
-                request_queue_[i].cancelled = true;
+                m_requestQueue[i].m_cancelled = true;
                 return;
             }
         }
 
-        // Not in queue — may be in-flight, track for discard on completion
-        cancelled_ids_.Insert(id);
+        m_cancelledIds.Insert(id);
     }
 
-    size_t IOScheduler::DrainCompletions(wax::Vector<IOCompletion>& out)
-    {
+    size_t IOScheduler::DrainCompletions(wax::Vector<IOCompletion>& out) {
         HIVE_PROFILE_SCOPE_N("IOScheduler::DrainCompletions");
-        // Phase 1: drain all completions
-        wax::Vector<IOCompletion> raw{*alloc_};
+
+        wax::Vector<IOCompletion> raw{*m_alloc};
         {
-            std::lock_guard<HIVE_PROFILE_LOCKABLE_BASE(std::mutex)> lock{completion_mutex_};
-            raw = static_cast<wax::Vector<IOCompletion>&&>(completion_queue_);
-            completion_queue_ = wax::Vector<IOCompletion>{*alloc_};
+            std::lock_guard<HIVE_PROFILE_LOCKABLE_BASE(std::mutex)> lock{m_completionMutex};
+            raw = static_cast<wax::Vector<IOCompletion>&&>(m_completionQueue);
+            m_completionQueue = wax::Vector<IOCompletion>{*m_alloc};
         }
 
-        // Phase 2: filter cancelled (separate lock to avoid deadlock)
         {
-            std::lock_guard<std::mutex> lock{request_mutex_};
+            std::lock_guard<std::mutex> lock{m_requestMutex};
             for (size_t i = 0; i < raw.Size(); ++i)
             {
-                if (cancelled_ids_.Contains(raw[i].request_id))
+                if (m_cancelledIds.Contains(raw[i].m_requestId))
                 {
-                    cancelled_ids_.Remove(raw[i].request_id);
+                    m_cancelledIds.Remove(raw[i].m_requestId);
                 }
                 else
                 {
@@ -104,73 +100,70 @@ namespace nectar
         return out.Size();
     }
 
-    size_t IOScheduler::PendingCount() const
-    {
-        std::lock_guard<std::mutex> lock{request_mutex_};
-        return request_queue_.Size();
+    size_t IOScheduler::PendingCount() const {
+        std::lock_guard<std::mutex> lock{m_requestMutex};
+        return m_requestQueue.Size();
     }
 
-    bool IOScheduler::IsShutdown() const noexcept
-    {
-        return shutdown_.load(std::memory_order_relaxed);
+    bool IOScheduler::IsShutdown() const noexcept {
+        return m_shutdown.load(std::memory_order_relaxed);
     }
 
-    void IOScheduler::WorkerLoop()
-    {
-        int id = worker_id_counter_.fetch_add(1);
-        char thread_name[32];
-        std::snprintf(thread_name, sizeof(thread_name), "Nectar-IO-%d", id);
-        HIVE_PROFILE_THREAD(thread_name);
+    void IOScheduler::WorkerLoop() {
+        int id = m_workerIdCounter.fetch_add(1);
+        char threadName[32];
+        std::snprintf(threadName, sizeof(threadName), "Nectar-IO-%d", id);
+        HIVE_PROFILE_THREAD(threadName);
         HIVE_PROFILE_SCOPE_N("IOScheduler::WorkerLoop");
 
         while (true)
         {
             IORequest req;
 
-            // Wait for work
             {
-                std::unique_lock<std::mutex> lock{request_mutex_};
-                request_cv_.wait(lock, [this] {
-                    return shutdown_.load(std::memory_order_relaxed) || !request_queue_.IsEmpty();
-                });
+                std::unique_lock<std::mutex> lock{m_requestMutex};
+                m_requestCv.wait(
+                    lock, [this] { return m_shutdown.load(std::memory_order_relaxed) || !m_requestQueue.IsEmpty(); });
 
-                if (shutdown_.load(std::memory_order_relaxed) && request_queue_.IsEmpty())
-                    break;
-
-                // Find highest priority (lowest enum value)
-                size_t best = 0;
-                for (size_t i = 1; i < request_queue_.Size(); ++i)
+                if (m_shutdown.load(std::memory_order_relaxed) && m_requestQueue.IsEmpty())
                 {
-                    if (static_cast<uint8_t>(request_queue_[i].priority) <
-                        static_cast<uint8_t>(request_queue_[best].priority))
+                    break;
+                }
+
+                size_t best = 0;
+                for (size_t i = 1; i < m_requestQueue.Size(); ++i)
+                {
+                    if (static_cast<uint8_t>(m_requestQueue[i].m_priority) <
+                        static_cast<uint8_t>(m_requestQueue[best].m_priority))
                     {
                         best = i;
                     }
                 }
 
-                // Swap-remove
-                req = static_cast<IORequest&&>(request_queue_[best]);
-                if (best < request_queue_.Size() - 1)
-                    request_queue_[best] = static_cast<IORequest&&>(request_queue_[request_queue_.Size() - 1]);
-                request_queue_.PopBack();
+                req = static_cast<IORequest&&>(m_requestQueue[best]);
+                if (best < m_requestQueue.Size() - 1)
+                {
+                    m_requestQueue[best] = static_cast<IORequest&&>(m_requestQueue[m_requestQueue.Size() - 1]);
+                }
+                m_requestQueue.PopBack();
             }
 
-            // Skip cancelled
-            if (req.cancelled)
+            if (req.m_cancelled)
+            {
                 continue;
+            }
 
-            // Execute read
-            auto buffer = vfs_->ReadSync(req.path.View());
+            auto buffer = m_vfs->ReadSync(req.m_path.View());
 
             IOCompletion completion;
-            completion.request_id = req.id;
-            completion.success = (buffer.Size() > 0);
-            completion.data = static_cast<wax::ByteBuffer&&>(buffer);
+            completion.m_requestId = req.m_id;
+            completion.m_success = (buffer.Size() > 0);
+            completion.m_data = static_cast<wax::ByteBuffer&&>(buffer);
 
             {
-                std::lock_guard<HIVE_PROFILE_LOCKABLE_BASE(std::mutex)> lock{completion_mutex_};
-                completion_queue_.PushBack(static_cast<IOCompletion&&>(completion));
+                std::lock_guard<HIVE_PROFILE_LOCKABLE_BASE(std::mutex)> lock{m_completionMutex};
+                m_completionQueue.PushBack(static_cast<IOCompletion&&>(completion));
             }
         }
     }
-}
+} // namespace nectar

@@ -1,5 +1,6 @@
-#include <larvae/larvae.h>
 #include <queen/core/component_info.h>
+
+#include <larvae/larvae.h>
 
 namespace
 {
@@ -13,22 +14,29 @@ namespace
         float dx, dy, dz;
     };
 
-    struct Player {};
+    struct Player
+    {
+    };
 
     struct SparseComponent
     {
         int value;
-        static constexpr queen::StorageType storage = queen::StorageType::Sparse;
+        static constexpr queen::StorageType storage = queen::StorageType::SPARSE;
     };
 
     struct NonTrivial
     {
         int* data;
 
-        NonTrivial() : data{nullptr} {}
+        NonTrivial()
+            : data{nullptr} {}
         ~NonTrivial() { data = nullptr; }
-        NonTrivial(const NonTrivial& other) : data{other.data} {}
-        NonTrivial(NonTrivial&& other) noexcept : data{other.data} { other.data = nullptr; }
+        NonTrivial(const NonTrivial& other)
+            : data{other.data} {}
+        NonTrivial(NonTrivial&& other) noexcept
+            : data{other.data} {
+            other.data = nullptr;
+        }
     };
 
     auto test1 = larvae::RegisterTest("QueenComponentInfo", "StaticTypeInfo", []() {
@@ -37,9 +45,9 @@ namespace
         larvae::AssertEqual(Info::id, queen::TypeIdOf<Position>());
         larvae::AssertEqual(Info::size, sizeof(Position));
         larvae::AssertEqual(Info::alignment, alignof(Position));
-        larvae::AssertTrue(Info::is_trivially_copyable);
-        larvae::AssertTrue(Info::is_trivially_destructible);
-        larvae::AssertEqual(static_cast<int>(Info::storage), static_cast<int>(queen::StorageType::Dense));
+        larvae::AssertTrue(Info::isTriviallyCopyable);
+        larvae::AssertTrue(Info::isTriviallyDestructible);
+        larvae::AssertEqual(static_cast<int>(Info::storage), static_cast<int>(queen::StorageType::DENSE));
     });
 
     auto test2 = larvae::RegisterTest("QueenComponentInfo", "ConstructFunction", []() {
@@ -79,46 +87,46 @@ namespace
     auto test5 = larvae::RegisterTest("QueenComponentInfo", "SparseStorageHint", []() {
         using Info = queen::ComponentInfo<SparseComponent>;
 
-        larvae::AssertEqual(static_cast<int>(Info::storage), static_cast<int>(queen::StorageType::Sparse));
+        larvae::AssertEqual(static_cast<int>(Info::storage), static_cast<int>(queen::StorageType::SPARSE));
     });
 
     auto test6 = larvae::RegisterTest("QueenComponentInfo", "NonTrivialType", []() {
         using Info = queen::ComponentInfo<NonTrivial>;
 
-        larvae::AssertFalse(Info::is_trivially_copyable);
-        larvae::AssertFalse(Info::is_trivially_destructible);
+        larvae::AssertFalse(Info::isTriviallyCopyable);
+        larvae::AssertFalse(Info::isTriviallyDestructible);
     });
 
     auto test7 = larvae::RegisterTest("QueenComponentMeta", "BasicTypeInfo", []() {
         queen::ComponentMeta meta = queen::ComponentMeta::Of<Position>();
 
         larvae::AssertTrue(meta.IsValid());
-        larvae::AssertEqual(meta.size, sizeof(Position));
-        larvae::AssertEqual(meta.alignment, alignof(Position));
-        larvae::AssertEqual(meta.type_id, queen::TypeIdOf<Position>());
+        larvae::AssertEqual(meta.m_size, sizeof(Position));
+        larvae::AssertEqual(meta.m_alignment, alignof(Position));
+        larvae::AssertEqual(meta.m_typeId, queen::TypeIdOf<Position>());
     });
 
     auto test8 = larvae::RegisterTest("QueenComponentMeta", "TrivialTypeHasNoDestructor", []() {
         queen::ComponentMeta meta = queen::ComponentMeta::Of<Position>();
 
         larvae::AssertTrue(meta.IsTrivial());
-        larvae::AssertNull(meta.destruct);
+        larvae::AssertNull(meta.m_destruct);
     });
 
     auto test9 = larvae::RegisterTest("QueenComponentMeta", "NonTrivialTypeHasDestructor", []() {
         queen::ComponentMeta meta = queen::ComponentMeta::Of<NonTrivial>();
 
         larvae::AssertFalse(meta.IsTrivial());
-        larvae::AssertNotNull(meta.destruct);
+        larvae::AssertNotNull(meta.m_destruct);
     });
 
     auto test10 = larvae::RegisterTest("QueenComponentMeta", "ConstructFunction", []() {
         queen::ComponentMeta meta = queen::ComponentMeta::Of<Position>();
 
-        larvae::AssertNotNull(meta.construct);
+        larvae::AssertNotNull(meta.m_construct);
 
         alignas(Position) char buffer[sizeof(Position)];
-        meta.construct(buffer);
+        meta.m_construct(buffer);
 
         Position* pos = reinterpret_cast<Position*>(buffer);
         larvae::AssertEqual(pos->x, 0.0f);
@@ -130,27 +138,27 @@ namespace
         queen::ComponentMeta meta = queen::ComponentMeta::OfTag<Player>();
 
         larvae::AssertFalse(meta.IsValid());
-        larvae::AssertEqual(meta.size, size_t{0});
-        larvae::AssertEqual(meta.alignment, size_t{1});
-        larvae::AssertEqual(meta.type_id, queen::TypeIdOf<Player>());
-        larvae::AssertNull(meta.construct);
-        larvae::AssertNull(meta.destruct);
-        larvae::AssertNull(meta.move);
-        larvae::AssertNull(meta.copy);
+        larvae::AssertEqual(meta.m_size, size_t{0});
+        larvae::AssertEqual(meta.m_alignment, size_t{1});
+        larvae::AssertEqual(meta.m_typeId, queen::TypeIdOf<Player>());
+        larvae::AssertNull(meta.m_construct);
+        larvae::AssertNull(meta.m_destruct);
+        larvae::AssertNull(meta.m_move);
+        larvae::AssertNull(meta.m_copy);
     });
 
     auto test12 = larvae::RegisterTest("QueenComponentMeta", "DifferentTypesHaveDifferentIds", []() {
         queen::ComponentMeta pos_meta = queen::ComponentMeta::Of<Position>();
         queen::ComponentMeta vel_meta = queen::ComponentMeta::Of<Velocity>();
 
-        larvae::AssertNotEqual(pos_meta.type_id, vel_meta.type_id);
+        larvae::AssertNotEqual(pos_meta.m_typeId, vel_meta.m_typeId);
     });
 
     auto test13 = larvae::RegisterTest("QueenComponentMeta", "InvalidInfoByDefault", []() {
         queen::ComponentMeta meta{};
 
         larvae::AssertFalse(meta.IsValid());
-        larvae::AssertEqual(meta.type_id, queen::TypeId{0});
-        larvae::AssertEqual(meta.size, size_t{0});
+        larvae::AssertEqual(meta.m_typeId, queen::TypeId{0});
+        larvae::AssertEqual(meta.m_size, size_t{0});
     });
-}
+} // namespace
