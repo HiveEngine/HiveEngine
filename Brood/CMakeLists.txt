@@ -10,14 +10,23 @@ set(LARVAE_TEST_DIRS
         ${CMAKE_CURRENT_SOURCE_DIR}/tests
         ${CMAKE_CURRENT_SOURCE_DIR}/../Hive/tests
         ${CMAKE_CURRENT_SOURCE_DIR}/../Comb/tests
-        ${CMAKE_CURRENT_SOURCE_DIR}/../Terra/tests
         ${CMAKE_CURRENT_SOURCE_DIR}/../Wax/tests
         ${CMAKE_CURRENT_SOURCE_DIR}/../Queen/tests
         ${CMAKE_CURRENT_SOURCE_DIR}/../Nectar/tests
-        ${CMAKE_CURRENT_SOURCE_DIR}/../Swarm/tests
         ${CMAKE_CURRENT_SOURCE_DIR}/../Waggle/tests
-        ${CMAKE_CURRENT_SOURCE_DIR}/../Antennae/tests
 )
+
+if(TARGET Terra)
+    list(APPEND LARVAE_TEST_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/../Terra/tests)
+endif()
+
+if(TARGET Swarm)
+    list(APPEND LARVAE_TEST_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/../Swarm/tests)
+endif()
+
+if(TARGET Antennae)
+    list(APPEND LARVAE_TEST_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/../Antennae/tests)
+endif()
 
 # Glob all test_*.cpp files from specified directories (recursive)
 set(LARVAE_TEST_SOURCES src/larvae_runner_main.cpp)
@@ -39,14 +48,23 @@ target_link_libraries(larvae_runner
         Larvae
         Hive
         Comb
-        Terra
         Wax
         Queen
         Waggle
-        Antennae
         Nectar
-        Swarm
 )
+
+if(TARGET Terra)
+    target_link_libraries(larvae_runner PRIVATE Terra)
+endif()
+
+if(TARGET Antennae)
+    target_link_libraries(larvae_runner PRIVATE Antennae)
+endif()
+
+if(TARGET Swarm)
+    target_link_libraries(larvae_runner PRIVATE Swarm)
+endif()
 
 target_include_directories(larvae_runner
     PRIVATE
@@ -55,10 +73,16 @@ target_include_directories(larvae_runner
         ${CMAKE_SOURCE_DIR}/Wax/include
         ${CMAKE_SOURCE_DIR}/Queen/include
         ${CMAKE_SOURCE_DIR}/Waggle/include
-        ${CMAKE_SOURCE_DIR}/Antennae/include
         ${CMAKE_SOURCE_DIR}/Nectar/include
-        ${CMAKE_SOURCE_DIR}/Swarm/include
 )
+
+if(TARGET Antennae)
+    target_include_directories(larvae_runner PRIVATE ${CMAKE_SOURCE_DIR}/Antennae/include)
+endif()
+
+if(TARGET Swarm)
+    target_include_directories(larvae_runner PRIVATE ${CMAKE_SOURCE_DIR}/Swarm/include)
+endif()
 
 set_target_properties(larvae_runner
         PROPERTIES
@@ -96,14 +120,23 @@ target_link_libraries(larvae_benchmark
         Larvae
         Hive
         Comb
-        Terra
         Wax
         Queen
         Waggle
-        Antennae
         Nectar
-        Swarm
 )
+
+if(TARGET Terra)
+    target_link_libraries(larvae_benchmark PRIVATE Terra)
+endif()
+
+if(TARGET Antennae)
+    target_link_libraries(larvae_benchmark PRIVATE Antennae)
+endif()
+
+if(TARGET Swarm)
+    target_link_libraries(larvae_benchmark PRIVATE Swarm)
+endif()
 
 target_include_directories(larvae_benchmark
     PRIVATE
@@ -112,9 +145,12 @@ target_include_directories(larvae_benchmark
         ${CMAKE_SOURCE_DIR}/Wax/include
         ${CMAKE_SOURCE_DIR}/Queen/include
         ${CMAKE_SOURCE_DIR}/Waggle/include
-        ${CMAKE_SOURCE_DIR}/Antennae/include
         ${CMAKE_SOURCE_DIR}/Nectar/include
 )
+
+if(TARGET Antennae)
+    target_include_directories(larvae_benchmark PRIVATE ${CMAKE_SOURCE_DIR}/Antennae/include)
+endif()
 
 set_target_properties(larvae_benchmark
         PROPERTIES
@@ -142,7 +178,7 @@ target_include_directories(hive_launcher
         ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
-if (HIVE_ENGINE_MODE STREQUAL "Editor")
+if (TARGET Forge)
     target_link_libraries(hive_launcher PRIVATE Forge)
 endif ()
 
@@ -159,7 +195,7 @@ add_dependencies(larvae_runner hive_launcher)
 
 option(HIVE_BUILD_GUI_TESTS "Build the ImGui GUI test runner" ON)
 
-if (HIVE_BUILD_GUI_TESTS)
+if (HIVE_BUILD_GUI_TESTS AND HIVE_FEATURE_GLFW)
 
     find_package(OpenGL REQUIRED)
 
@@ -230,15 +266,24 @@ if (HIVE_BUILD_GUI_TESTS)
             Larvae
             Hive
             Comb
-            Terra
             Wax
             Queen
             Waggle
-            Antennae
             Nectar
-            Swarm
             imgui
     )
+
+    if(TARGET Terra)
+        target_link_libraries(larvae_runner_gui PRIVATE Terra)
+    endif()
+
+    if(TARGET Antennae)
+        target_link_libraries(larvae_runner_gui PRIVATE Antennae)
+    endif()
+
+    if(TARGET Swarm)
+        target_link_libraries(larvae_runner_gui PRIVATE Swarm)
+    endif()
 
     target_include_directories(larvae_runner_gui
             PRIVATE

@@ -67,22 +67,39 @@ set_property(CACHE HIVE_ENGINE_MODE PROPERTY STRINGS "Editor" "Game" "Headless")
 # ============================================================================
 # Feature Toggles
 # ============================================================================
-# These can be overridden individually. Default values depend on mode/config.
+# These can be overridden individually. Headless mode is the only mode that
+# forcibly disables graphics; other modes preserve explicit preset/user values.
+set(HIVE_DEFAULT_FEATURE_IMGUI OFF)
+set(HIVE_DEFAULT_FEATURE_VULKAN ON)
+set(HIVE_DEFAULT_FEATURE_D3D12 OFF)
+set(HIVE_DEFAULT_FEATURE_GLFW ON)
 
-option(HIVE_FEATURE_IMGUI "Enable ImGui integration" OFF)
-option(HIVE_FEATURE_VULKAN "Enable Vulkan renderer" ON)
-option(HIVE_FEATURE_D3D12 "Enable D3D12 renderer (Windows only)" OFF)
-option(HIVE_FEATURE_GLFW "Enable GLFW windowing" ON)
+option(HIVE_FEATURE_IMGUI "Enable ImGui integration" ${HIVE_DEFAULT_FEATURE_IMGUI})
+option(HIVE_FEATURE_VULKAN "Enable Vulkan renderer" ${HIVE_DEFAULT_FEATURE_VULKAN})
+option(HIVE_FEATURE_D3D12 "Enable D3D12 renderer (Windows only)" ${HIVE_DEFAULT_FEATURE_D3D12})
+option(HIVE_FEATURE_GLFW "Enable GLFW windowing" ${HIVE_DEFAULT_FEATURE_GLFW})
 
-# Headless mode forces graphics off; non-headless restores defaults
+# Headless mode forces graphics off.
 if(HIVE_ENGINE_MODE STREQUAL "Headless")
     set(HIVE_FEATURE_VULKAN OFF CACHE BOOL "Enable Vulkan renderer" FORCE)
     set(HIVE_FEATURE_D3D12 OFF CACHE BOOL "Enable D3D12 renderer" FORCE)
     set(HIVE_FEATURE_GLFW OFF CACHE BOOL "Enable GLFW windowing" FORCE)
     set(HIVE_FEATURE_IMGUI OFF CACHE BOOL "Enable ImGui integration" FORCE)
-elseif(NOT HIVE_FEATURE_D3D12)
-    set(HIVE_FEATURE_VULKAN ON CACHE BOOL "Enable Vulkan renderer" FORCE)
-    set(HIVE_FEATURE_GLFW ON CACHE BOOL "Enable GLFW windowing" FORCE)
+endif()
+
+set(HIVE_HAS_RENDER_BACKEND OFF)
+if(HIVE_FEATURE_VULKAN OR HIVE_FEATURE_D3D12)
+    set(HIVE_HAS_RENDER_BACKEND ON)
+endif()
+
+set(HIVE_HAS_WINDOW_SYSTEM OFF)
+if(HIVE_FEATURE_GLFW)
+    set(HIVE_HAS_WINDOW_SYSTEM ON)
+endif()
+
+set(HIVE_HAS_INTERACTIVE_GRAPHICS OFF)
+if(HIVE_HAS_RENDER_BACKEND AND HIVE_HAS_WINDOW_SYSTEM)
+    set(HIVE_HAS_INTERACTIVE_GRAPHICS ON)
 endif()
 
 # Mutual exclusion: Vulkan and D3D12
@@ -170,12 +187,16 @@ add_subdirectory(Waggle)
 if(HIVE_FEATURE_GLFW)
     add_subdirectory(Antennae)
 endif()
-add_subdirectory(Swarm)
-if(HIVE_ENGINE_MODE STREQUAL "Editor")
+if(HIVE_HAS_RENDER_BACKEND)
+    add_subdirectory(Swarm)
+endif()
+if(HIVE_ENGINE_MODE STREQUAL "Editor" AND HIVE_FEATURE_IMGUI AND HIVE_HAS_INTERACTIVE_GRAPHICS)
     add_subdirectory(Forge)
 endif()
 add_subdirectory(Brood)
-add_subdirectory(Testbed)
+if(HIVE_HAS_INTERACTIVE_GRAPHICS)
+    add_subdirectory(Testbed)
+endif()
 add_subdirectory(projects)
 
 message(STATUS "")

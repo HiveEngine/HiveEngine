@@ -93,12 +93,14 @@ target_link_libraries(Swarm
         Hive
         Comb
         Wax
-        Terra
-
 		Diligent-GraphicsEngineVk-static
 		Diligent-GraphicsEngine
 		Diligent-BuildSettings
 )
+
+if(TARGET Terra)
+    target_link_libraries(Swarm PUBLIC Terra)
+endif()
 
 target_compile_features(Swarm
         PUBLIC
