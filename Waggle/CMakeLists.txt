@@ -22,6 +22,11 @@ target_include_directories(Waggle
         include
 )
 
+target_precompile_headers(Waggle
+    PRIVATE
+        include/waggle/precomp.h
+)
+
 target_link_libraries(Waggle
     PUBLIC
         Queen

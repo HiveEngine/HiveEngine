@@ -1,5 +1,12 @@
 cmake_minimum_required(VERSION 3.28.3)
 
+# Default to the bundled LLVM toolchain on Windows unless the user already
+# selected a compiler or an explicit toolchain.
+if(WIN32 AND NOT DEFINED CMAKE_TOOLCHAIN_FILE AND NOT DEFINED CMAKE_C_COMPILER AND NOT DEFINED CMAKE_CXX_COMPILER)
+    set(CMAKE_TOOLCHAIN_FILE "${CMAKE_CURRENT_SOURCE_DIR}/cmake/toolchains/llvm-windows.cmake"
+        CACHE FILEPATH "Default Windows toolchain")
+endif()
+
 # Workaround for CMake 3.31 introspection bug with custom Clang builds on Windows
 # Skip linking during try_compile to avoid malformed generator expressions
 if(WIN32)
@@ -126,7 +133,12 @@ option(HIVE_ENABLE_LTO "Enable Link-Time Optimization (slower compile, better ru
 option(HIVE_ENABLE_FAST_MATH "Enable fast math optimizations (less precise)" OFF)
 option(HIVE_WARNINGS_AS_ERRORS "Treat warnings as errors" OFF)
 option(HIVE_ENABLE_SIMD "Enable SIMD optimizations (SSE2)" ON)
+option(HIVE_ENABLE_COMPILER_CACHE "Enable sccache/ccache when available" ON)
 option(HIVE_BUILD_TESTING "Build tests and benchmarks" OFF)
+set(HIVE_COMPILER_CACHE_PROGRAM "" CACHE FILEPATH "Explicit compiler cache launcher path")
+set(HIVE_DILIGENT_PROVIDER "AUTO" CACHE STRING "How Swarm resolves Diligent: AUTO, PREBUILT, or SOURCE")
+set_property(CACHE HIVE_DILIGENT_PROVIDER PROPERTY STRINGS AUTO PREBUILT SOURCE)
+set(HIVE_DILIGENT_PACKAGE_DIR "" CACHE PATH "Path to a local HiveDiligent package directory")
 
 # Sanitizer options (for Debug builds with Clang)
 option(HIVE_ENABLE_SANITIZERS "Enable sanitizers (requires Clang)" OFF)
@@ -139,6 +151,36 @@ if(WIN32 AND CMAKE_BUILD_TYPE STREQUAL "Debug" AND HIVE_ENABLE_SANITIZERS)
 endif()
 
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/HiveToolchain.cmake)
+
+set(HIVE_COMPILER_CACHE_STATUS "OFF")
+if(CMAKE_CXX_COMPILER_LAUNCHER)
+    set(HIVE_COMPILER_CACHE_STATUS "${CMAKE_CXX_COMPILER_LAUNCHER} (preconfigured)")
+elseif(HIVE_ENABLE_COMPILER_CACHE)
+    set(_hive_compiler_cache_program "")
+    if(HIVE_COMPILER_CACHE_PROGRAM)
+        set(_hive_compiler_cache_program "${HIVE_COMPILER_CACHE_PROGRAM}")
+    else()
+        find_program(_hive_sccache_program NAMES sccache)
+        find_program(_hive_ccache_program NAMES ccache)
+        if(_hive_sccache_program)
+            set(_hive_compiler_cache_program "${_hive_sccache_program}")
+        elseif(_hive_ccache_program)
+            set(_hive_compiler_cache_program "${_hive_ccache_program}")
+        endif()
+    endif()
+
+    if(_hive_compiler_cache_program)
+        set(CMAKE_C_COMPILER_LAUNCHER "${_hive_compiler_cache_program}" CACHE STRING "C compiler launcher" FORCE)
+        set(CMAKE_CXX_COMPILER_LAUNCHER "${_hive_compiler_cache_program}" CACHE STRING "CXX compiler launcher" FORCE)
+        set(HIVE_COMPILER_CACHE_STATUS "${_hive_compiler_cache_program}")
+    endif()
+endif()
+
+string(TOUPPER "${HIVE_DILIGENT_PROVIDER}" HIVE_DILIGENT_PROVIDER)
+set(HIVE_DILIGENT_STATUS "${HIVE_DILIGENT_PROVIDER}")
+if(HIVE_DILIGENT_PACKAGE_DIR)
+    set(HIVE_DILIGENT_STATUS "${HIVE_DILIGENT_STATUS} @ ${HIVE_DILIGENT_PACKAGE_DIR}")
+endif()
 
 # Feature toggles — always define so C++ never falls back to HiveConfig.h guesses
 macro(hive_define_feature name)
@@ -191,8 +233,8 @@ if(HIVE_ENGINE_MODE STREQUAL "Editor" AND HIVE_FEATURE_IMGUI AND HIVE_HAS_INTERA
 endif()
 if(HIVE_BUILD_TESTING)
     add_subdirectory(Larvae)
-    add_subdirectory(Brood)
 endif()
+add_subdirectory(Brood)
 if(HIVE_HAS_INTERACTIVE_GRAPHICS)
     add_subdirectory(Testbed)
 endif()
@@ -225,6 +267,8 @@ message(STATUS "  Exceptions:       OFF")
 message(STATUS "  LTO:              ${HIVE_ENABLE_LTO}")
 message(STATUS "  Fast Math:        ${HIVE_ENABLE_FAST_MATH}")
 message(STATUS "  SIMD:             ${HIVE_ENABLE_SIMD}")
+message(STATUS "  Diligent:         ${HIVE_DILIGENT_STATUS}")
+message(STATUS "  Compiler Cache:   ${HIVE_COMPILER_CACHE_STATUS}")
 message(STATUS "  Testing:          ${HIVE_BUILD_TESTING}")
 message(STATUS "  Warnings->Errors: ${HIVE_WARNINGS_AS_ERRORS}")
 if(HIVE_ENABLE_SANITIZERS)

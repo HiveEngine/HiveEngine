@@ -1,32 +1,8 @@
 # ============================================================================
-# Brood - Test Runner
+# Brood - Tools and Test Runner
 # ============================================================================
 
 set(BROOD_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
-set(BROOD_TEST_DIRS
-    ${CMAKE_CURRENT_SOURCE_DIR}/tests
-    ${CMAKE_CURRENT_SOURCE_DIR}/../Hive/tests
-    ${CMAKE_CURRENT_SOURCE_DIR}/../Comb/tests
-    ${CMAKE_CURRENT_SOURCE_DIR}/../Wax/tests
-    ${CMAKE_CURRENT_SOURCE_DIR}/../Queen/tests
-    ${CMAKE_CURRENT_SOURCE_DIR}/../Nectar/tests
-    ${CMAKE_CURRENT_SOURCE_DIR}/../Waggle/tests
-)
-
-foreach(_module IN ITEMS Terra Swarm Antennae)
-    if(TARGET ${_module})
-        list(APPEND BROOD_TEST_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/../${_module}/tests)
-    endif()
-endforeach()
-
-function(brood_collect_sources out_var entrypoint pattern)
-    set(_sources ${entrypoint})
-    foreach(_test_dir IN LISTS BROOD_TEST_DIRS)
-        file(GLOB_RECURSE _dir_sources CONFIGURE_DEPENDS "${_test_dir}/${pattern}")
-        list(APPEND _sources ${_dir_sources})
-    endforeach()
-    set(${out_var} ${_sources} PARENT_SCOPE)
-endfunction()
 
 function(brood_link_test_target target)
     target_link_libraries(${target}
@@ -53,50 +29,6 @@ function(brood_link_test_target target)
 endfunction()
 
 # ============================================================================
-# Test Executable
-# ============================================================================
-
-brood_collect_sources(BROOD_TEST_SOURCES "" test_*.cpp)
-
-add_library(brood_tests OBJECT ${BROOD_TEST_SOURCES})
-
-hive_configure_target(brood_tests)
-
-brood_link_test_target(brood_tests)
-
-add_executable(larvae_runner
-    src/larvae_runner_main.cpp
-    $<TARGET_OBJECTS:brood_tests>
-)
-
-hive_configure_target(larvae_runner)
-
-brood_link_test_target(larvae_runner)
-
-# ============================================================================
-# CTest Integration
-# ============================================================================
-
-enable_testing()
-add_test(NAME AllTests COMMAND larvae_runner)
-
-# ============================================================================
-# Benchmark Discovery
-# ============================================================================
-
-brood_collect_sources(BROOD_BENCHMARK_SOURCES src/larvae_benchmark_main.cpp benchmark_*.cpp)
-
-# ============================================================================
-# Benchmark Executable
-# ============================================================================
-
-add_executable(larvae_benchmark ${BROOD_BENCHMARK_SOURCES})
-
-hive_configure_target(larvae_benchmark)
-
-brood_link_test_target(larvae_benchmark)
-
-# ============================================================================
 # Engine Launcher
 # ============================================================================
 
@@ -121,84 +53,156 @@ if(TARGET Forge)
     target_link_libraries(hive_launcher PRIVATE Forge)
 endif()
 
-add_dependencies(larvae_runner hive_launcher)
+if(HIVE_BUILD_TESTING)
 
-# ============================================================================
-# GUI Test Runner (ImGui) - requires OpenGL, skip on headless builds
-# ============================================================================
-
-option(HIVE_BUILD_GUI_TESTS "Build the ImGui GUI test runner" ON)
-
-if(HIVE_BUILD_GUI_TESTS AND HIVE_FEATURE_GLFW)
-
-    find_package(OpenGL REQUIRED)
-
-    include(FetchContent)
-
-    # GLFW - only fetch if not already provided by Terra
-    if(NOT TARGET glfw)
-        FetchContent_Declare(
-            glfw
-            GIT_REPOSITORY https://github.com/glfw/glfw.git
-            GIT_TAG 3.4
-        )
-        set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
-        set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
-        set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
-        FetchContent_MakeAvailable(glfw)
-    endif()
-
-    # ImGui
-    FetchContent_Declare(
-        imgui
-        GIT_REPOSITORY https://github.com/ocornut/imgui.git
-        GIT_TAG v1.91.6
-    )
-    FetchContent_MakeAvailable(imgui)
-
-    # ImGui library
-    add_library(imgui STATIC
-        ${imgui_SOURCE_DIR}/imgui.cpp
-        ${imgui_SOURCE_DIR}/imgui_demo.cpp
-        ${imgui_SOURCE_DIR}/imgui_draw.cpp
-        ${imgui_SOURCE_DIR}/imgui_tables.cpp
-        ${imgui_SOURCE_DIR}/imgui_widgets.cpp
-        ${imgui_SOURCE_DIR}/backends/imgui_impl_glfw.cpp
-        ${imgui_SOURCE_DIR}/backends/imgui_impl_opengl3.cpp
+    set(BROOD_TEST_DIRS
+        ${CMAKE_CURRENT_SOURCE_DIR}/tests
+        ${CMAKE_CURRENT_SOURCE_DIR}/../Hive/tests
+        ${CMAKE_CURRENT_SOURCE_DIR}/../Comb/tests
+        ${CMAKE_CURRENT_SOURCE_DIR}/../Wax/tests
+        ${CMAKE_CURRENT_SOURCE_DIR}/../Queen/tests
+        ${CMAKE_CURRENT_SOURCE_DIR}/../Nectar/tests
+        ${CMAKE_CURRENT_SOURCE_DIR}/../Waggle/tests
     )
 
-    target_include_directories(imgui SYSTEM PUBLIC
-        ${imgui_SOURCE_DIR}
-        ${imgui_SOURCE_DIR}/backends
-    )
+    foreach(_module IN ITEMS Terra Swarm Antennae)
+        if(TARGET ${_module})
+            list(APPEND BROOD_TEST_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/../${_module}/tests)
+        endif()
+    endforeach()
 
-    target_link_libraries(imgui PUBLIC
-        glfw
-        OpenGL::GL
-    )
+    function(brood_collect_sources out_var entrypoint pattern)
+        set(_sources ${entrypoint})
+        foreach(_test_dir IN LISTS BROOD_TEST_DIRS)
+            file(GLOB_RECURSE _dir_sources CONFIGURE_DEPENDS "${_test_dir}/${pattern}")
+            list(APPEND _sources ${_dir_sources})
+        endforeach()
+        set(${out_var} ${_sources} PARENT_SCOPE)
+    endfunction()
 
-    hive_silence_target_warnings(imgui)
+    # ============================================================================
+    # Test Executable
+    # ============================================================================
 
-    add_executable(larvae_runner_gui
-        src/larvae_runner_gui_main.cpp
+    brood_collect_sources(BROOD_TEST_SOURCES "" test_*.cpp)
+
+    add_library(brood_tests OBJECT ${BROOD_TEST_SOURCES})
+
+    hive_configure_target(brood_tests)
+
+    brood_link_test_target(brood_tests)
+
+    add_executable(larvae_runner
+        src/larvae_runner_main.cpp
         $<TARGET_OBJECTS:brood_tests>
     )
 
-    hive_configure_target(larvae_runner_gui)
+    hive_configure_target(larvae_runner)
 
-    brood_link_test_target(larvae_runner_gui)
+    brood_link_test_target(larvae_runner)
 
-    target_link_libraries(larvae_runner_gui
-        PRIVATE
+    add_dependencies(larvae_runner hive_launcher)
+
+    # ============================================================================
+    # CTest Integration
+    # ============================================================================
+
+    enable_testing()
+    add_test(NAME AllTests COMMAND larvae_runner)
+
+    # ============================================================================
+    # Benchmark Discovery
+    # ============================================================================
+
+    brood_collect_sources(BROOD_BENCHMARK_SOURCES src/larvae_benchmark_main.cpp benchmark_*.cpp)
+
+    # ============================================================================
+    # Benchmark Executable
+    # ============================================================================
+
+    add_executable(larvae_benchmark ${BROOD_BENCHMARK_SOURCES})
+
+    hive_configure_target(larvae_benchmark)
+
+    brood_link_test_target(larvae_benchmark)
+
+    # ============================================================================
+    # GUI Test Runner (ImGui) - requires OpenGL, skip on headless builds
+    # ============================================================================
+
+    option(HIVE_BUILD_GUI_TESTS "Build the ImGui GUI test runner" ON)
+
+    if(HIVE_BUILD_GUI_TESTS AND HIVE_FEATURE_GLFW)
+
+        find_package(OpenGL REQUIRED)
+
+        include(FetchContent)
+
+        # GLFW - only fetch if not already provided by Terra
+        if(NOT TARGET glfw)
+            FetchContent_Declare(
+                glfw
+                GIT_REPOSITORY https://github.com/glfw/glfw.git
+                GIT_TAG 3.4
+            )
+            set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
+            set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+            set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+            FetchContent_MakeAvailable(glfw)
+        endif()
+
+        # ImGui
+        FetchContent_Declare(
             imgui
-    )
-
-    # On Windows, set WIN32 subsystem to avoid console window
-    if(WIN32)
-        set_target_properties(larvae_runner_gui
-            PROPERTIES
-                WIN32_EXECUTABLE TRUE
+            GIT_REPOSITORY https://github.com/ocornut/imgui.git
+            GIT_TAG v1.91.6
         )
-    endif()
+        FetchContent_MakeAvailable(imgui)
 
+        # ImGui library
+        add_library(imgui STATIC
+            ${imgui_SOURCE_DIR}/imgui.cpp
+            ${imgui_SOURCE_DIR}/imgui_demo.cpp
+            ${imgui_SOURCE_DIR}/imgui_draw.cpp
+            ${imgui_SOURCE_DIR}/imgui_tables.cpp
+            ${imgui_SOURCE_DIR}/imgui_widgets.cpp
+            ${imgui_SOURCE_DIR}/backends/imgui_impl_glfw.cpp
+            ${imgui_SOURCE_DIR}/backends/imgui_impl_opengl3.cpp
+        )
+
+        target_include_directories(imgui SYSTEM PUBLIC
+            ${imgui_SOURCE_DIR}
+            ${imgui_SOURCE_DIR}/backends
+        )
+
+        target_link_libraries(imgui PUBLIC
+            glfw
+            OpenGL::GL
+        )
+
+        hive_silence_target_warnings(imgui)
+
+        add_executable(larvae_runner_gui
+            src/larvae_runner_gui_main.cpp
+            $<TARGET_OBJECTS:brood_tests>
+        )
+
+        hive_configure_target(larvae_runner_gui)
+
+        brood_link_test_target(larvae_runner_gui)
+
+        target_link_libraries(larvae_runner_gui
+            PRIVATE
+                imgui
+        )
+
+        # On Windows, set WIN32 subsystem to avoid console window
+        if(WIN32)
+            set_target_properties(larvae_runner_gui
+                PROPERTIES
+                    WIN32_EXECUTABLE TRUE
+            )
+        endif()
+
+    endif()
 endif()
