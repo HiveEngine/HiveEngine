@@ -137,6 +137,9 @@ add_library(HiveToolchain_FastMath INTERFACE)
 add_library(HiveToolchain_SIMD INTERFACE)
 add_library(HiveToolchain_Sanitizers INTERFACE)
 add_library(HiveToolchain_LTO INTERFACE)
+add_library(HiveDefines_Platform INTERFACE)
+add_library(HiveDefines_Config INTERFACE)
+add_library(HiveDefines_Mode INTERFACE)
 
 add_library(HiveFeature_Exception_On INTERFACE)
 add_library(HiveFeature_Exception_Off INTERFACE)
@@ -345,6 +348,9 @@ function(hive_configure_target target)
     target_link_libraries(${target} ${_scope}
         HiveToolchain_Base
         HiveToolchain_Config
+        HiveDefines_Platform
+        HiveDefines_Config
+        HiveDefines_Mode
     )
 
     if(NOT HIVE_CFG_NO_WARNINGS)
@@ -397,11 +403,11 @@ endfunction()
 
 # Platform detection
 if(WIN32)
-    add_compile_definitions(HIVE_PLATFORM_WINDOWS=1)
+    target_compile_definitions(HiveDefines_Platform INTERFACE HIVE_PLATFORM_WINDOWS=1)
 elseif(UNIX AND NOT APPLE)
-    add_compile_definitions(HIVE_PLATFORM_LINUX=1)
+    target_compile_definitions(HiveDefines_Platform INTERFACE HIVE_PLATFORM_LINUX=1)
 elseif(APPLE)
-    add_compile_definitions(HIVE_PLATFORM_MACOS=1)
+    target_compile_definitions(HiveDefines_Platform INTERFACE HIVE_PLATFORM_MACOS=1)
 endif()
 
 # ============================================================================
@@ -409,7 +415,7 @@ endif()
 # ============================================================================
 
 # Build configuration
-add_compile_definitions(
+target_compile_definitions(HiveDefines_Config INTERFACE
     $<$<CONFIG:Debug>:HIVE_CONFIG_DEBUG=1>
     $<$<CONFIG:Release>:HIVE_CONFIG_RELEASE=1>
     $<$<CONFIG:RelWithDebInfo>:HIVE_CONFIG_RELEASE=1>
@@ -419,11 +425,11 @@ add_compile_definitions(
 
 # Engine mode
 if(HIVE_ENGINE_MODE STREQUAL "Editor")
-    add_compile_definitions(HIVE_MODE_EDITOR=1)
+    target_compile_definitions(HiveDefines_Mode INTERFACE HIVE_MODE_EDITOR=1)
 elseif(HIVE_ENGINE_MODE STREQUAL "Game")
-    add_compile_definitions(HIVE_MODE_GAME=1)
+    target_compile_definitions(HiveDefines_Mode INTERFACE HIVE_MODE_GAME=1)
 elseif(HIVE_ENGINE_MODE STREQUAL "Headless")
-    add_compile_definitions(HIVE_MODE_HEADLESS=1)
+    target_compile_definitions(HiveDefines_Mode INTERFACE HIVE_MODE_HEADLESS=1)
 endif()
 
 # Feature toggles — always define so C++ never falls back to HiveConfig.h guesses
