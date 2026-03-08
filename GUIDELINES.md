@@ -2,8 +2,8 @@
 
 Ground rules for working in this codebase. The source of truth for machine-enforced style is:
 
-- [`/C:/Dev/HE/.clang-format`](/C:/Dev/HE/.clang-format)
-- [`/C:/Dev/HE/.clang-tidy`](/C:/Dev/HE/.clang-tidy)
+- [`.clang-format`](.clang-format)
+- [`.clang-tidy`](.clang-tidy)
 
 If the prose below and the tooling disagree, update the prose or the config so they match.
 
@@ -58,25 +58,25 @@ Namespaces follow `camelBack`. Single-word namespaces such as `queen`, `comb`, a
 
 The naming rules below are aligned to `.clang-tidy`.
 
-| What | Style | Examples |
-|---|---|---|
-| Classes, structs, enums, aliases | `PascalCase` | `Entity`, `LinearAllocator`, `ProjectConfig` |
-| Functions, methods | `PascalCase` | `Allocate()`, `IsAlive()`, `PushBack()` |
-| Template parameters | `PascalCase` | `T`, `Allocator`, `ComponentT` |
-| Namespaces | `camelBack` | `queen`, `comb`, `projectTools` |
-| Enum constants | `UPPER_SNAKE` | `ALLOCATE`, `INVALID`, `PLAYING` |
-| Macros, feature flags | `UPPER_SNAKE` | `HIVE_FEATURE_ASSERTS`, `COMB_MEM_DEBUG` |
-| Global constants | `UPPER_SNAKE` | `MAX_ENTITIES`, `DEFAULT_TIMEOUT_MS` |
-| Static constants | `UPPER_SNAKE` | `MAX_LEVELS`, `MIN_BLOCK_SIZE` |
-| Global variables | `camelBack` with `g_` | `g_moduleRegistry`, `g_jobSystem` |
-| Static variables | `camelBack` with `s_` | `s_cachedState`, `s_instanceCount` |
-| Member variables | `camelBack` with `m_` | `m_size`, `m_capacity`, `m_allocator` |
-| Parameters | `camelBack` | `entityCount`, `allocator`, `projectPath` |
-| Local variables | `camelBack` | `entityCount`, `oldCapacity`, `renderContext` |
-| Local constants | `camelBack` | `windowFlags`, `branchLimit`, `maxDepth` |
-| `constexpr` variables | `camelBack` unless they are static/global constants | `chunkSize`, `headerMask` |
-| Files | `snake_case` | `entity_allocator.h`, `linear_allocator.cpp` |
-| Test files | `test_*.cpp` | `test_entity.cpp`, `test_vector.cpp` |
+| What                             | Style                                               | Examples                                      |
+|----------------------------------|-----------------------------------------------------|-----------------------------------------------|
+| Classes, structs, enums, aliases | `PascalCase`                                        | `Entity`, `LinearAllocator`, `ProjectConfig`  |
+| Functions, methods               | `PascalCase`                                        | `Allocate()`, `IsAlive()`, `PushBack()`       |
+| Template parameters              | `PascalCase`                                        | `T`, `Allocator`, `ComponentT`                |
+| Namespaces                       | `camelBack`                                         | `queen`, `comb`, `projectTools`               |
+| Enum constants                   | `UPPER_SNAKE`                                       | `ALLOCATE`, `INVALID`, `PLAYING`              |
+| Macros, feature flags            | `UPPER_SNAKE`                                       | `HIVE_FEATURE_ASSERTS`, `COMB_MEM_DEBUG`      |
+| Global constants                 | `UPPER_SNAKE`                                       | `MAX_ENTITIES`, `DEFAULT_TIMEOUT_MS`          |
+| Static constants                 | `UPPER_SNAKE`                                       | `MAX_LEVELS`, `MIN_BLOCK_SIZE`                |
+| Global variables                 | `camelBack` with `g_`                               | `g_moduleRegistry`, `g_jobSystem`             |
+| Static variables                 | `camelBack` with `s_`                               | `s_cachedState`, `s_instanceCount`            |
+| Member variables                 | `camelBack` with `m_`                               | `m_size`, `m_capacity`, `m_allocator`         |
+| Parameters                       | `camelBack`                                         | `entityCount`, `allocator`, `projectPath`     |
+| Local variables                  | `camelBack`                                         | `entityCount`, `oldCapacity`, `renderContext` |
+| Local constants                  | `camelBack`                                         | `windowFlags`, `branchLimit`, `maxDepth`      |
+| `constexpr` variables            | `camelBack` unless they are static/global constants | `chunkSize`, `headerMask`                     |
+| Files                            | `snake_case`                                        | `entity_allocator.h`, `linear_allocator.cpp`  |
+| Test files                       | `test_*.cpp`                                        | `test_entity.cpp`, `test_vector.cpp`          |
 
 Additional naming rules:
 
@@ -243,11 +243,11 @@ The allocator must outlive everything allocated from it.
 
 Typical allocator usage:
 
-| Allocator | Lifetime | Use case |
-|---|---|---|
-| `LinearAllocator` | Frame or scope | Scratch data, temp buffers |
-| `BuddyAllocator` | Persistent | Long-lived allocations |
-| `PoolAllocator` | Persistent | Fixed-size high churn objects |
+| Allocator          | Lifetime        | Use case                              |
+|--------------------|-----------------|---------------------------------------|
+| `LinearAllocator`  | Frame or scope  | Scratch data, temp buffers            |
+| `BuddyAllocator`   | Persistent      | Long-lived allocations                |
+| `PoolAllocator`    | Persistent      | Fixed-size high churn objects         |
 | `DefaultAllocator` | Global fallback | Only when ownership is truly implicit |
 
 ---
@@ -258,13 +258,13 @@ No exceptions.
 
 Use the assert hierarchy from `<hive/core/assert.h>`:
 
-| Function | Evaluates in release | Checks in release | Use for |
-|---|---|---|---|
-| `hive::Assert(expr, msg)` | No | No | Invariants, dev-time assumptions |
-| `hive::Verify(expr, msg)` | Yes | No | Side-effectful checks |
-| `hive::Check(expr, msg)` | Yes | Yes | Critical runtime invariants |
-| `hive::Unreachable()` | N/A | N/A | Impossible paths |
-| `hive::NotImplemented()` | N/A | N/A | Explicit placeholders |
+| Function                  | Evaluates in release | Checks in release | Use for                          |
+|---------------------------|----------------------|-------------------|----------------------------------|
+| `hive::Assert(expr, msg)` | No                   | No                | Invariants, dev-time assumptions |
+| `hive::Verify(expr, msg)` | Yes                  | No                | Side-effectful checks            |
+| `hive::Check(expr, msg)`  | Yes                  | Yes               | Critical runtime invariants      |
+| `hive::Unreachable()`     | N/A                  | N/A               | Impossible paths                 |
+| `hive::NotImplemented()`  | N/A                  | N/A               | Explicit placeholders            |
 
 For recoverable failures, return values such as `bool`, `nullptr`, or result structs.
 
