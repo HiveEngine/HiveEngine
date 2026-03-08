@@ -1,5 +1,11 @@
+#include <antennae/actions.h>
+#include <antennae/input.h>
 #include <antennae/keyboard.h>
 #include <antennae/mouse.h>
+
+#include <queen/world/world.h>
+
+#include <terra/platform/glfw_terra.h>
 
 #include <larvae/larvae.h>
 
@@ -91,5 +97,71 @@ namespace
         antennae::Mouse m{};
         larvae::AssertTrue(m.first_update);
     });
+
+    // =========================================================================
+    // Actions
+    // =========================================================================
+
+    auto t_actions_default_bindings = larvae::RegisterTest("Antennae.Actions", "default_bindings", []() {
+        antennae::Keyboard keyboard{};
+        antennae::Mouse mouse{};
+        antennae::InputActionMap actionMap{};
+        antennae::InputActions actions{};
+
+        keyboard.current[static_cast<int>(terra::Key::A)] = true;
+        antennae::UpdateInputActions(actions, actionMap, keyboard, mouse);
+        larvae::AssertTrue(actions.IsDown(antennae::InputAction::MOVE_LEFT));
+        larvae::AssertTrue(actions.JustPressed(antennae::InputAction::MOVE_LEFT));
+
+        keyboard.previous[static_cast<int>(terra::Key::A)] = true;
+        keyboard.current[static_cast<int>(terra::Key::A)] = false;
+        keyboard.current[static_cast<int>(terra::Key::LEFT)] = true;
+        antennae::UpdateInputActions(actions, actionMap, keyboard, mouse);
+        larvae::AssertTrue(actions.IsDown(antennae::InputAction::MOVE_LEFT));
+        larvae::AssertTrue(actions.IsHeld(antennae::InputAction::MOVE_LEFT));
+
+        keyboard.current[static_cast<int>(terra::Key::LEFT)] = false;
+        mouse.buttons[static_cast<int>(terra::MouseButton::LEFT)] = true;
+        antennae::UpdateInputActions(actions, actionMap, keyboard, mouse);
+        larvae::AssertTrue(actions.IsDown(antennae::InputAction::CONFIRM));
+        larvae::AssertTrue(actions.IsDown(antennae::InputAction::PRIMARY));
+        larvae::AssertTrue(actions.JustPressed(antennae::InputAction::CONFIRM));
+    });
+
+    auto t_actions_update_input_wrapper =
+        larvae::RegisterTest("Antennae.Actions", "update_input_inserts_resources", []() {
+            queen::World world{};
+            terra::WindowContext window{};
+
+            window.m_currentInputState.m_keys[static_cast<int>(terra::Key::A)] = true;
+            antennae::UpdateInput(world, &window);
+
+            larvae::AssertTrue(world.HasResource<antennae::Keyboard>());
+            larvae::AssertTrue(world.HasResource<antennae::Mouse>());
+            larvae::AssertTrue(world.HasResource<antennae::InputActionMap>());
+            larvae::AssertTrue(world.HasResource<antennae::InputActions>());
+
+            const auto* actions = world.Resource<antennae::InputActions>();
+            larvae::AssertTrue(actions != nullptr);
+            larvae::AssertTrue(actions->IsDown(antennae::InputAction::MOVE_LEFT));
+            larvae::AssertTrue(actions->JustPressed(antennae::InputAction::MOVE_LEFT));
+
+            antennae::InputActionMap* actionMap = world.Resource<antennae::InputActionMap>();
+            larvae::AssertTrue(actionMap != nullptr);
+            actionMap->Clear(antennae::InputAction::MOVE_LEFT);
+            actionMap->AddKey(antennae::InputAction::MOVE_LEFT, terra::Key::D);
+
+            window.m_currentInputState.m_keys[static_cast<int>(terra::Key::A)] = false;
+            window.m_currentInputState.m_keys[static_cast<int>(terra::Key::D)] = true;
+            antennae::UpdateInput(world, &window);
+
+            larvae::AssertTrue(actions->IsDown(antennae::InputAction::MOVE_LEFT));
+            larvae::AssertTrue(actions->IsHeld(antennae::InputAction::MOVE_LEFT));
+            larvae::AssertTrue(!actions->JustPressed(antennae::InputAction::MOVE_LEFT));
+
+            window.m_currentInputState.m_keys[static_cast<int>(terra::Key::D)] = false;
+            antennae::UpdateInput(world, &window);
+            larvae::AssertTrue(actions->JustReleased(antennae::InputAction::MOVE_LEFT));
+        });
 
 } // namespace

@@ -1,6 +1,9 @@
 #include <terra/platform/glfw_terra.h>
 #include <terra/terra.h>
 
+#include <antennae/actions.h>
+#include <antennae/input.h>
+
 #include <testbed/precomp.h>
 
 #define TERRA_NATIVE_LINUX
@@ -18,14 +21,16 @@ struct PlatformContext
 {
     swarm::RenderContext* renderContext_;
     terra::WindowContext* windowContext_;
+    antennae::Keyboard* keyboard_;
+    antennae::Mouse* mouse_;
+    antennae::InputActions* actions_;
+    antennae::InputActionMap* actionMap_;
 };
 
 static void GameLogic(PlatformContext& context) {
-    const terra::InputState* currentInput = terra::GetWindowInputState(context.windowContext_);
-
-    if (terra::IsKeyDown(currentInput, terra::Key::A))
+    if (context.actions_->IsDown(antennae::InputAction::MOVE_LEFT))
     {
-        std::cout << "A" << std::endl;
+        std::cout << "MoveLeft" << std::endl;
     }
 
     swarm::Render(context.renderContext_);
@@ -50,6 +55,10 @@ private:
 
     terra::WindowContext windowContext_;
     swarm::RenderContext renderContext_;
+    antennae::Keyboard keyboard_;
+    antennae::Mouse mouse_;
+    antennae::InputActions actions_;
+    antennae::InputActionMap actionMap_;
 };
 
 Engine::Engine()
@@ -112,10 +121,15 @@ void Engine::Shutdown() {
 }
 
 void Engine::Loop() {
-    PlatformContext platformContext{&renderContext_, &windowContext_};
+    PlatformContext platformContext{&renderContext_, &windowContext_, &keyboard_, &mouse_, &actions_, &actionMap_};
     while (!terra::ShouldWindowClose(platformContext.windowContext_))
     {
         terra::PollEvents(platformContext.windowContext_);
+        const terra::InputState* input = terra::GetWindowInputState(platformContext.windowContext_);
+        antennae::UpdateKeyboard(*platformContext.keyboard_, input);
+        antennae::UpdateMouse(*platformContext.mouse_, input);
+        antennae::UpdateInputActions(*platformContext.actions_, *platformContext.actionMap_, *platformContext.keyboard_,
+                                     *platformContext.mouse_);
         GameLogic(platformContext);
 
         // TODO remove this
