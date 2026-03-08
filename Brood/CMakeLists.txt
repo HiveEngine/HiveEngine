@@ -7,6 +7,7 @@
 # ============================================================================
 
 set(LARVAE_TEST_DIRS
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests
     ${CMAKE_CURRENT_SOURCE_DIR}/../Hive/tests
     ${CMAKE_CURRENT_SOURCE_DIR}/../Comb/tests
     ${CMAKE_CURRENT_SOURCE_DIR}/../Wax/tests
@@ -134,8 +135,10 @@ set_target_properties(hive_launcher
         RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
 )
 
+add_dependencies(larvae_runner hive_launcher)
+
 # ============================================================================
-# GUI Test Runner (ImGui) — requires OpenGL, skip on headless builds
+# GUI Test Runner (ImGui) - requires OpenGL, skip on headless builds
 # ============================================================================
 
 option(HIVE_BUILD_GUI_TESTS "Build the ImGui GUI test runner" ON)

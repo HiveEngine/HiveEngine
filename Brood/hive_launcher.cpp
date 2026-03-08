@@ -1,7 +1,5 @@
 #include <hive/HiveConfig.h>
 #include <hive/core/log.h>
-#include <hive/core/module.h>
-#include <hive/core/moduleregistry.h>
 
 #include <comb/debug/global_memory_tracker.h>
 #include <comb/default_allocator.h>
@@ -49,33 +47,13 @@ namespace
 
     static const hive::LogCategory LOG_LAUNCHER{"Hive.Launcher"};
 
-    class LauncherModule : public hive::Module
-    {
-    public:
-        LauncherModule()
-            : m_logger{m_logMgr} {}
-        const char* GetName() const override { return "LauncherModule"; }
-
-    protected:
-        void DoInitialize() override { Module::DoInitialize(); }
-        void DoShutdown() override { Module::DoShutdown(); }
-
-    private:
-        hive::LogManager m_logMgr;
-        hive::ConsoleLogger m_logger;
-    };
-
-    void RegisterLauncherModule() {
-        hive::ModuleRegistry::GetInstance().RegisterModule(
-            []() -> std::unique_ptr<hive::Module> { return std::make_unique<LauncherModule>(); });
-    }
-
     struct LauncherState
     {
         comb::ModuleAllocator m_alloc{"Launcher", size_t{1024} * 1024 * 1024};
         waggle::ProjectManager* m_project{nullptr};
         waggle::GameplayModule m_gameplay;
         const char* m_projectPath{nullptr};
+        bool m_exitAfterSetup{false};
 
 #if HIVE_MODE_EDITOR
         forge::EditorSelection m_selection;
@@ -88,6 +66,290 @@ namespace
         swarm::ViewportRT* m_viewportRt{nullptr};
         void* m_viewportTexture{nullptr};
 #endif
+    };
+
+#if HIVE_MODE_EDITOR
+    void DrawEditor(waggle::EngineContext& ctx, LauncherState& state);
+#endif
+
+    struct LauncherCommandLine
+    {
+        std::filesystem::path m_projectPath{};
+        bool m_forceHeadless{false};
+        bool m_exitAfterSetup{false};
+    };
+
+    void PrintUsage() {
+        std::fprintf(stderr, "Usage: hive_launcher [--headless] [--exit-after-setup] [path/to/project.hive]\n");
+    }
+
+    bool TryParseCommandLine(int argc, char* argv[], LauncherCommandLine* commandLine) {
+        for (int i = 1; i < argc; ++i)
+        {
+            const char* arg = argv[i];
+            if (std::strcmp(arg, "--headless") == 0)
+            {
+                commandLine->m_forceHeadless = true;
+                continue;
+            }
+
+            if (std::strcmp(arg, "--exit-after-setup") == 0)
+            {
+                commandLine->m_exitAfterSetup = true;
+                continue;
+            }
+
+            if (arg[0] == '-')
+            {
+                std::fprintf(stderr, "Error: unknown option: %s\n", arg);
+                PrintUsage();
+                return false;
+            }
+
+            if (!commandLine->m_projectPath.empty())
+            {
+                std::fprintf(stderr, "Error: multiple project paths provided\n");
+                PrintUsage();
+                return false;
+            }
+
+            commandLine->m_projectPath = arg;
+        }
+
+        return true;
+    }
+
+    std::string BuildWindowTitle(const std::string& projectPath) {
+        std::string windowTitle = "HiveEngine";
+        comb::ModuleAllocator tmpAlloc{"TmpProjectParse", size_t{4} * 1024 * 1024};
+        nectar::ProjectFile projectFile{tmpAlloc.Get()};
+        auto loadResult = projectFile.LoadFromDisk({projectPath.c_str(), projectPath.size()});
+        if (loadResult.m_success && projectFile.Name().Size() > 0)
+        {
+            windowTitle += " - ";
+            windowTitle.append(projectFile.Name().Data(), projectFile.Name().Size());
+        }
+
+        return windowTitle;
+    }
+
+    class LauncherProcessSession
+    {
+    public:
+        LauncherProcessSession()
+            : m_logger{m_logManager} {}
+
+        ~LauncherProcessSession() { Finalize(); }
+
+        int Run(int argc, char* argv[]) {
+            LauncherCommandLine commandLine{};
+            if (!TryParseCommandLine(argc, argv, &commandLine))
+            {
+                return 1;
+            }
+
+            return Run(commandLine);
+        }
+
+        void Finalize() {
+            if (m_finalized)
+            {
+                return;
+            }
+
+            comb::debug::ReportLiveAllocatorLeaks();
+            hive::ShutdownProfiler();
+            std::cout.flush();
+            std::cerr.flush();
+            std::fflush(stdout);
+            std::fflush(stderr);
+            m_finalized = true;
+        }
+
+    private:
+        int Run(const LauncherCommandLine& commandLine) {
+            std::error_code ec;
+            std::filesystem::path projectPath = commandLine.m_projectPath;
+            if (projectPath.empty())
+            {
+                projectPath = std::filesystem::current_path(ec) / "project.hive";
+            }
+
+            if (!std::filesystem::exists(projectPath, ec) || ec)
+            {
+                std::fprintf(stderr, "Error: project file not found: %s\n", projectPath.string().c_str());
+                PrintUsage();
+                return 1;
+            }
+
+            projectPath = std::filesystem::absolute(projectPath, ec);
+            if (ec)
+            {
+                std::fprintf(stderr, "Error: failed to resolve project path: %s\n", projectPath.string().c_str());
+                return 1;
+            }
+
+            const std::string pathStr = projectPath.generic_string();
+            const std::string windowTitle = BuildWindowTitle(pathStr);
+
+            LauncherState state{};
+            state.m_projectPath = pathStr.c_str();
+            state.m_exitAfterSetup = commandLine.m_exitAfterSetup;
+
+            waggle::EngineConfig config{};
+            config.m_windowTitle = windowTitle.c_str();
+#if HIVE_MODE_EDITOR
+            config.m_windowWidth = 1920;
+            config.m_windowHeight = 1080;
+            config.m_mode = commandLine.m_forceHeadless ? waggle::EngineMode::HEADLESS : waggle::EngineMode::EDITOR;
+#elif HIVE_MODE_HEADLESS
+            config.m_mode = waggle::EngineMode::HEADLESS;
+#else
+            config.m_mode = commandLine.m_forceHeadless ? waggle::EngineMode::HEADLESS : waggle::EngineMode::GAME;
+#endif
+
+            waggle::EngineCallbacks callbacks{};
+            callbacks.m_onSetup = [](waggle::EngineContext& ctx, void* ud) -> bool {
+                auto& s = *static_cast<LauncherState*>(ud);
+                auto& alloc = s.m_alloc.Get();
+                auto& world = *ctx.m_world;
+
+                s.m_project = comb::New<waggle::ProjectManager>(alloc, alloc);
+                const waggle::ProjectConfig projConfig{.m_enableHotReload = true, .m_watcherIntervalMs = 500};
+                if (!s.m_project->Open({s.m_projectPath, std::strlen(s.m_projectPath)}, projConfig))
+                {
+                    hive::LogError(LOG_LAUNCHER, "Failed to open project: {}", s.m_projectPath);
+                    comb::Delete(alloc, s.m_project);
+                    s.m_project = nullptr;
+                    return false;
+                }
+
+                const auto& proj = s.m_project->Project();
+                hive::LogInfo(LOG_LAUNCHER, "Project '{}' v{}", std::string{proj.Name().Data(), proj.Name().Size()},
+                              std::string{proj.Version().Data(), proj.Version().Size()});
+
+                world.InsertResource(waggle::ProjectContext{s.m_project});
+
+#if HIVE_MODE_EDITOR
+                if (ctx.m_renderContext && ctx.m_window)
+                {
+                    forge::ForgeImGuiInit(ctx.m_renderContext, ctx.m_window->m_window);
+                    s.m_viewportRt = swarm::CreateViewportRT(ctx.m_renderContext, 1280, 720);
+                    s.m_viewportTexture = forge::ForgeRegisterViewportRT(ctx.m_renderContext, s.m_viewportRt);
+                }
+#endif
+
+                const auto root = std::string{s.m_project->Paths().m_root.CStr(), s.m_project->Paths().m_root.Size()};
+#if HIVE_MODE_EDITOR
+                s.m_assetsRoot = root + "/assets";
+#endif
+#if HIVE_PLATFORM_WINDOWS
+                const auto dllPath = root + "/gameplay.dll";
+#else
+                const auto dllPath = root + "/gameplay.so";
+#endif
+
+                std::error_code dllEc;
+                if (std::filesystem::exists(dllPath, dllEc) && !dllEc)
+                {
+                    if (s.m_gameplay.Load(dllPath.c_str()))
+                    {
+                        if (!s.m_gameplay.Register(world))
+                        {
+                            hive::LogWarning(LOG_LAUNCHER, "Gameplay DLL Register() failed");
+                        }
+                    }
+                    else
+                    {
+                        hive::LogWarning(LOG_LAUNCHER, "Failed to load gameplay DLL: {}", s.m_gameplay.GetError());
+                    }
+                }
+                else
+                {
+                    hive::LogInfo(LOG_LAUNCHER, "No gameplay DLL found at {}", dllPath);
+                }
+
+                if (s.m_exitAfterSetup)
+                {
+                    ctx.m_app->RequestStop();
+                }
+
+                return true;
+            };
+
+            callbacks.m_onFrame = [](waggle::EngineContext& ctx, void* ud) {
+                auto& s = *static_cast<LauncherState*>(ud);
+                s.m_project->Update();
+
+#if HIVE_MODE_EDITOR
+                if (ctx.m_renderContext)
+                {
+                    if (s.m_viewportRt)
+                    {
+                        swarm::BeginViewportRT(ctx.m_renderContext, s.m_viewportRt);
+                        swarm::DrawPipeline(ctx.m_renderContext);
+                        swarm::EndViewportRT(ctx.m_renderContext, s.m_viewportRt);
+                    }
+
+                    forge::ForgeImGuiNewFrame();
+                    DrawEditor(ctx, s);
+                    forge::ForgeImGuiRender(ctx.m_renderContext);
+                }
+#elif HIVE_FEATURE_VULKAN || HIVE_FEATURE_D3D12
+                if (ctx.m_renderContext)
+                {
+                    swarm::DrawPipeline(ctx.m_renderContext);
+                }
+#endif
+            };
+
+            callbacks.m_onShutdown = [](waggle::EngineContext& ctx, void* ud) {
+                auto& s = *static_cast<LauncherState*>(ud);
+                auto& world = *ctx.m_world;
+
+#if HIVE_MODE_EDITOR
+                if (ctx.m_renderContext)
+                {
+                    swarm::WaitForIdle(ctx.m_renderContext);
+                    if (s.m_viewportTexture)
+                    {
+                        forge::ForgeUnregisterViewportRT(s.m_viewportTexture);
+                    }
+                    if (s.m_viewportRt)
+                    {
+                        swarm::DestroyViewportRT(s.m_viewportRt);
+                    }
+                    forge::ForgeImGuiShutdown(ctx.m_renderContext);
+                }
+#endif
+
+                if (s.m_gameplay.IsRegistered())
+                {
+                    s.m_gameplay.Unregister(world);
+                }
+
+                if (s.m_project)
+                {
+                    world.RemoveResource<waggle::ProjectContext>();
+                    s.m_project->Close();
+                    comb::Delete(s.m_alloc.Get(), s.m_project);
+                    s.m_project = nullptr;
+                }
+
+                // gameplay.Unload() is NOT called here: the World still has system
+                // lambdas whose code lives in the DLL (e.g. FreeCamera). Calling
+                // FreeLibrary now would unmap that code while the World still
+                // references it. Instead, GameplayModule::~GameplayModule() will
+                // call FreeLibrary after Run() returns and the World is destroyed.
+            };
+
+            callbacks.m_userData = &state;
+            return waggle::Run(config, callbacks);
+        }
+
+        hive::LogManager m_logManager;
+        hive::ConsoleLogger m_logger;
+        bool m_finalized{false};
     };
 
 #if HIVE_MODE_EDITOR
@@ -202,184 +464,9 @@ namespace
 } // anonymous namespace
 
 int main(int argc, char* argv[]) {
-    std::error_code ec;
-    std::filesystem::path projectPath;
-
-    if (argc >= 2)
-    {
-        projectPath = argv[1];
-    }
-    else
-    {
-        projectPath = std::filesystem::current_path(ec) / "project.hive";
-    }
-
-    if (!std::filesystem::exists(projectPath, ec) || ec)
-    {
-        std::fprintf(stderr, "Error: project file not found: %s\n", projectPath.string().c_str());
-        std::fprintf(stderr, "Usage: hive_launcher [path/to/project.hive]\n");
-        return 1;
-    }
-
-    projectPath = std::filesystem::absolute(projectPath, ec);
-    auto pathStr = projectPath.generic_string();
-
-    std::string windowTitle = "HiveEngine";
-    {
-        comb::ModuleAllocator tmpAlloc{"TmpProjectParse", size_t{4} * 1024 * 1024};
-        nectar::ProjectFile pf{tmpAlloc.Get()};
-        auto result = pf.LoadFromDisk({pathStr.c_str(), pathStr.size()});
-        if (result.m_success && pf.Name().Size() > 0)
-        {
-            windowTitle += " - ";
-            windowTitle.append(pf.Name().Data(), pf.Name().Size());
-        }
-    }
-
-    int result = 0;
-    {
-        LauncherState state{};
-        state.m_projectPath = pathStr.c_str();
-
-        waggle::EngineConfig config{};
-        config.m_windowTitle = windowTitle.c_str();
-#if HIVE_MODE_EDITOR
-        config.m_windowWidth = 1920;
-        config.m_windowHeight = 1080;
-        config.m_mode = waggle::EngineMode::EDITOR;
-#elif HIVE_MODE_HEADLESS
-        config.m_mode = waggle::EngineMode::HEADLESS;
-#endif
-
-        waggle::EngineCallbacks callbacks{};
-        callbacks.m_onRegisterModules = RegisterLauncherModule;
-
-        callbacks.m_onSetup = [](waggle::EngineContext& ctx, void* ud) -> bool {
-            auto& s = *static_cast<LauncherState*>(ud);
-            auto& alloc = s.m_alloc.Get();
-            auto& world = *ctx.m_world;
-
-            s.m_project = comb::New<waggle::ProjectManager>(alloc, alloc);
-            const waggle::ProjectConfig projConfig{.m_enableHotReload = true, .m_watcherIntervalMs = 500};
-            if (!s.m_project->Open({s.m_projectPath, std::strlen(s.m_projectPath)}, projConfig))
-            {
-                hive::LogError(LOG_LAUNCHER, "Failed to open project: {}", s.m_projectPath);
-                comb::Delete(alloc, s.m_project);
-                s.m_project = nullptr;
-                return false;
-            }
-
-            const auto& proj = s.m_project->Project();
-            hive::LogInfo(LOG_LAUNCHER, "Project '{}' v{}", std::string{proj.Name().Data(), proj.Name().Size()},
-                          std::string{proj.Version().Data(), proj.Version().Size()});
-
-            world.InsertResource(waggle::ProjectContext{s.m_project});
-
-#if HIVE_MODE_EDITOR
-            if (ctx.m_renderContext && ctx.m_window)
-            {
-                forge::ForgeImGuiInit(ctx.m_renderContext, ctx.m_window->m_window);
-                s.m_viewportRt = swarm::CreateViewportRT(ctx.m_renderContext, 1280, 720);
-                s.m_viewportTexture = forge::ForgeRegisterViewportRT(ctx.m_renderContext, s.m_viewportRt);
-            }
-#endif
-
-            auto root = std::string{s.m_project->Paths().m_root.CStr(), s.m_project->Paths().m_root.Size()};
-#if HIVE_MODE_EDITOR
-            s.m_assetsRoot = root + "/assets";
-#endif
-#if HIVE_PLATFORM_WINDOWS
-            auto dllPath = root + "/gameplay.dll";
-#else
-            auto dllPath = root + "/gameplay.so";
-#endif
-
-            std::error_code ec;
-            if (std::filesystem::exists(dllPath, ec) && !ec)
-            {
-                if (s.m_gameplay.Load(dllPath.c_str()))
-                {
-                    if (!s.m_gameplay.Register(world))
-                        hive::LogWarning(LOG_LAUNCHER, "Gameplay DLL Register() failed");
-                }
-                else
-                    hive::LogWarning(LOG_LAUNCHER, "Failed to load gameplay DLL: {}", s.m_gameplay.GetError());
-            }
-            else
-            {
-                hive::LogInfo(LOG_LAUNCHER, "No gameplay DLL found at {}", dllPath);
-            }
-
-            return true;
-        };
-
-        callbacks.m_onFrame = [](waggle::EngineContext& ctx, void* ud) {
-            auto& s = *static_cast<LauncherState*>(ud);
-            s.m_project->Update();
-
-#if HIVE_MODE_EDITOR
-            if (ctx.m_renderContext)
-            {
-                if (s.m_viewportRt)
-                {
-                    swarm::BeginViewportRT(ctx.m_renderContext, s.m_viewportRt);
-                    swarm::DrawPipeline(ctx.m_renderContext);
-                    swarm::EndViewportRT(ctx.m_renderContext, s.m_viewportRt);
-                }
-
-                forge::ForgeImGuiNewFrame();
-                DrawEditor(ctx, s);
-                forge::ForgeImGuiRender(ctx.m_renderContext);
-            }
-#elif HIVE_FEATURE_VULKAN || HIVE_FEATURE_D3D12
-            if (ctx.m_renderContext)
-                swarm::DrawPipeline(ctx.m_renderContext);
-#endif
-        };
-
-        callbacks.m_onShutdown = [](waggle::EngineContext& ctx, void* ud) {
-            auto& s = *static_cast<LauncherState*>(ud);
-            auto& world = *ctx.m_world;
-
-#if HIVE_MODE_EDITOR
-            if (ctx.m_renderContext)
-            {
-                swarm::WaitForIdle(ctx.m_renderContext);
-                if (s.m_viewportTexture)
-                    forge::ForgeUnregisterViewportRT(s.m_viewportTexture);
-                if (s.m_viewportRt)
-                    swarm::DestroyViewportRT(s.m_viewportRt);
-                forge::ForgeImGuiShutdown(ctx.m_renderContext);
-            }
-#endif
-
-            if (s.m_gameplay.IsRegistered())
-                s.m_gameplay.Unregister(world);
-
-            if (s.m_project)
-            {
-                world.RemoveResource<waggle::ProjectContext>();
-                s.m_project->Close();
-                comb::Delete(s.m_alloc.Get(), s.m_project);
-                s.m_project = nullptr;
-            }
-
-            // gameplay.Unload() is NOT called here: the World still has system
-            // lambdas whose code lives in the DLL (e.g. FreeCamera). Calling
-            // FreeLibrary now would unmap that code while the World still
-            // references it. Instead, GameplayModule::~GameplayModule() will
-            // call FreeLibrary after Run() returns and the World is destroyed.
-        };
-
-        callbacks.m_userData = &state;
-        result = waggle::Run(config, callbacks);
-    }
-    comb::debug::ReportLiveAllocatorLeaks();
-    hive::ShutdownProfiler();
-    std::cout.flush();
-    std::cerr.flush();
-    std::fflush(stdout);
-    std::fflush(stderr);
+    LauncherProcessSession session{};
+    const int result = session.Run(argc, argv);
+    session.Finalize();
     // Runtime teardown is complete here. Avoid lingering during CRT static teardown.
     std::_Exit(result);
 }
