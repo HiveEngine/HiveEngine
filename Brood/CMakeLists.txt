@@ -191,7 +191,7 @@ if (HIVE_BUILD_GUI_TESTS)
             ${imgui_SOURCE_DIR}/backends/imgui_impl_opengl3.cpp
     )
 
-    target_include_directories(imgui PUBLIC
+    target_include_directories(imgui SYSTEM PUBLIC
             ${imgui_SOURCE_DIR}
             ${imgui_SOURCE_DIR}/backends
     )
@@ -199,6 +199,12 @@ if (HIVE_BUILD_GUI_TESTS)
     target_link_libraries(imgui PUBLIC
             glfw
             OpenGL::GL
+    )
+
+    target_compile_options(imgui PRIVATE
+            $<$<CXX_COMPILER_ID:Clang>:-w>
+            $<$<CXX_COMPILER_ID:GNU>:-w>
+            $<$<CXX_COMPILER_ID:MSVC>:/w>
     )
 
     # GUI Test sources (include all test files like console runner)

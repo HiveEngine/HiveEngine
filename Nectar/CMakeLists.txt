@@ -14,10 +14,15 @@ target_sources(Nectar
 target_include_directories(Nectar
     PUBLIC
         include
-        extern/stb
-    PRIVATE
-        ${CMAKE_SOURCE_DIR}/Hive/extern/tinyobj
+)
+
+target_include_directories(Nectar
+    SYSTEM PRIVATE
         extern/cgltf
+        extern/lz4
+        extern/stb
+        extern/zstd
+        ${CMAKE_SOURCE_DIR}/Hive/extern/tinyobj
 )
 
 target_link_libraries(Nectar
@@ -39,4 +44,3 @@ set(NECTAR_EXTERN_SOURCES
 )
 set_source_files_properties(${NECTAR_EXTERN_SOURCES} PROPERTIES LANGUAGE CXX)
 target_sources(Nectar PRIVATE ${NECTAR_EXTERN_SOURCES})
-target_include_directories(Nectar PRIVATE extern/lz4 extern/zstd)

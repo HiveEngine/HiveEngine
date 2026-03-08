@@ -10,7 +10,7 @@
 set(FMT_EXCEPTIONS OFF CACHE BOOL "Disable exceptions in fmt" FORCE)
 set(FMT_INSTALL OFF CACHE BOOL "Don't install fmt" FORCE)
 
-add_subdirectory(extern/fmt EXCLUDE_FROM_ALL)
+add_subdirectory(extern/fmt EXCLUDE_FROM_ALL SYSTEM)
 
 # Silence warnings from fmt (external library)
 if(TARGET fmt)
@@ -56,6 +56,11 @@ target_include_directories(Hive
         extern/hmm
     PRIVATE
         src
+)
+
+target_include_directories(Hive
+    SYSTEM PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/extern/fmt/include
 )
 
 target_precompile_headers(Hive

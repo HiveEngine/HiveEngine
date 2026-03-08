@@ -153,11 +153,18 @@ endif()
 
 # MSVC and Clang-CL (both use MSVC-style command-line flags)
 if(MSVC)
+    set(HIVE_COMPILER_IS_CLANG_CL OFF)
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+        set(HIVE_COMPILER_IS_CLANG_CL ON)
+    endif()
+
     add_compile_options(
-            /MP /permissive- /Zc:__cplusplus /Zc:inline /utf-8
+            /permissive- /Zc:__cplusplus /Zc:inline /utf-8
     )
 
-    add_compile_options(/external:W0 /external:anglebrackets)
+    if(NOT HIVE_COMPILER_IS_CLANG_CL)
+        add_compile_options(/MP /external:W0)
+    endif()
 
     add_compile_options(
             /W4                  # Warning level 4
@@ -170,10 +177,15 @@ if(MSVC)
             /w14640              # Thread-unsafe static member initialization
             /wd4100              # Disable: unreferenced formal parameter (too noisy)
             /wd4530              # Disable: C++ exception handler (from external headers with /EHs-c-)
-            -Wno-unsafe-buffer-usage          # Too noisy for low-level engine code
-            -Wno-unsafe-buffer-usage-in-libc-call  # Same family, flags memcpy/memset
-            -Wno-c++98-compat                 # C++20 project, no need for C++98 compat warnings
     )
+
+    if(HIVE_COMPILER_IS_CLANG_CL)
+        add_compile_options(
+                -Wno-unsafe-buffer-usage
+                -Wno-unsafe-buffer-usage-in-libc-call
+                -Wno-c++98-compat
+        )
+    endif()
 
     if(HIVE_WARNINGS_AS_ERRORS)
         add_compile_options(/WX)
@@ -206,7 +218,7 @@ if(MSVC)
         add_compile_definitions(NDEBUG _ITERATOR_DEBUG_LEVEL=1)
     endif()
 
-    if(HIVE_ENABLE_SIMD)
+    if(HIVE_ENABLE_SIMD AND CMAKE_SIZEOF_VOID_P EQUAL 4)
         add_compile_options(/arch:SSE2)
     endif()
 
