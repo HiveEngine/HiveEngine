@@ -170,7 +170,7 @@ namespace queen
         /**
          * Get the execution order (for debugging/visualization)
          */
-        [[nodiscard]] const wax::Vector<uint32_t, Allocator>& ExecutionOrder() const noexcept
+        [[nodiscard]] const wax::Vector<uint32_t>& ExecutionOrder() const noexcept
         {
             return graph_.ExecutionOrder();
         }

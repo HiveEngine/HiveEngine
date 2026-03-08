@@ -70,7 +70,7 @@ namespace {
             for (size_t i = 0; i < pending_.Size(); ++i)
             {
                 nectar::FileChange c;
-                c.path = wax::String<>{*alloc_};
+                c.path = wax::String{*alloc_};
                 c.path.Append(pending_[i].path.CStr(), pending_[i].path.Size());
                 c.kind = pending_[i].kind;
                 changes.PushBack(static_cast<nectar::FileChange&&>(c));
@@ -81,7 +81,7 @@ namespace {
         void Inject(wax::StringView path, nectar::FileChangeKind kind)
         {
             nectar::FileChange c;
-            c.path = wax::String<>{*alloc_};
+            c.path = wax::String{*alloc_};
             c.path.Append(path.Data(), path.Size());
             c.kind = kind;
             pending_.PushBack(static_cast<nectar::FileChange&&>(c));
@@ -111,7 +111,7 @@ namespace {
         {
             nectar::ImportResult r{};
             r.success = true;
-            r.intermediate_data = wax::ByteBuffer<>{GetHrAlloc()};
+            r.intermediate_data = wax::ByteBuffer{GetHrAlloc()};
             r.intermediate_data.Append(source_data.Data(), source_data.Size());
             return r;
         }
@@ -137,7 +137,7 @@ namespace {
                                           settings.GetString("import", "base_path").Size()};
             nectar::ImportResult r{};
             r.success = true;
-            r.intermediate_data = wax::ByteBuffer<>{GetHrAlloc()};
+            r.intermediate_data = wax::ByteBuffer{GetHrAlloc()};
             r.intermediate_data.Append(source_data.Data(), source_data.Size());
             return r;
         }
@@ -157,7 +157,7 @@ namespace {
         {
             nectar::CookResult r;
             r.success = true;
-            r.cooked_data = wax::ByteBuffer<>{*ctx.alloc};
+            r.cooked_data = wax::ByteBuffer{*ctx.alloc};
             r.cooked_data.Append(data.Data(), data.Size());
             return r;
         }
@@ -176,13 +176,13 @@ namespace {
 
         nectar::AssetRecord record{};
         record.uuid = id;
-        record.path = wax::String<>{alloc, path};
-        record.type = wax::String<>{alloc, type};
-        record.name = wax::String<>{alloc};
+        record.path = wax::String{alloc, path};
+        record.type = wax::String{alloc, type};
+        record.name = wax::String{alloc};
         record.content_hash = nectar::ContentHash::FromData(data, size);
         record.intermediate_hash = cas_hash;
         record.import_version = 1;
-        record.labels = wax::Vector<wax::String<>>{alloc};
+        record.labels = wax::Vector<wax::String>{alloc};
         db.Insert(static_cast<nectar::AssetRecord&&>(record));
     }
 

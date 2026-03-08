@@ -25,9 +25,9 @@ namespace {
         auto& alloc = GetDbAlloc();
         nectar::AssetRecord r{};
         r.uuid = MakeId(id);
-        r.path = wax::String<>{alloc, path};
-        r.type = wax::String<>{alloc, type};
-        r.name = wax::String<>{alloc, name};
+        r.path = wax::String{alloc, path};
+        r.type = wax::String{alloc, type};
+        r.name = wax::String{alloc, name};
         r.content_hash = nectar::ContentHash::FromData(path, std::strlen(path));
         return r;
     }
@@ -157,12 +157,12 @@ namespace {
         nectar::AssetDatabase db{alloc};
 
         auto r1 = MakeRecord(1, "a.png", "Texture", "a");
-        r1.labels.PushBack(wax::String<>{alloc, "hero"});
-        r1.labels.PushBack(wax::String<>{alloc, "character"});
+        r1.labels.PushBack(wax::String{alloc, "hero"});
+        r1.labels.PushBack(wax::String{alloc, "character"});
         db.Insert(static_cast<nectar::AssetRecord&&>(r1));
 
         auto r2 = MakeRecord(2, "b.png", "Texture", "b");
-        r2.labels.PushBack(wax::String<>{alloc, "environment"});
+        r2.labels.PushBack(wax::String{alloc, "environment"});
         db.Insert(static_cast<nectar::AssetRecord&&>(r2));
 
         wax::Vector<nectar::AssetRecord*> results{alloc};

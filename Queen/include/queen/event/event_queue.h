@@ -89,7 +89,7 @@ namespace queen
         using Iterator = const T*;
 
         explicit EventQueue(Allocator& allocator)
-            : buffers_{wax::Vector<T, Allocator>{allocator}, wax::Vector<T, Allocator>{allocator}}
+            : buffers_{wax::Vector<T>{allocator}, wax::Vector<T>{allocator}}
             , current_{0}
         {
         }
@@ -270,7 +270,7 @@ namespace queen
         /**
          * Get read-only access to current frame's events
          */
-        [[nodiscard]] const wax::Vector<T, Allocator>& CurrentBuffer() const noexcept
+        [[nodiscard]] const wax::Vector<T>& CurrentBuffer() const noexcept
         {
             return buffers_[current_];
         }
@@ -278,13 +278,13 @@ namespace queen
         /**
          * Get read-only access to previous frame's events
          */
-        [[nodiscard]] const wax::Vector<T, Allocator>& PreviousBuffer() const noexcept
+        [[nodiscard]] const wax::Vector<T>& PreviousBuffer() const noexcept
         {
             return buffers_[1 - current_];
         }
 
     private:
-        wax::Vector<T, Allocator> buffers_[2];
+        wax::Vector<T> buffers_[2];
         uint8_t current_;
     };
 }

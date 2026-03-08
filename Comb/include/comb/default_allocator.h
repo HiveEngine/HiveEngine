@@ -110,7 +110,7 @@ namespace comb
     public:
         ModuleAllocator(const char* name, size_t capacity)
             : name_{name}
-            , buddy_{capacity}
+            , buddy_{capacity, name}
             , allocator_{buddy_}
         {
             ModuleRegistry::GetInstance().Register(name_, this);

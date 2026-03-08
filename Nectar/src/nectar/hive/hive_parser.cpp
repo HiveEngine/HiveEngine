@@ -67,13 +67,13 @@ namespace nectar
 
         // Extract a quoted string from text starting at pos (which should be '"').
         // Returns the content without quotes, and advances pos past the closing quote.
-        bool ExtractQuotedString(wax::StringView text, size_t& pos, wax::String<>& out,
+        bool ExtractQuotedString(wax::StringView text, size_t& pos, wax::String& out,
                                  comb::DefaultAllocator& alloc)
         {
             if (pos >= text.Size() || text[pos] != '"') return false;
             ++pos; // skip opening quote
 
-            out = wax::String<>{alloc};
+            out = wax::String{alloc};
             while (pos < text.Size())
             {
                 char c = text[pos];
@@ -117,12 +117,12 @@ namespace nectar
             if (trimmed[0] == '"')
             {
                 size_t pos = 0;
-                wax::String<> str{alloc};
+                wax::String str{alloc};
                 if (ExtractQuotedString(trimmed, pos, str, alloc))
                 {
                     HiveValue v{};
                     v.type = HiveValue::Type::String;
-                    v.str = static_cast<wax::String<>&&>(str);
+                    v.str = static_cast<wax::String&&>(str);
                     return v;
                 }
                 ok = false;
@@ -160,13 +160,13 @@ namespace nectar
 
                     if (inner[pos] == '"')
                     {
-                        wax::String<> elem{alloc};
+                        wax::String elem{alloc};
                         if (!ExtractQuotedString(inner, pos, elem, alloc))
                         {
                             ok = false;
                             return HiveValue{};
                         }
-                        v.array.PushBack(static_cast<wax::String<>&&>(elem));
+                        v.array.PushBack(static_cast<wax::String&&>(elem));
                     }
                     else
                     {
@@ -199,7 +199,7 @@ namespace nectar
     {
         HiveParseResult result{HiveDocument{alloc}, wax::Vector<HiveParseError>{alloc}};
 
-        wax::String<> current_section{alloc};
+        wax::String current_section{alloc};
         size_t line_num = 0;
         size_t pos = 0;
 
@@ -228,7 +228,7 @@ namespace nectar
                 {
                     HiveParseError err{};
                     err.line = line_num;
-                    err.message = wax::String<>{alloc, "Invalid section header"};
+                    err.message = wax::String{alloc, "Invalid section header"};
                     result.errors.PushBack(static_cast<HiveParseError&&>(err));
                     continue;
                 }
@@ -238,12 +238,12 @@ namespace nectar
                 {
                     HiveParseError err{};
                     err.line = line_num;
-                    err.message = wax::String<>{alloc, "Empty section name"};
+                    err.message = wax::String{alloc, "Empty section name"};
                     result.errors.PushBack(static_cast<HiveParseError&&>(err));
                     continue;
                 }
 
-                current_section = wax::String<>{alloc, name};
+                current_section = wax::String{alloc, name};
                 result.document.AddSection(name);
                 continue;
             }
@@ -254,7 +254,7 @@ namespace nectar
             {
                 HiveParseError err{};
                 err.line = line_num;
-                err.message = wax::String<>{alloc, "Expected key = value"};
+                err.message = wax::String{alloc, "Expected key = value"};
                 result.errors.PushBack(static_cast<HiveParseError&&>(err));
                 continue;
             }
@@ -263,7 +263,7 @@ namespace nectar
             {
                 HiveParseError err{};
                 err.line = line_num;
-                err.message = wax::String<>{alloc, "Key-value outside of section"};
+                err.message = wax::String{alloc, "Key-value outside of section"};
                 result.errors.PushBack(static_cast<HiveParseError&&>(err));
                 continue;
             }
@@ -275,7 +275,7 @@ namespace nectar
             {
                 HiveParseError err{};
                 err.line = line_num;
-                err.message = wax::String<>{alloc, "Empty key"};
+                err.message = wax::String{alloc, "Empty key"};
                 result.errors.PushBack(static_cast<HiveParseError&&>(err));
                 continue;
             }
@@ -287,7 +287,7 @@ namespace nectar
             {
                 HiveParseError err{};
                 err.line = line_num;
-                err.message = wax::String<>{alloc, "Invalid value"};
+                err.message = wax::String{alloc, "Invalid value"};
                 result.errors.PushBack(static_cast<HiveParseError&&>(err));
                 continue;
             }

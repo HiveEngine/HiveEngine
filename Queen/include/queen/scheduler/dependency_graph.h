@@ -84,7 +84,7 @@ namespace queen
                 if (system != nullptr)
                 {
                     nodes_.PushBack(SystemNode{system->Id()});
-                    adjacency_.PushBack(wax::Vector<uint32_t, Allocator>{allocator_});
+                    adjacency_.PushBack(wax::Vector<uint32_t>{allocator_});
                 }
             }
 
@@ -181,7 +181,7 @@ namespace queen
         /**
          * Get the topologically sorted execution order
          */
-        [[nodiscard]] const wax::Vector<uint32_t, Allocator>& ExecutionOrder() const noexcept
+        [[nodiscard]] const wax::Vector<uint32_t>& ExecutionOrder() const noexcept
         {
             return execution_order_;
         }
@@ -189,7 +189,7 @@ namespace queen
         /**
          * Get root systems (no dependencies)
          */
-        [[nodiscard]] const wax::Vector<uint32_t, Allocator>& Roots() const noexcept
+        [[nodiscard]] const wax::Vector<uint32_t>& Roots() const noexcept
         {
             return roots_;
         }
@@ -218,7 +218,7 @@ namespace queen
         /**
          * Get dependents of a node (systems that depend on this one)
          */
-        [[nodiscard]] const wax::Vector<uint32_t, Allocator>* GetDependents(uint32_t index) const
+        [[nodiscard]] const wax::Vector<uint32_t>* GetDependents(uint32_t index) const
         {
             if (index < adjacency_.Size())
             {
@@ -256,14 +256,14 @@ namespace queen
             execution_order_.Reserve(nodes_.Size());
 
             // Use Kahn's algorithm
-            wax::Vector<uint16_t, Allocator> in_degree{allocator_};
+            wax::Vector<uint16_t> in_degree{allocator_};
             in_degree.Reserve(nodes_.Size());
             for (size_t i = 0; i < nodes_.Size(); ++i)
             {
                 in_degree.PushBack(nodes_[i].DependencyCount());
             }
 
-            wax::Vector<uint32_t, Allocator> queue{allocator_};
+            wax::Vector<uint32_t> queue{allocator_};
             queue.Reserve(nodes_.Size());
             for (size_t i = 0; i < roots_.Size(); ++i)
             {
@@ -293,10 +293,10 @@ namespace queen
             }
         }
 
-        wax::Vector<SystemNode, Allocator> nodes_;
-        wax::Vector<wax::Vector<uint32_t, Allocator>, Allocator> adjacency_;
-        wax::Vector<uint32_t, Allocator> roots_;
-        wax::Vector<uint32_t, Allocator> execution_order_;
+        wax::Vector<SystemNode> nodes_;
+        wax::Vector<wax::Vector<uint32_t>> adjacency_;
+        wax::Vector<uint32_t> roots_;
+        wax::Vector<uint32_t> execution_order_;
         Allocator& allocator_;
         bool dirty_;
     };

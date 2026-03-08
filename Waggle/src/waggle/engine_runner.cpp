@@ -219,7 +219,6 @@ int Run(const EngineConfig& config, const EngineCallbacks& callbacks)
         terra::ShutdownSystem();
     }
 #endif
-
     moduleRegistry.ShutdownModules();
     return 0;
 }

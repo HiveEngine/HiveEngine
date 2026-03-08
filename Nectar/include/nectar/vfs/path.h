@@ -13,7 +13,7 @@ namespace nectar
     /// - No double slashes
     /// - No trailing slash
     /// - No leading slash (paths are relative to mount points)
-    [[nodiscard]] wax::String<> NormalizePath(wax::StringView path, comb::DefaultAllocator& alloc);
+    [[nodiscard]] wax::String NormalizePath(wax::StringView path, comb::DefaultAllocator& alloc);
 
     /// Extract parent directory: "textures/hero.png" -> "textures"
     /// Returns empty view if no parent.

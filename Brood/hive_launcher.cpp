@@ -33,7 +33,9 @@
 
 #include <cstdio>
 #include <cstring>
+#include <cstdlib>
 #include <filesystem>
+#include <iostream>
 #include <memory>
 #include <string>
 
@@ -231,141 +233,151 @@ int main(int argc, char* argv[])
         }
     }
 
-    LauncherState state{};
-    state.project_path = path_str.c_str();
+    int result = 0;
+    {
+        LauncherState state{};
+        state.project_path = path_str.c_str();
 
-    waggle::EngineConfig config{};
-    config.window_title = window_title.c_str();
+        waggle::EngineConfig config{};
+        config.window_title = window_title.c_str();
 #if HIVE_MODE_EDITOR
-    config.window_width = 1920;
-    config.window_height = 1080;
-    config.mode = waggle::EngineMode::Editor;
+        config.window_width = 1920;
+        config.window_height = 1080;
+        config.mode = waggle::EngineMode::Editor;
 #elif HIVE_MODE_HEADLESS
-    config.mode = waggle::EngineMode::Headless;
+        config.mode = waggle::EngineMode::Headless;
 #endif
 
-    waggle::EngineCallbacks callbacks{};
-    callbacks.on_register_modules = RegisterLauncherModule;
+        waggle::EngineCallbacks callbacks{};
+        callbacks.on_register_modules = RegisterLauncherModule;
 
-    callbacks.on_setup = [](waggle::EngineContext& ctx, void* ud) -> bool {
-        auto& s = *static_cast<LauncherState*>(ud);
-        auto& alloc = s.alloc.Get();
-        auto& world = *ctx.world;
+        callbacks.on_setup = [](waggle::EngineContext& ctx, void* ud) -> bool {
+            auto& s = *static_cast<LauncherState*>(ud);
+            auto& alloc = s.alloc.Get();
+            auto& world = *ctx.world;
 
-        s.project = comb::New<waggle::ProjectManager>(alloc, alloc);
-        waggle::ProjectConfig proj_config{.enable_hot_reload = true, .watcher_interval_ms = 500};
-        if (!s.project->Open({s.project_path, std::strlen(s.project_path)}, proj_config))
-        {
-            hive::LogError(LogLauncher, "Failed to open project: {}", s.project_path);
-            comb::Delete(alloc, s.project);
-            s.project = nullptr;
-            return false;
-        }
+            s.project = comb::New<waggle::ProjectManager>(alloc, alloc);
+            waggle::ProjectConfig proj_config{.enable_hot_reload = true, .watcher_interval_ms = 500};
+            if (!s.project->Open({s.project_path, std::strlen(s.project_path)}, proj_config))
+            {
+                hive::LogError(LogLauncher, "Failed to open project: {}", s.project_path);
+                comb::Delete(alloc, s.project);
+                s.project = nullptr;
+                return false;
+            }
 
-        const auto& proj = s.project->Project();
-        hive::LogInfo(LogLauncher, "Project '{}' v{}",
-                      std::string{proj.Name().Data(), proj.Name().Size()},
-                      std::string{proj.Version().Data(), proj.Version().Size()});
+            const auto& proj = s.project->Project();
+            hive::LogInfo(LogLauncher, "Project '{}' v{}",
+                          std::string{proj.Name().Data(), proj.Name().Size()},
+                          std::string{proj.Version().Data(), proj.Version().Size()});
 
-        world.InsertResource(waggle::ProjectContext{s.project});
+            world.InsertResource(waggle::ProjectContext{s.project});
 
 #if HIVE_MODE_EDITOR
-        if (ctx.render_context && ctx.window)
-        {
-            forge::ForgeImGuiInit(ctx.render_context, ctx.window->window_);
-            s.viewport_rt = swarm::CreateViewportRT(ctx.render_context, 1280, 720);
-            s.viewport_texture = forge::ForgeRegisterViewportRT(ctx.render_context, s.viewport_rt);
-        }
+            if (ctx.render_context && ctx.window)
+            {
+                forge::ForgeImGuiInit(ctx.render_context, ctx.window->window_);
+                s.viewport_rt = swarm::CreateViewportRT(ctx.render_context, 1280, 720);
+                s.viewport_texture = forge::ForgeRegisterViewportRT(ctx.render_context, s.viewport_rt);
+            }
 #endif
 
-        auto root = std::string{s.project->Paths().root.CStr(), s.project->Paths().root.Size()};
+            auto root = std::string{s.project->Paths().root.CStr(), s.project->Paths().root.Size()};
 #if HIVE_MODE_EDITOR
-        s.assets_root = root + "/assets";
+            s.assets_root = root + "/assets";
 #endif
 #if HIVE_PLATFORM_WINDOWS
-        auto dll_path = root + "/gameplay.dll";
+            auto dll_path = root + "/gameplay.dll";
 #else
-        auto dll_path = root + "/gameplay.so";
+            auto dll_path = root + "/gameplay.so";
 #endif
 
-        std::error_code ec;
-        if (std::filesystem::exists(dll_path, ec) && !ec)
-        {
-            if (s.gameplay.Load(dll_path.c_str()))
+            std::error_code ec;
+            if (std::filesystem::exists(dll_path, ec) && !ec)
             {
-                if (!s.gameplay.Register(world))
-                    hive::LogWarning(LogLauncher, "Gameplay DLL Register() failed");
+                if (s.gameplay.Load(dll_path.c_str()))
+                {
+                    if (!s.gameplay.Register(world))
+                        hive::LogWarning(LogLauncher, "Gameplay DLL Register() failed");
+                }
+                else
+                    hive::LogWarning(LogLauncher, "Failed to load gameplay DLL: {}", s.gameplay.GetError());
             }
             else
-                hive::LogWarning(LogLauncher, "Failed to load gameplay DLL: {}", s.gameplay.GetError());
-        }
-        else
-        {
-            hive::LogInfo(LogLauncher, "No gameplay DLL found at {}", dll_path);
-        }
-
-        return true;
-    };
-
-    callbacks.on_frame = [](waggle::EngineContext& ctx, void* ud) {
-        auto& s = *static_cast<LauncherState*>(ud);
-        s.project->Update();
-
-#if HIVE_MODE_EDITOR
-        if (ctx.render_context)
-        {
-            if (s.viewport_rt)
             {
-                swarm::BeginViewportRT(ctx.render_context, s.viewport_rt);
-                swarm::DrawPipeline(ctx.render_context);
-                swarm::EndViewportRT(ctx.render_context, s.viewport_rt);
+                hive::LogInfo(LogLauncher, "No gameplay DLL found at {}", dll_path);
             }
 
-            forge::ForgeImGuiNewFrame();
-            DrawEditor(ctx, s);
-            forge::ForgeImGuiRender(ctx.render_context);
-        }
-#elif HIVE_FEATURE_VULKAN || HIVE_FEATURE_D3D12
-        if (ctx.render_context)
-            swarm::DrawPipeline(ctx.render_context);
-#endif
-    };
+            return true;
+        };
 
-    callbacks.on_shutdown = [](waggle::EngineContext& ctx, void* ud) {
-        auto& s = *static_cast<LauncherState*>(ud);
-        auto& world = *ctx.world;
+        callbacks.on_frame = [](waggle::EngineContext& ctx, void* ud) {
+            auto& s = *static_cast<LauncherState*>(ud);
+            s.project->Update();
 
 #if HIVE_MODE_EDITOR
-        if (ctx.render_context)
-        {
-            if (s.viewport_texture)
-                forge::ForgeUnregisterViewportRT(s.viewport_texture);
-            if (s.viewport_rt)
-                swarm::DestroyViewportRT(s.viewport_rt);
-            forge::ForgeImGuiShutdown(ctx.render_context);
-        }
+            if (ctx.render_context)
+            {
+                if (s.viewport_rt)
+                {
+                    swarm::BeginViewportRT(ctx.render_context, s.viewport_rt);
+                    swarm::DrawPipeline(ctx.render_context);
+                    swarm::EndViewportRT(ctx.render_context, s.viewport_rt);
+                }
+
+                forge::ForgeImGuiNewFrame();
+                DrawEditor(ctx, s);
+                forge::ForgeImGuiRender(ctx.render_context);
+            }
+#elif HIVE_FEATURE_VULKAN || HIVE_FEATURE_D3D12
+            if (ctx.render_context)
+                swarm::DrawPipeline(ctx.render_context);
+#endif
+        };
+
+        callbacks.on_shutdown = [](waggle::EngineContext& ctx, void* ud) {
+            auto& s = *static_cast<LauncherState*>(ud);
+            auto& world = *ctx.world;
+
+#if HIVE_MODE_EDITOR
+            if (ctx.render_context)
+            {
+                swarm::WaitForIdle(ctx.render_context);
+                if (s.viewport_texture)
+                    forge::ForgeUnregisterViewportRT(s.viewport_texture);
+                if (s.viewport_rt)
+                    swarm::DestroyViewportRT(s.viewport_rt);
+                forge::ForgeImGuiShutdown(ctx.render_context);
+            }
 #endif
 
-        if (s.gameplay.IsRegistered())
-            s.gameplay.Unregister(world);
+            if (s.gameplay.IsRegistered())
+                s.gameplay.Unregister(world);
 
-        if (s.project)
-        {
-            world.RemoveResource<waggle::ProjectContext>();
-            s.project->Close();
-            comb::Delete(s.alloc.Get(), s.project);
-            s.project = nullptr;
-        }
+            if (s.project)
+            {
+                world.RemoveResource<waggle::ProjectContext>();
+                s.project->Close();
+                comb::Delete(s.alloc.Get(), s.project);
+                s.project = nullptr;
+            }
 
-        // gameplay.Unload() is NOT called here: the World still has system
-        // lambdas whose code lives in the DLL (e.g. FreeCamera). Calling
-        // FreeLibrary now would unmap that code while the World still
-        // references it. Instead, GameplayModule::~GameplayModule() will
-        // call FreeLibrary after Run() returns and the World is destroyed.
-    };
+            // gameplay.Unload() is NOT called here: the World still has system
+            // lambdas whose code lives in the DLL (e.g. FreeCamera). Calling
+            // FreeLibrary now would unmap that code while the World still
+            // references it. Instead, GameplayModule::~GameplayModule() will
+            // call FreeLibrary after Run() returns and the World is destroyed.
+        };
 
-    callbacks.user_data = &state;
-    int result = waggle::Run(config, callbacks);
+        callbacks.user_data = &state;
+        result = waggle::Run(config, callbacks);
+    }
     comb::debug::ReportLiveAllocatorLeaks();
-    return result;
+    hive::ShutdownProfiler();
+    std::cout.flush();
+    std::cerr.flush();
+    std::fflush(stdout);
+    std::fflush(stderr);
+    // Runtime teardown is complete here. Avoid lingering during CRT static teardown.
+    std::_Exit(result);
 }

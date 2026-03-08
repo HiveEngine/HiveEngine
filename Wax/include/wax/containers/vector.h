@@ -2,59 +2,15 @@
 
 #include <cstddef>
 #include <cstring>
-#include <utility>
-#include <type_traits>
 #include <initializer_list>
+#include <type_traits>
+#include <utility>
+#include <comb/memory_resource.h>
 #include <hive/core/assert.h>
-#include <comb/allocator_concepts.h>
-#include <comb/default_allocator.h>
 
 namespace wax
 {
-    /**
-     * Dynamic array with custom allocator support
-     *
-     * Vector provides a resizable array that manages its own memory using
-     * a pluggable allocator system.
-     * control over memory allocation strategies.
-     *
-     * Performance characteristics:
-     * - Storage: Heap-allocated via custom allocator
-     * - Access: O(1) - direct pointer arithmetic
-     * - Push/Pop: O(1) amortized - may trigger reallocation
-     * - Insert/Erase: O(n) - requires shifting elements
-     * - Reallocation: O(n) - copies/moves all elements
-     * - Growth factor: 2x capacity when full
-     *
-     * Memory layout:
-     * - 24 bytes (64-bit): pointer + size + capacity
-     * - Elements stored contiguously in allocator memory
-     *
-     * Limitations:
-     * - No exception safety (aborts on allocation failure)
-     * - Allocator must outlive the vector
-     * - Cannot shrink capacity without manual intervention
-     *
-     * Use cases:
-     * - Dynamic collections with known allocator lifetime
-     * - Hot-path data structures with custom memory strategies
-     * - Replacing std::vector in game/engine code
-     *
-     * Example:
-     * @code
-     *   comb::LinearAllocator alloc{1024 * 1024};
-     *   wax::Vector<int, comb::LinearAllocator> vec{alloc};
-     *
-     *   vec.PushBack(1);
-     *   vec.PushBack(2);
-     *   vec.PushBack(3);
-     *
-     *   for (int val : vec) {
-     *       // ...
-     *   }
-     * @endcode
-     */
-    template<typename T, comb::Allocator Allocator = comb::DefaultAllocator>
+    template<typename T>
     class Vector
     {
     public:
@@ -63,88 +19,110 @@ namespace wax
         using Iterator = T*;
         using ConstIterator = const T*;
 
-        // Default constructor - uses global default allocator
         Vector() noexcept
-            requires std::is_same_v<Allocator, comb::DefaultAllocator>
             : data_{nullptr}
             , size_{0}
             , capacity_{0}
-            , allocator_{&comb::GetDefaultAllocator()}
+            , allocator_{comb::GetDefaultMemoryResource()}
         {}
 
-        // Default constructor with initial capacity - uses global default allocator
         explicit Vector(size_t initial_capacity)
-            requires std::is_same_v<Allocator, comb::DefaultAllocator>
             : data_{nullptr}
             , size_{0}
             , capacity_{0}
-            , allocator_{&comb::GetDefaultAllocator()}
+            , allocator_{comb::GetDefaultMemoryResource()}
         {
             Reserve(initial_capacity);
         }
 
-        // Constructor with allocator
+        explicit Vector(comb::MemoryResource allocator) noexcept
+            : data_{nullptr}
+            , size_{0}
+            , capacity_{0}
+            , allocator_{allocator}
+        {}
+
+        template<comb::Allocator Allocator>
         explicit Vector(Allocator& allocator) noexcept
             : data_{nullptr}
             , size_{0}
             , capacity_{0}
-            , allocator_{&allocator}
+            , allocator_{comb::MemoryResource{allocator}}
         {}
 
-        // Constructor with allocator and initial capacity
-        Vector(Allocator& allocator, size_t initial_capacity)
+        Vector(comb::MemoryResource allocator, size_t initial_capacity)
             : data_{nullptr}
             , size_{0}
             , capacity_{0}
-            , allocator_{&allocator}
+            , allocator_{allocator}
         {
             Reserve(initial_capacity);
         }
 
-        // Initializer list constructor - uses global default allocator
-        Vector(std::initializer_list<T> init)
-            requires std::is_same_v<Allocator, comb::DefaultAllocator>
+        template<comb::Allocator Allocator>
+        Vector(Allocator& allocator, size_t initial_capacity)
             : data_{nullptr}
             , size_{0}
             , capacity_{0}
-            , allocator_{&comb::GetDefaultAllocator()}
+            , allocator_{comb::MemoryResource{allocator}}
+        {
+            Reserve(initial_capacity);
+        }
+
+        Vector(std::initializer_list<T> init)
+            : data_{nullptr}
+            , size_{0}
+            , capacity_{0}
+            , allocator_{comb::GetDefaultMemoryResource()}
         {
             Reserve(init.size());
-            for (const auto& val : init)
+            for (const auto& value : init)
             {
-                new (&data_[size_]) T(val);
+                new (&data_[size_]) T(value);
                 ++size_;
             }
         }
 
-        // Initializer list constructor with allocator
+        Vector(comb::MemoryResource allocator, std::initializer_list<T> init)
+            : data_{nullptr}
+            , size_{0}
+            , capacity_{0}
+            , allocator_{allocator}
+        {
+            Reserve(init.size());
+            for (const auto& value : init)
+            {
+                new (&data_[size_]) T(value);
+                ++size_;
+            }
+        }
+
+        template<comb::Allocator Allocator>
         Vector(Allocator& allocator, std::initializer_list<T> init)
             : data_{nullptr}
             , size_{0}
             , capacity_{0}
-            , allocator_{&allocator}
+            , allocator_{comb::MemoryResource{allocator}}
         {
             Reserve(init.size());
-            for (const auto& val : init)
+            for (const auto& value : init)
             {
-                new (&data_[size_]) T(val);
+                new (&data_[size_]) T(value);
                 ++size_;
             }
         }
 
-        // Destructor
         ~Vector() noexcept
         {
             Clear();
             if (data_)
             {
-                allocator_->Deallocate(data_);
+                allocator_.Deallocate(data_);
                 data_ = nullptr;
                 capacity_ = 0;
             }
         }
 
-        // Copy constructor
         Vector(const Vector& other)
             : data_{nullptr}
             , size_{0}
@@ -169,7 +147,6 @@ namespace wax
             }
         }
 
-        // Copy assignment
         Vector& operator=(const Vector& other)
         {
             if (this != &other)
@@ -177,7 +154,7 @@ namespace wax
                 Clear();
                 if (data_)
                 {
-                    allocator_->Deallocate(data_);
+                    allocator_.Deallocate(data_);
                     data_ = nullptr;
                     capacity_ = 0;
                 }
@@ -203,7 +180,6 @@ namespace wax
             return *this;
         }
 
-        // Move constructor
         Vector(Vector&& other) noexcept
             : data_{other.data_}
             , size_{other.size_}
@@ -215,7 +191,6 @@ namespace wax
             other.capacity_ = 0;
         }
 
-        // Move assignment
         Vector& operator=(Vector&& other) noexcept
         {
             if (this != &other)
@@ -223,7 +198,7 @@ namespace wax
                 Clear();
                 if (data_)
                 {
-                    allocator_->Deallocate(data_);
+                    allocator_.Deallocate(data_);
                 }
 
                 data_ = other.data_;
@@ -238,7 +213,6 @@ namespace wax
             return *this;
         }
 
-        // Element access (bounds-checked in debug)
         [[nodiscard]] T& operator[](size_t index) noexcept
         {
             hive::Assert(index < size_, "Vector index out of bounds");
@@ -251,7 +225,6 @@ namespace wax
             return data_[index];
         }
 
-        // Element access (always bounds-checked)
         [[nodiscard]] T& At(size_t index)
         {
             hive::Check(index < size_, "Vector index out of bounds");
@@ -264,7 +237,6 @@ namespace wax
             return data_[index];
         }
 
-        // First and last element access
         [[nodiscard]] T& Front() noexcept
         {
             hive::Assert(size_ > 0, "Vector is empty");
@@ -289,7 +261,6 @@ namespace wax
             return data_[size_ - 1];
         }
 
-        // Raw data access
         [[nodiscard]] T* Data() noexcept
         {
             return data_;
@@ -300,7 +271,6 @@ namespace wax
             return data_;
         }
 
-        // Size information
         [[nodiscard]] size_t Size() const noexcept
         {
             return size_;
@@ -316,7 +286,11 @@ namespace wax
             return size_ == 0;
         }
 
-        // Iterator support
+        [[nodiscard]] comb::MemoryResource GetAllocator() const noexcept
+        {
+            return allocator_;
+        }
+
         [[nodiscard]] Iterator begin() noexcept
         {
             return data_;
@@ -337,7 +311,6 @@ namespace wax
             return data_ + size_;
         }
 
-        // Capacity management
         void Reserve(size_t new_capacity)
         {
             if (new_capacity <= capacity_)
@@ -347,7 +320,7 @@ namespace wax
 
             hive::Check(new_capacity <= SIZE_MAX / sizeof(T), "Vector capacity overflow");
 
-            T* new_data = static_cast<T*>(allocator_->Allocate(new_capacity * sizeof(T), alignof(T)));
+            T* new_data = static_cast<T*>(allocator_.Allocate(new_capacity * sizeof(T), alignof(T)));
             hive::Check(new_data != nullptr, "Vector allocation failed");
 
             if (data_)
@@ -365,7 +338,7 @@ namespace wax
                     }
                 }
 
-                allocator_->Deallocate(data_);
+                allocator_.Deallocate(data_);
             }
 
             data_ = new_data;
@@ -383,14 +356,14 @@ namespace wax
             {
                 if (data_)
                 {
-                    allocator_->Deallocate(data_);
+                    allocator_.Deallocate(data_);
                     data_ = nullptr;
                 }
                 capacity_ = 0;
                 return;
             }
 
-            T* new_data = static_cast<T*>(allocator_->Allocate(size_ * sizeof(T), alignof(T)));
+            T* new_data = static_cast<T*>(allocator_.Allocate(size_ * sizeof(T), alignof(T)));
             hive::Check(new_data != nullptr, "Vector allocation failed");
 
             if constexpr (std::is_trivially_copyable_v<T>)
@@ -406,12 +379,11 @@ namespace wax
                 }
             }
 
-            allocator_->Deallocate(data_);
+            allocator_.Deallocate(data_);
             data_ = new_data;
             capacity_ = size_;
         }
 
-        // Modifiers
         void Clear() noexcept
         {
             if constexpr (!std::is_trivially_destructible_v<T>)
@@ -428,7 +400,7 @@ namespace wax
         {
             if (size_ == capacity_)
             {
-                size_t new_capacity = capacity_ == 0 ? 8 : capacity_ * 2;
+                const size_t new_capacity = capacity_ == 0 ? 8 : capacity_ * 2;
                 Reserve(new_capacity);
             }
 
@@ -440,7 +412,7 @@ namespace wax
         {
             if (size_ == capacity_)
             {
-                size_t new_capacity = capacity_ == 0 ? 8 : capacity_ * 2;
+                const size_t new_capacity = capacity_ == 0 ? 8 : capacity_ * 2;
                 Reserve(new_capacity);
             }
 
@@ -453,7 +425,7 @@ namespace wax
         {
             if (size_ == capacity_)
             {
-                size_t new_capacity = capacity_ == 0 ? 8 : capacity_ * 2;
+                const size_t new_capacity = capacity_ == 0 ? 8 : capacity_ * 2;
                 Reserve(new_capacity);
             }
 
@@ -532,6 +504,6 @@ namespace wax
         T* data_;
         size_t size_;
         size_t capacity_;
-        Allocator* allocator_;
+        comb::MemoryResource allocator_;
     };
 }

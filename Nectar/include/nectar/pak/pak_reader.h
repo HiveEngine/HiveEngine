@@ -25,7 +25,7 @@ namespace nectar
             wax::StringView path, comb::DefaultAllocator& alloc);
 
         /// Read an asset by ContentHash. Returns empty buffer if not found.
-        [[nodiscard]] wax::ByteBuffer<> Read(ContentHash hash, comb::DefaultAllocator& alloc);
+        [[nodiscard]] wax::ByteBuffer Read(ContentHash hash, comb::DefaultAllocator& alloc);
 
         /// Check if an asset exists.
         [[nodiscard]] bool Contains(ContentHash hash) const;

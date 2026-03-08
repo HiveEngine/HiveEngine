@@ -30,7 +30,7 @@ namespace nectar
 
     void HotReloadManager::SetBaseDirectory(wax::StringView base_dir)
     {
-        base_dir_ = wax::String<>{*alloc_};
+        base_dir_ = wax::String{*alloc_};
         base_dir_.Append(base_dir.Data(), base_dir.Size());
 
         // Normalize backslashes
@@ -67,7 +67,7 @@ namespace nectar
 
             // Strip base directory to get VFS path
             wax::StringView lookup_path = changes[i].path.View();
-            wax::String<> vfs_buf{*alloc_};
+            wax::String vfs_buf{*alloc_};
             if (base_dir_.Size() > 0)
             {
                 auto abs = changes[i].path.View();

@@ -55,9 +55,8 @@ namespace queen
     /**
      * Serialize a single field to binary
      */
-    template<typename Allocator>
-    void SerializeField(const void* component, const FieldInfo& field,
-                        wax::BinaryWriter<Allocator>& writer) noexcept
+    inline void SerializeField(const void* component, const FieldInfo& field,
+                               wax::BinaryWriter& writer) noexcept
     {
         const auto* field_ptr = static_cast<const std::byte*>(component) + field.offset;
 
@@ -273,9 +272,8 @@ namespace queen
      * @param reflection Reflection data describing the component's fields
      * @param writer BinaryWriter to write to
      */
-    template<typename Allocator>
-    void SerializeComponent(const void* component, const ComponentReflection& reflection,
-                            wax::BinaryWriter<Allocator>& writer) noexcept
+    inline void SerializeComponent(const void* component, const ComponentReflection& reflection,
+                                   wax::BinaryWriter& writer) noexcept
     {
         for (size_t i = 0; i < reflection.field_count; ++i)
         {
@@ -302,8 +300,8 @@ namespace queen
     /**
      * Serialize a reflectable component (type-safe version)
      */
-    template<Reflectable T, typename Allocator>
-    void Serialize(const T& component, wax::BinaryWriter<Allocator>& writer) noexcept
+    template<Reflectable T>
+    void Serialize(const T& component, wax::BinaryWriter& writer) noexcept
     {
         auto reflection = GetReflectionData<T>();
         SerializeComponent(&component, reflection, writer);

@@ -705,13 +705,13 @@ namespace hive::math
             return combined;
         }
 
-        wax::Vector<BVHNode, Allocator>  nodes_;
-        wax::Vector<uint32_t, Allocator> right_;   // right child index (parallel to nodes_)
-        wax::Vector<uint32_t, Allocator> parent_;   // parent index (parallel to nodes_)
-        wax::Vector<uint32_t, Allocator> items_;    // item indices, partitioned by Build
-        wax::Vector<AABB, Allocator>     item_aabbs_;
-        wax::Vector<AABB, Allocator>     fat_aabbs_;
-        wax::Vector<uint32_t, Allocator> free_list_;
+        wax::Vector<BVHNode>  nodes_;
+        wax::Vector<uint32_t> right_;   // right child index (parallel to nodes_)
+        wax::Vector<uint32_t> parent_;   // parent index (parallel to nodes_)
+        wax::Vector<uint32_t> items_;    // item indices, partitioned by Build
+        wax::Vector<AABB>     item_aabbs_;
+        wax::Vector<AABB>     fat_aabbs_;
+        wax::Vector<uint32_t> free_list_;
 
         uint32_t root_{detail::kInvalidNode};
         uint32_t item_count_{0};

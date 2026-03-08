@@ -70,9 +70,9 @@ namespace {
 
         nectar::AssetRecord r{};
         r.uuid = MakeId(10);
-        r.path = wax::String<>{alloc, "textures/hero.png"};
-        r.type = wax::String<>{alloc, "Texture"};
-        r.name = wax::String<>{alloc, "hero"};
+        r.path = wax::String{alloc, "textures/hero.png"};
+        r.type = wax::String{alloc, "Texture"};
+        r.name = wax::String{alloc, "hero"};
         db.Insert(static_cast<nectar::AssetRecord&&>(r));
 
         nectar::ImportContext ctx{alloc, db, MakeId(1)};
@@ -124,7 +124,7 @@ namespace {
             nectar::ImportResult result{};
             if (source_data.Size() < sizeof(int))
             {
-                result.error_message = wax::String<>{"Too short"};
+                result.error_message = wax::String{"Too short"};
                 return result;
             }
             result.success = true;

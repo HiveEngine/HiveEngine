@@ -15,10 +15,10 @@ namespace nectar
 
         if (!record.path.IsEmpty())
         {
-            wax::String<> path_key{*alloc_, record.path.View()};
+            wax::String path_key{*alloc_, record.path.View()};
             if (path_index_.Contains(path_key)) return false;
             AssetId uuid = record.uuid;
-            path_index_.Insert(static_cast<wax::String<>&&>(path_key), uuid);
+            path_index_.Insert(static_cast<wax::String&&>(path_key), uuid);
         }
 
         AssetId uuid = record.uuid;
@@ -34,7 +34,7 @@ namespace nectar
         // Remove path index
         if (!record->path.IsEmpty())
         {
-            wax::String<> path_key{*alloc_, record->path.View()};
+            wax::String path_key{*alloc_, record->path.View()};
             path_index_.Remove(path_key);
         }
 
@@ -54,14 +54,14 @@ namespace nectar
         {
             if (!existing->path.IsEmpty())
             {
-                wax::String<> old_key{*alloc_, existing->path.View()};
+                wax::String old_key{*alloc_, existing->path.View()};
                 path_index_.Remove(old_key);
             }
             if (!record.path.IsEmpty())
             {
-                wax::String<> new_key{*alloc_, record.path.View()};
+                wax::String new_key{*alloc_, record.path.View()};
                 if (path_index_.Contains(new_key)) return false;
-                path_index_.Insert(static_cast<wax::String<>&&>(new_key), uuid);
+                path_index_.Insert(static_cast<wax::String&&>(new_key), uuid);
             }
         }
 
@@ -81,7 +81,7 @@ namespace nectar
 
     AssetRecord* AssetDatabase::FindByPath(wax::StringView path)
     {
-        wax::String<> key{*alloc_, path};
+        wax::String key{*alloc_, path};
         auto* uuid = path_index_.Find(key);
         if (!uuid) return nullptr;
         return records_.Find(*uuid);
@@ -89,7 +89,7 @@ namespace nectar
 
     const AssetRecord* AssetDatabase::FindByPath(wax::StringView path) const
     {
-        wax::String<> key{*alloc_, path};
+        wax::String key{*alloc_, path};
         auto* uuid = path_index_.Find(key);
         if (!uuid) return nullptr;
         return records_.Find(*uuid);
@@ -129,7 +129,7 @@ namespace nectar
 
     bool AssetDatabase::ContainsPath(wax::StringView path) const
     {
-        wax::String<> key{*alloc_, path};
+        wax::String key{*alloc_, path};
         return path_index_.Contains(key);
     }
 }

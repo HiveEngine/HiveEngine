@@ -100,10 +100,10 @@ namespace nectar
         }
         if (!ok || shapes.empty())
         {
-            result.error_message = wax::String<>{"OBJ parse failed"};
+            result.error_message = wax::String{"OBJ parse failed"};
             if (!err.empty())
             {
-                result.error_message = wax::String<>{err.c_str()};
+                result.error_message = wax::String{err.c_str()};
             }
             return result;
         }
@@ -257,7 +257,7 @@ namespace nectar
 
         if (vertices.empty())
         {
-            result.error_message = wax::String<>{"OBJ contains no geometry"};
+            result.error_message = wax::String{"OBJ contains no geometry"};
             return result;
         }
 

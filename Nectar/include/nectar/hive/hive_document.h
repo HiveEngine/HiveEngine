@@ -14,7 +14,7 @@ namespace nectar
     class HiveDocument
     {
     public:
-        using SectionMap = wax::HashMap<wax::String<>, HiveValue>;
+        using SectionMap = wax::HashMap<wax::String, HiveValue>;
 
         explicit HiveDocument(comb::DefaultAllocator& alloc)
             : alloc_{&alloc}
@@ -25,16 +25,16 @@ namespace nectar
 
         [[nodiscard]] bool HasSection(wax::StringView name) const
         {
-            wax::String<> key{*alloc_, name};
+            wax::String key{*alloc_, name};
             return sections_.Contains(key);
         }
 
         void AddSection(wax::StringView name)
         {
-            wax::String<> key{*alloc_, name};
+            wax::String key{*alloc_, name};
             if (!sections_.Contains(key))
             {
-                sections_.Insert(static_cast<wax::String<>&&>(key), SectionMap{*alloc_, 8});
+                sections_.Insert(static_cast<wax::String&&>(key), SectionMap{*alloc_, 8});
             }
         }
 
@@ -42,14 +42,14 @@ namespace nectar
 
         void SetValue(wax::StringView section, wax::StringView key, HiveValue value)
         {
-            wax::String<> sec_key{*alloc_, section};
+            wax::String sec_key{*alloc_, section};
             auto* sec = sections_.Find(sec_key);
             if (!sec)
             {
-                sections_.Insert(wax::String<>{*alloc_, section}, SectionMap{*alloc_, 8});
+                sections_.Insert(wax::String{*alloc_, section}, SectionMap{*alloc_, 8});
                 sec = sections_.Find(sec_key);
             }
-            wax::String<> val_key{*alloc_, key};
+            wax::String val_key{*alloc_, key};
             auto* existing = sec->Find(val_key);
             if (existing)
             {
@@ -57,25 +57,25 @@ namespace nectar
             }
             else
             {
-                sec->Insert(static_cast<wax::String<>&&>(val_key), static_cast<HiveValue&&>(value));
+                sec->Insert(static_cast<wax::String&&>(val_key), static_cast<HiveValue&&>(value));
             }
         }
 
         [[nodiscard]] const HiveValue* GetValue(wax::StringView section, wax::StringView key) const
         {
-            wax::String<> sec_key{*alloc_, section};
+            wax::String sec_key{*alloc_, section};
             auto* sec = sections_.Find(sec_key);
             if (!sec) return nullptr;
-            wax::String<> val_key{*alloc_, key};
+            wax::String val_key{*alloc_, key};
             return sec->Find(val_key);
         }
 
         [[nodiscard]] HiveValue* GetValue(wax::StringView section, wax::StringView key)
         {
-            wax::String<> sec_key{*alloc_, section};
+            wax::String sec_key{*alloc_, section};
             auto* sec = sections_.Find(sec_key);
             if (!sec) return nullptr;
-            wax::String<> val_key{*alloc_, key};
+            wax::String val_key{*alloc_, key};
             return sec->Find(val_key);
         }
 
@@ -115,7 +115,7 @@ namespace nectar
 
         // -- Iteration --
 
-        using DocumentMap = wax::HashMap<wax::String<>, SectionMap>;
+        using DocumentMap = wax::HashMap<wax::String, SectionMap>;
 
         [[nodiscard]] const DocumentMap& Sections() const noexcept { return sections_; }
         [[nodiscard]] DocumentMap& Sections() noexcept { return sections_; }

@@ -22,7 +22,7 @@ namespace nectar
         [[nodiscard]] ContentHash Store(wax::ByteSpan data);
 
         /// Load a blob by hash. Returns empty buffer if not found.
-        [[nodiscard]] wax::ByteBuffer<> Load(ContentHash hash);
+        [[nodiscard]] wax::ByteBuffer Load(ContentHash hash);
 
         /// Check if a blob exists.
         [[nodiscard]] bool Contains(ContentHash hash) const;
@@ -33,10 +33,10 @@ namespace nectar
         [[nodiscard]] wax::StringView RootDir() const noexcept;
 
     private:
-        void BuildBlobPath(ContentHash hash, wax::String<>& out) const;
+        void BuildBlobPath(ContentHash hash, wax::String& out) const;
         void EnsureDirectoryExists(wax::StringView dir_path) const;
 
         comb::DefaultAllocator* alloc_;
-        wax::String<> root_dir_;
+        wax::String root_dir_;
     };
 }

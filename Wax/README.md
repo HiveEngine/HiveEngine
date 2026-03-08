@@ -98,7 +98,7 @@ pool.Destroy(handle);
 |-----|-----|-------|
 | `std::vector<T>` | `wax::Vector<T, A>` | Needs allocator |
 | `std::array<T, N>` | `wax::Array<T, N>` | Drop-in |
-| `std::string` | `wax::String<A>` | SSO + allocator |
+| `std::string` | `wax::String` | SSO + allocator |
 | `std::unordered_map` | `wax::HashMap<K, V, A>` | Robin Hood |
 | `std::unique_ptr<T>` | `wax::Box<T, A>` | Needs allocator |
 | `std::shared_ptr<T>` | `wax::Rc<T, A>` | Non-atomic |

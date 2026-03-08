@@ -2,6 +2,7 @@
 #include <nectar/cas/cas_store.h>
 #include <nectar/core/content_hash.h>
 #include <comb/default_allocator.h>
+#include <wax/containers/vector.h>
 #include <cstring>
 #include <filesystem>
 

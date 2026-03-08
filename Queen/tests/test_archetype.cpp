@@ -22,7 +22,7 @@ namespace
     auto test1 = larvae::RegisterTest("QueenArchetype", "Creation", []() {
         comb::LinearAllocator alloc{65536};
 
-        wax::Vector<queen::ComponentMeta, comb::LinearAllocator> metas{alloc};
+        wax::Vector<queen::ComponentMeta> metas{alloc};
         metas.PushBack(queen::ComponentMeta::Of<Position>());
         metas.PushBack(queen::ComponentMeta::Of<Velocity>());
 
@@ -37,15 +37,15 @@ namespace
     auto test2 = larvae::RegisterTest("QueenArchetype", "UniqueId", []() {
         comb::LinearAllocator alloc{131072};
 
-        wax::Vector<queen::ComponentMeta, comb::LinearAllocator> metas1{alloc};
+        wax::Vector<queen::ComponentMeta> metas1{alloc};
         metas1.PushBack(queen::ComponentMeta::Of<Position>());
         metas1.PushBack(queen::ComponentMeta::Of<Velocity>());
 
-        wax::Vector<queen::ComponentMeta, comb::LinearAllocator> metas2{alloc};
+        wax::Vector<queen::ComponentMeta> metas2{alloc};
         metas2.PushBack(queen::ComponentMeta::Of<Velocity>());
         metas2.PushBack(queen::ComponentMeta::Of<Position>());
 
-        wax::Vector<queen::ComponentMeta, comb::LinearAllocator> metas3{alloc};
+        wax::Vector<queen::ComponentMeta> metas3{alloc};
         metas3.PushBack(queen::ComponentMeta::Of<Position>());
 
         queen::Archetype<comb::LinearAllocator> arch1{alloc, std::move(metas1)};
@@ -59,7 +59,7 @@ namespace
     auto test3 = larvae::RegisterTest("QueenArchetype", "AllocateAndSetComponent", []() {
         comb::LinearAllocator alloc{65536};
 
-        wax::Vector<queen::ComponentMeta, comb::LinearAllocator> metas{alloc};
+        wax::Vector<queen::ComponentMeta> metas{alloc};
         metas.PushBack(queen::ComponentMeta::Of<Position>());
 
         queen::Archetype<comb::LinearAllocator> arch{alloc, std::move(metas)};
@@ -79,7 +79,7 @@ namespace
     auto test4 = larvae::RegisterTest("QueenArchetype", "FreeRow", []() {
         comb::LinearAllocator alloc{65536};
 
-        wax::Vector<queen::ComponentMeta, comb::LinearAllocator> metas{alloc};
+        wax::Vector<queen::ComponentMeta> metas{alloc};
         metas.PushBack(queen::ComponentMeta::Of<Position>());
 
         queen::Archetype<comb::LinearAllocator> arch{alloc, std::move(metas)};
@@ -106,7 +106,7 @@ namespace
     auto test5 = larvae::RegisterTest("QueenArchetype", "GetEntity", []() {
         comb::LinearAllocator alloc{65536};
 
-        wax::Vector<queen::ComponentMeta, comb::LinearAllocator> metas{alloc};
+        wax::Vector<queen::ComponentMeta> metas{alloc};
         metas.PushBack(queen::ComponentMeta::Of<Position>());
 
         queen::Archetype<comb::LinearAllocator> arch{alloc, std::move(metas)};
@@ -120,7 +120,7 @@ namespace
     auto test6 = larvae::RegisterTest("QueenArchetype", "GetColumnIndex", []() {
         comb::LinearAllocator alloc{65536};
 
-        wax::Vector<queen::ComponentMeta, comb::LinearAllocator> metas{alloc};
+        wax::Vector<queen::ComponentMeta> metas{alloc};
         metas.PushBack(queen::ComponentMeta::Of<Position>());
         metas.PushBack(queen::ComponentMeta::Of<Velocity>());
 
@@ -138,7 +138,7 @@ namespace
     auto test7 = larvae::RegisterTest("QueenArchetype", "ComponentTypesSorted", []() {
         comb::LinearAllocator alloc{65536};
 
-        wax::Vector<queen::ComponentMeta, comb::LinearAllocator> metas{alloc};
+        wax::Vector<queen::ComponentMeta> metas{alloc};
         metas.PushBack(queen::ComponentMeta::Of<Position>());
         metas.PushBack(queen::ComponentMeta::Of<Velocity>());
         metas.PushBack(queen::ComponentMeta::Of<Health>());
@@ -155,10 +155,10 @@ namespace
     auto test8 = larvae::RegisterTest("QueenArchetype", "EdgeCache", []() {
         comb::LinearAllocator alloc{131072};
 
-        wax::Vector<queen::ComponentMeta, comb::LinearAllocator> metas1{alloc};
+        wax::Vector<queen::ComponentMeta> metas1{alloc};
         metas1.PushBack(queen::ComponentMeta::Of<Position>());
 
-        wax::Vector<queen::ComponentMeta, comb::LinearAllocator> metas2{alloc};
+        wax::Vector<queen::ComponentMeta> metas2{alloc};
         metas2.PushBack(queen::ComponentMeta::Of<Position>());
         metas2.PushBack(queen::ComponentMeta::Of<Velocity>());
 
@@ -176,7 +176,7 @@ namespace
     auto test9 = larvae::RegisterTest("QueenArchetype", "GetColumn", []() {
         comb::LinearAllocator alloc{65536};
 
-        wax::Vector<queen::ComponentMeta, comb::LinearAllocator> metas{alloc};
+        wax::Vector<queen::ComponentMeta> metas{alloc};
         metas.PushBack(queen::ComponentMeta::Of<Position>());
 
         queen::Archetype<comb::LinearAllocator> arch{alloc, std::move(metas)};
@@ -192,7 +192,7 @@ namespace
     auto test10 = larvae::RegisterTest("QueenArchetype", "MultipleEntities", []() {
         comb::LinearAllocator alloc{65536};
 
-        wax::Vector<queen::ComponentMeta, comb::LinearAllocator> metas{alloc};
+        wax::Vector<queen::ComponentMeta> metas{alloc};
         metas.PushBack(queen::ComponentMeta::Of<Position>());
         metas.PushBack(queen::ComponentMeta::Of<Velocity>());
 
@@ -218,7 +218,7 @@ namespace
     auto test11 = larvae::RegisterTest("QueenArchetype", "EmptyArchetype", []() {
         comb::LinearAllocator alloc{65536};
 
-        wax::Vector<queen::ComponentMeta, comb::LinearAllocator> metas{alloc};
+        wax::Vector<queen::ComponentMeta> metas{alloc};
 
         queen::Archetype<comb::LinearAllocator> arch{alloc, std::move(metas)};
 

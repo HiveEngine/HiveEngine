@@ -32,7 +32,7 @@ namespace nectar
     {
         HIVE_PROFILE_SCOPE_N("ImportPipeline::ImportAsset");
         ImportOutput output{};
-        output.error_message = wax::String<>{*alloc_};
+        output.error_message = wax::String{*alloc_};
         output.dependencies = wax::Vector<DependencyEdge>{*alloc_};
 
         // 1. Find importer
@@ -61,7 +61,7 @@ namespace nectar
         auto result = importer->Import(source_data.View(), settings, ctx);
         if (!result.success)
         {
-            output.error_message = static_cast<wax::String<>&&>(result.error_message);
+            output.error_message = static_cast<wax::String&&>(result.error_message);
             return output;
         }
 
@@ -84,22 +84,22 @@ namespace nectar
             existing->content_hash = source_hash;
             existing->intermediate_hash = cas_hash;
             existing->import_version = importer->Version();
-            existing->type = wax::String<>{*alloc_};
+            existing->type = wax::String{*alloc_};
             existing->type.Append(importer->TypeName().Data(), importer->TypeName().Size());
         }
         else
         {
             AssetRecord record{};
             record.uuid = request.asset_id;
-            record.path = wax::String<>{*alloc_};
+            record.path = wax::String{*alloc_};
             record.path.Append(request.source_path.Data(), request.source_path.Size());
-            record.type = wax::String<>{*alloc_};
+            record.type = wax::String{*alloc_};
             record.type.Append(importer->TypeName().Data(), importer->TypeName().Size());
-            record.name = wax::String<>{*alloc_};
+            record.name = wax::String{*alloc_};
             record.content_hash = source_hash;
             record.intermediate_hash = cas_hash;
             record.import_version = importer->Version();
-            record.labels = wax::Vector<wax::String<>>{*alloc_};
+            record.labels = wax::Vector<wax::String>{*alloc_};
             db_->Insert(static_cast<AssetRecord&&>(record));
         }
 

@@ -72,7 +72,7 @@ namespace nectar
         if (!pixels || w <= 0 || h <= 0)
         {
             if (pixels) stbi_image_free(pixels);
-            result.error_message = wax::String<>{"Failed to decode image"};
+            result.error_message = wax::String{"Failed to decode image"};
             return result;
         }
 

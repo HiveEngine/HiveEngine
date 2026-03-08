@@ -245,7 +245,7 @@ namespace queen
         }
 
         Allocator* allocator_;
-        wax::HashMap<TypeId, size_t, Allocator> queues_;
-        wax::Vector<QueueEntry, Allocator> entries_;
+        wax::HashMap<TypeId, size_t> queues_;
+        wax::Vector<QueueEntry> entries_;
     };
 }

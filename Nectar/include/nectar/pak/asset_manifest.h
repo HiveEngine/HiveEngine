@@ -32,7 +32,7 @@ namespace nectar
         }
 
         /// Serialize to binary for embedding in .npak.
-        [[nodiscard]] wax::ByteBuffer<> Serialize(comb::DefaultAllocator& alloc) const;
+        [[nodiscard]] wax::ByteBuffer Serialize(comb::DefaultAllocator& alloc) const;
 
         /// Deserialize from binary.
         [[nodiscard]] static AssetManifest Deserialize(
@@ -40,6 +40,6 @@ namespace nectar
 
     private:
         comb::DefaultAllocator* alloc_;
-        wax::HashMap<wax::String<>, ContentHash> entries_;
+        wax::HashMap<wax::String, ContentHash> entries_;
     };
 }

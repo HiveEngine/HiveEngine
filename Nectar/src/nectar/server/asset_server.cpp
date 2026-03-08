@@ -62,7 +62,7 @@ namespace nectar
                 {
                     storage->SetStatus(pending->slot_index, AssetStatus::Failed);
                     storage->SetError(pending->slot_index,
-                                      AssetErrorInfo{AssetError::FileNotFound, wax::String<>{}});
+                                      AssetErrorInfo{AssetError::FileNotFound, wax::String{}});
                 }
                 else
                 {
@@ -72,7 +72,7 @@ namespace nectar
                     // Free ByteBuffer immediately — data was copied into asset blob by LoadFromData.
                     // Without this, ALL ByteBuffers stay alive until end of Update(), causing
                     // memory peaks when many IO requests complete simultaneously.
-                    completions[i].data = wax::ByteBuffer<>{};
+                    completions[i].data = wax::ByteBuffer{};
 
                     if (ok)
                         storage->SetStatus(pending->slot_index, AssetStatus::Ready);
@@ -80,7 +80,7 @@ namespace nectar
                     {
                         storage->SetStatus(pending->slot_index, AssetStatus::Failed);
                         storage->SetError(pending->slot_index,
-                                          AssetErrorInfo{AssetError::LoadFailed, wax::String<>{}});
+                                          AssetErrorInfo{AssetError::LoadFailed, wax::String{}});
                     }
                 }
 
@@ -111,12 +111,12 @@ namespace nectar
         pending_loads_.Insert(req_id, PendingLoad{index, generation, type_id});
     }
 
-    wax::ByteBuffer<comb::DefaultAllocator> AssetServer::ReadFile(wax::StringView path)
+    wax::ByteBuffer AssetServer::ReadFile(wax::StringView path)
     {
-        wax::ByteBuffer<comb::DefaultAllocator> buffer{*allocator_};
+        wax::ByteBuffer buffer{*allocator_};
 
         // Build full path
-        wax::String<comb::DefaultAllocator> full_path{*allocator_};
+        wax::String full_path{*allocator_};
         if (base_path_.Size() > 0)
         {
             full_path.Append(base_path_.View().Data(), base_path_.View().Size());

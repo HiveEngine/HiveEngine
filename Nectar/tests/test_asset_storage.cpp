@@ -167,7 +167,7 @@ namespace {
         nectar::AssetStorageFor<DummyAsset> storage{alloc, 8};
 
         auto handle = storage.AllocateSlot();
-        storage.SetError(handle.index, nectar::AssetErrorInfo{nectar::AssetError::FileNotFound, wax::String<>{}});
+        storage.SetError(handle.index, nectar::AssetErrorInfo{nectar::AssetError::FileNotFound, wax::String{}});
 
         auto* err = storage.GetError(handle.index);
         larvae::AssertNotNull(err);

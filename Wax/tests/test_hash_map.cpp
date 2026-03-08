@@ -7,7 +7,7 @@ namespace
 {
     auto test1 = larvae::RegisterTest("WaxHashMap", "InsertAndFind", []() {
         comb::LinearAllocator alloc{8192};
-        wax::HashMap<int, int, comb::LinearAllocator> map{alloc, 16};
+        wax::HashMap<int, int> map{alloc, 16};
 
         bool inserted = map.Insert(42, 100);
         larvae::AssertTrue(inserted);
@@ -20,7 +20,7 @@ namespace
 
     auto test2 = larvae::RegisterTest("WaxHashMap", "FindNotFound", []() {
         comb::LinearAllocator alloc{4096};
-        wax::HashMap<int, int, comb::LinearAllocator> map{alloc, 16};
+        wax::HashMap<int, int> map{alloc, 16};
 
         map.Insert(1, 100);
 
@@ -30,7 +30,7 @@ namespace
 
     auto test3 = larvae::RegisterTest("WaxHashMap", "DuplicateKey", []() {
         comb::LinearAllocator alloc{4096};
-        wax::HashMap<int, int, comb::LinearAllocator> map{alloc, 16};
+        wax::HashMap<int, int> map{alloc, 16};
 
         bool first = map.Insert(42, 100);
         bool second = map.Insert(42, 200);
@@ -43,7 +43,7 @@ namespace
 
     auto test4 = larvae::RegisterTest("WaxHashMap", "Remove", []() {
         comb::LinearAllocator alloc{4096};
-        wax::HashMap<int, int, comb::LinearAllocator> map{alloc, 16};
+        wax::HashMap<int, int> map{alloc, 16};
 
         map.Insert(1, 10);
         map.Insert(2, 20);
@@ -62,7 +62,7 @@ namespace
 
     auto test5 = larvae::RegisterTest("WaxHashMap", "RemoveNotFound", []() {
         comb::LinearAllocator alloc{4096};
-        wax::HashMap<int, int, comb::LinearAllocator> map{alloc, 16};
+        wax::HashMap<int, int> map{alloc, 16};
 
         map.Insert(1, 10);
 
@@ -73,7 +73,7 @@ namespace
 
     auto test6 = larvae::RegisterTest("WaxHashMap", "Clear", []() {
         comb::LinearAllocator alloc{4096};
-        wax::HashMap<int, int, comb::LinearAllocator> map{alloc, 16};
+        wax::HashMap<int, int> map{alloc, 16};
 
         map.Insert(1, 10);
         map.Insert(2, 20);
@@ -90,7 +90,7 @@ namespace
 
     auto test7 = larvae::RegisterTest("WaxHashMap", "Contains", []() {
         comb::LinearAllocator alloc{4096};
-        wax::HashMap<int, int, comb::LinearAllocator> map{alloc, 16};
+        wax::HashMap<int, int> map{alloc, 16};
 
         map.Insert(42, 100);
 
@@ -100,7 +100,7 @@ namespace
 
     auto test8 = larvae::RegisterTest("WaxHashMap", "Rehash", []() {
         comb::BuddyAllocator alloc{65536};
-        wax::HashMap<int, int, comb::BuddyAllocator> map{alloc, 4};
+        wax::HashMap<int, int> map{alloc, 4};
 
         for (int i = 0; i < 100; ++i)
         {
@@ -119,7 +119,7 @@ namespace
 
     auto test9 = larvae::RegisterTest("WaxHashMap", "Iterator", []() {
         comb::LinearAllocator alloc{4096};
-        wax::HashMap<int, int, comb::LinearAllocator> map{alloc, 16};
+        wax::HashMap<int, int> map{alloc, 16};
 
         map.Insert(1, 10);
         map.Insert(2, 20);
@@ -143,7 +143,7 @@ namespace
 
     auto test10 = larvae::RegisterTest("WaxHashMap", "OperatorBracket", []() {
         comb::BuddyAllocator alloc{8192};
-        wax::HashMap<int, int, comb::BuddyAllocator> map{alloc, 16};
+        wax::HashMap<int, int> map{alloc, 16};
 
         map.Insert(42, 100);
 
@@ -156,7 +156,7 @@ namespace
     auto test11 = larvae::RegisterTest("WaxHashMap", "FloatValues", []() {
         comb::BuddyAllocator alloc{16384};
 
-        wax::HashMap<int, float, comb::BuddyAllocator> map{alloc, 16};
+        wax::HashMap<int, float> map{alloc, 16};
 
         map.Insert(1, 1.5f);
         map.Insert(2, 2.5f);
@@ -169,12 +169,12 @@ namespace
 
     auto test12 = larvae::RegisterTest("WaxHashMap", "MoveConstruct", []() {
         comb::LinearAllocator alloc{8192};
-        wax::HashMap<int, int, comb::LinearAllocator> map1{alloc, 16};
+        wax::HashMap<int, int> map1{alloc, 16};
 
         map1.Insert(1, 10);
         map1.Insert(2, 20);
 
-        wax::HashMap<int, int, comb::LinearAllocator> map2{static_cast<wax::HashMap<int, int, comb::LinearAllocator>&&>(map1)};
+        wax::HashMap<int, int> map2{static_cast<wax::HashMap<int, int>&&>(map1)};
 
         larvae::AssertEqual(map2.Count(), size_t{2});
         larvae::AssertNotNull(map2.Find(1));
@@ -183,7 +183,7 @@ namespace
 
     auto test13 = larvae::RegisterTest("WaxHashMap", "RemoveAndReinsert", []() {
         comb::LinearAllocator alloc{4096};
-        wax::HashMap<int, int, comb::LinearAllocator> map{alloc, 16};
+        wax::HashMap<int, int> map{alloc, 16};
 
         map.Insert(1, 10);
         map.Insert(2, 20);
@@ -214,7 +214,7 @@ namespace
 
         {
             comb::LinearAllocator alloc{4096};
-            wax::HashMap<int, NonTrivialValue, comb::LinearAllocator> map{alloc, 16};
+            wax::HashMap<int, NonTrivialValue> map{alloc, 16};
 
             map.Emplace(1, 10);
             map.Emplace(2, 20);
@@ -230,7 +230,7 @@ namespace
 
     auto test15 = larvae::RegisterTest("WaxHashMap", "Emplace", []() {
         comb::LinearAllocator alloc{4096};
-        wax::HashMap<int, NonTrivialValue, comb::LinearAllocator> map{alloc, 16};
+        wax::HashMap<int, NonTrivialValue> map{alloc, 16};
 
         bool inserted = map.Emplace(42, 100);
         larvae::AssertTrue(inserted);
@@ -242,15 +242,15 @@ namespace
 
     auto test16 = larvae::RegisterTest("WaxHashMap", "MoveAssignment", []() {
         comb::BuddyAllocator alloc{16384};
-        wax::HashMap<int, int, comb::BuddyAllocator> map1{alloc, 16};
-        wax::HashMap<int, int, comb::BuddyAllocator> map2{alloc, 16};
+        wax::HashMap<int, int> map1{alloc, 16};
+        wax::HashMap<int, int> map2{alloc, 16};
 
         map1.Insert(1, 10);
         map1.Insert(2, 20);
 
         map2.Insert(100, 1000);
 
-        map2 = static_cast<wax::HashMap<int, int, comb::BuddyAllocator>&&>(map1);
+        map2 = static_cast<wax::HashMap<int, int>&&>(map1);
 
         larvae::AssertEqual(map2.Count(), size_t{2});
         larvae::AssertNotNull(map2.Find(1));
@@ -262,7 +262,7 @@ namespace
 
     auto test17 = larvae::RegisterTest("WaxHashMap", "EmptyMapIteration", []() {
         comb::LinearAllocator alloc{4096};
-        wax::HashMap<int, int, comb::LinearAllocator> map{alloc, 16};
+        wax::HashMap<int, int> map{alloc, 16};
 
         int count = 0;
         for (auto it = map.begin(); it != map.end(); ++it)
@@ -275,7 +275,7 @@ namespace
 
     auto test18 = larvae::RegisterTest("WaxHashMap", "OperatorBracketDefaultConstruct", []() {
         comb::BuddyAllocator alloc{8192};
-        wax::HashMap<int, int, comb::BuddyAllocator> map{alloc, 16};
+        wax::HashMap<int, int> map{alloc, 16};
 
         // Access missing key creates default value
         int& val = map[99];
@@ -290,7 +290,7 @@ namespace
 
     auto test19 = larvae::RegisterTest("WaxHashMap", "ConstFind", []() {
         comb::LinearAllocator alloc{4096};
-        wax::HashMap<int, int, comb::LinearAllocator> map{alloc, 16};
+        wax::HashMap<int, int> map{alloc, 16};
 
         map.Insert(1, 10);
         map.Insert(2, 20);
@@ -307,7 +307,7 @@ namespace
 
     auto test20 = larvae::RegisterTest("WaxHashMap", "RangeForLoop", []() {
         comb::LinearAllocator alloc{4096};
-        wax::HashMap<int, int, comb::LinearAllocator> map{alloc, 16};
+        wax::HashMap<int, int> map{alloc, 16};
 
         map.Insert(1, 10);
         map.Insert(2, 20);

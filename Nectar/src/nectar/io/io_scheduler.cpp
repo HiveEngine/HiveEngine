@@ -46,7 +46,7 @@ namespace nectar
 
         IORequest req;
         req.id = id;
-        req.path = wax::String<>{*alloc_};
+        req.path = wax::String{*alloc_};
         req.path.Append(path.Data(), path.Size());
         req.priority = priority;
         req.cancelled = false;
@@ -165,7 +165,7 @@ namespace nectar
             IOCompletion completion;
             completion.request_id = req.id;
             completion.success = (buffer.Size() > 0);
-            completion.data = static_cast<wax::ByteBuffer<>&&>(buffer);
+            completion.data = static_cast<wax::ByteBuffer&&>(buffer);
 
             {
                 std::lock_guard<HIVE_PROFILE_LOCKABLE_BASE(std::mutex)> lock{completion_mutex_};

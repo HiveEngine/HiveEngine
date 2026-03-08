@@ -11,7 +11,7 @@ namespace nectar
     struct HiveParseError
     {
         size_t line{0};
-        wax::String<> message{};
+        wax::String message{};
     };
 
     struct HiveParseResult

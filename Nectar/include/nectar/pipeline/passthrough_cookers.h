@@ -17,7 +17,7 @@ public:
     {
         CookResult r;
         r.success = true;
-        r.cooked_data = wax::ByteBuffer<comb::DefaultAllocator>{*ctx.alloc};
+        r.cooked_data = wax::ByteBuffer{*ctx.alloc};
         r.cooked_data.Append(data.Data(), data.Size());
         return r;
     }
@@ -32,7 +32,7 @@ public:
     {
         CookResult r;
         r.success = true;
-        r.cooked_data = wax::ByteBuffer<comb::DefaultAllocator>{*ctx.alloc};
+        r.cooked_data = wax::ByteBuffer{*ctx.alloc};
         r.cooked_data.Append(data.Data(), data.Size());
         return r;
     }

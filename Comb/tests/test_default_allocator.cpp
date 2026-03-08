@@ -123,7 +123,7 @@ namespace
         comb::BuddyAllocator& buddy = module.GetUnderlying();
 
         larvae::AssertEqual(buddy.GetTotalMemory(), 1_MB);
-        larvae::AssertStringEqual(buddy.GetName(), "BuddyAllocator");
+        larvae::AssertStringEqual(buddy.GetName(), "TestModule");
     });
 
     auto test10 = larvae::RegisterTest("ModuleAllocator", "ConstGetReturnsConstRef", []() {

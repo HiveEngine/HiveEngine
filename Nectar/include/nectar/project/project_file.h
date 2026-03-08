@@ -12,12 +12,12 @@ namespace nectar
 {
     struct ProjectPaths
     {
-        wax::String<> root;
-        wax::String<> assets;
-        wax::String<> cache;
-        wax::String<> cas;
-        wax::String<> source;
-        wax::String<> import_cache;
+        wax::String root;
+        wax::String assets;
+        wax::String cache;
+        wax::String cas;
+        wax::String source;
+        wax::String import_cache;
     };
 
     struct ProjectDesc
@@ -44,7 +44,7 @@ namespace nectar
 
         void Create(const ProjectDesc& desc);
 
-        [[nodiscard]] wax::String<> Serialize() const;
+        [[nodiscard]] wax::String Serialize() const;
         [[nodiscard]] bool SaveToDisk(wax::StringView file_path) const;
 
         [[nodiscard]] wax::StringView Name() const;

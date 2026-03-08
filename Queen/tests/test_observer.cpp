@@ -194,7 +194,7 @@ namespace
     auto test_observer_14_hashmap = larvae::RegisterTest("QueenObserver", "HashMapWithObserverKey", []() {
         comb::BuddyAllocator alloc{4 * 1024 * 1024};
 
-        wax::HashMap<queen::ObserverKey, uint32_t, comb::BuddyAllocator, queen::ObserverKeyHash> map{alloc, 16};
+        wax::HashMap<queen::ObserverKey, uint32_t, queen::ObserverKeyHash> map{alloc, 16};
 
         queen::ObserverKey key1 = queen::ObserverKey::Of<queen::OnAdd<Health>>();
         queen::ObserverKey key2 = queen::ObserverKey::Of<queen::OnRemove<Health>>();
@@ -215,8 +215,8 @@ namespace
     auto test_observer_14_hashmap_vec = larvae::RegisterTest("QueenObserver", "HashMapWithVectorValue", []() {
         comb::BuddyAllocator alloc{4 * 1024 * 1024};
 
-        using VectorType = wax::Vector<uint32_t, comb::BuddyAllocator>;
-        wax::HashMap<queen::ObserverKey, VectorType, comb::BuddyAllocator, queen::ObserverKeyHash> map{alloc, 16};
+        using VectorType = wax::Vector<uint32_t>;
+        wax::HashMap<queen::ObserverKey, VectorType, queen::ObserverKeyHash> map{alloc, 16};
 
         queen::ObserverKey key1 = queen::ObserverKey::Of<queen::OnAdd<Health>>();
 
@@ -234,7 +234,7 @@ namespace
     auto test_observer_14_vec_obs = larvae::RegisterTest("QueenObserver", "VectorOfObservers", []() {
         comb::BuddyAllocator alloc{4 * 1024 * 1024};
 
-        wax::Vector<queen::Observer<comb::BuddyAllocator>, comb::BuddyAllocator> observers{alloc};
+        wax::Vector<queen::Observer<comb::BuddyAllocator>> observers{alloc};
 
         queen::ObserverId id{0};
         observers.EmplaceBack(alloc, id, "TestObserver", queen::TriggerType::Add, queen::TypeIdOf<Health>());
@@ -273,9 +273,8 @@ namespace
         comb::BuddyAllocator alloc{4 * 1024 * 1024};
 
         // Create storage
-        wax::Vector<queen::Observer<comb::BuddyAllocator>, comb::BuddyAllocator> observers{alloc};
-        wax::HashMap<queen::ObserverKey, wax::Vector<uint32_t, comb::BuddyAllocator>,
-                     comb::BuddyAllocator, queen::ObserverKeyHash> lookup{alloc, 32};
+        wax::Vector<queen::Observer<comb::BuddyAllocator>> observers{alloc};
+        wax::HashMap<queen::ObserverKey, wax::Vector<uint32_t>, queen::ObserverKeyHash> lookup{alloc, 32};
 
         // Step 1: Create observer ID
         queen::ObserverId id{static_cast<uint32_t>(observers.Size())};
@@ -292,7 +291,7 @@ namespace
 
         // Step 4: Create key and add to lookup
         queen::ObserverKey key = queen::ObserverKey::Of<queen::OnAdd<Health>>();
-        wax::Vector<uint32_t, comb::BuddyAllocator> indices{alloc};
+        wax::Vector<uint32_t> indices{alloc};
         indices.PushBack(id.Value());
         lookup.Insert(key, std::move(indices));
 
@@ -308,9 +307,8 @@ namespace
         queen::World world{};  // Create World first
 
         // Manually do what ObserverStorage does internally
-        wax::Vector<queen::Observer<comb::BuddyAllocator>, comb::BuddyAllocator> observers{alloc};
-        wax::HashMap<queen::ObserverKey, wax::Vector<uint32_t, comb::BuddyAllocator>,
-                     comb::BuddyAllocator, queen::ObserverKeyHash> lookup{alloc, 32};
+        wax::Vector<queen::Observer<comb::BuddyAllocator>> observers{alloc};
+        wax::HashMap<queen::ObserverKey, wax::Vector<uint32_t>, queen::ObserverKeyHash> lookup{alloc, 32};
 
         // Step 1-4: Same as before
         queen::ObserverId id{static_cast<uint32_t>(observers.Size())};
@@ -319,7 +317,7 @@ namespace
         observers.EmplaceBack(alloc, id, "TestObserver", trigger, component_id);
 
         queen::ObserverKey key = queen::ObserverKey::Of<queen::OnAdd<Health>>();
-        wax::Vector<uint32_t, comb::BuddyAllocator> indices{alloc};
+        wax::Vector<uint32_t> indices{alloc};
         indices.PushBack(id.Value());
         lookup.Insert(key, std::move(indices));
 

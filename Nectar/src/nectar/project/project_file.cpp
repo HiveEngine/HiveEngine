@@ -34,13 +34,13 @@ ProjectFile::LoadResult ProjectFile::LoadFromDisk(wax::StringView file_path)
 {
     LoadResult result{};
 
-    wax::String<> path{*alloc_, file_path};
+    wax::String path{*alloc_, file_path};
     FILE* file = std::fopen(path.CStr(), "rb");
     if (!file)
     {
         HiveParseError err{};
         err.line = 0;
-        err.message = wax::String<>{*alloc_, "Failed to open file"};
+        err.message = wax::String{*alloc_, "Failed to open file"};
         result.errors.PushBack(static_cast<HiveParseError&&>(err));
         return result;
     }
@@ -54,12 +54,12 @@ ProjectFile::LoadResult ProjectFile::LoadFromDisk(wax::StringView file_path)
         std::fclose(file);
         HiveParseError err{};
         err.line = 0;
-        err.message = wax::String<>{*alloc_, "File is empty"};
+        err.message = wax::String{*alloc_, "File is empty"};
         result.errors.PushBack(static_cast<HiveParseError&&>(err));
         return result;
     }
 
-    wax::String<> content{*alloc_};
+    wax::String content{*alloc_};
     content.Reserve(static_cast<size_t>(file_size));
     // Read into a temporary buffer, then append
     char buf[4096];
@@ -93,15 +93,15 @@ void ProjectFile::Create(const ProjectDesc& desc)
         doc_.SetValue("render", "backend", HiveValue::MakeString(*alloc_, desc.backend));
 }
 
-wax::String<> ProjectFile::Serialize() const
+wax::String ProjectFile::Serialize() const
 {
     return HiveWriter::Write(doc_, *alloc_);
 }
 
 bool ProjectFile::SaveToDisk(wax::StringView file_path) const
 {
-    wax::String<> content = Serialize();
-    wax::String<> path{*alloc_, file_path};
+    wax::String content = Serialize();
+    wax::String path{*alloc_, file_path};
 
     FILE* file = std::fopen(path.CStr(), "wb");
     if (!file)
@@ -149,7 +149,7 @@ wax::StringView ProjectFile::SourceRelative() const
     return doc_.GetString("paths", "source", "src");
 }
 
-static void NormalizeSeparators(wax::String<>& path)
+static void NormalizeSeparators(wax::String& path)
 {
     char* data = path.Data();
     for (size_t i = 0; i < path.Size(); ++i)
@@ -159,9 +159,9 @@ static void NormalizeSeparators(wax::String<>& path)
     }
 }
 
-static wax::String<> JoinPath(comb::DefaultAllocator& alloc, wax::StringView root, wax::StringView relative)
+static wax::String JoinPath(comb::DefaultAllocator& alloc, wax::StringView root, wax::StringView relative)
 {
-    wax::String<> result{alloc, root};
+    wax::String result{alloc, root};
 
     if (!root.IsEmpty() && root.Data()[root.Size() - 1] != '/' && root.Data()[root.Size() - 1] != '\\')
         result.Append('/');
@@ -175,7 +175,7 @@ ProjectPaths ProjectFile::ResolvePaths(wax::StringView project_root) const
 {
     ProjectPaths paths{};
 
-    paths.root = wax::String<>{*alloc_, project_root};
+    paths.root = wax::String{*alloc_, project_root};
     NormalizeSeparators(paths.root);
 
     paths.assets = JoinPath(*alloc_, project_root, AssetsRelative());
@@ -195,7 +195,7 @@ bool ProjectFile::Validate(wax::Vector<HiveParseError>& errors) const
     {
         HiveParseError err{};
         err.line = 0;
-        err.message = wax::String<>{*alloc_, "[project] name is required"};
+        err.message = wax::String{*alloc_, "[project] name is required"};
         errors.PushBack(static_cast<HiveParseError&&>(err));
         return false;
     }

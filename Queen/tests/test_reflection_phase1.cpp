@@ -249,7 +249,7 @@ namespace
         WithEnum original{RenderMode::Wireframe, 0.5f};
 
         comb::LinearAllocator alloc{4096};
-        wax::BinaryWriter<comb::LinearAllocator> writer{alloc};
+        wax::BinaryWriter writer{alloc};
         queen::Serialize(original, writer);
 
         WithEnum loaded{};
@@ -264,7 +264,7 @@ namespace
         WithAlignment original{Alignment::Left, 42};
 
         comb::LinearAllocator alloc{4096};
-        wax::BinaryWriter<comb::LinearAllocator> writer{alloc};
+        wax::BinaryWriter writer{alloc};
         queen::Serialize(original, writer);
 
         WithAlignment loaded{};
@@ -292,7 +292,7 @@ namespace
         WithFixedString original{wax::FixedString{"Hello"}, 99};
 
         comb::LinearAllocator alloc{4096};
-        wax::BinaryWriter<comb::LinearAllocator> writer{alloc};
+        wax::BinaryWriter writer{alloc};
         queen::Serialize(original, writer);
 
         WithFixedString loaded{wax::FixedString{}, 0};
@@ -307,7 +307,7 @@ namespace
         WithFixedString original{wax::FixedString{}, 7};
 
         comb::LinearAllocator alloc{4096};
-        wax::BinaryWriter<comb::LinearAllocator> writer{alloc};
+        wax::BinaryWriter writer{alloc};
         queen::Serialize(original, writer);
 
         WithFixedString loaded{wax::FixedString{"garbage"}, 0};
@@ -322,7 +322,7 @@ namespace
         WithFixedString original{wax::FixedString{"1234567890123456789012"}, 1};  // 22 chars = max
 
         comb::LinearAllocator alloc{4096};
-        wax::BinaryWriter<comb::LinearAllocator> writer{alloc};
+        wax::BinaryWriter writer{alloc};
         queen::Serialize(original, writer);
 
         WithFixedString loaded{};
@@ -353,7 +353,7 @@ namespace
         WithFixedArray original{{1.f, 2.f, 3.f, 4.f}, 4};
 
         comb::LinearAllocator alloc{4096};
-        wax::BinaryWriter<comb::LinearAllocator> writer{alloc};
+        wax::BinaryWriter writer{alloc};
         queen::Serialize(original, writer);
 
         WithFixedArray loaded{};

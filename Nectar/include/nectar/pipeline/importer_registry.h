@@ -28,6 +28,6 @@ namespace nectar
 
     private:
         comb::DefaultAllocator* alloc_;
-        wax::HashMap<wax::String<>, IAssetImporter*> extension_map_;
+        wax::HashMap<wax::String, IAssetImporter*> extension_map_;
     };
 }

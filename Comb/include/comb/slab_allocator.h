@@ -402,7 +402,7 @@ namespace comb
 
             if (ptr)
             {
-                HIVE_PROFILE_ALLOC(ptr, size, "SlabAllocator");
+                HIVE_PROFILE_ALLOC(ptr, size, GetName());
             }
             return ptr;
         }
@@ -420,7 +420,7 @@ namespace comb
             if (!ptr)
                 return;
 
-            HIVE_PROFILE_FREE(ptr, "SlabAllocator");
+            HIVE_PROFILE_FREE(ptr, GetName());
 
 #if COMB_MEM_DEBUG
             DeallocateDebug(ptr);

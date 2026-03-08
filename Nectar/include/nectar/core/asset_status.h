@@ -28,6 +28,6 @@ namespace nectar
     struct AssetErrorInfo
     {
         AssetError code{AssetError::None};
-        wax::String<> message{};
+        wax::String message{};
     };
 }

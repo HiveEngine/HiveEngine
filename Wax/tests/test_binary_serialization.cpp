@@ -90,7 +90,7 @@ auto bytespan_iteration = larvae::RegisterTest("ByteSpan", "Iteration", []() {
 
 auto bytebuffer_default = larvae::RegisterTest("ByteBuffer", "DefaultConstruction", []() {
     comb::LinearAllocator alloc{1024};
-    wax::ByteBuffer<comb::LinearAllocator> buffer{alloc};
+    wax::ByteBuffer buffer{alloc};
 
     larvae::AssertEqual(buffer.Size(), 0u);
     larvae::AssertTrue(buffer.IsEmpty());
@@ -98,7 +98,7 @@ auto bytebuffer_default = larvae::RegisterTest("ByteBuffer", "DefaultConstructio
 
 auto bytebuffer_reserve = larvae::RegisterTest("ByteBuffer", "Reserve", []() {
     comb::LinearAllocator alloc{1024};
-    wax::ByteBuffer<comb::LinearAllocator> buffer{alloc};
+    wax::ByteBuffer buffer{alloc};
 
     buffer.Reserve(100);
     larvae::AssertTrue(buffer.Capacity() >= 100u);
@@ -107,7 +107,7 @@ auto bytebuffer_reserve = larvae::RegisterTest("ByteBuffer", "Reserve", []() {
 
 auto bytebuffer_append_byte = larvae::RegisterTest("ByteBuffer", "AppendByte", []() {
     comb::LinearAllocator alloc{1024};
-    wax::ByteBuffer<comb::LinearAllocator> buffer{alloc};
+    wax::ByteBuffer buffer{alloc};
 
     buffer.Append(static_cast<uint8_t>(42));
     buffer.Append(static_cast<uint8_t>(123));
@@ -119,7 +119,7 @@ auto bytebuffer_append_byte = larvae::RegisterTest("ByteBuffer", "AppendByte", [
 
 auto bytebuffer_append = larvae::RegisterTest("ByteBuffer", "Append", []() {
     comb::LinearAllocator alloc{1024};
-    wax::ByteBuffer<comb::LinearAllocator> buffer{alloc};
+    wax::ByteBuffer buffer{alloc};
 
     uint8_t data[] = {1, 2, 3, 4};
     buffer.Append(data, 4);
@@ -131,7 +131,7 @@ auto bytebuffer_append = larvae::RegisterTest("ByteBuffer", "Append", []() {
 
 auto bytebuffer_clear = larvae::RegisterTest("ByteBuffer", "Clear", []() {
     comb::LinearAllocator alloc{1024};
-    wax::ByteBuffer<comb::LinearAllocator> buffer{alloc};
+    wax::ByteBuffer buffer{alloc};
 
     buffer.Append(static_cast<uint8_t>(1));
     buffer.Append(static_cast<uint8_t>(2));
@@ -143,7 +143,7 @@ auto bytebuffer_clear = larvae::RegisterTest("ByteBuffer", "Clear", []() {
 
 auto bytebuffer_view = larvae::RegisterTest("ByteBuffer", "View", []() {
     comb::LinearAllocator alloc{1024};
-    wax::ByteBuffer<comb::LinearAllocator> buffer{alloc};
+    wax::ByteBuffer buffer{alloc};
 
     buffer.Append(static_cast<uint8_t>(10));
     buffer.Append(static_cast<uint8_t>(20));
@@ -160,7 +160,7 @@ auto bytebuffer_view = larvae::RegisterTest("ByteBuffer", "View", []() {
 
 auto writer_int8 = larvae::RegisterTest("BinaryWriter", "WriteInt8", []() {
     comb::LinearAllocator alloc{1024};
-    wax::BinaryWriter<comb::LinearAllocator> writer{alloc};
+    wax::BinaryWriter writer{alloc};
 
     writer.Write<int8_t>(-42);
 
@@ -170,7 +170,7 @@ auto writer_int8 = larvae::RegisterTest("BinaryWriter", "WriteInt8", []() {
 
 auto writer_int16 = larvae::RegisterTest("BinaryWriter", "WriteInt16", []() {
     comb::LinearAllocator alloc{1024};
-    wax::BinaryWriter<comb::LinearAllocator> writer{alloc};
+    wax::BinaryWriter writer{alloc};
 
     writer.Write<int16_t>(0x1234);
 
@@ -182,7 +182,7 @@ auto writer_int16 = larvae::RegisterTest("BinaryWriter", "WriteInt16", []() {
 
 auto writer_int32 = larvae::RegisterTest("BinaryWriter", "WriteInt32", []() {
     comb::LinearAllocator alloc{1024};
-    wax::BinaryWriter<comb::LinearAllocator> writer{alloc};
+    wax::BinaryWriter writer{alloc};
 
     writer.Write<int32_t>(0x12345678);
 
@@ -196,7 +196,7 @@ auto writer_int32 = larvae::RegisterTest("BinaryWriter", "WriteInt32", []() {
 
 auto writer_int64 = larvae::RegisterTest("BinaryWriter", "WriteInt64", []() {
     comb::LinearAllocator alloc{1024};
-    wax::BinaryWriter<comb::LinearAllocator> writer{alloc};
+    wax::BinaryWriter writer{alloc};
 
     writer.Write<int64_t>(0x123456789ABCDEF0LL);
 
@@ -205,7 +205,7 @@ auto writer_int64 = larvae::RegisterTest("BinaryWriter", "WriteInt64", []() {
 
 auto writer_float = larvae::RegisterTest("BinaryWriter", "WriteFloat", []() {
     comb::LinearAllocator alloc{1024};
-    wax::BinaryWriter<comb::LinearAllocator> writer{alloc};
+    wax::BinaryWriter writer{alloc};
 
     writer.Write<float>(3.14159f);
 
@@ -214,7 +214,7 @@ auto writer_float = larvae::RegisterTest("BinaryWriter", "WriteFloat", []() {
 
 auto writer_double = larvae::RegisterTest("BinaryWriter", "WriteDouble", []() {
     comb::LinearAllocator alloc{1024};
-    wax::BinaryWriter<comb::LinearAllocator> writer{alloc};
+    wax::BinaryWriter writer{alloc};
 
     writer.Write<double>(3.141592653589793);
 
@@ -223,7 +223,7 @@ auto writer_double = larvae::RegisterTest("BinaryWriter", "WriteDouble", []() {
 
 auto writer_bytes = larvae::RegisterTest("BinaryWriter", "WriteBytes", []() {
     comb::LinearAllocator alloc{1024};
-    wax::BinaryWriter<comb::LinearAllocator> writer{alloc};
+    wax::BinaryWriter writer{alloc};
 
     uint8_t data[] = {0xDE, 0xAD, 0xBE, 0xEF};
     writer.WriteBytes(data, 4);
@@ -235,7 +235,7 @@ auto writer_bytes = larvae::RegisterTest("BinaryWriter", "WriteBytes", []() {
 
 auto writer_multiple = larvae::RegisterTest("BinaryWriter", "WriteMultipleValues", []() {
     comb::LinearAllocator alloc{1024};
-    wax::BinaryWriter<comb::LinearAllocator> writer{alloc};
+    wax::BinaryWriter writer{alloc};
 
     writer.Write<uint32_t>(0x12345678);
     writer.Write<uint16_t>(0xABCD);
@@ -246,7 +246,7 @@ auto writer_multiple = larvae::RegisterTest("BinaryWriter", "WriteMultipleValues
 
 auto writer_clear = larvae::RegisterTest("BinaryWriter", "Clear", []() {
     comb::LinearAllocator alloc{1024};
-    wax::BinaryWriter<comb::LinearAllocator> writer{alloc};
+    wax::BinaryWriter writer{alloc};
 
     writer.Write<uint32_t>(123);
     writer.Clear();
@@ -256,7 +256,7 @@ auto writer_clear = larvae::RegisterTest("BinaryWriter", "Clear", []() {
 
 auto writer_varint = larvae::RegisterTest("BinaryWriter", "WriteVarInt", []() {
     comb::LinearAllocator alloc{1024};
-    wax::BinaryWriter<comb::LinearAllocator> writer{alloc};
+    wax::BinaryWriter writer{alloc};
 
     // Small value (1 byte)
     writer.WriteVarInt(0);
@@ -285,7 +285,7 @@ auto writer_varint = larvae::RegisterTest("BinaryWriter", "WriteVarInt", []() {
 
 auto writer_string = larvae::RegisterTest("BinaryWriter", "WriteString", []() {
     comb::LinearAllocator alloc{1024};
-    wax::BinaryWriter<comb::LinearAllocator> writer{alloc};
+    wax::BinaryWriter writer{alloc};
 
     writer.WriteString("Hello", 5);
 
@@ -508,7 +508,7 @@ auto reader_remaining_view = larvae::RegisterTest("BinaryReader", "RemainingView
 
 auto roundtrip_int8 = larvae::RegisterTest("BinarySerialization", "RoundTripInt8", []() {
     comb::LinearAllocator alloc{1024};
-    wax::BinaryWriter<comb::LinearAllocator> writer{alloc};
+    wax::BinaryWriter writer{alloc};
 
     writer.Write<int8_t>(-100);
 
@@ -518,7 +518,7 @@ auto roundtrip_int8 = larvae::RegisterTest("BinarySerialization", "RoundTripInt8
 
 auto roundtrip_int16 = larvae::RegisterTest("BinarySerialization", "RoundTripInt16", []() {
     comb::LinearAllocator alloc{1024};
-    wax::BinaryWriter<comb::LinearAllocator> writer{alloc};
+    wax::BinaryWriter writer{alloc};
 
     writer.Write<int16_t>(-12345);
 
@@ -528,7 +528,7 @@ auto roundtrip_int16 = larvae::RegisterTest("BinarySerialization", "RoundTripInt
 
 auto roundtrip_int32 = larvae::RegisterTest("BinarySerialization", "RoundTripInt32", []() {
     comb::LinearAllocator alloc{1024};
-    wax::BinaryWriter<comb::LinearAllocator> writer{alloc};
+    wax::BinaryWriter writer{alloc};
 
     writer.Write<int32_t>(-123456789);
 
@@ -538,7 +538,7 @@ auto roundtrip_int32 = larvae::RegisterTest("BinarySerialization", "RoundTripInt
 
 auto roundtrip_int64 = larvae::RegisterTest("BinarySerialization", "RoundTripInt64", []() {
     comb::LinearAllocator alloc{1024};
-    wax::BinaryWriter<comb::LinearAllocator> writer{alloc};
+    wax::BinaryWriter writer{alloc};
 
     writer.Write<int64_t>(-1234567890123456789LL);
 
@@ -548,7 +548,7 @@ auto roundtrip_int64 = larvae::RegisterTest("BinarySerialization", "RoundTripInt
 
 auto roundtrip_unsigned = larvae::RegisterTest("BinarySerialization", "RoundTripUnsigned", []() {
     comb::LinearAllocator alloc{1024};
-    wax::BinaryWriter<comb::LinearAllocator> writer{alloc};
+    wax::BinaryWriter writer{alloc};
 
     writer.Write<uint8_t>(255);
     writer.Write<uint16_t>(65535);
@@ -564,7 +564,7 @@ auto roundtrip_unsigned = larvae::RegisterTest("BinarySerialization", "RoundTrip
 
 auto roundtrip_float = larvae::RegisterTest("BinarySerialization", "RoundTripFloat", []() {
     comb::LinearAllocator alloc{1024};
-    wax::BinaryWriter<comb::LinearAllocator> writer{alloc};
+    wax::BinaryWriter writer{alloc};
 
     writer.Write<float>(3.14159f);
     writer.Write<float>(-123.456f);
@@ -583,7 +583,7 @@ auto roundtrip_float = larvae::RegisterTest("BinarySerialization", "RoundTripFlo
 
 auto roundtrip_double = larvae::RegisterTest("BinarySerialization", "RoundTripDouble", []() {
     comb::LinearAllocator alloc{1024};
-    wax::BinaryWriter<comb::LinearAllocator> writer{alloc};
+    wax::BinaryWriter writer{alloc};
 
     writer.Write<double>(3.141592653589793);
     writer.Write<double>(-2.718281828459045);
@@ -599,7 +599,7 @@ auto roundtrip_double = larvae::RegisterTest("BinarySerialization", "RoundTripDo
 
 auto roundtrip_varint = larvae::RegisterTest("BinarySerialization", "RoundTripVarInt", []() {
     comb::LinearAllocator alloc{1024};
-    wax::BinaryWriter<comb::LinearAllocator> writer{alloc};
+    wax::BinaryWriter writer{alloc};
 
     writer.WriteVarInt(0);
     writer.WriteVarInt(127);
@@ -619,7 +619,7 @@ auto roundtrip_varint = larvae::RegisterTest("BinarySerialization", "RoundTripVa
 
 auto roundtrip_mixed = larvae::RegisterTest("BinarySerialization", "RoundTripMixedTypes", []() {
     comb::LinearAllocator alloc{1024};
-    wax::BinaryWriter<comb::LinearAllocator> writer{alloc};
+    wax::BinaryWriter writer{alloc};
 
     writer.Write<uint32_t>(0xDEADBEEF);
     writer.Write<float>(42.5f);
@@ -649,7 +649,7 @@ auto roundtrip_struct = larvae::RegisterTest("BinarySerialization", "RoundTripSt
     };
 
     comb::LinearAllocator alloc{1024};
-    wax::BinaryWriter<comb::LinearAllocator> writer{alloc};
+    wax::BinaryWriter writer{alloc};
 
     TestStruct original{100, -200, 3.5f};
     writer.WriteBytes(&original, sizeof(TestStruct));
@@ -741,7 +741,7 @@ auto bytespan_array_ctor = larvae::RegisterTest("ByteSpan", "ArrayConstructor", 
 
 auto bytebuffer_append_typed = larvae::RegisterTest("ByteBuffer", "AppendTyped", []() {
     comb::LinearAllocator alloc{1024};
-    wax::ByteBuffer<comb::LinearAllocator> buffer{alloc};
+    wax::ByteBuffer buffer{alloc};
 
     uint32_t val = 0x12345678;
     buffer.Append(val);
@@ -755,7 +755,7 @@ auto bytebuffer_append_typed = larvae::RegisterTest("ByteBuffer", "AppendTyped",
 
 auto bytebuffer_append_span = larvae::RegisterTest("ByteBuffer", "AppendByteSpan", []() {
     comb::LinearAllocator alloc{1024};
-    wax::ByteBuffer<comb::LinearAllocator> buffer{alloc};
+    wax::ByteBuffer buffer{alloc};
 
     uint8_t data[] = {10, 20, 30};
     wax::ByteSpan span{data, 3};
@@ -770,7 +770,7 @@ auto bytebuffer_append_span = larvae::RegisterTest("ByteBuffer", "AppendByteSpan
 
 auto bytebuffer_resize = larvae::RegisterTest("ByteBuffer", "Resize", []() {
     comb::LinearAllocator alloc{1024};
-    wax::ByteBuffer<comb::LinearAllocator> buffer{alloc};
+    wax::ByteBuffer buffer{alloc};
 
     buffer.Append(static_cast<uint8_t>(1));
     buffer.Append(static_cast<uint8_t>(2));
@@ -789,7 +789,7 @@ auto bytebuffer_resize = larvae::RegisterTest("ByteBuffer", "Resize", []() {
 
 auto bytebuffer_view_offset = larvae::RegisterTest("ByteBuffer", "ViewWithOffset", []() {
     comb::LinearAllocator alloc{1024};
-    wax::ByteBuffer<comb::LinearAllocator> buffer{alloc};
+    wax::ByteBuffer buffer{alloc};
 
     buffer.Append(static_cast<uint8_t>(10));
     buffer.Append(static_cast<uint8_t>(20));
@@ -804,7 +804,7 @@ auto bytebuffer_view_offset = larvae::RegisterTest("ByteBuffer", "ViewWithOffset
 
 auto bytebuffer_mutable = larvae::RegisterTest("ByteBuffer", "MutableAccess", []() {
     comb::LinearAllocator alloc{1024};
-    wax::ByteBuffer<comb::LinearAllocator> buffer{alloc};
+    wax::ByteBuffer buffer{alloc};
 
     buffer.Append(static_cast<uint8_t>(1));
     buffer.Append(static_cast<uint8_t>(2));
@@ -822,7 +822,7 @@ auto bytebuffer_mutable = larvae::RegisterTest("ByteBuffer", "MutableAccess", []
 
 auto bytebuffer_iterators = larvae::RegisterTest("ByteBuffer", "Iterators", []() {
     comb::LinearAllocator alloc{1024};
-    wax::ByteBuffer<comb::LinearAllocator> buffer{alloc};
+    wax::ByteBuffer buffer{alloc};
 
     buffer.Append(static_cast<uint8_t>(1));
     buffer.Append(static_cast<uint8_t>(2));
@@ -852,7 +852,7 @@ auto bytebuffer_iterators = larvae::RegisterTest("ByteBuffer", "Iterators", []()
 
 auto writer_varint_signed = larvae::RegisterTest("BinaryWriter", "WriteVarIntSigned", []() {
     comb::LinearAllocator alloc{1024};
-    wax::BinaryWriter<comb::LinearAllocator> writer{alloc};
+    wax::BinaryWriter writer{alloc};
 
     // 0 -> ZigZag 0 -> 1 byte
     writer.WriteVarIntSigned(0);
@@ -876,7 +876,7 @@ auto writer_varint_signed = larvae::RegisterTest("BinaryWriter", "WriteVarIntSig
 
 auto writer_stringz = larvae::RegisterTest("BinaryWriter", "WriteStringZ", []() {
     comb::LinearAllocator alloc{1024};
-    wax::BinaryWriter<comb::LinearAllocator> writer{alloc};
+    wax::BinaryWriter writer{alloc};
 
     writer.WriteStringZ("Hi");
 
@@ -889,7 +889,7 @@ auto writer_stringz = larvae::RegisterTest("BinaryWriter", "WriteStringZ", []() 
 
 auto writer_stringz_null = larvae::RegisterTest("BinaryWriter", "WriteStringZNull", []() {
     comb::LinearAllocator alloc{1024};
-    wax::BinaryWriter<comb::LinearAllocator> writer{alloc};
+    wax::BinaryWriter writer{alloc};
 
     writer.WriteStringZ(nullptr);
 
@@ -899,7 +899,7 @@ auto writer_stringz_null = larvae::RegisterTest("BinaryWriter", "WriteStringZNul
 
 auto writer_padding = larvae::RegisterTest("BinaryWriter", "WritePadding", []() {
     comb::LinearAllocator alloc{1024};
-    wax::BinaryWriter<comb::LinearAllocator> writer{alloc};
+    wax::BinaryWriter writer{alloc};
 
     writer.Write<uint8_t>(0xFF);
     writer.WritePadding(3);
@@ -913,7 +913,7 @@ auto writer_padding = larvae::RegisterTest("BinaryWriter", "WritePadding", []() 
 
 auto writer_alignment = larvae::RegisterTest("BinaryWriter", "WriteAlignment", []() {
     comb::LinearAllocator alloc{1024};
-    wax::BinaryWriter<comb::LinearAllocator> writer{alloc};
+    wax::BinaryWriter writer{alloc};
 
     writer.Write<uint8_t>(0xFF);         // 1 byte
     writer.WriteAlignment(4);            // Pad to 4-byte boundary: 3 zeros
@@ -926,7 +926,7 @@ auto writer_alignment = larvae::RegisterTest("BinaryWriter", "WriteAlignment", [
 
 auto writer_bytes_span = larvae::RegisterTest("BinaryWriter", "WriteBytesSpan", []() {
     comb::LinearAllocator alloc{1024};
-    wax::BinaryWriter<comb::LinearAllocator> writer{alloc};
+    wax::BinaryWriter writer{alloc};
 
     uint8_t data[] = {0xAA, 0xBB, 0xCC};
     wax::ByteSpan span{data, 3};
@@ -941,7 +941,7 @@ auto writer_bytes_span = larvae::RegisterTest("BinaryWriter", "WriteBytesSpan", 
 
 auto writer_string_cstr = larvae::RegisterTest("BinaryWriter", "WriteStringCStr", []() {
     comb::LinearAllocator alloc{1024};
-    wax::BinaryWriter<comb::LinearAllocator> writer{alloc};
+    wax::BinaryWriter writer{alloc};
 
     writer.WriteString("Test");
 
@@ -959,7 +959,7 @@ auto writer_string_cstr = larvae::RegisterTest("BinaryWriter", "WriteStringCStr"
 
 auto writer_string_null = larvae::RegisterTest("BinaryWriter", "WriteStringNull", []() {
     comb::LinearAllocator alloc{1024};
-    wax::BinaryWriter<comb::LinearAllocator> writer{alloc};
+    wax::BinaryWriter writer{alloc};
 
     writer.WriteString(static_cast<const char*>(nullptr));
 
@@ -1077,7 +1077,7 @@ auto reader_read_out = larvae::RegisterTest("BinaryReader", "ReadOutputParam", [
 
 auto roundtrip_varint_signed = larvae::RegisterTest("BinarySerialization", "RoundTripVarIntSigned", []() {
     comb::LinearAllocator alloc{1024};
-    wax::BinaryWriter<comb::LinearAllocator> writer{alloc};
+    wax::BinaryWriter writer{alloc};
 
     writer.WriteVarIntSigned(0);
     writer.WriteVarIntSigned(1);
@@ -1099,7 +1099,7 @@ auto roundtrip_varint_signed = larvae::RegisterTest("BinarySerialization", "Roun
 
 auto roundtrip_stringz = larvae::RegisterTest("BinarySerialization", "RoundTripStringZ", []() {
     comb::LinearAllocator alloc{1024};
-    wax::BinaryWriter<comb::LinearAllocator> writer{alloc};
+    wax::BinaryWriter writer{alloc};
 
     writer.WriteStringZ("Hello");
     writer.WriteStringZ("World");
@@ -1119,7 +1119,7 @@ auto roundtrip_stringz = larvae::RegisterTest("BinarySerialization", "RoundTripS
 
 auto roundtrip_string_cstr = larvae::RegisterTest("BinarySerialization", "RoundTripStringCStr", []() {
     comb::LinearAllocator alloc{1024};
-    wax::BinaryWriter<comb::LinearAllocator> writer{alloc};
+    wax::BinaryWriter writer{alloc};
 
     writer.WriteString("Test");
 
@@ -1135,7 +1135,7 @@ auto roundtrip_string_cstr = larvae::RegisterTest("BinarySerialization", "RoundT
 
 auto roundtrip_alignment = larvae::RegisterTest("BinarySerialization", "RoundTripWithAlignment", []() {
     comb::LinearAllocator alloc{1024};
-    wax::BinaryWriter<comb::LinearAllocator> writer{alloc};
+    wax::BinaryWriter writer{alloc};
 
     writer.Write<uint8_t>(0xFF);
     writer.WriteAlignment(4);    // 3 bytes padding

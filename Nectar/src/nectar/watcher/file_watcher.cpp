@@ -15,9 +15,9 @@ namespace nectar
 
     void PollingFileWatcher::Watch(wax::StringView directory)
     {
-        wax::String<> dir{*alloc_};
+        wax::String dir{*alloc_};
         dir.Append(directory.Data(), directory.Size());
-        watched_dirs_.PushBack(static_cast<wax::String<>&&>(dir));
+        watched_dirs_.PushBack(static_cast<wax::String&&>(dir));
     }
 
     size_t PollingFileWatcher::WatchedDirCount() const noexcept
@@ -64,13 +64,13 @@ namespace nectar
     {
         HIVE_PROFILE_SCOPE_N("FileWatcher::ScanDirectories");
         // Mark all known files as "not seen" by using a temp set
-        wax::HashMap<wax::String<>, bool> seen{*alloc_, 256};
+        wax::HashMap<wax::String, bool> seen{*alloc_, 256};
 
         for (size_t i = 0; i < watched_dirs_.Size(); ++i)
             ScanDirectory(watched_dirs_[i].View(), changes);
 
         // Detect deletions
-        wax::Vector<wax::String<>> to_remove{*alloc_};
+        wax::Vector<wax::String> to_remove{*alloc_};
         for (auto it = known_files_.begin(); it != known_files_.end(); ++it)
         {
             std::error_code ec;
@@ -78,14 +78,14 @@ namespace nectar
                     std::filesystem::path{it.Key().CStr()}, ec))
             {
                 FileChange change;
-                change.path = wax::String<>{*alloc_};
+                change.path = wax::String{*alloc_};
                 change.path.Append(it.Key().CStr(), it.Key().Size());
                 change.kind = FileChangeKind::Deleted;
                 changes.PushBack(static_cast<FileChange&&>(change));
 
-                wax::String<> key{*alloc_};
+                wax::String key{*alloc_};
                 key.Append(it.Key().CStr(), it.Key().Size());
-                to_remove.PushBack(static_cast<wax::String<>&&>(key));
+                to_remove.PushBack(static_cast<wax::String&&>(key));
             }
         }
 
@@ -112,18 +112,18 @@ namespace nectar
 
             auto snapshot = GetFileSnapshot(entry.path());
 
-            wax::String<> key{*alloc_};
+            wax::String key{*alloc_};
             key.Append(path_str.c_str(), path_str.size());
 
             auto* existing = known_files_.Find(key);
             if (!existing)
             {
-                wax::String<> insert_key{*alloc_};
+                wax::String insert_key{*alloc_};
                 insert_key.Append(path_str.c_str(), path_str.size());
-                known_files_.Insert(static_cast<wax::String<>&&>(insert_key), snapshot);
+                known_files_.Insert(static_cast<wax::String&&>(insert_key), snapshot);
 
                 FileChange change;
-                change.path = wax::String<>{*alloc_};
+                change.path = wax::String{*alloc_};
                 change.path.Append(path_str.c_str(), path_str.size());
                 change.kind = FileChangeKind::Created;
                 changes.PushBack(static_cast<FileChange&&>(change));
@@ -133,7 +133,7 @@ namespace nectar
                 *existing = snapshot;
 
                 FileChange change;
-                change.path = wax::String<>{*alloc_};
+                change.path = wax::String{*alloc_};
                 change.path.Append(path_str.c_str(), path_str.size());
                 change.kind = FileChangeKind::Modified;
                 changes.PushBack(static_cast<FileChange&&>(change));

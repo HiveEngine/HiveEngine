@@ -1,59 +1,15 @@
 #pragma once
 
-#include <hive/core/assert.h>
-#include <comb/allocator_concepts.h>
-#include <comb/default_allocator.h>
-#include <cstdint>
 #include <cstddef>
-#include <utility>
+#include <cstdint>
 #include <functional>
+#include <utility>
+#include <comb/memory_resource.h>
+#include <hive/core/assert.h>
 
 namespace wax
 {
-    /**
-     * Open-addressing hash map with Robin Hood hashing
-     *
-     * Cache-friendly hash map optimized for game engines. Uses linear probing
-     * with Robin Hood insertion to minimize probe distances.
-     *
-     * Use cases:
-     * - Entity component lookup (EntityID -> Component)
-     * - Asset caches (string hash -> asset)
-     * - General key-value storage with fast lookup
-     *
-     * Memory layout: Single contiguous array of buckets
-     * ┌─────────┬─────────┬─────────┬─────────┐
-     * │ Bucket0 │ Bucket1 │ Bucket2 │ ...     │
-     * │ K,V,PSL │ K,V,PSL │ K,V,PSL │         │
-     * └─────────┴─────────┴─────────┴─────────┘
-     *
-     * Performance:
-     * - Insert: O(1) average
-     * - Find: O(1) average
-     * - Remove: O(1) average
-     * - Iteration: O(capacity)
-     * - Load factor: 0.75 max (rehash at 75% full)
-     *
-     * Limitations:
-     * - Keys must be hashable (std::hash<K> or custom)
-     * - Iteration order is not deterministic
-     * - No pointer stability (rehash invalidates pointers)
-     *
-     * Example:
-     * @code
-     *   comb::LinearAllocator alloc{1_MB};
-     *   wax::HashMap<EntityID, Transform> transforms{alloc, 1000};
-     *
-     *   transforms.Insert(entity.id, transform);
-     *
-     *   if (auto* t = transforms.Find(entity.id)) {
-     *       t->position.x += 1.0f;
-     *   }
-     *
-     *   transforms.Remove(entity.id);
-     * @endcode
-     */
-    template<typename K, typename V, comb::Allocator Allocator = comb::DefaultAllocator, typename Hash = std::hash<K>>
+    template<typename K, typename V, typename Hash = std::hash<K>>
     class HashMap
     {
     private:
@@ -67,7 +23,7 @@ namespace wax
             alignas(K) unsigned char key_storage[sizeof(K)];
             alignas(V) unsigned char value_storage[sizeof(V)];
             uint8_t state{kEmpty};
-            uint8_t psl{0};  // Probe Sequence Length (Robin Hood)
+            uint8_t psl{0};
 
             [[nodiscard]] K* Key() { return reinterpret_cast<K*>(key_storage); }
             [[nodiscard]] const K* Key() const { return reinterpret_cast<const K*>(key_storage); }
@@ -80,7 +36,9 @@ namespace wax
         {
         public:
             Iterator(Bucket* buckets, size_t index, size_t capacity)
-                : buckets_{buckets}, index_{index}, capacity_{capacity}
+                : buckets_{buckets}
+                , index_{index}
+                , capacity_{capacity}
             {
                 SkipEmpty();
             }
@@ -98,7 +56,6 @@ namespace wax
             }
 
             bool operator==(const Iterator& other) const { return index_ == other.index_; }
-
             [[nodiscard]] const K& Key() const { return *buckets_[index_].Key(); }
             [[nodiscard]] V& Value() { return *buckets_[index_].Value(); }
 
@@ -120,7 +77,9 @@ namespace wax
         {
         public:
             ConstIterator(const Bucket* buckets, size_t index, size_t capacity)
-                : buckets_{buckets}, index_{index}, capacity_{capacity}
+                : buckets_{buckets}
+                , index_{index}
+                , capacity_{capacity}
             {
                 SkipEmpty();
             }
@@ -138,7 +97,6 @@ namespace wax
             }
 
             bool operator==(const ConstIterator& other) const { return index_ == other.index_; }
-
             [[nodiscard]] const K& Key() const { return *buckets_[index_].Key(); }
             [[nodiscard]] const V& Value() const { return *buckets_[index_].Value(); }
 
@@ -156,49 +114,33 @@ namespace wax
             size_t capacity_;
         };
 
-        // Default constructor - uses global default allocator
-        HashMap(size_t initial_capacity = 16)
-            requires std::is_same_v<Allocator, comb::DefaultAllocator>
-            : allocator_{&comb::GetDefaultAllocator()}
+        explicit HashMap(size_t initial_capacity = 16)
+            : allocator_{comb::GetDefaultMemoryResource()}
             , capacity_{NextPowerOfTwo(initial_capacity)}
             , count_{0}
         {
-            hive::Assert(initial_capacity > 0, "HashMap capacity must be > 0");
-
-            buckets_ = static_cast<Bucket*>(allocator_->Allocate(sizeof(Bucket) * capacity_, alignof(Bucket)));
-            hive::Assert(buckets_ != nullptr, "Failed to allocate HashMap buckets");
-
-            for (size_t i = 0; i < capacity_; ++i)
-            {
-                buckets_[i].state = kEmpty;
-                buckets_[i].psl = 0;
-            }
+            InitializeBuckets(initial_capacity);
         }
 
-        // Constructor with allocator
+        explicit HashMap(comb::MemoryResource allocator, size_t initial_capacity = 16)
+            : allocator_{allocator}
+            , capacity_{NextPowerOfTwo(initial_capacity)}
+            , count_{0}
+        {
+            InitializeBuckets(initial_capacity);
+        }
+
+        template<comb::Allocator Allocator>
         HashMap(Allocator& allocator, size_t initial_capacity = 16)
-            : allocator_{&allocator}
-            , capacity_{NextPowerOfTwo(initial_capacity)}
-            , count_{0}
-        {
-            hive::Assert(initial_capacity > 0, "HashMap capacity must be > 0");
-
-            buckets_ = static_cast<Bucket*>(allocator.Allocate(sizeof(Bucket) * capacity_, alignof(Bucket)));
-            hive::Assert(buckets_ != nullptr, "Failed to allocate HashMap buckets");
-
-            for (size_t i = 0; i < capacity_; ++i)
-            {
-                buckets_[i].state = kEmpty;
-                buckets_[i].psl = 0;
-            }
-        }
+            : HashMap{comb::MemoryResource{allocator}, initial_capacity}
+        {}
 
         ~HashMap()
         {
             Clear();
-            if (buckets_ && allocator_)
+            if (buckets_)
             {
-                allocator_->Deallocate(buckets_);
+                allocator_.Deallocate(buckets_);
             }
         }
 
@@ -211,7 +153,6 @@ namespace wax
             , capacity_{other.capacity_}
             , count_{other.count_}
         {
-            other.allocator_ = nullptr;
             other.buckets_ = nullptr;
             other.capacity_ = 0;
             other.count_ = 0;
@@ -222,9 +163,9 @@ namespace wax
             if (this != &other)
             {
                 Clear();
-                if (buckets_ && allocator_)
+                if (buckets_)
                 {
-                    allocator_->Deallocate(buckets_);
+                    allocator_.Deallocate(buckets_);
                 }
 
                 allocator_ = other.allocator_;
@@ -232,7 +173,6 @@ namespace wax
                 capacity_ = other.capacity_;
                 count_ = other.count_;
 
-                other.allocator_ = nullptr;
                 other.buckets_ = nullptr;
                 other.capacity_ = 0;
                 other.count_ = 0;
@@ -246,7 +186,6 @@ namespace wax
             {
                 Rehash(capacity_ * 2);
             }
-
             return InsertInternal(key, value);
         }
 
@@ -256,7 +195,6 @@ namespace wax
             {
                 Rehash(capacity_ * 2);
             }
-
             return InsertInternalMove(key, static_cast<V&&>(value));
         }
 
@@ -268,7 +206,7 @@ namespace wax
                 Rehash(capacity_ * 2);
             }
 
-            size_t hash = Hash{}(key);
+            const size_t hash = Hash{}(key);
             size_t index = hash & (capacity_ - 1);
             uint8_t psl = 0;
 
@@ -295,7 +233,7 @@ namespace wax
                 {
                     K temp_key = static_cast<K&&>(*bucket.Key());
                     V temp_value = static_cast<V&&>(*bucket.Value());
-                    uint8_t temp_psl = bucket.psl;
+                    const uint8_t temp_psl = bucket.psl;
 
                     bucket.Key()->~K();
                     bucket.Value()->~V();
@@ -316,7 +254,7 @@ namespace wax
 
         [[nodiscard]] V* Find(const K& key) noexcept
         {
-            size_t hash = Hash{}(key);
+            const size_t hash = Hash{}(key);
             size_t index = hash & (capacity_ - 1);
             uint8_t psl = 0;
 
@@ -359,7 +297,7 @@ namespace wax
 
         bool Remove(const K& key)
         {
-            size_t hash = Hash{}(key);
+            const size_t hash = Hash{}(key);
             size_t index = hash & (capacity_ - 1);
             uint8_t psl = 0;
 
@@ -385,7 +323,6 @@ namespace wax
                         bucket.Value()->~V();
                         bucket.state = kDeleted;
                         --count_;
-
                         ShiftBackward(index);
                         return true;
                     }
@@ -398,8 +335,7 @@ namespace wax
 
         V& operator[](const K& key)
         {
-            V* found = Find(key);
-            if (found)
+            if (V* found = Find(key))
             {
                 return *found;
             }
@@ -410,18 +346,19 @@ namespace wax
 
         void Clear() noexcept
         {
+            if (buckets_ == nullptr)
+            {
+                return;
+            }
+
             for (size_t i = 0; i < capacity_; ++i)
             {
                 if (buckets_[i].state == kOccupied)
                 {
                     buckets_[i].Key()->~K();
                     buckets_[i].Value()->~V();
-                    buckets_[i].state = kEmpty;
                 }
-                else
-                {
-                    buckets_[i].state = kEmpty;
-                }
+                buckets_[i].state = kEmpty;
                 buckets_[i].psl = 0;
             }
             count_ = 0;
@@ -430,7 +367,8 @@ namespace wax
         [[nodiscard]] size_t Count() const noexcept { return count_; }
         [[nodiscard]] size_t Capacity() const noexcept { return capacity_; }
         [[nodiscard]] bool IsEmpty() const noexcept { return count_ == 0; }
-        [[nodiscard]] float LoadFactor() const noexcept { return static_cast<float>(count_) / capacity_; }
+        [[nodiscard]] float LoadFactor() const noexcept { return static_cast<float>(count_) / static_cast<float>(capacity_); }
+        [[nodiscard]] comb::MemoryResource GetAllocator() const noexcept { return allocator_; }
 
         [[nodiscard]] Iterator begin() noexcept { return Iterator{buckets_, 0, capacity_}; }
         [[nodiscard]] Iterator end() noexcept { return Iterator{buckets_, capacity_, capacity_}; }
@@ -438,6 +376,20 @@ namespace wax
         [[nodiscard]] ConstIterator end() const noexcept { return ConstIterator{buckets_, capacity_, capacity_}; }
 
     private:
+        void InitializeBuckets(size_t initial_capacity)
+        {
+            hive::Assert(initial_capacity > 0, "HashMap capacity must be > 0");
+
+            buckets_ = static_cast<Bucket*>(allocator_.Allocate(sizeof(Bucket) * capacity_, alignof(Bucket)));
+            hive::Assert(buckets_ != nullptr, "Failed to allocate HashMap buckets");
+
+            for (size_t i = 0; i < capacity_; ++i)
+            {
+                buckets_[i].state = kEmpty;
+                buckets_[i].psl = 0;
+            }
+        }
+
         [[nodiscard]] bool ShouldRehash() const noexcept
         {
             return count_ >= static_cast<size_t>(static_cast<float>(capacity_) * kMaxLoadFactor);
@@ -446,10 +398,10 @@ namespace wax
         void Rehash(size_t new_capacity)
         {
             Bucket* old_buckets = buckets_;
-            size_t old_capacity = capacity_;
+            const size_t old_capacity = capacity_;
 
             capacity_ = new_capacity;
-            buckets_ = static_cast<Bucket*>(allocator_->Allocate(sizeof(Bucket) * capacity_, alignof(Bucket)));
+            buckets_ = static_cast<Bucket*>(allocator_.Allocate(sizeof(Bucket) * capacity_, alignof(Bucket)));
             hive::Assert(buckets_ != nullptr, "Failed to allocate HashMap buckets during rehash");
 
             for (size_t i = 0; i < capacity_; ++i)
@@ -470,12 +422,12 @@ namespace wax
                 }
             }
 
-            allocator_->Deallocate(old_buckets);
+            allocator_.Deallocate(old_buckets);
         }
 
         bool InsertInternal(const K& key, const V& value)
         {
-            size_t hash = Hash{}(key);
+            const size_t hash = Hash{}(key);
             size_t index = hash & (capacity_ - 1);
             uint8_t psl = 0;
 
@@ -515,7 +467,7 @@ namespace wax
 
         bool InsertInternalMove(const K& key, V&& value)
         {
-            size_t hash = Hash{}(key);
+            const size_t hash = Hash{}(key);
             size_t index = hash & (capacity_ - 1);
             uint8_t psl = 0;
 
@@ -606,7 +558,10 @@ namespace wax
 
         static constexpr size_t NextPowerOfTwo(size_t n)
         {
-            if (n == 0) return 1;
+            if (n == 0)
+            {
+                return 1;
+            }
             --n;
             n |= n >> 1;
             n |= n >> 2;
@@ -617,8 +572,8 @@ namespace wax
             return n + 1;
         }
 
-        Allocator* allocator_;
-        Bucket* buckets_;
+        comb::MemoryResource allocator_;
+        Bucket* buckets_{nullptr};
         size_t capacity_;
         size_t count_;
     };

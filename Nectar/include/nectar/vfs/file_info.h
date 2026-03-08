@@ -23,7 +23,7 @@ namespace nectar
 
     struct DirectoryEntry
     {
-        wax::String<> name;
+        wax::String name;
         bool is_directory{false};
     };
 }

@@ -25,7 +25,7 @@ namespace nectar
         void Unmount(wax::StringView mount_point, MountSource* source);
 
         /// Read a file through the VFS. Returns empty buffer if not found.
-        [[nodiscard]] wax::ByteBuffer<> ReadSync(wax::StringView path);
+        [[nodiscard]] wax::ByteBuffer ReadSync(wax::StringView path);
 
         /// Check if a file exists in any mount.
         [[nodiscard]] bool Exists(wax::StringView path) const;
@@ -42,7 +42,7 @@ namespace nectar
     private:
         struct MountEntry
         {
-            wax::String<> prefix;   // normalized mount point
+            wax::String prefix;   // normalized mount point
             MountSource* source;
             int priority;
         };
@@ -50,7 +50,7 @@ namespace nectar
         /// Resolve path to a mount source + relative path.
         /// Returns nullptr if no mount matches.
         MountSource* Resolve(wax::StringView normalized_path,
-                             wax::String<>& out_relative) const;
+                             wax::String& out_relative) const;
 
         comb::DefaultAllocator* alloc_;
         wax::Vector<MountEntry> mounts_;  // sorted by priority descending

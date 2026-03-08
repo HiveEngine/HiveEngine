@@ -27,6 +27,31 @@ namespace {
         larvae::AssertNotNull(vec.Data());
     });
 
+    auto test2b = larvae::RegisterTest("WaxVector", "ConstructionWithMemoryResource", []() {
+        comb::LinearAllocator alloc{1024};
+        comb::MemoryResource resource{alloc};
+        wax::Vector<int> vec{resource, 10};
+
+        vec.PushBack(7);
+
+        larvae::AssertEqual(vec.Size(), 1u);
+        larvae::AssertEqual(vec.Capacity(), 10u);
+        larvae::AssertEqual(vec[0], 7);
+        larvae::AssertEqual(resource.GetName(), alloc.GetName());
+    });
+
+    auto test2c = larvae::RegisterTest("WaxVector", "LegacyAliasAcceptsMemoryResource", []() {
+        comb::LinearAllocator alloc{1024};
+        comb::MemoryResource resource{alloc};
+        wax::Vector<int> vec{resource, 10};
+
+        vec.PushBack(42);
+
+        larvae::AssertEqual(vec.Size(), 1u);
+        larvae::AssertEqual(vec.Capacity(), 10u);
+        larvae::AssertEqual(vec[0], 42);
+    });
+
     // =============================================================================
     // Push and Pop Operations
     // =============================================================================
@@ -595,7 +620,7 @@ namespace {
 
         {
             comb::LinearAllocator alloc{4096};
-            wax::Vector<Tracked, comb::LinearAllocator> vec{alloc};
+            wax::Vector<Tracked> vec{alloc};
 
             vec.EmplaceBack(1);
             vec.EmplaceBack(2);
@@ -614,7 +639,7 @@ namespace {
         Tracked::alive_count = 0;
 
         comb::LinearAllocator alloc{4096};
-        wax::Vector<Tracked, comb::LinearAllocator> vec{alloc};
+        wax::Vector<Tracked> vec{alloc};
 
         vec.EmplaceBack(1);
         vec.EmplaceBack(2);
@@ -635,12 +660,12 @@ namespace {
         Tracked::alive_count = 0;
 
         comb::LinearAllocator alloc{4096};
-        wax::Vector<Tracked, comb::LinearAllocator> vec1{alloc};
+        wax::Vector<Tracked> vec1{alloc};
 
         vec1.EmplaceBack(10);
         vec1.EmplaceBack(20);
 
-        wax::Vector<Tracked, comb::LinearAllocator> vec2{vec1};
+        wax::Vector<Tracked> vec2{vec1};
 
         larvae::AssertEqual(vec2.Size(), 2u);
         larvae::AssertEqual(vec2[0].value, 10);
@@ -654,7 +679,7 @@ namespace {
         Tracked::alive_count = 0;
 
         comb::LinearAllocator alloc{4096};
-        wax::Vector<Tracked, comb::LinearAllocator> vec{alloc};
+        wax::Vector<Tracked> vec{alloc};
 
         vec.EmplaceBack(1);
         vec.EmplaceBack(2);

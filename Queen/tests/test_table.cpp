@@ -22,7 +22,7 @@ namespace
     auto test1 = larvae::RegisterTest("QueenTable", "AllocateRow", []() {
         comb::LinearAllocator alloc{65536};
 
-        wax::Vector<queen::ComponentMeta, comb::LinearAllocator> metas{alloc};
+        wax::Vector<queen::ComponentMeta> metas{alloc};
         metas.PushBack(queen::ComponentMeta::Of<Position>());
         metas.PushBack(queen::ComponentMeta::Of<Velocity>());
 
@@ -39,7 +39,7 @@ namespace
     auto test2 = larvae::RegisterTest("QueenTable", "AllocateMultipleRows", []() {
         comb::LinearAllocator alloc{65536};
 
-        wax::Vector<queen::ComponentMeta, comb::LinearAllocator> metas{alloc};
+        wax::Vector<queen::ComponentMeta> metas{alloc};
         metas.PushBack(queen::ComponentMeta::Of<Position>());
 
         queen::Table<comb::LinearAllocator> table{alloc, metas, 100};
@@ -61,7 +61,7 @@ namespace
     auto test3 = larvae::RegisterTest("QueenTable", "GetColumn", []() {
         comb::LinearAllocator alloc{65536};
 
-        wax::Vector<queen::ComponentMeta, comb::LinearAllocator> metas{alloc};
+        wax::Vector<queen::ComponentMeta> metas{alloc};
         metas.PushBack(queen::ComponentMeta::Of<Position>());
         metas.PushBack(queen::ComponentMeta::Of<Velocity>());
 
@@ -79,7 +79,7 @@ namespace
     auto test4 = larvae::RegisterTest("QueenTable", "SetAndGetComponent", []() {
         comb::LinearAllocator alloc{65536};
 
-        wax::Vector<queen::ComponentMeta, comb::LinearAllocator> metas{alloc};
+        wax::Vector<queen::ComponentMeta> metas{alloc};
         metas.PushBack(queen::ComponentMeta::Of<Position>());
 
         queen::Table<comb::LinearAllocator> table{alloc, metas, 100};
@@ -101,7 +101,7 @@ namespace
     auto test5 = larvae::RegisterTest("QueenTable", "FreeRowSwapAndPop", []() {
         comb::LinearAllocator alloc{65536};
 
-        wax::Vector<queen::ComponentMeta, comb::LinearAllocator> metas{alloc};
+        wax::Vector<queen::ComponentMeta> metas{alloc};
         metas.PushBack(queen::ComponentMeta::Of<Position>());
 
         queen::Table<comb::LinearAllocator> table{alloc, metas, 100};
@@ -132,7 +132,7 @@ namespace
     auto test6 = larvae::RegisterTest("QueenTable", "FreeLastRow", []() {
         comb::LinearAllocator alloc{65536};
 
-        wax::Vector<queen::ComponentMeta, comb::LinearAllocator> metas{alloc};
+        wax::Vector<queen::ComponentMeta> metas{alloc};
         metas.PushBack(queen::ComponentMeta::Of<Position>());
 
         queen::Table<comb::LinearAllocator> table{alloc, metas, 100};
@@ -153,7 +153,7 @@ namespace
     auto test7 = larvae::RegisterTest("QueenTable", "HasComponent", []() {
         comb::LinearAllocator alloc{65536};
 
-        wax::Vector<queen::ComponentMeta, comb::LinearAllocator> metas{alloc};
+        wax::Vector<queen::ComponentMeta> metas{alloc};
         metas.PushBack(queen::ComponentMeta::Of<Position>());
         metas.PushBack(queen::ComponentMeta::Of<Velocity>());
 
@@ -167,7 +167,7 @@ namespace
     auto test8 = larvae::RegisterTest("QueenTable", "MultipleColumns", []() {
         comb::LinearAllocator alloc{65536};
 
-        wax::Vector<queen::ComponentMeta, comb::LinearAllocator> metas{alloc};
+        wax::Vector<queen::ComponentMeta> metas{alloc};
         metas.PushBack(queen::ComponentMeta::Of<Position>());
         metas.PushBack(queen::ComponentMeta::Of<Velocity>());
         metas.PushBack(queen::ComponentMeta::Of<Health>());
@@ -189,7 +189,7 @@ namespace
     auto test9 = larvae::RegisterTest("QueenTable", "ColumnCount", []() {
         comb::LinearAllocator alloc{65536};
 
-        wax::Vector<queen::ComponentMeta, comb::LinearAllocator> metas{alloc};
+        wax::Vector<queen::ComponentMeta> metas{alloc};
         metas.PushBack(queen::ComponentMeta::Of<Position>());
         metas.PushBack(queen::ComponentMeta::Of<Velocity>());
 
@@ -201,7 +201,7 @@ namespace
     auto test10 = larvae::RegisterTest("QueenTable", "EmptyTable", []() {
         comb::LinearAllocator alloc{65536};
 
-        wax::Vector<queen::ComponentMeta, comb::LinearAllocator> metas{alloc};
+        wax::Vector<queen::ComponentMeta> metas{alloc};
         metas.PushBack(queen::ComponentMeta::Of<Position>());
 
         queen::Table<comb::LinearAllocator> table{alloc, metas, 100};
@@ -217,7 +217,7 @@ namespace
     auto test11 = larvae::RegisterTest("QueenTable", "GetEntities", []() {
         comb::LinearAllocator alloc{65536};
 
-        wax::Vector<queen::ComponentMeta, comb::LinearAllocator> metas{alloc};
+        wax::Vector<queen::ComponentMeta> metas{alloc};
         metas.PushBack(queen::ComponentMeta::Of<Position>());
 
         queen::Table<comb::LinearAllocator> table{alloc, metas, 100};
@@ -237,7 +237,7 @@ namespace
     auto test12 = larvae::RegisterTest("QueenTable", "GetColumnByTypeId", []() {
         comb::LinearAllocator alloc{65536};
 
-        wax::Vector<queen::ComponentMeta, comb::LinearAllocator> metas{alloc};
+        wax::Vector<queen::ComponentMeta> metas{alloc};
         metas.PushBack(queen::ComponentMeta::Of<Position>());
 
         queen::Table<comb::LinearAllocator> table{alloc, metas, 100};
@@ -257,7 +257,7 @@ namespace
     auto test13 = larvae::RegisterTest("QueenTable", "MoveRowToSameComponents", []() {
         comb::LinearAllocator alloc{65536};
 
-        wax::Vector<queen::ComponentMeta, comb::LinearAllocator> metas{alloc};
+        wax::Vector<queen::ComponentMeta> metas{alloc};
         metas.PushBack(queen::ComponentMeta::Of<Position>());
         metas.PushBack(queen::ComponentMeta::Of<Velocity>());
 
@@ -295,12 +295,12 @@ namespace
     auto test14 = larvae::RegisterTest("QueenTable", "MoveRowToPartialComponents", []() {
         comb::LinearAllocator alloc{65536};
 
-        wax::Vector<queen::ComponentMeta, comb::LinearAllocator> src_metas{alloc};
+        wax::Vector<queen::ComponentMeta> src_metas{alloc};
         src_metas.PushBack(queen::ComponentMeta::Of<Position>());
         src_metas.PushBack(queen::ComponentMeta::Of<Velocity>());
         src_metas.PushBack(queen::ComponentMeta::Of<Health>());
 
-        wax::Vector<queen::ComponentMeta, comb::LinearAllocator> dst_metas{alloc};
+        wax::Vector<queen::ComponentMeta> dst_metas{alloc};
         dst_metas.PushBack(queen::ComponentMeta::Of<Position>());
         dst_metas.PushBack(queen::ComponentMeta::Of<Health>());
 
@@ -336,10 +336,10 @@ namespace
     auto test15 = larvae::RegisterTest("QueenTable", "MoveRowToNoCommonComponents", []() {
         comb::LinearAllocator alloc{65536};
 
-        wax::Vector<queen::ComponentMeta, comb::LinearAllocator> src_metas{alloc};
+        wax::Vector<queen::ComponentMeta> src_metas{alloc};
         src_metas.PushBack(queen::ComponentMeta::Of<Position>());
 
-        wax::Vector<queen::ComponentMeta, comb::LinearAllocator> dst_metas{alloc};
+        wax::Vector<queen::ComponentMeta> dst_metas{alloc};
         dst_metas.PushBack(queen::ComponentMeta::Of<Health>());
 
         queen::Table<comb::LinearAllocator> src{alloc, src_metas, 100};
@@ -360,7 +360,7 @@ namespace
     auto test16 = larvae::RegisterTest("QueenTable", "GetTypeIds", []() {
         comb::LinearAllocator alloc{65536};
 
-        wax::Vector<queen::ComponentMeta, comb::LinearAllocator> metas{alloc};
+        wax::Vector<queen::ComponentMeta> metas{alloc};
         metas.PushBack(queen::ComponentMeta::Of<Position>());
         metas.PushBack(queen::ComponentMeta::Of<Velocity>());
         metas.PushBack(queen::ComponentMeta::Of<Health>());

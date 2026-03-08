@@ -257,7 +257,7 @@ namespace queen
             auto* indices = lookup_.Find(key);
             if (indices == nullptr)
             {
-                wax::Vector<uint32_t, Allocator> new_indices{*allocator_};
+                wax::Vector<uint32_t> new_indices{*allocator_};
                 new_indices.PushBack(observer_index);
                 lookup_.Insert(key, std::move(new_indices));
             }
@@ -268,7 +268,7 @@ namespace queen
         }
 
         Allocator* allocator_;
-        wax::Vector<Observer<Allocator>, Allocator> observers_;
-        wax::HashMap<ObserverKey, wax::Vector<uint32_t, Allocator>, Allocator, ObserverKeyHash> lookup_;
+        wax::Vector<Observer<Allocator>> observers_;
+        wax::HashMap<ObserverKey, wax::Vector<uint32_t>, ObserverKeyHash> lookup_;
     };
 }

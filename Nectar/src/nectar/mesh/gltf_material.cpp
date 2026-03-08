@@ -43,12 +43,12 @@ namespace nectar
                 const auto& tex_view = mat.pbr_metallic_roughness.base_color_texture;
                 if (tex_view.texture && tex_view.texture->image && tex_view.texture->image->uri)
                 {
-                    info.base_color_texture = wax::String<>{tex_view.texture->image->uri};
+                    info.base_color_texture = wax::String{tex_view.texture->image->uri};
                 }
 
                 const auto& mr_view = mat.pbr_metallic_roughness.metallic_roughness_texture;
                 if (mr_view.texture && mr_view.texture->image && mr_view.texture->image->uri)
-                    info.metallic_roughness_texture = wax::String<>{mr_view.texture->image->uri};
+                    info.metallic_roughness_texture = wax::String{mr_view.texture->image->uri};
 
                 info.metallic_factor = mat.pbr_metallic_roughness.metallic_factor;
                 info.roughness_factor = mat.pbr_metallic_roughness.roughness_factor;
@@ -57,7 +57,7 @@ namespace nectar
             if (mat.normal_texture.texture && mat.normal_texture.texture->image &&
                 mat.normal_texture.texture->image->uri)
             {
-                info.normal_texture = wax::String<>{mat.normal_texture.texture->image->uri};
+                info.normal_texture = wax::String{mat.normal_texture.texture->image->uri};
             }
 
             if (mat.alpha_mode == cgltf_alpha_mode_mask)

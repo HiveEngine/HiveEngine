@@ -1124,7 +1124,7 @@ namespace queen
         void ForEachDescendant(Entity root, F&& callback)
         {
             // Depth-first traversal using frame allocator stack
-            wax::Vector<Entity, FrameAllocator> stack{GetFrameAllocator()};
+            wax::Vector<Entity> stack{GetFrameAllocator()};
 
             const Children* root_children = Get<Children>(root);
             if (root_children != nullptr)
@@ -1229,7 +1229,7 @@ namespace queen
             }
 
             // Collect all descendants first to avoid modification during iteration
-            wax::Vector<Entity, FrameAllocator> to_despawn{GetFrameAllocator()};
+            wax::Vector<Entity> to_despawn{GetFrameAllocator()};
             ForEachDescendant(entity, [&to_despawn](Entity descendant) {
                 to_despawn.PushBack(descendant);
             });
@@ -1357,8 +1357,8 @@ namespace queen
         ArchetypeGraph<ComponentAllocator> archetype_graph_;
         ComponentIndex<PersistentAllocator> component_index_;
 
-        wax::HashMap<TypeId, void*, PersistentAllocator> resources_;
-        wax::Vector<ComponentMeta, PersistentAllocator> resource_metas_;
+        wax::HashMap<TypeId, void*> resources_;
+        wax::Vector<ComponentMeta> resource_metas_;
 
         SystemStorage<PersistentAllocator> systems_;
         Scheduler<PersistentAllocator> scheduler_;
@@ -1486,8 +1486,8 @@ namespace queen
 
     private:
         World* world_;
-        wax::Vector<ComponentMeta, FrameAllocator> pending_metas_;
-        wax::Vector<void*, FrameAllocator> pending_data_;
+        wax::Vector<ComponentMeta> pending_metas_;
+        wax::Vector<void*> pending_data_;
     };
 
     inline EntityBuilder World::Spawn()

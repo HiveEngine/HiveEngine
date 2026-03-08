@@ -22,7 +22,7 @@ namespace nectar
         [[nodiscard]] size_t FileCount() const noexcept;
 
         // -- MountSource --
-        [[nodiscard]] wax::ByteBuffer<> ReadFile(
+        [[nodiscard]] wax::ByteBuffer ReadFile(
             wax::StringView path, comb::DefaultAllocator& alloc) override;
         [[nodiscard]] bool Exists(wax::StringView path) const override;
         [[nodiscard]] FileInfo Stat(wax::StringView path) const override;
@@ -33,6 +33,6 @@ namespace nectar
 
     private:
         comb::DefaultAllocator* alloc_;
-        wax::HashMap<wax::String<>, wax::Vector<uint8_t>> files_;
+        wax::HashMap<wax::String, wax::Vector<uint8_t>> files_;
     };
 }

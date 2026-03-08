@@ -68,7 +68,7 @@ namespace {
         {
             nectar::ImportResult r{};
             r.success = true;
-            r.intermediate_data = wax::ByteBuffer<>{GetPipeAlloc()};
+            r.intermediate_data = wax::ByteBuffer{GetPipeAlloc()};
             r.intermediate_data.Append(source_data.Data(), source_data.Size());
             return r;
         }
@@ -91,7 +91,7 @@ namespace {
                                      nectar::ImportContext&) override
         {
             nectar::ImportResult r{};
-            r.error_message = wax::String<>{GetPipeAlloc(), "import failed on purpose"};
+            r.error_message = wax::String{GetPipeAlloc(), "import failed on purpose"};
             return r;
         }
     };
@@ -117,7 +117,7 @@ namespace {
             ctx.DeclareHardDep(dep_target);
             nectar::ImportResult r{};
             r.success = true;
-            r.intermediate_data = wax::ByteBuffer<>{GetPipeAlloc()};
+            r.intermediate_data = wax::ByteBuffer{GetPipeAlloc()};
             r.intermediate_data.Append(source_data.Data(), source_data.Size());
             return r;
         }

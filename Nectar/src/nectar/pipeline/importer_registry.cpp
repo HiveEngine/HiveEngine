@@ -16,7 +16,7 @@ namespace nectar
         for (size_t i = 0; i < exts.Size(); ++i)
         {
             wax::StringView raw{exts[i]};
-            wax::String<> key{*alloc_};
+            wax::String key{*alloc_};
             for (size_t c = 0; c < raw.Size(); ++c)
             {
                 char ch = raw[c];
@@ -30,13 +30,13 @@ namespace nectar
             if (existing)
                 *existing = importer;
             else
-                extension_map_.Insert(static_cast<wax::String<>&&>(key), importer);
+                extension_map_.Insert(static_cast<wax::String&&>(key), importer);
         }
     }
 
     IAssetImporter* ImporterRegistry::FindByExtension(wax::StringView extension) const
     {
-        wax::String<> key{*alloc_};
+        wax::String key{*alloc_};
         for (size_t i = 0; i < extension.Size(); ++i)
         {
             char ch = extension[i];

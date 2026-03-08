@@ -3,13 +3,13 @@
 
 namespace nectar
 {
-    wax::String<> NormalizePath(wax::StringView path, comb::DefaultAllocator& alloc)
+    wax::String NormalizePath(wax::StringView path, comb::DefaultAllocator& alloc)
     {
         if (path.Size() == 0)
-            return wax::String<>{alloc};
+            return wax::String{alloc};
 
         // Copy into mutable buffer, replace backslashes and lowercase
-        wax::String<> buf{alloc};
+        wax::String buf{alloc};
         buf.Append(path.Data(), path.Size());
 
         // In-place transform: backslash -> slash, uppercase -> lowercase
@@ -50,7 +50,7 @@ namespace nectar
         }
 
         // Join with '/'
-        wax::String<> result{alloc};
+        wax::String result{alloc};
         for (size_t i = 0; i < segments.Size(); ++i)
         {
             if (i > 0)
