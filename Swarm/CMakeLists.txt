@@ -28,15 +28,161 @@ function(swarm_fix_diligent_targets DIR)
     endforeach()
 endfunction()
 
+function(swarm_find_prebuilt_diligent PACKAGE_DIR OUT_FOUND OUT_SOURCE_DIR)
+    set(_swarm_had_find_targets_global FALSE)
+    if(DEFINED CMAKE_FIND_PACKAGE_TARGETS_GLOBAL)
+        set(_swarm_had_find_targets_global TRUE)
+        set(_swarm_prev_find_targets_global "${CMAKE_FIND_PACKAGE_TARGETS_GLOBAL}")
+    endif()
+
+    set(CMAKE_FIND_PACKAGE_TARGETS_GLOBAL TRUE)
+    find_package(HiveDiligent CONFIG QUIET
+        PATHS "${PACKAGE_DIR}"
+        NO_DEFAULT_PATH
+    )
+
+    if(_swarm_had_find_targets_global)
+        set(CMAKE_FIND_PACKAGE_TARGETS_GLOBAL "${_swarm_prev_find_targets_global}")
+    else()
+        unset(CMAKE_FIND_PACKAGE_TARGETS_GLOBAL)
+    endif()
+
+    unset(_swarm_had_find_targets_global)
+    unset(_swarm_prev_find_targets_global)
+
+    if(HiveDiligent_FOUND)
+        set(${OUT_FOUND} TRUE PARENT_SCOPE)
+        if(HIVE_DILIGENT_SOURCE_DIR)
+            set(${OUT_SOURCE_DIR} "${HIVE_DILIGENT_SOURCE_DIR}" PARENT_SCOPE)
+        else()
+            set(${OUT_SOURCE_DIR} "" PARENT_SCOPE)
+        endif()
+    else()
+        set(${OUT_FOUND} FALSE PARENT_SCOPE)
+        set(${OUT_SOURCE_DIR} "" PARENT_SCOPE)
+    endif()
+endfunction()
+
+function(swarm_bootstrap_prebuilt_diligent BUILD_DIR PACKAGE_DIR BUILD_CONFIG)
+    set(_swarm_bootstrap_source_dir "${CMAKE_SOURCE_DIR}/tools/diligent")
+    if(NOT EXISTS "${_swarm_bootstrap_source_dir}/CMakeLists.txt")
+        message(FATAL_ERROR "Swarm: Diligent bootstrap project not found at ${_swarm_bootstrap_source_dir}")
+    endif()
+
+    file(MAKE_DIRECTORY "${BUILD_DIR}")
+    file(MAKE_DIRECTORY "${PACKAGE_DIR}")
+
+    set(_swarm_bootstrap_configure_stdout_log "${BUILD_DIR}/hive_diligent_configure.stdout.log")
+    set(_swarm_bootstrap_configure_stderr_log "${BUILD_DIR}/hive_diligent_configure.stderr.log")
+    set(_swarm_bootstrap_build_stdout_log "${BUILD_DIR}/hive_diligent_build.stdout.log")
+    set(_swarm_bootstrap_build_stderr_log "${BUILD_DIR}/hive_diligent_build.stderr.log")
+
+    set(_swarm_bootstrap_configure_cmd
+        "${CMAKE_COMMAND}"
+        -S "${_swarm_bootstrap_source_dir}"
+        -B "${BUILD_DIR}"
+        -G "${CMAKE_GENERATOR}"
+        "-DHIVE_ROOT_DIR=${CMAKE_SOURCE_DIR}"
+        "-DHIVE_DILIGENT_EXPORT_DIR=${PACKAGE_DIR}"
+    )
+
+    if(CMAKE_GENERATOR_PLATFORM)
+        list(APPEND _swarm_bootstrap_configure_cmd -A "${CMAKE_GENERATOR_PLATFORM}")
+    endif()
+
+    if(CMAKE_GENERATOR_TOOLSET)
+        list(APPEND _swarm_bootstrap_configure_cmd -T "${CMAKE_GENERATOR_TOOLSET}")
+    endif()
+
+    if(CMAKE_MAKE_PROGRAM)
+        list(APPEND _swarm_bootstrap_configure_cmd "-DCMAKE_MAKE_PROGRAM=${CMAKE_MAKE_PROGRAM}")
+    endif()
+
+    if(CMAKE_TOOLCHAIN_FILE)
+        list(APPEND _swarm_bootstrap_configure_cmd "-DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE}")
+    endif()
+
+    if(CMAKE_BUILD_TYPE)
+        list(APPEND _swarm_bootstrap_configure_cmd "-DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}")
+    endif()
+
+    if(CMAKE_C_COMPILER)
+        list(APPEND _swarm_bootstrap_configure_cmd "-DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}")
+    endif()
+
+    if(CMAKE_CXX_COMPILER)
+        list(APPEND _swarm_bootstrap_configure_cmd "-DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}")
+    endif()
+
+    if(CMAKE_C_COMPILER_LAUNCHER)
+        list(APPEND _swarm_bootstrap_configure_cmd "-DCMAKE_C_COMPILER_LAUNCHER=${CMAKE_C_COMPILER_LAUNCHER}")
+    endif()
+
+    if(CMAKE_CXX_COMPILER_LAUNCHER)
+        list(APPEND _swarm_bootstrap_configure_cmd "-DCMAKE_CXX_COMPILER_LAUNCHER=${CMAKE_CXX_COMPILER_LAUNCHER}")
+    endif()
+
+    if(CMAKE_RC_COMPILER)
+        list(APPEND _swarm_bootstrap_configure_cmd "-DCMAKE_RC_COMPILER=${CMAKE_RC_COMPILER}")
+    endif()
+
+    if(CMAKE_SYSTEM_PROCESSOR)
+        list(APPEND _swarm_bootstrap_configure_cmd "-DCMAKE_SYSTEM_PROCESSOR=${CMAKE_SYSTEM_PROCESSOR}")
+    endif()
+
+    if(CMAKE_MSVC_RUNTIME_LIBRARY)
+        list(APPEND _swarm_bootstrap_configure_cmd "-DCMAKE_MSVC_RUNTIME_LIBRARY=${CMAKE_MSVC_RUNTIME_LIBRARY}")
+    endif()
+
+    message(STATUS "Swarm: bootstrapping prebuilt Diligent in ${BUILD_DIR}")
+
+    execute_process(
+        COMMAND ${_swarm_bootstrap_configure_cmd}
+        RESULT_VARIABLE _swarm_bootstrap_configure_result
+        OUTPUT_FILE "${_swarm_bootstrap_configure_stdout_log}"
+        ERROR_FILE "${_swarm_bootstrap_configure_stderr_log}"
+    )
+
+    if(NOT _swarm_bootstrap_configure_result EQUAL 0)
+        message(FATAL_ERROR
+            "Swarm: failed to configure the Diligent bootstrap project. "
+            "See ${_swarm_bootstrap_configure_stdout_log} and ${_swarm_bootstrap_configure_stderr_log}"
+        )
+    endif()
+
+    execute_process(
+        COMMAND
+            "${CMAKE_COMMAND}"
+            --build "${BUILD_DIR}"
+            --target HiveDiligentPackage
+            --config "${BUILD_CONFIG}"
+        RESULT_VARIABLE _swarm_bootstrap_build_result
+        OUTPUT_FILE "${_swarm_bootstrap_build_stdout_log}"
+        ERROR_FILE "${_swarm_bootstrap_build_stderr_log}"
+    )
+
+    if(NOT _swarm_bootstrap_build_result EQUAL 0)
+        message(FATAL_ERROR
+            "Swarm: failed to build the prebuilt Diligent package. "
+            "See ${_swarm_bootstrap_build_stdout_log} and ${_swarm_bootstrap_build_stderr_log}"
+        )
+    endif()
+endfunction()
+
 set(_swarm_diligent_provider "${HIVE_DILIGENT_PROVIDER}")
 if(NOT _swarm_diligent_provider)
     set(_swarm_diligent_provider "AUTO")
 endif()
 string(TOUPPER "${_swarm_diligent_provider}" _swarm_diligent_provider)
 
+set(_swarm_diligent_build_config "${CMAKE_BUILD_TYPE}")
+if(NOT _swarm_diligent_build_config)
+    set(_swarm_diligent_build_config "Debug")
+endif()
+
 set(_swarm_diligent_package_dir "${HIVE_DILIGENT_PACKAGE_DIR}")
 if(NOT _swarm_diligent_package_dir)
-    string(TOLOWER "${CMAKE_BUILD_TYPE}" _swarm_diligent_config_suffix)
+    string(TOLOWER "${_swarm_diligent_build_config}" _swarm_diligent_config_suffix)
     if(NOT _swarm_diligent_config_suffix)
         set(_swarm_diligent_config_suffix "debug")
     endif()
@@ -45,38 +191,46 @@ if(NOT _swarm_diligent_package_dir)
     )
 endif()
 
+set(_swarm_diligent_bootstrap_build_dir "${HIVE_DILIGENT_BOOTSTRAP_BUILD_DIR}")
+if(NOT _swarm_diligent_bootstrap_build_dir)
+    string(TOLOWER "${_swarm_diligent_build_config}" _swarm_diligent_bootstrap_suffix)
+    set(_swarm_diligent_bootstrap_build_dir
+        "${CMAKE_SOURCE_DIR}/out/build/diligent-${_swarm_diligent_bootstrap_suffix}"
+    )
+endif()
+
 set(_swarm_diligent_source_dir "${CMAKE_CURRENT_SOURCE_DIR}/extern/diligentcore")
 set(_swarm_using_prebuilt_diligent OFF)
 
 if(_swarm_diligent_provider STREQUAL "AUTO" OR _swarm_diligent_provider STREQUAL "PREBUILT")
-    set(_swarm_had_find_targets_global FALSE)
-    if(DEFINED CMAKE_FIND_PACKAGE_TARGETS_GLOBAL)
-        set(_swarm_had_find_targets_global TRUE)
-        set(_swarm_prev_find_targets_global "${CMAKE_FIND_PACKAGE_TARGETS_GLOBAL}")
-    endif()
-    set(CMAKE_FIND_PACKAGE_TARGETS_GLOBAL TRUE)
-    find_package(HiveDiligent CONFIG QUIET
-        PATHS "${_swarm_diligent_package_dir}"
-        NO_DEFAULT_PATH
+    swarm_find_prebuilt_diligent(
+        "${_swarm_diligent_package_dir}"
+        _swarm_using_prebuilt_diligent
+        _swarm_prebuilt_diligent_source_dir
     )
-    if(_swarm_had_find_targets_global)
-        set(CMAKE_FIND_PACKAGE_TARGETS_GLOBAL "${_swarm_prev_find_targets_global}")
-    else()
-        unset(CMAKE_FIND_PACKAGE_TARGETS_GLOBAL)
+
+    if(NOT _swarm_using_prebuilt_diligent AND HIVE_BOOTSTRAP_DILIGENT)
+        swarm_bootstrap_prebuilt_diligent(
+            "${_swarm_diligent_bootstrap_build_dir}"
+            "${_swarm_diligent_package_dir}"
+            "${_swarm_diligent_build_config}"
+        )
+        swarm_find_prebuilt_diligent(
+            "${_swarm_diligent_package_dir}"
+            _swarm_using_prebuilt_diligent
+            _swarm_prebuilt_diligent_source_dir
+        )
     endif()
-    unset(_swarm_had_find_targets_global)
-    unset(_swarm_prev_find_targets_global)
-    if(HiveDiligent_FOUND)
-        set(_swarm_using_prebuilt_diligent ON)
-        if(HIVE_DILIGENT_SOURCE_DIR)
-            set(_swarm_diligent_source_dir "${HIVE_DILIGENT_SOURCE_DIR}")
+
+    if(_swarm_using_prebuilt_diligent)
+        if(_swarm_prebuilt_diligent_source_dir)
+            set(_swarm_diligent_source_dir "${_swarm_prebuilt_diligent_source_dir}")
         endif()
         message(STATUS "Swarm: using prebuilt Diligent from ${_swarm_diligent_package_dir}")
-    elseif(_swarm_diligent_provider STREQUAL "PREBUILT")
+    elseif(_swarm_diligent_provider STREQUAL "PREBUILT" OR HIVE_BOOTSTRAP_DILIGENT)
         message(FATAL_ERROR
-            "Swarm: prebuilt Diligent was requested, but HiveDiligentConfig.cmake was not found in "
-            "${_swarm_diligent_package_dir}. Run tools/build_diligent.ps1 (Windows) or tools/build_diligent.sh (Linux) first, "
-            "or switch HIVE_DILIGENT_PROVIDER to AUTO/SOURCE."
+            "Swarm: prebuilt Diligent is unavailable in ${_swarm_diligent_package_dir}. "
+            "Automatic bootstrap was requested, but no HiveDiligent package was produced."
         )
     endif()
 endif()
