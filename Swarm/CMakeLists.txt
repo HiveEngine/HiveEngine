@@ -314,3 +314,9 @@ target_link_libraries(Swarm
 		Diligent-GraphicsEngine
 		Diligent-BuildSettings
 )
+
+if(UNIX AND TARGET Diligent-LinuxPlatform)
+    # Static archive link order matters on ELF linkers. Repeat the platform
+    # archive after the Diligent stack so DebugMessageCallback resolves.
+    target_link_libraries(Swarm PUBLIC Diligent-LinuxPlatform)
+endif()

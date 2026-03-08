@@ -1,8 +1,14 @@
 include_guard(GLOBAL)
 
+include(CMakeFindDependencyMacro)
+
 set(HiveDiligent_FOUND TRUE)
 set(HIVE_DILIGENT_SOURCE_DIR "@HIVE_DILIGENT_SOURCE_DIR@")
 set(HIVE_DILIGENT_BUILD_DIR "@CMAKE_BINARY_DIR@")
+
+if(NOT TARGET Threads::Threads)
+    find_dependency(Threads)
+endif()
 
 include("${CMAKE_CURRENT_LIST_DIR}/HiveDiligentTargets.cmake")
 
@@ -19,3 +25,7 @@ _hive_diligent_create_shim("volk::volk_headers" "volk_headers")
 _hive_diligent_create_shim("glslang::glslang" "glslang")
 _hive_diligent_create_shim("glslang::glslang-default-resource-limits" "glslang-default-resource-limits")
 _hive_diligent_create_shim("glslang::SPIRV" "SPIRV")
+
+if(UNIX AND TARGET Diligent-Primitives AND TARGET Diligent-LinuxPlatform)
+    set_property(TARGET Diligent-Primitives APPEND PROPERTY INTERFACE_LINK_LIBRARIES Diligent-LinuxPlatform)
+endif()

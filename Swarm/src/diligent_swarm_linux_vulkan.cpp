@@ -29,8 +29,8 @@ namespace swarm
 
             nativeWindow.pDisplay = display;
             nativeWindow.pWaylandSurface = surface;
-            factory->CreateSwapChainVk(renderContext.device_, renderContext.context_, desc, nativeWindow,
-                                       &renderContext.swapchain_);
+            factory->CreateSwapChainVk(renderContext.m_device, renderContext.m_context, desc, nativeWindow,
+                                       &renderContext.m_swapchain);
         }
 
         return true;
@@ -56,8 +56,8 @@ namespace swarm
 
             nativeWindow.pDisplay = display;
             nativeWindow.WindowId = window;
-            factory->CreateSwapChainVk(renderContext.device_, renderContext.context_, desc, nativeWindow,
-                                       &renderContext.swapchain_);
+            factory->CreateSwapChainVk(renderContext.m_device, renderContext.m_context, desc, nativeWindow,
+                                       &renderContext.m_swapchain);
         }
 
         return true;

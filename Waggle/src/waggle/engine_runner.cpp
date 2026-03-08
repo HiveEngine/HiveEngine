@@ -12,9 +12,10 @@
 #include <antennae/keyboard.h>
 #endif
 
-#if (HIVE_FEATURE_VULKAN || HIVE_FEATURE_D3D12) && HIVE_FEATURE_GLFW
+#if HIVE_FEATURE_VULKAN || HIVE_FEATURE_D3D12
 #include <swarm/platform/diligent_swarm.h>
 #include <swarm/swarm.h>
+#if HIVE_FEATURE_GLFW
 #ifdef _WIN32
 #define TERRA_NATIVE_WIN32
 #include <swarm/platform/win32_swarm.h>
@@ -25,6 +26,7 @@
 #include <swarm/platform/linux_swarm.h>
 
 #include <terra/terra_native.h>
+#endif
 #endif
 #endif
 
