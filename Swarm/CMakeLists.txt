@@ -6,6 +6,8 @@ add_library(Swarm STATIC)
 
 hive_configure_target(Swarm RTTI ON EXCEPTIONS ON)
 
+get_filename_component(_swarm_engine_root_dir "${CMAKE_CURRENT_SOURCE_DIR}/.." ABSOLUTE)
+
 # Re-enable exceptions and suppress warnings for all Diligent targets built from source
 function(swarm_fix_diligent_targets DIR)
     get_property(TARGETS DIRECTORY "${DIR}" PROPERTY BUILDSYSTEM_TARGETS)
@@ -64,7 +66,7 @@ function(swarm_find_prebuilt_diligent PACKAGE_DIR OUT_FOUND OUT_SOURCE_DIR)
 endfunction()
 
 function(swarm_bootstrap_prebuilt_diligent BUILD_DIR PACKAGE_DIR BUILD_CONFIG)
-    set(_swarm_bootstrap_source_dir "${CMAKE_SOURCE_DIR}/tools/diligent")
+    set(_swarm_bootstrap_source_dir "${_swarm_engine_root_dir}/tools/diligent")
     if(NOT EXISTS "${_swarm_bootstrap_source_dir}/CMakeLists.txt")
         message(FATAL_ERROR "Swarm: Diligent bootstrap project not found at ${_swarm_bootstrap_source_dir}")
     endif()
@@ -82,7 +84,7 @@ function(swarm_bootstrap_prebuilt_diligent BUILD_DIR PACKAGE_DIR BUILD_CONFIG)
         -S "${_swarm_bootstrap_source_dir}"
         -B "${BUILD_DIR}"
         -G "${CMAKE_GENERATOR}"
-        "-DHIVE_ROOT_DIR=${CMAKE_SOURCE_DIR}"
+        "-DHIVE_ROOT_DIR=${_swarm_engine_root_dir}"
         "-DHIVE_DILIGENT_EXPORT_DIR=${PACKAGE_DIR}"
     )
 
@@ -187,7 +189,7 @@ if(NOT _swarm_diligent_package_dir)
         set(_swarm_diligent_config_suffix "debug")
     endif()
     set(_swarm_diligent_package_dir
-        "${CMAKE_SOURCE_DIR}/out/build/diligent-${_swarm_diligent_config_suffix}/package"
+        "${_swarm_engine_root_dir}/out/build/diligent-${_swarm_diligent_config_suffix}/package"
     )
 endif()
 
@@ -195,7 +197,7 @@ set(_swarm_diligent_bootstrap_build_dir "${HIVE_DILIGENT_BOOTSTRAP_BUILD_DIR}")
 if(NOT _swarm_diligent_bootstrap_build_dir)
     string(TOLOWER "${_swarm_diligent_build_config}" _swarm_diligent_bootstrap_suffix)
     set(_swarm_diligent_bootstrap_build_dir
-        "${CMAKE_SOURCE_DIR}/out/build/diligent-${_swarm_diligent_bootstrap_suffix}"
+        "${_swarm_engine_root_dir}/out/build/diligent-${_swarm_diligent_bootstrap_suffix}"
     )
 endif()
 
