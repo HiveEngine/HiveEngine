@@ -1,11 +1,15 @@
-#include <larvae/larvae.h>
-#include <nectar/server/asset_server.h>
-#include <nectar/server/asset_event.h>
 #include <comb/default_allocator.h>
 #include <comb/new.h>
+
+#include <nectar/server/asset_event.h>
+#include <nectar/server/asset_server.h>
+
+#include <larvae/larvae.h>
+
 #include <cstring>
 
-namespace {
+namespace
+{
 
     struct EvtAsset
     {
@@ -15,16 +19,16 @@ namespace {
     class EvtLoader final : public nectar::AssetLoader<EvtAsset>
     {
     public:
-        EvtAsset* Load(wax::ByteSpan data, comb::DefaultAllocator& alloc) override
-        {
-            if (data.Size() < sizeof(int)) return nullptr;
+        EvtAsset* Load(wax::ByteSpan data, comb::DefaultAllocator& alloc) override {
+            if (data.Size() < sizeof(int))
+                return nullptr;
             auto* a = comb::New<EvtAsset>(alloc);
             a->value = data.Read<int>(0);
             return a;
         }
-        void Unload(EvtAsset* asset, comb::DefaultAllocator& alloc) override
-        {
-            if (asset) comb::Delete(alloc, asset);
+        void Unload(EvtAsset* asset, comb::DefaultAllocator& alloc) override {
+            if (asset)
+                comb::Delete(alloc, asset);
         }
     };
 
@@ -36,33 +40,30 @@ namespace {
     class EvtLoaderB final : public nectar::AssetLoader<EvtAssetB>
     {
     public:
-        EvtAssetB* Load(wax::ByteSpan data, comb::DefaultAllocator& alloc) override
-        {
-            if (data.Size() < sizeof(float)) return nullptr;
+        EvtAssetB* Load(wax::ByteSpan data, comb::DefaultAllocator& alloc) override {
+            if (data.Size() < sizeof(float))
+                return nullptr;
             auto* a = comb::New<EvtAssetB>(alloc);
             a->x = data.Read<float>(0);
             return a;
         }
-        void Unload(EvtAssetB* asset, comb::DefaultAllocator& alloc) override
-        {
-            if (asset) comb::Delete(alloc, asset);
+        void Unload(EvtAssetB* asset, comb::DefaultAllocator& alloc) override {
+            if (asset)
+                comb::Delete(alloc, asset);
         }
     };
 
-    auto& GetEvtAlloc()
-    {
+    auto& GetEvtAlloc() {
         static comb::ModuleAllocator alloc{"TestEvt", 4 * 1024 * 1024};
         return alloc.Get();
     }
 
-    wax::ByteSpan IntSpan(uint8_t* buf, int v)
-    {
+    wax::ByteSpan IntSpan(uint8_t* buf, int v) {
         std::memcpy(buf, &v, sizeof(int));
         return wax::ByteSpan{buf, sizeof(int)};
     }
 
-    wax::ByteSpan FloatSpan(uint8_t* buf, float v)
-    {
+    wax::ByteSpan FloatSpan(uint8_t* buf, float v) {
         std::memcpy(buf, &v, sizeof(float));
         return wax::ByteSpan{buf, sizeof(float)};
     }
@@ -80,9 +81,8 @@ namespace {
 
         nectar::AssetEvent<EvtAsset> evt{};
         larvae::AssertTrue(server.PollEvents<EvtAsset>(evt));
-        larvae::AssertEqual(static_cast<uint8_t>(evt.kind),
-                           static_cast<uint8_t>(nectar::AssetEventKind::Loaded));
-        larvae::AssertTrue(evt.handle == h.Raw());
+        larvae::AssertEqual(static_cast<uint8_t>(evt.m_kind), static_cast<uint8_t>(nectar::AssetEventKind::LOADED));
+        larvae::AssertTrue(evt.m_handle == h.Raw());
     });
 
     auto t2 = larvae::RegisterTest("NectarEvent", "FailEmitsFailedEvent", []() {
@@ -97,8 +97,7 @@ namespace {
 
         nectar::AssetEvent<EvtAsset> evt{};
         larvae::AssertTrue(server.PollEvents<EvtAsset>(evt));
-        larvae::AssertEqual(static_cast<uint8_t>(evt.kind),
-                           static_cast<uint8_t>(nectar::AssetEventKind::Failed));
+        larvae::AssertEqual(static_cast<uint8_t>(evt.m_kind), static_cast<uint8_t>(nectar::AssetEventKind::Failed));
     });
 
     auto t3 = larvae::RegisterTest("NectarEvent", "GcEmitsUnloadedEvent", []() {
@@ -121,9 +120,8 @@ namespace {
 
         nectar::AssetEvent<EvtAsset> evt{};
         larvae::AssertTrue(server.PollEvents<EvtAsset>(evt));
-        larvae::AssertEqual(static_cast<uint8_t>(evt.kind),
-                           static_cast<uint8_t>(nectar::AssetEventKind::Unloaded));
-        larvae::AssertTrue(evt.handle == raw);
+        larvae::AssertEqual(static_cast<uint8_t>(evt.m_kind), static_cast<uint8_t>(nectar::AssetEventKind::UNLOADED));
+        larvae::AssertTrue(evt.m_handle == raw);
     });
 
     auto t4 = larvae::RegisterTest("NectarEvent", "NoPollReturnsFalse", []() {
@@ -151,12 +149,10 @@ namespace {
         larvae::AssertTrue(server.PollEvents<EvtAsset>(evt2));
 
         // Both should be Loaded, first = h1, second = h2
-        larvae::AssertEqual(static_cast<uint8_t>(evt1.kind),
-                           static_cast<uint8_t>(nectar::AssetEventKind::Loaded));
-        larvae::AssertEqual(static_cast<uint8_t>(evt2.kind),
-                           static_cast<uint8_t>(nectar::AssetEventKind::Loaded));
-        larvae::AssertTrue(evt1.handle == h1.Raw());
-        larvae::AssertTrue(evt2.handle == h2.Raw());
+        larvae::AssertEqual(static_cast<uint8_t>(evt1.m_kind), static_cast<uint8_t>(nectar::AssetEventKind::LOADED));
+        larvae::AssertEqual(static_cast<uint8_t>(evt2.m_kind), static_cast<uint8_t>(nectar::AssetEventKind::LOADED));
+        larvae::AssertTrue(evt1.m_handle == h1.Raw());
+        larvae::AssertTrue(evt2.m_handle == h2.Raw());
     });
 
     auto t6 = larvae::RegisterTest("NectarEvent", "EventsPerType", []() {
@@ -174,12 +170,12 @@ namespace {
         // Poll type A → should get only A events
         nectar::AssetEvent<EvtAsset> evtA{};
         larvae::AssertTrue(server.PollEvents<EvtAsset>(evtA));
-        larvae::AssertTrue(evtA.handle == hA.Raw());
+        larvae::AssertTrue(evtA.m_handle == hA.Raw());
 
         // Poll type B → should get only B events
         nectar::AssetEvent<EvtAssetB> evtB{};
         larvae::AssertTrue(server.PollEvents<EvtAssetB>(evtB));
-        larvae::AssertTrue(evtB.handle == hB.Raw());
+        larvae::AssertTrue(evtB.m_handle == hB.Raw());
 
         // No more events for either
         nectar::AssetEvent<EvtAsset> noA{};
@@ -216,8 +212,8 @@ namespace {
         server.PollEvents<EvtAsset>(evt);
 
         // Handle from event should match the loaded handle
-        larvae::AssertEqual(evt.handle.index, h.Raw().index);
-        larvae::AssertEqual(evt.handle.generation, h.Raw().generation);
+        larvae::AssertEqual(evt.m_handle.m_index, h.Raw().m_index);
+        larvae::AssertEqual(evt.m_handle.m_generation, h.Raw().m_generation);
     });
 
     auto t9 = larvae::RegisterTest("NectarEvent", "NoEventWhenCacheHit", []() {
@@ -260,8 +256,7 @@ namespace {
         // Should emit Reloaded
         nectar::AssetEvent<EvtAsset> evt{};
         larvae::AssertTrue(server.PollEvents<EvtAsset>(evt));
-        larvae::AssertEqual(static_cast<uint8_t>(evt.kind),
-                           static_cast<uint8_t>(nectar::AssetEventKind::Reloaded));
+        larvae::AssertEqual(static_cast<uint8_t>(evt.m_kind), static_cast<uint8_t>(nectar::AssetEventKind::RELOADED));
 
         // Asset should have new value
         auto* asset = server.Get(h);

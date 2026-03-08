@@ -1,7 +1,9 @@
-#include <larvae/larvae.h>
 #include <wax/containers/array.h>
 
-namespace {
+#include <larvae/larvae.h>
+
+namespace
+{
     // =============================================================================
     // Basic Construction and Access
     // =============================================================================
@@ -133,7 +135,7 @@ namespace {
     auto test12 = larvae::RegisterTest("WaxArray", "BeginEndIteratorRange", []() {
         wax::Array<int, 4> arr = {10, 20, 30, 40};
 
-        auto it = arr.begin();
+        auto it = arr.Begin();
         larvae::AssertEqual(*it, 10);
 
         ++it;
@@ -146,16 +148,16 @@ namespace {
         larvae::AssertEqual(*it, 40);
 
         ++it;
-        larvae::AssertTrue(it == arr.end());
+        larvae::AssertTrue(it == arr.End());
     });
 
     auto test13 = larvae::RegisterTest("WaxArray", "RangeForLoopSum", []() {
         wax::Array<int, 5> arr = {1, 2, 3, 4, 5};
 
         int sum = 0;
-        for (int val : arr)
+        for (auto it = arr.Begin(); it != arr.End(); ++it)
         {
-            sum += val;
+            sum += *it;
         }
 
         larvae::AssertEqual(sum, 15);
@@ -164,9 +166,9 @@ namespace {
     auto test14 = larvae::RegisterTest("WaxArray", "RangeForLoopModification", []() {
         wax::Array<int, 3> arr = {1, 2, 3};
 
-        for (int& val : arr)
+        for (auto it = arr.Begin(); it != arr.End(); ++it)
         {
-            val *= 2;
+            *it *= 2;
         }
 
         larvae::AssertEqual(arr[0], 2);
@@ -178,9 +180,9 @@ namespace {
         const wax::Array<int, 3> arr = {10, 20, 30};
 
         int sum = 0;
-        for (int val : arr)
+        for (auto it = arr.Begin(); it != arr.End(); ++it)
         {
-            sum += val;
+            sum += *it;
         }
 
         larvae::AssertEqual(sum, 60);
@@ -321,4 +323,4 @@ namespace {
 
         larvae::AssertEqual(arr.Size(), 1000u);
     });
-}
+} // namespace

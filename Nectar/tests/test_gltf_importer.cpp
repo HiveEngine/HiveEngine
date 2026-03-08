@@ -1,32 +1,33 @@
-#include <larvae/larvae.h>
+#include <comb/default_allocator.h>
+
+#include <nectar/core/asset_id.h>
+#include <nectar/database/asset_database.h>
+#include <nectar/hive/hive_document.h>
 #include <nectar/mesh/gltf_importer.h>
 #include <nectar/mesh/gltf_material.h>
 #include <nectar/mesh/mesh_data.h>
 #include <nectar/pipeline/import_context.h>
-#include <nectar/database/asset_database.h>
-#include <nectar/hive/hive_document.h>
-#include <nectar/core/asset_id.h>
-#include <comb/default_allocator.h>
-#include <cstring>
+
+#include <larvae/larvae.h>
+
 #include <cmath>
+#include <cstring>
 
-namespace {
+namespace
+{
 
-    auto& GetGltfAlloc()
-    {
+    auto& GetGltfAlloc() {
         static comb::ModuleAllocator alloc{"TestGltf", 8 * 1024 * 1024};
         return alloc.Get();
     }
 
-    nectar::AssetId MakeId(uint64_t v)
-    {
+    nectar::AssetId MakeId(uint64_t v) {
         uint8_t bytes[16] = {};
         std::memcpy(bytes, &v, sizeof(v));
         return nectar::AssetId::FromBytes(bytes);
     }
 
-    wax::ByteSpan GltfSpan(const char* json)
-    {
+    wax::ByteSpan GltfSpan(const char* json) {
         return wax::ByteSpan{reinterpret_cast<const uint8_t*>(json), std::strlen(json)};
     }
 
@@ -41,8 +42,8 @@ namespace {
         "{"
         "  \"asset\": { \"version\": \"2.0\" },"
         "  \"buffers\": [{ \"uri\": \"data:application/octet-stream;base64,"
-            "AAAAAAAAAAAAAAAAAACAPwAAAAAAAAAAAAAAAAAAgD8AAAAAAAABAAIAAAA=\","
-            "\"byteLength\": 44 }],"
+        "AAAAAAAAAAAAAAAAAACAPwAAAAAAAAAAAAAAAAAAgD8AAAAAAAABAAIAAAA=\","
+        "\"byteLength\": 44 }],"
         "  \"bufferViews\": ["
         "    { \"buffer\": 0, \"byteOffset\": 0, \"byteLength\": 36, \"target\": 34962 },"
         "    { \"buffer\": 0, \"byteOffset\": 36, \"byteLength\": 6, \"target\": 34963 }"
@@ -70,9 +71,9 @@ namespace {
         "{"
         "  \"asset\": { \"version\": \"2.0\" },"
         "  \"buffers\": [{ \"uri\": \"data:application/octet-stream;base64,"
-            "AAAAAAAAAAAAAAAAAACAPwAAAAAAAAAAAAAAAAAAgD8AAAAAAAAAAAAAAAAAAIA/AAAAAAAAAAAAAIA/AAAAAAAAAAAAAIA/"
-            "AAAAAAAAAAAAAIA/AAAAAAAAAAAAAIA/AAABAAIAAAA=\","
-            "\"byteLength\": 104 }],"
+        "AAAAAAAAAAAAAAAAAACAPwAAAAAAAAAAAAAAAAAAgD8AAAAAAAAAAAAAAAAAAIA/AAAAAAAAAAAAAIA/AAAAAAAAAAAAAIA/"
+        "AAAAAAAAAAAAAIA/AAAAAAAAAAAAAIA/AAABAAIAAAA=\","
+        "\"byteLength\": 104 }],"
         "  \"bufferViews\": ["
         "    { \"buffer\": 0, \"byteOffset\": 0,  \"byteLength\": 36, \"target\": 34962 },"
         "    { \"buffer\": 0, \"byteOffset\": 36, \"byteLength\": 36, \"target\": 34962 },"
@@ -106,8 +107,9 @@ namespace {
         "{"
         "  \"asset\": { \"version\": \"2.0\" },"
         "  \"buffers\": [{ \"uri\": \"data:application/octet-stream;base64,"
-            "AAAAAAAAAAAAAAAAAACAPwAAAAAAAAAAAAAAAAAAgD8AAAAAAAABAAIAAAAAAABAAAAAAAAAAAAAAEBAAAAAAAAAAAAAAABAAACAPwAAAAAAAAEAAgAAAA==\","
-            "\"byteLength\": 88 }],"
+        "AAAAAAAAAAAAAAAAAACAPwAAAAAAAAAAAAAAAAAAgD8AAAAAAAABAAIAAAAAAABAAAAAAAAAAAAAAEBAAAAAAAAAAAAAAABAAACAPwAAAAAAAA"
+        "EAAgAAAA==\","
+        "\"byteLength\": 88 }],"
         "  \"bufferViews\": ["
         "    { \"buffer\": 0, \"byteOffset\": 0,  \"byteLength\": 36, \"target\": 34962 },"
         "    { \"buffer\": 0, \"byteOffset\": 36, \"byteLength\": 6,  \"target\": 34963 },"
@@ -157,8 +159,8 @@ namespace {
         "    }}"
         "  ],"
         "  \"buffers\": [{ \"uri\": \"data:application/octet-stream;base64,"
-            "AAAAAAAAAAAAAAAAAACAPwAAAAAAAAAAAAAAAACAPwAAAAAAAAAAAAEAAgAAAA==\","
-            "\"byteLength\": 44 }],"
+        "AAAAAAAAAAAAAAAAAACAPwAAAAAAAAAAAAAAAACAPwAAAAAAAAAAAAEAAgAAAA==\","
+        "\"byteLength\": 44 }],"
         "  \"bufferViews\": ["
         "    { \"buffer\": 0, \"byteOffset\": 0,  \"byteLength\": 36, \"target\": 34962 },"
         "    { \"buffer\": 0, \"byteOffset\": 36, \"byteLength\": 6,  \"target\": 34963 }"
@@ -192,15 +194,15 @@ namespace {
         nectar::HiveDocument settings{alloc};
 
         auto result = importer.Import(GltfSpan(kTriangleGltf), settings, ctx);
-        larvae::AssertTrue(result.success);
-        larvae::AssertTrue(result.intermediate_data.Size() > sizeof(nectar::NmshHeader));
+        larvae::AssertTrue(result.m_success);
+        larvae::AssertTrue(result.m_intermediateData.Size() > sizeof(nectar::NmshHeader));
 
-        auto* header = reinterpret_cast<const nectar::NmshHeader*>(result.intermediate_data.Data());
-        larvae::AssertEqual(header->magic, nectar::kNmshMagic);
-        larvae::AssertEqual(header->version, uint32_t{2});
-        larvae::AssertEqual(header->vertex_count, uint32_t{3});
-        larvae::AssertEqual(header->index_count, uint32_t{3});
-        larvae::AssertEqual(header->submesh_count, uint32_t{1});
+        auto* header = reinterpret_cast<const nectar::NmshHeader*>(result.m_intermediateData.Data());
+        larvae::AssertEqual(header->m_magic, nectar::kNmshMagic);
+        larvae::AssertEqual(header->m_version, uint32_t{2});
+        larvae::AssertEqual(header->m_vertexCount, uint32_t{3});
+        larvae::AssertEqual(header->m_indexCount, uint32_t{3});
+        larvae::AssertEqual(header->m_submeshCount, uint32_t{1});
     });
 
     auto t2 = larvae::RegisterTest("NectarGltf", "NmshBlobLayout", []() {
@@ -211,22 +213,22 @@ namespace {
         nectar::HiveDocument settings{alloc};
 
         auto result = importer.Import(GltfSpan(kTriangleGltf), settings, ctx);
-        larvae::AssertTrue(result.success);
+        larvae::AssertTrue(result.m_success);
 
-        auto* header = reinterpret_cast<const nectar::NmshHeader*>(result.intermediate_data.Data());
-        larvae::AssertEqual(result.intermediate_data.Size(), nectar::NmshTotalSize(*header));
+        auto* header = reinterpret_cast<const nectar::NmshHeader*>(result.m_intermediateData.Data());
+        larvae::AssertEqual(result.m_intermediateData.Size(), nectar::NmshTotalSize(*header));
 
         // Submesh table
-        auto* submeshes = reinterpret_cast<const nectar::SubMesh*>(
-            result.intermediate_data.Data() + sizeof(nectar::NmshHeader));
-        larvae::AssertEqual(submeshes[0].index_offset, uint32_t{0});
-        larvae::AssertEqual(submeshes[0].index_count, uint32_t{3});
+        auto* submeshes =
+            reinterpret_cast<const nectar::SubMesh*>(result.m_intermediateData.Data() + sizeof(nectar::NmshHeader));
+        larvae::AssertEqual(submeshes[0].m_indexOffset, uint32_t{0});
+        larvae::AssertEqual(submeshes[0].m_indexCount, uint32_t{3});
 
         // Index data in range
-        auto* idx = reinterpret_cast<const uint32_t*>(
-            result.intermediate_data.Data() + nectar::NmshIndexDataOffset(*header));
-        for (uint32_t i = 0; i < header->index_count; ++i)
-            larvae::AssertTrue(idx[i] < header->vertex_count);
+        auto* idx =
+            reinterpret_cast<const uint32_t*>(result.m_intermediateData.Data() + nectar::NmshIndexDataOffset(*header));
+        for (uint32_t i = 0; i < header->m_indexCount; ++i)
+            larvae::AssertTrue(idx[i] < header->m_vertexCount);
     });
 
     auto t3 = larvae::RegisterTest("NectarGltf", "AABB", []() {
@@ -237,16 +239,16 @@ namespace {
         nectar::HiveDocument settings{alloc};
 
         auto result = importer.Import(GltfSpan(kTriangleGltf), settings, ctx);
-        larvae::AssertTrue(result.success);
+        larvae::AssertTrue(result.m_success);
 
-        auto* header = reinterpret_cast<const nectar::NmshHeader*>(result.intermediate_data.Data());
+        auto* header = reinterpret_cast<const nectar::NmshHeader*>(result.m_intermediateData.Data());
         constexpr float kTol = 1e-5f;
         // Triangle at (0,0,0), (1,0,0), (0,1,0)
         for (int a = 0; a < 3; ++a)
-            larvae::AssertTrue(std::fabs(header->aabb_min[a]) < kTol);
-        larvae::AssertTrue(std::fabs(header->aabb_max[0] - 1.0f) < kTol);
-        larvae::AssertTrue(std::fabs(header->aabb_max[1] - 1.0f) < kTol);
-        larvae::AssertTrue(std::fabs(header->aabb_max[2]) < kTol);
+            larvae::AssertTrue(std::fabs(header->m_aabbMin[a]) < kTol);
+        larvae::AssertTrue(std::fabs(header->m_aabbMax[0] - 1.0f) < kTol);
+        larvae::AssertTrue(std::fabs(header->m_aabbMax[1] - 1.0f) < kTol);
+        larvae::AssertTrue(std::fabs(header->m_aabbMax[2]) < kTol);
     });
 
     auto t4 = larvae::RegisterTest("NectarGltf", "ScaleSetting", []() {
@@ -258,12 +260,12 @@ namespace {
         settings.SetValue("import", "scale", nectar::HiveValue::MakeFloat(2.0));
 
         auto result = importer.Import(GltfSpan(kTriangleGltf), settings, ctx);
-        larvae::AssertTrue(result.success);
+        larvae::AssertTrue(result.m_success);
 
-        auto* header = reinterpret_cast<const nectar::NmshHeader*>(result.intermediate_data.Data());
+        auto* header = reinterpret_cast<const nectar::NmshHeader*>(result.m_intermediateData.Data());
         constexpr float kTol = 1e-5f;
-        larvae::AssertTrue(std::fabs(header->aabb_max[0] - 2.0f) < kTol);
-        larvae::AssertTrue(std::fabs(header->aabb_max[1] - 2.0f) < kTol);
+        larvae::AssertTrue(std::fabs(header->m_aabbMax[0] - 2.0f) < kTol);
+        larvae::AssertTrue(std::fabs(header->m_aabbMax[1] - 2.0f) < kTol);
     });
 
     auto t5 = larvae::RegisterTest("NectarGltf", "GeneratedNormals", []() {
@@ -275,19 +277,19 @@ namespace {
 
         // Triangle with no normals in glTF
         auto result = importer.Import(GltfSpan(kTriangleGltf), settings, ctx);
-        larvae::AssertTrue(result.success);
+        larvae::AssertTrue(result.m_success);
 
-        auto* header = reinterpret_cast<const nectar::NmshHeader*>(result.intermediate_data.Data());
-        auto* verts = reinterpret_cast<const nectar::MeshVertex*>(
-            result.intermediate_data.Data() + nectar::NmshVertexDataOffset(*header));
+        auto* header = reinterpret_cast<const nectar::NmshHeader*>(result.m_intermediateData.Data());
+        auto* verts = reinterpret_cast<const nectar::MeshVertex*>(result.m_intermediateData.Data() +
+                                                                  nectar::NmshVertexDataOffset(*header));
 
         // Triangle in XY plane -> normal = (0,0,1) or (0,0,-1)
         constexpr float kTol = 1e-5f;
         for (uint32_t i = 0; i < 3; ++i)
         {
-            larvae::AssertTrue(std::fabs(verts[i].normal[0]) < kTol);
-            larvae::AssertTrue(std::fabs(verts[i].normal[1]) < kTol);
-            larvae::AssertTrue(std::fabs(std::fabs(verts[i].normal[2]) - 1.0f) < kTol);
+            larvae::AssertTrue(std::fabs(verts[i].m_normal[0]) < kTol);
+            larvae::AssertTrue(std::fabs(verts[i].m_normal[1]) < kTol);
+            larvae::AssertTrue(std::fabs(std::fabs(verts[i].m_normal[2]) - 1.0f) < kTol);
         }
     });
 
@@ -299,26 +301,26 @@ namespace {
         nectar::HiveDocument settings{alloc};
 
         auto result = importer.Import(GltfSpan(kTriangleWithAttribsGltf), settings, ctx);
-        larvae::AssertTrue(result.success);
+        larvae::AssertTrue(result.m_success);
 
-        auto* header = reinterpret_cast<const nectar::NmshHeader*>(result.intermediate_data.Data());
-        larvae::AssertEqual(header->vertex_count, uint32_t{3});
+        auto* header = reinterpret_cast<const nectar::NmshHeader*>(result.m_intermediateData.Data());
+        larvae::AssertEqual(header->m_vertexCount, uint32_t{3});
 
-        auto* verts = reinterpret_cast<const nectar::MeshVertex*>(
-            result.intermediate_data.Data() + nectar::NmshVertexDataOffset(*header));
+        auto* verts = reinterpret_cast<const nectar::MeshVertex*>(result.m_intermediateData.Data() +
+                                                                  nectar::NmshVertexDataOffset(*header));
 
         // All normals should be (0,0,1)
         constexpr float kTol = 1e-5f;
         for (uint32_t i = 0; i < 3; ++i)
         {
-            larvae::AssertTrue(std::fabs(verts[i].normal[2] - 1.0f) < kTol);
+            larvae::AssertTrue(std::fabs(verts[i].m_normal[2] - 1.0f) < kTol);
         }
 
         // Check UVs exist (at least one vertex has non-zero UV)
         bool has_uv = false;
         for (uint32_t i = 0; i < 3; ++i)
         {
-            if (verts[i].uv[0] > 0.01f || verts[i].uv[1] > 0.01f)
+            if (verts[i].m_uv[0] > 0.01f || verts[i].m_uv[1] > 0.01f)
                 has_uv = true;
         }
         larvae::AssertTrue(has_uv);
@@ -332,22 +334,22 @@ namespace {
         nectar::HiveDocument settings{alloc};
 
         auto result = importer.Import(GltfSpan(kMultiMaterialGltf), settings, ctx);
-        larvae::AssertTrue(result.success);
+        larvae::AssertTrue(result.m_success);
 
-        auto* header = reinterpret_cast<const nectar::NmshHeader*>(result.intermediate_data.Data());
-        larvae::AssertEqual(header->vertex_count, uint32_t{6}); // 2 triangles
-        larvae::AssertEqual(header->index_count, uint32_t{6});
-        larvae::AssertEqual(header->submesh_count, uint32_t{2});
+        auto* header = reinterpret_cast<const nectar::NmshHeader*>(result.m_intermediateData.Data());
+        larvae::AssertEqual(header->m_vertexCount, uint32_t{6}); // 2 triangles
+        larvae::AssertEqual(header->m_indexCount, uint32_t{6});
+        larvae::AssertEqual(header->m_submeshCount, uint32_t{2});
 
-        auto* submeshes = reinterpret_cast<const nectar::SubMesh*>(
-            result.intermediate_data.Data() + sizeof(nectar::NmshHeader));
+        auto* submeshes =
+            reinterpret_cast<const nectar::SubMesh*>(result.m_intermediateData.Data() + sizeof(nectar::NmshHeader));
 
         // Each submesh: 3 indices, different material
-        larvae::AssertEqual(submeshes[0].index_count, uint32_t{3});
-        larvae::AssertEqual(submeshes[1].index_count, uint32_t{3});
-        larvae::AssertTrue(submeshes[0].material_index != submeshes[1].material_index);
-        larvae::AssertTrue(submeshes[0].material_index >= 0);
-        larvae::AssertTrue(submeshes[1].material_index >= 0);
+        larvae::AssertEqual(submeshes[0].m_indexCount, uint32_t{3});
+        larvae::AssertEqual(submeshes[1].m_indexCount, uint32_t{3});
+        larvae::AssertTrue(submeshes[0].m_materialIndex != submeshes[1].m_materialIndex);
+        larvae::AssertTrue(submeshes[0].m_materialIndex >= 0);
+        larvae::AssertTrue(submeshes[1].m_materialIndex >= 0);
     });
 
     auto t8 = larvae::RegisterTest("NectarGltf", "Extensions", []() {
@@ -373,7 +375,7 @@ namespace {
 
         const uint8_t garbage[] = {0xDE, 0xAD, 0xBE, 0xEF};
         auto result = importer.Import(wax::ByteSpan{garbage, sizeof(garbage)}, settings, ctx);
-        larvae::AssertFalse(result.success);
+        larvae::AssertFalse(result.m_success);
     });
 
     auto t11 = larvae::RegisterTest("NectarGltf", "EmptyMeshes", []() {
@@ -386,7 +388,7 @@ namespace {
         // Valid glTF but no meshes
         const char* empty_gltf = "{ \"asset\": { \"version\": \"2.0\" } }";
         auto result = importer.Import(GltfSpan(empty_gltf), settings, ctx);
-        larvae::AssertFalse(result.success);
+        larvae::AssertFalse(result.m_success);
     });
 
     auto t12 = larvae::RegisterTest("NectarGltf", "MaterialExtraction", []() {
@@ -396,19 +398,19 @@ namespace {
         larvae::AssertEqual(materials.Size(), size_t{3});
 
         // Material 0: has base color texture
-        larvae::AssertEqual(materials[0].material_index, int32_t{0});
-        larvae::AssertTrue(materials[0].base_color_texture.Size() > 0);
+        larvae::AssertEqual(materials[0].m_materialIndex, int32_t{0});
+        larvae::AssertTrue(materials[0].m_baseColorTexture.Size() > 0);
 
         // Verify texture path
-        auto path0 = materials[0].base_color_texture.View();
+        auto path0 = materials[0].m_baseColorTexture.View();
         larvae::AssertTrue(path0.Equals("textures/albedo.png"));
 
         // Material 1: no texture
-        larvae::AssertEqual(materials[1].material_index, int32_t{1});
-        larvae::AssertTrue(materials[1].base_color_texture.Size() == 0);
+        larvae::AssertEqual(materials[1].m_materialIndex, int32_t{1});
+        larvae::AssertTrue(materials[1].m_baseColorTexture.Size() == 0);
 
         // Material 2: has texture (normal map as base color for test)
-        larvae::AssertTrue(materials[2].base_color_texture.View().Equals("textures/normal.png"));
+        larvae::AssertTrue(materials[2].m_baseColorTexture.View().Equals("textures/normal.png"));
     });
 
     auto t13 = larvae::RegisterTest("NectarGltf", "MaterialBaseColorFactor", []() {
@@ -419,10 +421,10 @@ namespace {
 
         constexpr float kTol = 1e-5f;
         // Material 0: baseColorFactor = [0.8, 0.2, 0.1, 1.0]
-        larvae::AssertTrue(std::fabs(materials[0].base_color_factor[0] - 0.8f) < kTol);
-        larvae::AssertTrue(std::fabs(materials[0].base_color_factor[1] - 0.2f) < kTol);
-        larvae::AssertTrue(std::fabs(materials[0].base_color_factor[2] - 0.1f) < kTol);
-        larvae::AssertTrue(std::fabs(materials[0].base_color_factor[3] - 1.0f) < kTol);
+        larvae::AssertTrue(std::fabs(materials[0].m_baseColorFactor[0] - 0.8f) < kTol);
+        larvae::AssertTrue(std::fabs(materials[0].m_baseColorFactor[1] - 0.2f) < kTol);
+        larvae::AssertTrue(std::fabs(materials[0].m_baseColorFactor[2] - 0.1f) < kTol);
+        larvae::AssertTrue(std::fabs(materials[0].m_baseColorFactor[3] - 1.0f) < kTol);
     });
 
     auto t14 = larvae::RegisterTest("NectarGltf", "MaterialDefaultNoData", []() {
@@ -442,12 +444,12 @@ namespace {
 
         // Triangle with no material -> material_index = -1
         auto result = importer.Import(GltfSpan(kTriangleGltf), settings, ctx);
-        larvae::AssertTrue(result.success);
+        larvae::AssertTrue(result.m_success);
 
-        auto* header = reinterpret_cast<const nectar::NmshHeader*>(result.intermediate_data.Data());
-        auto* submeshes = reinterpret_cast<const nectar::SubMesh*>(
-            result.intermediate_data.Data() + sizeof(nectar::NmshHeader));
-        larvae::AssertEqual(submeshes[0].material_index, int32_t{-1});
+        auto* header = reinterpret_cast<const nectar::NmshHeader*>(result.m_intermediateData.Data());
+        auto* submeshes =
+            reinterpret_cast<const nectar::SubMesh*>(result.m_intermediateData.Data() + sizeof(nectar::NmshHeader));
+        larvae::AssertEqual(submeshes[0].m_materialIndex, int32_t{-1});
     });
 
     auto t16 = larvae::RegisterTest("NectarGltf", "SubMeshAABB", []() {
@@ -459,18 +461,18 @@ namespace {
 
         // Triangle: vertices at (0,0,0), (1,0,0), (0,1,0)
         auto result = importer.Import(GltfSpan(kTriangleGltf), settings, ctx);
-        larvae::AssertTrue(result.success);
+        larvae::AssertTrue(result.m_success);
 
-        auto* header = reinterpret_cast<const nectar::NmshHeader*>(result.intermediate_data.Data());
-        auto* submeshes = reinterpret_cast<const nectar::SubMesh*>(
-            result.intermediate_data.Data() + sizeof(nectar::NmshHeader));
+        auto* header = reinterpret_cast<const nectar::NmshHeader*>(result.m_intermediateData.Data());
+        auto* submeshes =
+            reinterpret_cast<const nectar::SubMesh*>(result.m_intermediateData.Data() + sizeof(nectar::NmshHeader));
 
         // Single submesh — AABB should match global
         for (int a = 0; a < 3; ++a)
         {
-            larvae::AssertTrue(submeshes[0].aabb_min[a] <= header->aabb_min[a] + 1e-5f);
-            larvae::AssertTrue(submeshes[0].aabb_max[a] >= header->aabb_max[a] - 1e-5f);
+            larvae::AssertTrue(submeshes[0].m_aabbMin[a] <= header->m_aabbMin[a] + 1e-5f);
+            larvae::AssertTrue(submeshes[0].m_aabbMax[a] >= header->m_aabbMax[a] - 1e-5f);
         }
     });
 
-}
+} // namespace

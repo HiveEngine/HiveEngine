@@ -1,151 +1,159 @@
 #define _CRT_SECURE_NO_WARNINGS
-#include <nectar/server/asset_server.h>
+
 #include <nectar/io/io_scheduler.h>
-#include <hive/profiling/profiler.h>
+#include <nectar/server/asset_server.h>
+
 #include <cstdio>
 
 namespace nectar
 {
     AssetServer::AssetServer(comb::DefaultAllocator& alloc)
-        : allocator_{&alloc}
-        , storages_{alloc, 16}
-        , path_cache_{alloc, 64}
-        , base_path_{alloc}
-        , pending_loads_{alloc, 16}
-    {}
+        : m_allocator{&alloc}
+        , m_storages{alloc, 16}
+        , m_pathCache{alloc, 64}
+        , m_basePath{alloc}
+        , m_pendingLoads{alloc, 16} {}
 
     AssetServer::AssetServer(comb::DefaultAllocator& alloc, VirtualFilesystem& vfs, IOScheduler& io)
-        : allocator_{&alloc}
-        , storages_{alloc, 16}
-        , path_cache_{alloc, 64}
-        , base_path_{alloc}
-        , vfs_{&vfs}
-        , io_{&io}
-        , pending_loads_{alloc, 64}
-    {}
+        : m_allocator{&alloc}
+        , m_storages{alloc, 16}
+        , m_pathCache{alloc, 64}
+        , m_basePath{alloc}
+        , m_vfs{&vfs}
+        , m_io{&io}
+        , m_pendingLoads{alloc, 64} {}
 
-    AssetServer::~AssetServer()
-    {
-        // Destroy all storages
-        for (auto it = storages_.begin(); it != storages_.end(); ++it)
+    AssetServer::~AssetServer() {
+        for (auto it = m_storages.Begin(); it != m_storages.End(); ++it)
         {
             IAssetStorage* storage = it.Value();
-            storage->~IAssetStorage();
-            allocator_->Deallocate(storage);
+            if (storage != nullptr)
+            {
+                storage->Destroy(*m_allocator);
+            }
         }
     }
 
-    void AssetServer::Update()
-    {
+    void AssetServer::Update() {
         HIVE_PROFILE_SCOPE_N("AssetServer::Update");
-        if (io_)
+
+        if (m_io != nullptr)
         {
-            wax::Vector<IOCompletion> completions{*allocator_};
-            io_->DrainCompletions(completions);
+            wax::Vector<IOCompletion> completions{*m_allocator};
+            m_io->DrainCompletions(completions);
 
             for (size_t i = 0; i < completions.Size(); ++i)
             {
-                auto* pending = pending_loads_.Find(completions[i].request_id);
-                if (!pending)
-                    continue;
-
-                auto* found = storages_.Find(pending->type_id);
-                if (!found)
+                auto* pending = m_pendingLoads.Find(completions[i].m_requestId);
+                if (pending == nullptr)
                 {
-                    pending_loads_.Remove(completions[i].request_id);
+                    continue;
+                }
+
+                auto* found = m_storages.Find(pending->m_typeId);
+                if (found == nullptr)
+                {
+                    m_pendingLoads.Remove(completions[i].m_requestId);
                     continue;
                 }
 
                 IAssetStorage* storage = *found;
-
-                if (!completions[i].success)
+                if (!completions[i].m_success)
                 {
-                    storage->SetStatus(pending->slot_index, AssetStatus::Failed);
-                    storage->SetError(pending->slot_index,
-                                      AssetErrorInfo{AssetError::FileNotFound, wax::String{}});
+                    storage->SetStatus(pending->m_slotIndex, AssetStatus::Failed);
+                    storage->SetError(pending->m_slotIndex,
+                                      AssetErrorInfo{AssetError::FILE_NOT_FOUND, wax::String{*m_allocator}});
                 }
                 else
                 {
-                    storage->SetStatus(pending->slot_index, AssetStatus::Loading);
-                    bool ok = storage->LoadFromData(pending->slot_index, pending->slot_generation,
-                                                    completions[i].data.View(), *allocator_);
-                    // Free ByteBuffer immediately — data was copied into asset blob by LoadFromData.
-                    // Without this, ALL ByteBuffers stay alive until end of Update(), causing
-                    // memory peaks when many IO requests complete simultaneously.
-                    completions[i].data = wax::ByteBuffer{};
+                    storage->SetStatus(pending->m_slotIndex, AssetStatus::LOADING);
+
+                    const bool ok = storage->LoadFromData(pending->m_slotIndex, pending->m_slotGeneration,
+                                                          completions[i].m_data.View(), *m_allocator);
+
+                    // Release completed IO data once the asset copy has been made.
+                    completions[i].m_data = wax::ByteBuffer{*m_allocator};
 
                     if (ok)
-                        storage->SetStatus(pending->slot_index, AssetStatus::Ready);
+                    {
+                        storage->SetStatus(pending->m_slotIndex, AssetStatus::READY);
+                    }
                     else
                     {
-                        storage->SetStatus(pending->slot_index, AssetStatus::Failed);
-                        storage->SetError(pending->slot_index,
-                                          AssetErrorInfo{AssetError::LoadFailed, wax::String{}});
+                        storage->SetStatus(pending->m_slotIndex, AssetStatus::Failed);
+                        storage->SetError(pending->m_slotIndex,
+                                          AssetErrorInfo{AssetError::LOAD_FAILED, wax::String{*m_allocator}});
                     }
                 }
 
-                pending_loads_.Remove(completions[i].request_id);
+                m_pendingLoads.Remove(completions[i].m_requestId);
             }
         }
 
-        for (auto it = storages_.begin(); it != storages_.end(); ++it)
+        for (auto it = m_storages.Begin(); it != m_storages.End(); ++it)
         {
-            it.Value()->CollectGarbage(gc_grace_frames_);
+            it.Value()->CollectGarbage(m_gcGraceFrames);
         }
     }
 
-    size_t AssetServer::GetTotalAssetCount() const
-    {
+    size_t AssetServer::GetTotalAssetCount() const {
         size_t total = 0;
-        for (auto it = storages_.begin(); it != storages_.end(); ++it)
+        for (auto it = m_storages.Begin(); it != m_storages.End(); ++it)
         {
             total += it.Value()->Count();
         }
         return total;
     }
 
-    void AssetServer::SubmitAsyncLoad(uint32_t index, uint32_t generation,
-                                       nectar::TypeId type_id, wax::StringView path)
-    {
-        IORequestId req_id = io_->Submit(path, LoadPriority::Normal);
-        pending_loads_.Insert(req_id, PendingLoad{index, generation, type_id});
+    void AssetServer::SubmitAsyncLoad(uint32_t index, uint32_t generation, nectar::TypeId typeId,
+                                      wax::StringView path) {
+        HIVE_PROFILE_SCOPE_N("AssetServer::SubmitAsyncLoad");
+
+        if (m_io == nullptr)
+        {
+            return;
+        }
+
+        const IORequestId requestId = m_io->Submit(path, LoadPriority::NORMAL);
+        m_pendingLoads.Insert(requestId, PendingLoad{index, generation, typeId});
     }
 
-    wax::ByteBuffer AssetServer::ReadFile(wax::StringView path)
-    {
-        wax::ByteBuffer buffer{*allocator_};
+    wax::ByteBuffer AssetServer::ReadFile(wax::StringView path) {
+        wax::ByteBuffer buffer{*m_allocator};
 
-        // Build full path
-        wax::String full_path{*allocator_};
-        if (base_path_.Size() > 0)
+        wax::String fullPath{*m_allocator};
+        if (m_basePath.Size() > 0)
         {
-            full_path.Append(base_path_.View().Data(), base_path_.View().Size());
-            full_path.Append("/", 1);
+            fullPath.Append(m_basePath.View().Data(), m_basePath.View().Size());
+            fullPath.Append("/", 1);
         }
-        full_path.Append(path.Data(), path.Size());
+        fullPath.Append(path.Data(), path.Size());
 
-        FILE* file = std::fopen(full_path.CStr(), "rb");
-        if (!file) return buffer;
+        FILE* file = std::fopen(fullPath.CStr(), "rb");
+        if (file == nullptr)
+        {
+            return buffer;
+        }
 
         std::fseek(file, 0, SEEK_END);
-        long file_size = std::ftell(file);
+        const long fileSize = std::ftell(file);
         std::fseek(file, 0, SEEK_SET);
 
-        if (file_size <= 0)
+        if (fileSize <= 0)
         {
             std::fclose(file);
             return buffer;
         }
 
-        buffer.Resize(static_cast<size_t>(file_size));
-        size_t read = std::fread(buffer.Data(), 1, static_cast<size_t>(file_size), file);
+        buffer.Resize(static_cast<size_t>(fileSize));
+        const size_t read = std::fread(buffer.Data(), 1, static_cast<size_t>(fileSize), file);
         std::fclose(file);
 
-        if (read != static_cast<size_t>(file_size))
+        if (read != static_cast<size_t>(fileSize))
         {
             buffer.Clear();
         }
 
         return buffer;
     }
-}
+} // namespace nectar

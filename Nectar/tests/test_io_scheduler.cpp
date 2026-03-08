@@ -1,24 +1,25 @@
-#include <larvae/larvae.h>
-#include <nectar/io/io_scheduler.h>
-#include <nectar/vfs/virtual_filesystem.h>
-#include <nectar/vfs/memory_mount.h>
 #include <comb/default_allocator.h>
+
+#include <nectar/io/io_scheduler.h>
+#include <nectar/vfs/memory_mount.h>
+#include <nectar/vfs/virtual_filesystem.h>
+
+#include <larvae/larvae.h>
+
+#include <chrono>
 #include <cstring>
 #include <thread>
-#include <chrono>
 
-namespace {
+namespace
+{
 
-    auto& GetIOAlloc()
-    {
+    auto& GetIOAlloc() {
         static comb::ModuleAllocator alloc{"TestIO", 4 * 1024 * 1024};
         return alloc.Get();
     }
 
     // Poll until condition is true, with timeout
-    template <typename Fn>
-    bool PollUntil(Fn&& fn, int timeout_ms = 2000)
-    {
+    template <typename Fn> bool PollUntil(Fn&& fn, int timeout_ms = 2000) {
         auto start = std::chrono::steady_clock::now();
         while (!fn())
         {
@@ -45,7 +46,7 @@ namespace {
 
         nectar::IOScheduler io{vfs, alloc, {1}};
 
-        auto id = io.Submit("test.txt", nectar::LoadPriority::Normal);
+        auto id = io.Submit("test.txt", nectar::LoadPriority::NORMAL);
 
         wax::Vector<nectar::IOCompletion> completions{alloc};
         bool ok = PollUntil([&]() {
@@ -55,10 +56,10 @@ namespace {
 
         larvae::AssertTrue(ok);
         larvae::AssertEqual(completions.Size(), size_t{1});
-        larvae::AssertEqual(completions[0].request_id, id);
-        larvae::AssertTrue(completions[0].success);
-        larvae::AssertEqual(completions[0].data.Size(), std::strlen(data));
-        larvae::AssertTrue(std::memcmp(completions[0].data.Data(), data, std::strlen(data)) == 0);
+        larvae::AssertEqual(completions[0].m_requestId, id);
+        larvae::AssertTrue(completions[0].m_success);
+        larvae::AssertEqual(completions[0].m_data.Size(), std::strlen(data));
+        larvae::AssertTrue(std::memcmp(completions[0].m_data.Data(), data, std::strlen(data)) == 0);
 
         io.Shutdown();
     });
@@ -79,9 +80,9 @@ namespace {
 
         nectar::IOScheduler io{vfs, alloc, {2}};
 
-        (void)io.Submit("a.txt", nectar::LoadPriority::Normal);
-        (void)io.Submit("b.txt", nectar::LoadPriority::Normal);
-        (void)io.Submit("c.txt", nectar::LoadPriority::Normal);
+        (void)io.Submit("a.txt", nectar::LoadPriority::NORMAL);
+        (void)io.Submit("b.txt", nectar::LoadPriority::NORMAL);
+        (void)io.Submit("c.txt", nectar::LoadPriority::NORMAL);
 
         wax::Vector<nectar::IOCompletion> completions{alloc};
         bool ok = PollUntil([&]() {
@@ -94,7 +95,7 @@ namespace {
 
         // All should succeed
         for (size_t i = 0; i < completions.Size(); ++i)
-            larvae::AssertTrue(completions[i].success);
+            larvae::AssertTrue(completions[i].m_success);
 
         io.Shutdown();
     });
@@ -119,9 +120,9 @@ namespace {
         // Submit low first, then critical — critical should be processed first
         // We need to pause the worker to queue both before processing starts
         // Since we can't pause, submit all at once and check that critical finishes
-        (void)io.Submit("low.txt", nectar::LoadPriority::Low);
-        (void)io.Submit("high.txt", nectar::LoadPriority::High);
-        auto id_crit = io.Submit("crit.txt", nectar::LoadPriority::Critical);
+        (void)io.Submit("low.txt", nectar::LoadPriority::LOW);
+        (void)io.Submit("high.txt", nectar::LoadPriority::HIGH);
+        auto id_crit = io.Submit("crit.txt", nectar::LoadPriority::CRITICAL);
 
         wax::Vector<nectar::IOCompletion> completions{alloc};
         bool ok = PollUntil([&]() {
@@ -133,7 +134,7 @@ namespace {
         larvae::AssertEqual(completions.Size(), size_t{3});
 
         // First completion should be critical (lowest enum value)
-        larvae::AssertEqual(completions[0].request_id, id_crit);
+        larvae::AssertEqual(completions[0].m_requestId, id_crit);
 
         io.Shutdown();
     });
@@ -153,8 +154,8 @@ namespace {
 
         nectar::IOScheduler io{vfs, alloc, {1}};
 
-        auto id_a = io.Submit("a.txt", nectar::LoadPriority::Normal);
-        auto id_b = io.Submit("b.txt", nectar::LoadPriority::Normal);
+        auto id_a = io.Submit("a.txt", nectar::LoadPriority::NORMAL);
+        auto id_b = io.Submit("b.txt", nectar::LoadPriority::NORMAL);
 
         // Cancel b before it's processed
         io.Cancel(id_b);
@@ -172,7 +173,7 @@ namespace {
         bool found_b = false;
         for (size_t i = 0; i < completions.Size(); ++i)
         {
-            if (completions[i].request_id == id_b)
+            if (completions[i].m_requestId == id_b)
                 found_b = true;
         }
         larvae::AssertFalse(found_b);
@@ -181,7 +182,7 @@ namespace {
         bool found_a = false;
         for (size_t i = 0; i < completions.Size(); ++i)
         {
-            if (completions[i].request_id == id_a)
+            if (completions[i].m_requestId == id_a)
                 found_a = true;
         }
         larvae::AssertTrue(found_a);
@@ -203,7 +204,7 @@ namespace {
 
         nectar::IOScheduler io{vfs, alloc, {1}};
 
-        auto id = io.Submit("data.txt", nectar::LoadPriority::Normal);
+        auto id = io.Submit("data.txt", nectar::LoadPriority::NORMAL);
 
         // Wait for completion to be ready
         std::this_thread::sleep_for(std::chrono::milliseconds{50});
@@ -218,7 +219,7 @@ namespace {
         bool found = false;
         for (size_t i = 0; i < completions.Size(); ++i)
         {
-            if (completions[i].request_id == id)
+            if (completions[i].m_requestId == id)
                 found = true;
         }
         larvae::AssertFalse(found);
@@ -239,7 +240,7 @@ namespace {
 
         nectar::IOScheduler io{vfs, alloc, {1}};
 
-        auto id = io.Submit("doesnt_exist.txt", nectar::LoadPriority::Normal);
+        auto id = io.Submit("doesnt_exist.txt", nectar::LoadPriority::NORMAL);
 
         wax::Vector<nectar::IOCompletion> completions{alloc};
         bool ok = PollUntil([&]() {
@@ -248,9 +249,9 @@ namespace {
         });
 
         larvae::AssertTrue(ok);
-        larvae::AssertEqual(completions[0].request_id, id);
-        larvae::AssertFalse(completions[0].success);
-        larvae::AssertEqual(completions[0].data.Size(), size_t{0});
+        larvae::AssertEqual(completions[0].m_requestId, id);
+        larvae::AssertFalse(completions[0].m_success);
+        larvae::AssertEqual(completions[0].m_data.Size(), size_t{0});
 
         io.Shutdown();
     });
@@ -289,7 +290,7 @@ namespace {
 
         {
             nectar::IOScheduler io{vfs, alloc, {2}};
-            (void)io.Submit("x.txt", nectar::LoadPriority::Normal);
+            (void)io.Submit("x.txt", nectar::LoadPriority::NORMAL);
             // Destructor calls Shutdown which joins threads
         }
         // If we get here without hanging, shutdown works
@@ -309,7 +310,7 @@ namespace {
 
         nectar::IOScheduler io{vfs, alloc, {1}};
         io.Shutdown();
-        io.Shutdown();  // should not hang or crash
+        io.Shutdown(); // should not hang or crash
         larvae::AssertTrue(io.IsShutdown());
     });
 
@@ -355,7 +356,7 @@ namespace {
         vfs.Mount("", &mem);
 
         nectar::IOScheduler io{vfs, alloc, {1}};
-        (void)io.Submit("big.bin", nectar::LoadPriority::Normal);
+        (void)io.Submit("big.bin", nectar::LoadPriority::NORMAL);
 
         wax::Vector<nectar::IOCompletion> completions{alloc};
         bool ok = PollUntil([&]() {
@@ -364,11 +365,11 @@ namespace {
         });
 
         larvae::AssertTrue(ok);
-        larvae::AssertTrue(completions[0].success);
-        larvae::AssertEqual(completions[0].data.Size(), kSize);
+        larvae::AssertTrue(completions[0].m_success);
+        larvae::AssertEqual(completions[0].m_data.Size(), kSize);
 
         // Verify content
-        auto* ptr = completions[0].data.Data();
+        auto* ptr = completions[0].m_data.Data();
         for (size_t i = 0; i < kSize; ++i)
             larvae::AssertEqual(ptr[i], static_cast<uint8_t>(i & 0xFF));
 
@@ -384,12 +385,9 @@ namespace {
         nectar::MemoryMountSource mem{alloc};
 
         // 20 files, all with literal content
-        const char* names[] = {
-            "f00.txt", "f01.txt", "f02.txt", "f03.txt", "f04.txt",
-            "f05.txt", "f06.txt", "f07.txt", "f08.txt", "f09.txt",
-            "f10.txt", "f11.txt", "f12.txt", "f13.txt", "f14.txt",
-            "f15.txt", "f16.txt", "f17.txt", "f18.txt", "f19.txt"
-        };
+        const char* names[] = {"f00.txt", "f01.txt", "f02.txt", "f03.txt", "f04.txt", "f05.txt", "f06.txt",
+                               "f07.txt", "f08.txt", "f09.txt", "f10.txt", "f11.txt", "f12.txt", "f13.txt",
+                               "f14.txt", "f15.txt", "f16.txt", "f17.txt", "f18.txt", "f19.txt"};
         constexpr size_t kFileCount = 20;
 
         for (size_t i = 0; i < kFileCount; ++i)
@@ -406,7 +404,7 @@ namespace {
         {
             submitters.emplace_back([&io, &names, t]() {
                 for (size_t i = t * 5; i < (t + 1) * 5; ++i)
-                    (void)io.Submit(names[i], nectar::LoadPriority::Normal);
+                    (void)io.Submit(names[i], nectar::LoadPriority::NORMAL);
             });
         }
 
@@ -423,9 +421,9 @@ namespace {
         larvae::AssertEqual(completions.Size(), kFileCount);
 
         for (size_t i = 0; i < completions.Size(); ++i)
-            larvae::AssertTrue(completions[i].success);
+            larvae::AssertTrue(completions[i].m_success);
 
         io.Shutdown();
     });
 
-}
+} // namespace

@@ -1,26 +1,24 @@
-#include <forge/scene_file.h>
-
-#include <queen/world/world.h>
-#include <queen/reflect/world_serializer.h>
-#include <queen/reflect/world_deserializer.h>
-
 #include <hive/core/log.h>
+
+#include <queen/reflect/world_deserializer.h>
+#include <queen/reflect/world_serializer.h>
+#include <queen/world/world.h>
+
+#include <forge/scene_file.h>
 
 #include <cstdio>
 #include <vector>
 
-static const hive::LogCategory LogForge{"Forge"};
+static const hive::LogCategory LOG_FORGE{"Forge"};
 
 namespace forge
 {
-    bool SaveScene(queen::World& world, const queen::ComponentRegistry<256>& registry,
-                   const char* path)
-    {
+    bool SaveScene(queen::World& world, const queen::ComponentRegistry<256>& registry, const char* path) {
         queen::WorldSerializer<1024 * 1024> serializer;
         auto result = serializer.Serialize(world, registry);
-        if (!result.success)
+        if (!result.m_success)
         {
-            hive::LogError(LogForge, "Failed to serialize scene");
+            hive::LogError(LOG_FORGE, "Failed to serialize scene");
             return false;
         }
 
@@ -32,21 +30,19 @@ namespace forge
 #endif
         if (!f)
         {
-            hive::LogError(LogForge, "Failed to open file for writing: {}", path);
+            hive::LogError(LOG_FORGE, "Failed to open file for writing: {}", path);
             return false;
         }
 
         fwrite(serializer.CStr(), 1, serializer.Size(), f);
         fclose(f);
 
-        hive::LogInfo(LogForge, "Scene saved: {} ({} entities, {} components)",
-                      path, result.entities_written, result.components_written);
+        hive::LogInfo(LOG_FORGE, "Scene saved: {} ({} entities, {} components)", path, result.m_entitiesWritten,
+                      result.m_componentsWritten);
         return true;
     }
 
-    bool LoadScene(queen::World& world, const queen::ComponentRegistry<256>& registry,
-                   const char* path)
-    {
+    bool LoadScene(queen::World& world, const queen::ComponentRegistry<256>& registry, const char* path) {
         FILE* f = nullptr;
 #ifdef _MSC_VER
         fopen_s(&f, path, "r");
@@ -55,7 +51,7 @@ namespace forge
 #endif
         if (!f)
         {
-            hive::LogError(LogForge, "Failed to open scene file: {}", path);
+            hive::LogError(LOG_FORGE, "Failed to open scene file: {}", path);
             return false;
         }
 
@@ -68,16 +64,14 @@ namespace forge
         fclose(f);
 
         auto result = queen::WorldDeserializer::Deserialize(world, registry, buffer.data());
-        if (!result.success)
+        if (!result.m_success)
         {
-            hive::LogError(LogForge, "Failed to deserialize scene: {}",
-                           result.error ? result.error : "unknown");
+            hive::LogError(LOG_FORGE, "Failed to deserialize scene: {}", result.m_error ? result.m_error : "unknown");
             return false;
         }
 
-        hive::LogInfo(LogForge, "Scene loaded: {} ({} entities, {} components, {} skipped)",
-                      path, result.entities_loaded, result.components_loaded,
-                      result.components_skipped);
+        hive::LogInfo(LOG_FORGE, "Scene loaded: {} ({} entities, {} components, {} skipped)", path,
+                      result.m_entitiesLoaded, result.m_componentsLoaded, result.m_componentsSkipped);
         return true;
     }
-}
+} // namespace forge

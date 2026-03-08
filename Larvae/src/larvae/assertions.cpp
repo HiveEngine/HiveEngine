@@ -1,8 +1,9 @@
-#include <larvae/precomp.h>
 #include <larvae/assertions.h>
-#include <sstream>
-#include <cstdlib>
+#include <larvae/precomp.h>
+
 #include <cstdio>
+#include <cstdlib>
+#include <sstream>
 
 namespace larvae
 {
@@ -10,15 +11,13 @@ namespace larvae
     {
         // Global assertion failure handler
         AssertionFailureHandler g_assertion_handler = nullptr;
-    }
+    } // namespace
 
-    void SetAssertionFailureHandler(AssertionFailureHandler handler)
-    {
+    void SetAssertionFailureHandler(AssertionFailureHandler handler) {
         g_assertion_handler = handler;
     }
 
-    void HandleAssertionFailure(const std::string& message)
-    {
+    void HandleAssertionFailure(const std::string& message) {
         if (g_assertion_handler)
         {
             // Custom handler decides whether to continue or abort
@@ -35,14 +34,9 @@ namespace larvae
         std::abort();
     }
 
-    std::string FormatAssertionMessage(
-        const char* file,
-        std::uint_least32_t line,
-        const char* expression,
-        const std::string& expected_str,
-        const std::string& actual_str,
-        const std::string& custom_message)
-    {
+    std::string FormatAssertionMessage(const char* file, std::uint_least32_t line, const char* expression,
+                                       const std::string& expected_str, const std::string& actual_str,
+                                       const std::string& custom_message) {
         std::ostringstream ss;
         ss << file << ":" << line << ": Assertion failed\n";
         ss << "  Expression: " << expression << "\n";
@@ -64,4 +58,4 @@ namespace larvae
 
         return ss.str();
     }
-}
+} // namespace larvae

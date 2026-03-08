@@ -1,16 +1,17 @@
 #pragma once
 
 #include <comb/allocator_concepts.h>
+
 #include <cstddef>
 #include <memory>
 
 // Memory debugging (zero overhead when disabled)
 #if COMB_MEM_DEBUG
-    #include <comb/debug/mem_debug_config.h>
-    #include <comb/debug/allocation_registry.h>
-    #include <comb/debug/allocation_history.h>
-    #include <comb/debug/global_memory_tracker.h>
-    #include <comb/debug/platform_utils.h>
+#include <comb/debug/allocation_history.h>
+#include <comb/debug/allocation_registry.h>
+#include <comb/debug/global_memory_tracker.h>
+#include <comb/debug/mem_debug_config.h>
+#include <comb/debug/platform_utils.h>
 #endif
 
 namespace comb
@@ -151,9 +152,9 @@ namespace comb
         [[nodiscard]] const char* GetName() const;
 
     private:
-        void* base_{nullptr};
-        void* current_{nullptr};
-        size_t capacity_{0};
+        void* m_base{nullptr};
+        void* m_current{nullptr};
+        size_t m_capacity{0};
 
 #if COMB_MEM_DEBUG
         // Debug tracking (zero overhead when COMB_MEM_DEBUG=0)
@@ -161,14 +162,13 @@ namespace comb
         void DeallocateDebug(void* ptr);
 
         // Use unique_ptr to enable move semantics (AllocationRegistry contains non-movable mutex)
-        std::unique_ptr<debug::AllocationRegistry> registry_;
-        std::unique_ptr<debug::AllocationHistory> history_;
+        std::unique_ptr<debug::AllocationRegistry> m_registry;
+        std::unique_ptr<debug::AllocationHistory> m_history;
 
         // Tracks current_ without guard bytes — keeps GetUsedMemory() consistent across debug/release
-        void* release_current_{nullptr};
+        void* m_releaseCurrent{nullptr};
 #endif
     };
 
     static_assert(Allocator<LinearAllocator>, "LinearAllocator must satisfy Allocator concept");
-}
-
+} // namespace comb

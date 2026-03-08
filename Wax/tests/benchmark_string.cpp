@@ -1,7 +1,10 @@
-#include <larvae/larvae.h>
+#include <comb/linear_allocator.h>
+
 #include <wax/containers/string.h>
 #include <wax/containers/string_view.h>
-#include <comb/linear_allocator.h>
+
+#include <larvae/larvae.h>
+
 #include <string>
 
 namespace
@@ -285,15 +288,16 @@ namespace
     // StringView Benchmarks
     // =============================================================================
 
-    auto bench21 = larvae::RegisterBenchmark("WaxStringView", "ConstructFromLiteral", [](larvae::BenchmarkState& state) {
-        while (state.KeepRunning())
-        {
-            wax::StringView sv{"Hello World"};
-            larvae::DoNotOptimize(sv.Data());
-        }
+    auto bench21 =
+        larvae::RegisterBenchmark("WaxStringView", "ConstructFromLiteral", [](larvae::BenchmarkState& state) {
+            while (state.KeepRunning())
+            {
+                wax::StringView sv{"Hello World"};
+                larvae::DoNotOptimize(sv.Data());
+            }
 
-        state.SetItemsProcessed(state.iterations());
-    });
+            state.SetItemsProcessed(state.iterations());
+        });
 
     auto bench22 = larvae::RegisterBenchmark("WaxStringView", "FindChar", [](larvae::BenchmarkState& state) {
         wax::StringView sv{"The quick brown fox jumps over the lazy dog"};
@@ -367,4 +371,4 @@ namespace
 
         state.SetItemsProcessed(state.iterations());
     });
-}
+} // namespace

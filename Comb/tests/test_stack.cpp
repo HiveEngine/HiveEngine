@@ -1,20 +1,25 @@
-#include <larvae/larvae.h>
-#include <comb/stack_allocator.h>
 #include <comb/new.h>
+#include <comb/stack_allocator.h>
+
+#include <larvae/larvae.h>
+
 #include <cstring>
 
 namespace
 {
-    constexpr size_t operator""_KB(unsigned long long kb) { return kb * 1024; }
-    constexpr size_t operator""_MB(unsigned long long mb) { return mb * 1024 * 1024; }
+    constexpr size_t operator""_KB(unsigned long long kb) {
+        return kb * 1024;
+    }
+    constexpr size_t operator""_MB(unsigned long long mb) {
+        return mb * 1024 * 1024;
+    }
 
     // =============================================================================
     // Concept Satisfaction
     // =============================================================================
 
-    auto test1 = larvae::RegisterTest("StackAllocator", "ConceptSatisfaction", []() {
-        larvae::AssertTrue((comb::Allocator<comb::StackAllocator>));
-    });
+    auto test1 = larvae::RegisterTest("StackAllocator", "ConceptSatisfaction",
+                                      []() { larvae::AssertTrue((comb::Allocator<comb::StackAllocator>)); });
 
     // =============================================================================
     // Basic Functionality
@@ -344,7 +349,8 @@ namespace
         struct TestObject
         {
             int value;
-            TestObject(int v) : value{v} {}
+            TestObject(int v)
+                : value{v} {}
         };
 
         TestObject* obj = comb::New<TestObject>(allocator, 42);
@@ -359,7 +365,10 @@ namespace
         struct TestObject
         {
             bool* destroyed;
-            TestObject(bool* d) : destroyed{d} { *destroyed = false; }
+            TestObject(bool* d)
+                : destroyed{d} {
+                *destroyed = false;
+            }
             ~TestObject() { *destroyed = true; }
         };
 
@@ -474,4 +483,4 @@ namespace
 
         larvae::AssertEqual(allocator.GetUsedMemory(), 0u);
     });
-}
+} // namespace

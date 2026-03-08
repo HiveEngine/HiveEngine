@@ -1,11 +1,15 @@
-#include <larvae/larvae.h>
-#include <nectar/server/asset_server.h>
-#include <nectar/server/asset_loader.h>
 #include <comb/default_allocator.h>
 #include <comb/new.h>
+
+#include <nectar/server/asset_loader.h>
+#include <nectar/server/asset_server.h>
+
+#include <larvae/larvae.h>
+
 #include <cstring>
 
-namespace {
+namespace
+{
 
     struct ServerTestAsset
     {
@@ -15,16 +19,16 @@ namespace {
     class ServerTestLoader final : public nectar::AssetLoader<ServerTestAsset>
     {
     public:
-        ServerTestAsset* Load(wax::ByteSpan data, comb::DefaultAllocator& alloc) override
-        {
-            if (data.Size() < sizeof(int)) return nullptr;
+        ServerTestAsset* Load(wax::ByteSpan data, comb::DefaultAllocator& alloc) override {
+            if (data.Size() < sizeof(int))
+                return nullptr;
             auto* a = comb::New<ServerTestAsset>(alloc);
             a->value = data.Read<int>(0);
             return a;
         }
-        void Unload(ServerTestAsset* asset, comb::DefaultAllocator& alloc) override
-        {
-            if (asset) comb::Delete(alloc, asset);
+        void Unload(ServerTestAsset* asset, comb::DefaultAllocator& alloc) override {
+            if (asset)
+                comb::Delete(alloc, asset);
         }
     };
 
@@ -37,33 +41,30 @@ namespace {
     class OtherLoader final : public nectar::AssetLoader<OtherAsset>
     {
     public:
-        OtherAsset* Load(wax::ByteSpan data, comb::DefaultAllocator& alloc) override
-        {
-            if (data.Size() < sizeof(float)) return nullptr;
+        OtherAsset* Load(wax::ByteSpan data, comb::DefaultAllocator& alloc) override {
+            if (data.Size() < sizeof(float))
+                return nullptr;
             auto* a = comb::New<OtherAsset>(alloc);
             a->x = data.Read<float>(0);
             return a;
         }
-        void Unload(OtherAsset* asset, comb::DefaultAllocator& alloc) override
-        {
-            if (asset) comb::Delete(alloc, asset);
+        void Unload(OtherAsset* asset, comb::DefaultAllocator& alloc) override {
+            if (asset)
+                comb::Delete(alloc, asset);
         }
     };
 
-    auto& GetServerTestAlloc()
-    {
+    auto& GetServerTestAlloc() {
         static comb::ModuleAllocator alloc{"TestServer", 8 * 1024 * 1024};
         return alloc.Get();
     }
 
-    wax::ByteSpan MakeIntSpan(uint8_t* buf, int value)
-    {
+    wax::ByteSpan MakeIntSpan(uint8_t* buf, int value) {
         std::memcpy(buf, &value, sizeof(int));
         return wax::ByteSpan{buf, sizeof(int)};
     }
 
-    wax::ByteSpan MakeFloatSpan(uint8_t* buf, float value)
-    {
+    wax::ByteSpan MakeFloatSpan(uint8_t* buf, float value) {
         std::memcpy(buf, &value, sizeof(float));
         return wax::ByteSpan{buf, sizeof(float)};
     }
@@ -128,18 +129,16 @@ namespace {
         auto data = MakeIntSpan(buf, 1);
 
         auto handle = server.LoadFromMemory<ServerTestAsset>("status_test", data);
-        larvae::AssertEqual(
-            static_cast<uint8_t>(server.GetStatus(handle)),
-            static_cast<uint8_t>(nectar::AssetStatus::Ready));
+        larvae::AssertEqual(static_cast<uint8_t>(server.GetStatus(handle)),
+                            static_cast<uint8_t>(nectar::AssetStatus::READY));
     });
 
     auto t5 = larvae::RegisterTest("NectarAssetServer", "NullHandleStatus", []() {
         auto& alloc = GetServerTestAlloc();
         nectar::AssetServer server{alloc};
         nectar::StrongHandle<ServerTestAsset> null{};
-        larvae::AssertEqual(
-            static_cast<uint8_t>(server.GetStatus(null)),
-            static_cast<uint8_t>(nectar::AssetStatus::NotLoaded));
+        larvae::AssertEqual(static_cast<uint8_t>(server.GetStatus(null)),
+                            static_cast<uint8_t>(nectar::AssetStatus::NOT_LOADED));
     });
 
     // =========================================================================
@@ -192,9 +191,8 @@ namespace {
 
         auto handle = server.LoadFromMemory<ServerTestAsset>("fail_test", data);
         larvae::AssertFalse(handle.IsNull());
-        larvae::AssertEqual(
-            static_cast<uint8_t>(server.GetStatus(handle)),
-            static_cast<uint8_t>(nectar::AssetStatus::Failed));
+        larvae::AssertEqual(static_cast<uint8_t>(server.GetStatus(handle)),
+                            static_cast<uint8_t>(nectar::AssetStatus::Failed));
     });
 
     auto t9 = larvae::RegisterTest("NectarAssetServer", "GetFailedReturnsPlaceholder", []() {
@@ -243,15 +241,12 @@ namespace {
 
         auto handle = server.LoadFromMemory<ServerTestAsset>("no_loader", data);
         larvae::AssertFalse(handle.IsNull());
-        larvae::AssertEqual(
-            static_cast<uint8_t>(server.GetStatus(handle)),
-            static_cast<uint8_t>(nectar::AssetStatus::Failed));
+        larvae::AssertEqual(static_cast<uint8_t>(server.GetStatus(handle)),
+                            static_cast<uint8_t>(nectar::AssetStatus::Failed));
 
         auto* err = server.GetError(handle);
         larvae::AssertNotNull(err);
-        larvae::AssertEqual(
-            static_cast<uint8_t>(err->code),
-            static_cast<uint8_t>(nectar::AssetError::NoLoader));
+        larvae::AssertEqual(static_cast<uint8_t>(err->m_code), static_cast<uint8_t>(nectar::AssetError::NO_LOADER));
     });
 
     // =========================================================================
@@ -448,4 +443,4 @@ namespace {
         larvae::AssertEqual(server.GetTotalAssetCount(), size_t{0});
     });
 
-}
+} // namespace

@@ -1,21 +1,22 @@
-#include <larvae/larvae.h>
 #include <hive/math/bvh.h>
 #include <hive/math/transforms.h>
+
 #include <comb/buddy_allocator.h>
 
-namespace {
+#include <larvae/larvae.h>
+
+namespace
+{
 
     using namespace hive::math;
 
     constexpr size_t kAllocSize = 1024 * 1024;
 
-    AABB MakeBox(float cx, float cy, float cz, float h = 0.5f)
-    {
+    AABB MakeBox(float cx, float cy, float cz, float h = 0.5f) {
         return {{cx - h, cy - h, cz - h}, {cx + h, cy + h, cz + h}};
     }
 
-    Frustum MakeLookAtFrustum(Float3 eye, Float3 target, float fov, float aspect, float z_near, float z_far)
-    {
+    Frustum MakeLookAtFrustum(Float3 eye, Float3 target, float fov, float aspect, float z_near, float z_far) {
         Mat4 view = LookAt(eye, target, {0.f, 1.f, 0.f});
         Mat4 proj = Perspective(fov, aspect, z_near, z_far);
         return ExtractFrustum(proj * view);
@@ -200,7 +201,8 @@ namespace {
         bool restructured = bvh.Update(proxy, MakeBox(100.f, 100.f, 100.f, 0.5f));
         larvae::AssertTrue(restructured);
 
-        Frustum frustum = MakeLookAtFrustum({100.f, 100.f, 110.f}, {100.f, 100.f, 100.f}, Radians(60.f), 1.f, 0.1f, 200.f);
+        Frustum frustum =
+            MakeLookAtFrustum({100.f, 100.f, 110.f}, {100.f, 100.f, 100.f}, Radians(60.f), 1.f, 0.1f, 200.f);
         uint32_t found = 0;
         bvh.QueryFrustum(frustum, [&](uint32_t) { found++; });
         larvae::AssertEqual(found, 1u);
@@ -234,10 +236,8 @@ namespace {
         comb::BuddyAllocator alloc{kAllocSize};
         BVH<comb::BuddyAllocator> bvh{alloc};
 
-        AABB boxes[4] = {
-            MakeBox(0.f, 0.f, 0.f), MakeBox(3.f, 0.f, 0.f),
-            MakeBox(6.f, 0.f, 0.f), MakeBox(9.f, 0.f, 0.f)
-        };
+        AABB boxes[4] = {MakeBox(0.f, 0.f, 0.f), MakeBox(3.f, 0.f, 0.f), MakeBox(6.f, 0.f, 0.f),
+                         MakeBox(9.f, 0.f, 0.f)};
         bvh.Build(boxes, 4);
 
         AABB query{{-1.f, -1.f, -1.f}, {4.f, 1.f, 1.f}};
@@ -285,14 +285,16 @@ namespace {
         Frustum frustum = MakeLookAtFrustum({50.f, 50.f, 60.f}, {50.f, 50.f, 50.f}, Radians(60.f), 1.f, 0.1f, 100.f);
         uint32_t found = 0;
         bvh.QueryFrustum(frustum, [&](uint32_t idx) {
-            if (idx == 0) found++;
+            if (idx == 0)
+                found++;
         });
         larvae::AssertEqual(found, 1u);
 
         Frustum old_frustum = MakeLookAtFrustum({0.f, 0.f, 10.f}, {0.f, 0.f, 0.f}, Radians(30.f), 1.f, 0.1f, 20.f);
         found = 0;
         bvh.QueryFrustum(old_frustum, [&](uint32_t idx) {
-            if (idx == 0) found++;
+            if (idx == 0)
+                found++;
         });
         larvae::AssertEqual(found, 0u);
     });

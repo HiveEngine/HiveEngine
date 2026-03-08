@@ -2,24 +2,26 @@
 
 #include <imgui.h>
 
-#include <filesystem>
 #include <algorithm>
+#include <filesystem>
 #include <string>
 #include <vector>
 
 namespace forge
 {
-    static const char* IconForExtension(const std::string& ext)
-    {
-        if (ext == ".gltf" || ext == ".glb" || ext == ".obj") return "[3D]";
-        if (ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".tga" || ext == ".bmp") return "[Tex]";
-        if (ext == ".hlsl" || ext == ".glsl" || ext == ".vert" || ext == ".frag") return "[Sh]";
-        if (ext == ".hscene") return "[Scene]";
+    static const char* IconForExtension(const std::string& ext) {
+        if (ext == ".gltf" || ext == ".glb" || ext == ".obj")
+            return "[3D]";
+        if (ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".tga" || ext == ".bmp")
+            return "[Tex]";
+        if (ext == ".hlsl" || ext == ".glsl" || ext == ".vert" || ext == ".frag")
+            return "[Sh]";
+        if (ext == ".hscene")
+            return "[Scene]";
         return "";
     }
 
-    static void DrawDirectory(const std::filesystem::path& dir)
-    {
+    static void DrawDirectory(const std::filesystem::path& dir) {
         // Collect and sort entries
         std::vector<std::filesystem::directory_entry> dirs;
         std::vector<std::filesystem::directory_entry> files;
@@ -69,14 +71,13 @@ namespace forge
         }
     }
 
-    void DrawAssetBrowser(const char* assets_root)
-    {
-        if (!assets_root || !std::filesystem::exists(assets_root))
+    void DrawAssetBrowser(const char* assetsRoot) {
+        if (!assetsRoot || !std::filesystem::exists(assetsRoot))
         {
             ImGui::TextDisabled("Assets directory not found");
             return;
         }
 
-        DrawDirectory(std::filesystem::path{assets_root});
+        DrawDirectory(std::filesystem::path{assetsRoot});
     }
-}
+} // namespace forge

@@ -1,7 +1,9 @@
-#include <larvae/larvae.h>
-#include <queen/storage/component_index.h>
-#include <queen/storage/archetype_graph.h>
 #include <comb/linear_allocator.h>
+
+#include <queen/storage/archetype_graph.h>
+#include <queen/storage/component_index.h>
+
+#include <larvae/larvae.h>
 
 namespace
 {
@@ -20,7 +22,9 @@ namespace
         int current, max;
     };
 
-    struct Tag {};
+    struct Tag
+    {
+    };
 
     auto test1 = larvae::RegisterTest("QueenComponentIndex", "Empty", []() {
         comb::LinearAllocator alloc{65536};
@@ -222,4 +226,4 @@ namespace
         larvae::AssertEqual(result.Size(), size_t{1});
         larvae::AssertTrue(result[0] == arch_pos_vel);
     });
-}
+} // namespace

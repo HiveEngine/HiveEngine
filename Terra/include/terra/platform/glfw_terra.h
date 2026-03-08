@@ -1,19 +1,20 @@
 #pragma once
 
 #include <terra/terra.h>
+
 #include <GLFW/glfw3.h>
 
 namespace terra
 {
     struct WindowContext
     {
-        //GLFW stuff here
-        GLFWwindow *window_{nullptr};
-        const char *title_{nullptr};
-        int width_{0};
-        int height_{0};
+        // GLFW stuff here
+        GLFWwindow* m_window{nullptr};
+        const char* m_title{nullptr};
+        int m_width{0};
+        int m_height{0};
 
-        InputState currentInputState_{};
-        InputState lastInputState_{};
+        InputState m_currentInputState{};
+        InputState m_lastInputState{};
     };
-}
+} // namespace terra

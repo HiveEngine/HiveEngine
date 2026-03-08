@@ -1,21 +1,25 @@
-#include <larvae/larvae.h>
-#include <wax/pointers/rc.h>
 #include <comb/linear_allocator.h>
 
-namespace {
-    struct TestStruct {
+#include <wax/pointers/rc.h>
+
+#include <larvae/larvae.h>
+
+namespace
+{
+    struct TestStruct
+    {
         int value;
         float data;
         static int construct_count;
         static int destruct_count;
 
-        TestStruct(int v = 0, float d = 0.0f) : value{v}, data{d} {
+        TestStruct(int v = 0, float d = 0.0f)
+            : value{v}
+            , data{d} {
             ++construct_count;
         }
 
-        ~TestStruct() {
-            ++destruct_count;
-        }
+        ~TestStruct() { ++destruct_count; }
     };
 
     int TestStruct::construct_count = 0;
@@ -175,9 +179,12 @@ namespace {
 
         auto rc = wax::MakeRc<int>(alloc, 42);
 
-        if (rc) {
+        if (rc)
+        {
             larvae::AssertEqual(*rc, 42);
-        } else {
+        }
+        else
+        {
             larvae::AssertTrue(false); // Rc should be valid
         }
     });
@@ -185,9 +192,12 @@ namespace {
     auto test13 = larvae::RegisterTest("WaxRc", "BoolConversionNull", []() {
         wax::Rc<int, comb::LinearAllocator> rc;
 
-        if (rc) {
+        if (rc)
+        {
             larvae::AssertTrue(false); // Rc should be null
-        } else {
+        }
+        else
+        {
             larvae::AssertTrue(true);
         }
     });
@@ -221,10 +231,10 @@ namespace {
         larvae::AssertTrue(rc1.IsNull());
         larvae::AssertTrue(rc2.IsValid());
         larvae::AssertEqual(rc2.GetRefCount(), 1u);
-        larvae::AssertEqual(TestStruct::destruct_count, 0);  // Not destroyed yet
+        larvae::AssertEqual(TestStruct::destruct_count, 0); // Not destroyed yet
 
         rc2.Reset();
-        larvae::AssertEqual(TestStruct::destruct_count, 1);  // Now destroyed
+        larvae::AssertEqual(TestStruct::destruct_count, 1); // Now destroyed
     });
 
     // =============================================================================
@@ -291,7 +301,7 @@ namespace {
             larvae::AssertEqual(rc_outer.GetRefCount(), 2u);
         }
         larvae::AssertEqual(rc_outer.GetRefCount(), 1u);
-        larvae::AssertEqual(TestStruct::destruct_count, 0);  // Still alive
+        larvae::AssertEqual(TestStruct::destruct_count, 0); // Still alive
 
         rc_outer.Reset();
         larvae::AssertEqual(TestStruct::destruct_count, 1);
@@ -316,7 +326,7 @@ namespace {
         auto rc1 = wax::MakeRc<int>(alloc, 42);
         auto rc2 = wax::MakeRc<int>(alloc, 42);
 
-        larvae::AssertTrue(rc1 != rc2);  // Different objects
+        larvae::AssertTrue(rc1 != rc2); // Different objects
     });
 
     auto test22 = larvae::RegisterTest("WaxRc", "CompareWithNullptr", []() {
@@ -342,13 +352,15 @@ namespace {
         auto rc = wax::MakeRc<int>(alloc, 42);
         wax::Rc<int, comb::LinearAllocator> refs[100];
 
-        for (int i = 0; i < 100; ++i) {
+        for (int i = 0; i < 100; ++i)
+        {
             refs[i] = rc;
         }
 
-        larvae::AssertEqual(rc.GetRefCount(), 101u);  // 1 original + 100 copies
+        larvae::AssertEqual(rc.GetRefCount(), 101u); // 1 original + 100 copies
 
-        for (int i = 0; i < 100; ++i) {
+        for (int i = 0; i < 100; ++i)
+        {
             refs[i].Reset();
         }
 
@@ -401,4 +413,4 @@ namespace {
         larvae::AssertEqual(*rc, 42);
         larvae::AssertEqual(rc.GetRefCount(), 1u);
     });
-}
+} // namespace

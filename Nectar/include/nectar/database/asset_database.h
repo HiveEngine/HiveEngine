@@ -1,12 +1,14 @@
 #pragma once
 
-#include <nectar/database/asset_record.h>
-#include <nectar/database/dependency_graph.h>
+#include <comb/default_allocator.h>
+
 #include <wax/containers/hash_map.h>
 #include <wax/containers/string.h>
 #include <wax/containers/string_view.h>
 #include <wax/containers/vector.h>
-#include <comb/default_allocator.h>
+
+#include <nectar/database/asset_record.h>
+#include <nectar/database/dependency_graph.h>
 
 namespace nectar
 {
@@ -47,10 +49,8 @@ namespace nectar
 
         // -- Iteration --
 
-        template<typename F>
-        void ForEach(F&& fn) const
-        {
-            for (auto it = records_.begin(); it != records_.end(); ++it)
+        template <typename F> void ForEach(F&& fn) const {
+            for (auto it = m_records.Begin(); it != m_records.End(); ++it)
                 fn(it.Key(), it.Value());
         }
 
@@ -61,9 +61,9 @@ namespace nectar
         [[nodiscard]] bool ContainsPath(wax::StringView path) const;
 
     private:
-        comb::DefaultAllocator* alloc_;
-        wax::HashMap<AssetId, AssetRecord> records_;
-        wax::HashMap<wax::String, AssetId> path_index_;
-        DependencyGraph dep_graph_;
+        comb::DefaultAllocator* m_alloc;
+        wax::HashMap<AssetId, AssetRecord> m_records;
+        wax::HashMap<wax::String, AssetId> m_pathIndex;
+        DependencyGraph m_depGraph;
     };
-}
+} // namespace nectar

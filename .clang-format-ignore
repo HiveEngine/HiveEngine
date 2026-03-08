@@ -1,0 +1,8 @@
+/out/build/**
+/**/_deps/**
+/Hive/extern/**
+/Nectar/extern/**
+/Swarm/extern/**
+/Terra/extern/**
+/Testbed/extern/**
+/Cells/**/extern/**

@@ -1,7 +1,10 @@
-#include <larvae/larvae.h>
-#include <queen/world/world.h>
-#include <comb/linear_allocator.h>
 #include <comb/debug/mem_debug_config.h>
+#include <comb/linear_allocator.h>
+
+#include <queen/world/world.h>
+
+#include <larvae/larvae.h>
+
 #include <atomic>
 #include <thread>
 
@@ -32,8 +35,7 @@ namespace
     // Basic UpdateParallel Tests
     // ─────────────────────────────────────────────────────────────
 
-    auto test1 = larvae::RegisterTest("QueenWorldParallel", "UpdateParallelCreatesScheduler", []()
-    {
+    auto test1 = larvae::RegisterTest("QueenWorldParallel", "UpdateParallelCreatesScheduler", []() {
         comb::LinearAllocator alloc{ParallelAllocSize};
         queen::World world{};
 
@@ -46,8 +48,7 @@ namespace
         larvae::AssertNotNull(world.GetParallelScheduler());
     });
 
-    auto test2 = larvae::RegisterTest("QueenWorldParallel", "UpdateParallelNoSystems", []()
-    {
+    auto test2 = larvae::RegisterTest("QueenWorldParallel", "UpdateParallelNoSystems", []() {
         comb::LinearAllocator alloc{ParallelAllocSize};
         queen::World world{};
 
@@ -58,18 +59,15 @@ namespace
         larvae::AssertTrue(tick_after.IsNewerThan(tick_before));
     });
 
-    auto test3 = larvae::RegisterTest("QueenWorldParallel", "UpdateParallelSingleSystem", []()
-    {
+    auto test3 = larvae::RegisterTest("QueenWorldParallel", "UpdateParallelSingleSystem", []() {
         comb::LinearAllocator alloc{ParallelAllocSize};
         queen::World world{};
 
         std::atomic<int> count{0};
 
-        world.System<queen::Read<Position>>("CountPositions")
-            .Each([&count](const Position&)
-            {
-                count.fetch_add(1, std::memory_order_relaxed);
-            });
+        world.System<queen::Read<Position>>("CountPositions").Each([&count](const Position&) {
+            count.fetch_add(1, std::memory_order_relaxed);
+        });
 
         (void)world.Spawn(Position{1.0f, 0.0f, 0.0f});
         (void)world.Spawn(Position{2.0f, 0.0f, 0.0f});
@@ -80,25 +78,18 @@ namespace
         larvae::AssertEqual(count.load(), 3);
     });
 
-    auto test4 = larvae::RegisterTest("QueenWorldParallel", "UpdateParallelMultipleSystems", []()
-    {
+    auto test4 = larvae::RegisterTest("QueenWorldParallel", "UpdateParallelMultipleSystems", []() {
         comb::LinearAllocator alloc{ParallelAllocSize};
         queen::World world{};
 
         std::atomic<int> system_a_count{0};
         std::atomic<int> system_b_count{0};
 
-        world.System<queen::Read<Position>>("SystemA")
-            .Each([&system_a_count](const Position&)
-            {
-                system_a_count.fetch_add(1, std::memory_order_relaxed);
-            });
+        world.System<queen::Read<Position>>("SystemA").Each(
+            [&system_a_count](const Position&) { system_a_count.fetch_add(1, std::memory_order_relaxed); });
 
-        world.System<queen::Read<Velocity>>("SystemB")
-            .Each([&system_b_count](const Velocity&)
-            {
-                system_b_count.fetch_add(1, std::memory_order_relaxed);
-            });
+        world.System<queen::Read<Velocity>>("SystemB").Each(
+            [&system_b_count](const Velocity&) { system_b_count.fetch_add(1, std::memory_order_relaxed); });
 
         (void)world.Spawn(Position{1.0f, 0.0f, 0.0f});
         (void)world.Spawn(Velocity{1.0f, 0.0f, 0.0f});
@@ -109,18 +100,15 @@ namespace
         larvae::AssertEqual(system_b_count.load(), 1);
     });
 
-    auto test5 = larvae::RegisterTest("QueenWorldParallel", "UpdateParallelMixedArchetypes", []()
-    {
+    auto test5 = larvae::RegisterTest("QueenWorldParallel", "UpdateParallelMixedArchetypes", []() {
         comb::LinearAllocator alloc{ParallelAllocSize};
         queen::World world{};
 
         std::atomic<int> count{0};
 
-        world.System<queen::Read<Position>>("CountAll")
-            .Each([&count](const Position&)
-            {
-                count.fetch_add(1, std::memory_order_relaxed);
-            });
+        world.System<queen::Read<Position>>("CountAll").Each([&count](const Position&) {
+            count.fetch_add(1, std::memory_order_relaxed);
+        });
 
         (void)world.Spawn(Position{1.0f, 0.0f, 0.0f});
         (void)world.Spawn(Position{2.0f, 0.0f, 0.0f}, Velocity{0.0f, 0.0f, 0.0f});
@@ -135,8 +123,7 @@ namespace
     // Parallel Scheduler Reuse Tests
     // ─────────────────────────────────────────────────────────────
 
-    auto test6 = larvae::RegisterTest("QueenWorldParallel", "UpdateParallelReusesScheduler", []()
-    {
+    auto test6 = larvae::RegisterTest("QueenWorldParallel", "UpdateParallelReusesScheduler", []() {
         comb::LinearAllocator alloc{ParallelAllocSize};
         queen::World world{};
 
@@ -149,18 +136,14 @@ namespace
         larvae::AssertTrue(scheduler1 == scheduler2);
     });
 
-    auto test7 = larvae::RegisterTest("QueenWorldParallel", "UpdateParallelMultipleUpdates", []()
-    {
+    auto test7 = larvae::RegisterTest("QueenWorldParallel", "UpdateParallelMultipleUpdates", []() {
         comb::LinearAllocator alloc{ParallelAllocSize};
         queen::World world{};
 
         std::atomic<int> count{0};
 
-        world.System<queen::Read<Position>>("Counter")
-            .Each([&count](const Position&)
-            {
-                count.fetch_add(1, std::memory_order_relaxed);
-            });
+        world.System<queen::Read<Position>>("Counter").Each(
+            [&count](const Position&) { count.fetch_add(1, std::memory_order_relaxed); });
 
         (void)world.Spawn(Position{1.0f, 0.0f, 0.0f});
 
@@ -175,13 +158,11 @@ namespace
     // Invalidate Tests
     // ─────────────────────────────────────────────────────────────
 
-    auto test8 = larvae::RegisterTest("QueenWorldParallel", "InvalidateSchedulerAffectsBoth", []()
-    {
+    auto test8 = larvae::RegisterTest("QueenWorldParallel", "InvalidateSchedulerAffectsBoth", []() {
         comb::LinearAllocator alloc{ParallelAllocSize};
         queen::World world{};
 
-        world.System<queen::Read<Position>>("Sys1")
-            .Each([](const Position&) {});
+        world.System<queen::Read<Position>>("Sys1").Each([](const Position&) {});
 
         world.UpdateParallel(DefaultParallelWorkers);
 
@@ -200,8 +181,7 @@ namespace
     // Comparison: Sequential vs Parallel
     // ─────────────────────────────────────────────────────────────
 
-    auto test9 = larvae::RegisterTest("QueenWorldParallel", "ParallelSameResultAsSequential", []()
-    {
+    auto test9 = larvae::RegisterTest("QueenWorldParallel", "ParallelSameResultAsSequential", []() {
         comb::LinearAllocator alloc{2 * 1024 * 1024};
 
         std::atomic<int> sequential_count{0};
@@ -210,11 +190,8 @@ namespace
         {
             queen::World world{};
 
-            world.System<queen::Read<Position>>("Counter")
-                .Each([&sequential_count](const Position&)
-                {
-                    sequential_count.fetch_add(1, std::memory_order_relaxed);
-                });
+            world.System<queen::Read<Position>>("Counter").Each(
+                [&sequential_count](const Position&) { sequential_count.fetch_add(1, std::memory_order_relaxed); });
 
             for (int i = 0; i < 10; ++i)
             {
@@ -229,11 +206,8 @@ namespace
         {
             queen::World world{};
 
-            world.System<queen::Read<Position>>("Counter")
-                .Each([&parallel_count](const Position&)
-                {
-                    parallel_count.fetch_add(1, std::memory_order_relaxed);
-                });
+            world.System<queen::Read<Position>>("Counter").Each(
+                [&parallel_count](const Position&) { parallel_count.fetch_add(1, std::memory_order_relaxed); });
 
             for (int i = 0; i < 10; ++i)
             {
@@ -251,16 +225,11 @@ namespace
     // Write System Tests
     // ─────────────────────────────────────────────────────────────
 
-    auto test10 = larvae::RegisterTest("QueenWorldParallel", "UpdateParallelWriteSystem", []()
-    {
+    auto test10 = larvae::RegisterTest("QueenWorldParallel", "UpdateParallelWriteSystem", []() {
         comb::LinearAllocator alloc{ParallelAllocSize};
         queen::World world{};
 
-        world.System<queen::Write<Position>>("Move")
-            .Each([](Position& pos)
-            {
-                pos.x += 1.0f;
-            });
+        world.System<queen::Write<Position>>("Move").Each([](Position& pos) { pos.x += 1.0f; });
 
         auto e = world.Spawn(Position{0.0f, 0.0f, 0.0f});
 
@@ -271,22 +240,13 @@ namespace
         larvae::AssertEqual(pos->x, 1.0f);
     });
 
-    auto test11 = larvae::RegisterTest("QueenWorldParallel", "UpdateParallelMultipleWriteSystems", []()
-    {
+    auto test11 = larvae::RegisterTest("QueenWorldParallel", "UpdateParallelMultipleWriteSystems", []() {
         comb::LinearAllocator alloc{16 * 1024 * 1024};
         queen::World world{};
 
-        world.System<queen::Write<Position>>("MoveX")
-            .Each([](Position& pos)
-            {
-                pos.x += 1.0f;
-            });
+        world.System<queen::Write<Position>>("MoveX").Each([](Position& pos) { pos.x += 1.0f; });
 
-        world.System<queen::Write<Velocity>>("UpdateVelocity")
-            .Each([](Velocity& vel)
-            {
-                vel.dx += 0.5f;
-            });
+        world.System<queen::Write<Velocity>>("UpdateVelocity").Each([](Velocity& vel) { vel.dx += 0.5f; });
 
         auto e1 = world.Spawn(Position{0.0f, 0.0f, 0.0f});
         auto e2 = world.Spawn(Velocity{0.0f, 0.0f, 0.0f});
@@ -306,16 +266,14 @@ namespace
     // Independent vs Dependent Systems
     // ─────────────────────────────────────────────────────────────
 
-    auto test12 = larvae::RegisterTest("QueenWorldParallel", "IndependentSystemsCanRunParallel", []()
-    {
+    auto test12 = larvae::RegisterTest("QueenWorldParallel", "IndependentSystemsCanRunParallel", []() {
         comb::LinearAllocator alloc{ParallelAllocSize};
         queen::World world{};
 
         std::atomic<int> running_count{0};
         std::atomic<int> max_concurrent{0};
 
-        auto work_func = [&running_count, &max_concurrent]()
-        {
+        auto work_func = [&running_count, &max_concurrent]() {
             int current = running_count.fetch_add(1, std::memory_order_relaxed) + 1;
 
             int expected = max_concurrent.load(std::memory_order_relaxed);
@@ -328,14 +286,11 @@ namespace
             running_count.fetch_sub(1, std::memory_order_relaxed);
         };
 
-        world.System<queen::Read<Position>>("SysA")
-            .Each([&work_func](const Position&) { work_func(); });
+        world.System<queen::Read<Position>>("SysA").Each([&work_func](const Position&) { work_func(); });
 
-        world.System<queen::Read<Velocity>>("SysB")
-            .Each([&work_func](const Velocity&) { work_func(); });
+        world.System<queen::Read<Velocity>>("SysB").Each([&work_func](const Velocity&) { work_func(); });
 
-        world.System<queen::Read<Health>>("SysC")
-            .Each([&work_func](const Health&) { work_func(); });
+        world.System<queen::Read<Health>>("SysC").Each([&work_func](const Health&) { work_func(); });
 
         (void)world.Spawn(Position{1.0f, 0.0f, 0.0f});
         (void)world.Spawn(Velocity{1.0f, 0.0f, 0.0f});
@@ -351,8 +306,7 @@ namespace
     // Tick Increment Tests
     // ─────────────────────────────────────────────────────────────
 
-    auto test13 = larvae::RegisterTest("QueenWorldParallel", "UpdateParallelIncrementsTick", []()
-    {
+    auto test13 = larvae::RegisterTest("QueenWorldParallel", "UpdateParallelIncrementsTick", []() {
         comb::LinearAllocator alloc{ParallelAllocSize};
         queen::World world{};
 
@@ -366,18 +320,14 @@ namespace
         larvae::AssertTrue(t3.IsNewerThan(t2));
     });
 
-    auto test14 = larvae::RegisterTest("QueenWorldParallel", "MixedUpdateAndUpdateParallel", []()
-    {
+    auto test14 = larvae::RegisterTest("QueenWorldParallel", "MixedUpdateAndUpdateParallel", []() {
         comb::LinearAllocator alloc{ParallelAllocSize};
         queen::World world{};
 
         std::atomic<int> count{0};
 
-        world.System<queen::Read<Position>>("Counter")
-            .Each([&count](const Position&)
-            {
-                count.fetch_add(1, std::memory_order_relaxed);
-            });
+        world.System<queen::Read<Position>>("Counter").Each(
+            [&count](const Position&) { count.fetch_add(1, std::memory_order_relaxed); });
 
         (void)world.Spawn(Position{1.0f, 0.0f, 0.0f});
 
@@ -393,21 +343,17 @@ namespace
     // No Entities Tests
     // ─────────────────────────────────────────────────────────────
 
-    auto test15 = larvae::RegisterTest("QueenWorldParallel", "UpdateParallelNoEntities", []()
-    {
+    auto test15 = larvae::RegisterTest("QueenWorldParallel", "UpdateParallelNoEntities", []() {
         comb::LinearAllocator alloc{ParallelAllocSize};
         queen::World world{};
 
         std::atomic<int> count{0};
 
-        world.System<queen::Read<Position>>("Counter")
-            .Each([&count](const Position&)
-            {
-                count.fetch_add(1, std::memory_order_relaxed);
-            });
+        world.System<queen::Read<Position>>("Counter").Each(
+            [&count](const Position&) { count.fetch_add(1, std::memory_order_relaxed); });
 
         world.UpdateParallel(DefaultParallelWorkers);
 
         larvae::AssertEqual(count.load(), 0);
     });
-}
+} // namespace

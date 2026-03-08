@@ -1,10 +1,12 @@
 #pragma once
 
 #include <hive/core/assert.h>
+
 #include <comb/allocator_concepts.h>
 #include <comb/new.h>
-#include <cstdint>
+
 #include <cstddef>
+#include <cstdint>
 
 namespace wax
 {
@@ -46,26 +48,18 @@ namespace wax
      *   // handle.IsValid() still true, but entities.Get(handle) returns nullptr
      * @endcode
      */
-    template<typename T>
-    struct Handle
+    template <typename T> struct Handle
     {
-        uint32_t index{0};
-        uint32_t generation{0};
+        uint32_t m_index{0};
+        uint32_t m_generation{0};
 
-        [[nodiscard]] constexpr bool operator==(const Handle& other) const noexcept
-        {
-            return index == other.index && generation == other.generation;
+        [[nodiscard]] constexpr bool operator==(const Handle& other) const noexcept {
+            return m_index == other.m_index && m_generation == other.m_generation;
         }
 
-        [[nodiscard]] static constexpr Handle Invalid() noexcept
-        {
-            return Handle{UINT32_MAX, 0};
-        }
+        [[nodiscard]] static constexpr Handle Invalid() noexcept { return Handle{UINT32_MAX, 0}; }
 
-        [[nodiscard]] constexpr bool IsNull() const noexcept
-        {
-            return index == UINT32_MAX;
-        }
+        [[nodiscard]] constexpr bool IsNull() const noexcept { return m_index == UINT32_MAX; }
     };
 
     /**
@@ -77,55 +71,52 @@ namespace wax
      * @tparam T Object type to store
      * @tparam Allocator Comb allocator type
      */
-    template<typename T, comb::Allocator Allocator>
-    class HandlePool
+    template <typename T, comb::Allocator Allocator> class HandlePool
     {
     private:
         struct Slot
         {
-            alignas(T) unsigned char storage[sizeof(T)];
-            uint32_t generation{0};
-            uint32_t next_free{UINT32_MAX};
-            bool alive{false};
+            alignas(T) unsigned char m_storage[sizeof(T)];
+            uint32_t m_generation{0};
+            uint32_t m_nextFree{UINT32_MAX};
+            bool m_alive{false};
         };
 
     public:
         HandlePool(Allocator& allocator, size_t capacity)
-            : allocator_{&allocator}
-            , capacity_{capacity}
-            , count_{0}
-            , first_free_{0}
-        {
+            : m_allocator{&allocator}
+            , m_capacity{capacity}
+            , m_count{0}
+            , m_firstFree{0} {
             hive::Assert(capacity > 0, "HandlePool capacity must be > 0");
             hive::Assert(capacity <= UINT32_MAX, "HandlePool capacity exceeds max");
 
-            slots_ = static_cast<Slot*>(allocator.Allocate(sizeof(Slot) * capacity, alignof(Slot)));
-            hive::Assert(slots_ != nullptr, "Failed to allocate HandlePool slots");
+            m_slots = static_cast<Slot*>(allocator.Allocate(sizeof(Slot) * capacity, alignof(Slot)));
+            hive::Assert(m_slots != nullptr, "Failed to allocate HandlePool slots");
 
-            for (size_t i = 0; i < capacity_ - 1; ++i)
+            for (size_t i = 0; i < m_capacity - 1; ++i)
             {
-                slots_[i].generation = 0;
-                slots_[i].next_free = static_cast<uint32_t>(i + 1);
-                slots_[i].alive = false;
+                m_slots[i].m_generation = 0;
+                m_slots[i].m_nextFree = static_cast<uint32_t>(i + 1);
+                m_slots[i].m_alive = false;
             }
-            slots_[capacity_ - 1].generation = 0;
-            slots_[capacity_ - 1].next_free = UINT32_MAX;
-            slots_[capacity_ - 1].alive = false;
+            m_slots[m_capacity - 1].m_generation = 0;
+            m_slots[m_capacity - 1].m_nextFree = UINT32_MAX;
+            m_slots[m_capacity - 1].m_alive = false;
         }
 
-        ~HandlePool()
-        {
-            for (size_t i = 0; i < capacity_; ++i)
+        ~HandlePool() {
+            for (size_t i = 0; i < m_capacity; ++i)
             {
-                if (slots_[i].alive)
+                if (m_slots[i].m_alive)
                 {
                     GetPtr(i)->~T();
                 }
             }
 
-            if (slots_ && allocator_)
+            if (m_slots && m_allocator)
             {
-                allocator_->Deallocate(slots_);
+                m_allocator->Deallocate(m_slots);
             }
         }
 
@@ -133,153 +124,141 @@ namespace wax
         HandlePool& operator=(const HandlePool&) = delete;
 
         HandlePool(HandlePool&& other) noexcept
-            : allocator_{other.allocator_}
-            , slots_{other.slots_}
-            , capacity_{other.capacity_}
-            , count_{other.count_}
-            , first_free_{other.first_free_}
-        {
-            other.allocator_ = nullptr;
-            other.slots_ = nullptr;
-            other.capacity_ = 0;
-            other.count_ = 0;
-            other.first_free_ = UINT32_MAX;
+            : m_allocator{other.m_allocator}
+            , m_slots{other.m_slots}
+            , m_capacity{other.m_capacity}
+            , m_count{other.m_count}
+            , m_firstFree{other.m_firstFree} {
+            other.m_allocator = nullptr;
+            other.m_slots = nullptr;
+            other.m_capacity = 0;
+            other.m_count = 0;
+            other.m_firstFree = UINT32_MAX;
         }
 
-        HandlePool& operator=(HandlePool&& other) noexcept
-        {
+        HandlePool& operator=(HandlePool&& other) noexcept {
             if (this != &other)
             {
-                for (size_t i = 0; i < capacity_; ++i)
+                for (size_t i = 0; i < m_capacity; ++i)
                 {
-                    if (slots_[i].alive)
+                    if (m_slots[i].m_alive)
                     {
                         GetPtr(i)->~T();
                     }
                 }
-                if (slots_ && allocator_)
+                if (m_slots && m_allocator)
                 {
-                    allocator_->Deallocate(slots_);
+                    m_allocator->Deallocate(m_slots);
                 }
 
-                allocator_ = other.allocator_;
-                slots_ = other.slots_;
-                capacity_ = other.capacity_;
-                count_ = other.count_;
-                first_free_ = other.first_free_;
+                m_allocator = other.m_allocator;
+                m_slots = other.m_slots;
+                m_capacity = other.m_capacity;
+                m_count = other.m_count;
+                m_firstFree = other.m_firstFree;
 
-                other.allocator_ = nullptr;
-                other.slots_ = nullptr;
-                other.capacity_ = 0;
-                other.count_ = 0;
-                other.first_free_ = UINT32_MAX;
+                other.m_allocator = nullptr;
+                other.m_slots = nullptr;
+                other.m_capacity = 0;
+                other.m_count = 0;
+                other.m_firstFree = UINT32_MAX;
             }
             return *this;
         }
 
-        template<typename... Args>
-        [[nodiscard]] Handle<T> Create(Args&&... args)
-        {
-            if (first_free_ == UINT32_MAX)
+        template <typename... Args> [[nodiscard]] Handle<T> Create(Args&&... args) {
+            if (m_firstFree == UINT32_MAX)
             {
                 return Handle<T>::Invalid();
             }
 
-            uint32_t index = first_free_;
-            Slot& slot = slots_[index];
-            first_free_ = slot.next_free;
+            uint32_t index = m_firstFree;
+            Slot& slot = m_slots[index];
+            m_firstFree = slot.m_nextFree;
 
-            new (slot.storage) T(static_cast<Args&&>(args)...);
-            slot.alive = true;
-            ++count_;
+            new (slot.m_storage) T(static_cast<Args&&>(args)...);
+            slot.m_alive = true;
+            ++m_count;
 
-            return Handle<T>{index, slot.generation};
+            return Handle<T>{index, slot.m_generation};
         }
 
-        void Destroy(Handle<T> handle)
-        {
-            if (handle.IsNull() || handle.index >= capacity_)
+        void Destroy(Handle<T> handle) {
+            if (handle.IsNull() || handle.m_index >= m_capacity)
             {
                 return;
             }
 
-            Slot& slot = slots_[handle.index];
-            if (!slot.alive || slot.generation != handle.generation)
+            Slot& slot = m_slots[handle.m_index];
+            if (!slot.m_alive || slot.m_generation != handle.m_generation)
             {
                 return;
             }
 
-            GetPtr(handle.index)->~T();
-            slot.alive = false;
-            ++slot.generation;
-            slot.next_free = first_free_;
-            first_free_ = handle.index;
-            --count_;
+            GetPtr(handle.m_index)->~T();
+            slot.m_alive = false;
+            ++slot.m_generation;
+            slot.m_nextFree = m_firstFree;
+            m_firstFree = handle.m_index;
+            --m_count;
         }
 
-        [[nodiscard]] T* Get(Handle<T> handle) noexcept
-        {
-            if (handle.IsNull() || handle.index >= capacity_)
+        [[nodiscard]] T* Get(Handle<T> handle) noexcept {
+            if (handle.IsNull() || handle.m_index >= m_capacity)
             {
                 return nullptr;
             }
 
-            Slot& slot = slots_[handle.index];
-            if (!slot.alive || slot.generation != handle.generation)
+            Slot& slot = m_slots[handle.m_index];
+            if (!slot.m_alive || slot.m_generation != handle.m_generation)
             {
                 return nullptr;
             }
 
-            return GetPtr(handle.index);
+            return GetPtr(handle.m_index);
         }
 
-        [[nodiscard]] const T* Get(Handle<T> handle) const noexcept
-        {
-            if (handle.IsNull() || handle.index >= capacity_)
+        [[nodiscard]] const T* Get(Handle<T> handle) const noexcept {
+            if (handle.IsNull() || handle.m_index >= m_capacity)
             {
                 return nullptr;
             }
 
-            const Slot& slot = slots_[handle.index];
-            if (!slot.alive || slot.generation != handle.generation)
+            const Slot& slot = m_slots[handle.m_index];
+            if (!slot.m_alive || slot.m_generation != handle.m_generation)
             {
                 return nullptr;
             }
 
-            return GetPtr(handle.index);
+            return GetPtr(handle.m_index);
         }
 
-        [[nodiscard]] bool IsValid(Handle<T> handle) const noexcept
-        {
-            if (handle.IsNull() || handle.index >= capacity_)
+        [[nodiscard]] bool IsValid(Handle<T> handle) const noexcept {
+            if (handle.IsNull() || handle.m_index >= m_capacity)
             {
                 return false;
             }
 
-            const Slot& slot = slots_[handle.index];
-            return slot.alive && slot.generation == handle.generation;
+            const Slot& slot = m_slots[handle.m_index];
+            return slot.m_alive && slot.m_generation == handle.m_generation;
         }
 
-        [[nodiscard]] size_t Count() const noexcept { return count_; }
-        [[nodiscard]] size_t Capacity() const noexcept { return capacity_; }
-        [[nodiscard]] bool IsEmpty() const noexcept { return count_ == 0; }
-        [[nodiscard]] bool IsFull() const noexcept { return first_free_ == UINT32_MAX; }
+        [[nodiscard]] size_t Count() const noexcept { return m_count; }
+        [[nodiscard]] size_t Capacity() const noexcept { return m_capacity; }
+        [[nodiscard]] bool IsEmpty() const noexcept { return m_count == 0; }
+        [[nodiscard]] bool IsFull() const noexcept { return m_firstFree == UINT32_MAX; }
 
     private:
-        [[nodiscard]] T* GetPtr(size_t index) noexcept
-        {
-            return reinterpret_cast<T*>(slots_[index].storage);
+        [[nodiscard]] T* GetPtr(size_t index) noexcept { return reinterpret_cast<T*>(m_slots[index].m_storage); }
+
+        [[nodiscard]] const T* GetPtr(size_t index) const noexcept {
+            return reinterpret_cast<const T*>(m_slots[index].m_storage);
         }
 
-        [[nodiscard]] const T* GetPtr(size_t index) const noexcept
-        {
-            return reinterpret_cast<const T*>(slots_[index].storage);
-        }
-
-        Allocator* allocator_;
-        Slot* slots_;
-        size_t capacity_;
-        size_t count_;
-        uint32_t first_free_;
+        Allocator* m_allocator;
+        Slot* m_slots;
+        size_t m_capacity;
+        size_t m_count;
+        uint32_t m_firstFree;
     };
-}
+} // namespace wax

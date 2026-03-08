@@ -1,15 +1,18 @@
 #define _CRT_SECURE_NO_WARNINGS
-#include <larvae/larvae.h>
-#include <nectar/vfs/disk_mount.h>
 #include <comb/default_allocator.h>
+
+#include <nectar/vfs/disk_mount.h>
+
+#include <larvae/larvae.h>
+
 #include <cstdio>
 #include <cstring>
 #include <filesystem>
 
-namespace {
+namespace
+{
 
-    auto& GetDiskAlloc()
-    {
+    auto& GetDiskAlloc() {
         static comb::ModuleAllocator alloc{"TestDiskMount", 2 * 1024 * 1024};
         return alloc.Get();
     }
@@ -18,36 +21,31 @@ namespace {
     {
         std::filesystem::path path;
 
-        TestDiskDir()
-        {
+        TestDiskDir() {
             path = std::filesystem::temp_directory_path() / "nectar_disk_mount_test";
             std::error_code ec;
             std::filesystem::remove_all(path, ec);
             std::filesystem::create_directories(path);
         }
 
-        ~TestDiskDir()
-        {
+        ~TestDiskDir() {
             std::error_code ec;
             std::filesystem::remove_all(path, ec);
         }
 
-        const char* CStr() const
-        {
+        const char* CStr() const {
             static thread_local std::string s;
             s = path.string();
             return s.c_str();
         }
     };
 
-    TestDiskDir& GetTestDir()
-    {
+    TestDiskDir& GetTestDir() {
         static TestDiskDir dir;
         return dir;
     }
 
-    void WriteTestFile(const char* relative, const void* data, size_t size)
-    {
+    void WriteTestFile(const char* relative, const void* data, size_t size) {
         auto& dir = GetTestDir();
         std::string full = dir.path.string() + "/" + relative;
 
@@ -107,15 +105,15 @@ namespace {
 
         nectar::DiskMountSource mount{GetTestDir().CStr(), alloc};
         auto info = mount.Stat("stat_test.bin");
-        larvae::AssertTrue(info.exists);
-        larvae::AssertEqual(info.size, size_t{42});
+        larvae::AssertTrue(info.m_exists);
+        larvae::AssertEqual(info.m_size, size_t{42});
     });
 
     auto t6 = larvae::RegisterTest("NectarDiskMount", "StatNonExistent", []() {
         auto& alloc = GetDiskAlloc();
         nectar::DiskMountSource mount{GetTestDir().CStr(), alloc};
         auto info = mount.Stat("nope.bin");
-        larvae::AssertFalse(info.exists);
+        larvae::AssertFalse(info.m_exists);
     });
 
     auto t7 = larvae::RegisterTest("NectarDiskMount", "ListDirectory", []() {
@@ -136,4 +134,4 @@ namespace {
         larvae::AssertTrue(mount.RootDir().Equals("my/root"));
     });
 
-}
+} // namespace

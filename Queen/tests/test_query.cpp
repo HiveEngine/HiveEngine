@@ -1,15 +1,31 @@
-#include <larvae/larvae.h>
 #include <queen/query/query.h>
 #include <queen/world/world.h>
 
+#include <larvae/larvae.h>
+
 namespace
 {
-    struct Position { float x, y, z; };
-    struct Velocity { float dx, dy, dz; };
-    struct Health { int current, max; };
-    struct Player {};
-    struct Enemy {};
-    struct Dead {};
+    struct Position
+    {
+        float x, y, z;
+    };
+    struct Velocity
+    {
+        float dx, dy, dz;
+    };
+    struct Health
+    {
+        int current, max;
+    };
+    struct Player
+    {
+    };
+    struct Enemy
+    {
+    };
+    struct Dead
+    {
+    };
 
     // ─────────────────────────────────────────────────────────────
     // Basic Query tests
@@ -71,9 +87,7 @@ namespace
         auto query = world.Query<queen::Read<Position>>();
 
         float sum = 0.0f;
-        query.Each([&sum](const Position& pos) {
-            sum += pos.x;
-        });
+        query.Each([&sum](const Position& pos) { sum += pos.x; });
 
         larvae::AssertEqual(sum, 6.0f);
     });
@@ -86,9 +100,7 @@ namespace
 
         auto query = world.Query<queen::Read<Velocity>, queen::Write<Position>>();
 
-        query.Each([](const Velocity& vel, Position& pos) {
-            pos.x += vel.dx;
-        });
+        query.Each([](const Velocity& vel, Position& pos) { pos.x += vel.dx; });
 
         larvae::AssertEqual(world.Get<Position>(e1)->x, 1.0f);
         larvae::AssertEqual(world.Get<Position>(e2)->x, 2.0f);
@@ -138,9 +150,7 @@ namespace
         auto query = world.Query<queen::Read<Position>, queen::With<Player>>();
 
         float sum = 0.0f;
-        query.Each([&sum](const Position& pos) {
-            sum += pos.x;
-        });
+        query.Each([&sum](const Position& pos) { sum += pos.x; });
 
         larvae::AssertEqual(sum, 4.0f);
 
@@ -159,9 +169,7 @@ namespace
         auto query = world.Query<queen::Read<Position>, queen::Without<Dead>>();
 
         float sum = 0.0f;
-        query.Each([&sum](const Position& pos) {
-            sum += pos.x;
-        });
+        query.Each([&sum](const Position& pos) { sum += pos.x; });
 
         larvae::AssertEqual(sum, 4.0f);
 
@@ -221,9 +229,7 @@ namespace
         larvae::AssertEqual(query.EntityCount(), size_t{3});
 
         float sum = 0.0f;
-        query.Each([&sum](const Position& pos, [[maybe_unused]] const Velocity& vel) {
-            sum += pos.x;
-        });
+        query.Each([&sum](const Position& pos, [[maybe_unused]] const Velocity& vel) { sum += pos.x; });
 
         larvae::AssertEqual(sum, 6.0f);
     });
@@ -240,12 +246,8 @@ namespace
         (void)world.Spawn(Position{3, 0, 0}, Velocity{0.3f, 0, 0}, Player{}, Dead{});
         (void)world.Spawn(Position{4, 0, 0}, Velocity{0.4f, 0, 0});
 
-        auto query = world.Query<
-            queen::Read<Position>,
-            queen::Write<Velocity>,
-            queen::With<Player>,
-            queen::Without<Dead>
-        >();
+        auto query =
+            world.Query<queen::Read<Position>, queen::Write<Velocity>, queen::With<Player>, queen::Without<Dead>>();
 
         larvae::AssertEqual(query.EntityCount(), size_t{1});
 
@@ -268,9 +270,7 @@ namespace
         {
             auto query = world.Query<queen::Read<Velocity>, queen::Write<Position>>();
 
-            query.Each([](const Velocity& vel, Position& pos) {
-                pos.x += vel.dx * 0.016f;
-            });
+            query.Each([](const Velocity& vel, Position& pos) { pos.x += vel.dx * 0.016f; });
         }
 
         larvae::AssertTrue(world.Get<Position>(e1)->x > 0.0f);
@@ -291,9 +291,7 @@ namespace
         auto e2 = world.Spawn(Position{2, 0, 0}, Velocity{0.2f, 0, 0});
 
         float sum = 0.0f;
-        world.Query<queen::Read<Position>>().Each([&sum](const Position& pos) {
-            sum += pos.x;
-        });
+        world.Query<queen::Read<Position>>().Each([&sum](const Position& pos) { sum += pos.x; });
 
         larvae::AssertEqual(sum, 3.0f);
 
@@ -309,10 +307,8 @@ namespace
         (void)world.Spawn(Position{3, 0, 0}, Player{}, Dead{});
 
         float sum = 0.0f;
-        world.Query<queen::Read<Position>, queen::With<Player>, queen::Without<Dead>>()
-            .Each([&sum](const Position& pos) {
-                sum += pos.x;
-            });
+        world.Query<queen::Read<Position>, queen::With<Player>, queen::Without<Dead>>().Each(
+            [&sum](const Position& pos) { sum += pos.x; });
 
         larvae::AssertEqual(sum, 1.0f);
     });
@@ -323,10 +319,8 @@ namespace
         auto e1 = world.Spawn(Position{0, 0, 0}, Velocity{1, 0, 0});
         auto e2 = world.Spawn(Position{0, 0, 0}, Velocity{2, 0, 0});
 
-        world.Query<queen::Read<Velocity>, queen::Write<Position>>()
-            .Each([](const Velocity& vel, Position& pos) {
-                pos.x += vel.dx;
-            });
+        world.Query<queen::Read<Velocity>, queen::Write<Position>>().Each(
+            [](const Velocity& vel, Position& pos) { pos.x += vel.dx; });
 
         larvae::AssertEqual(world.Get<Position>(e1)->x, 1.0f);
         larvae::AssertEqual(world.Get<Position>(e2)->x, 2.0f);
@@ -342,8 +336,8 @@ namespace
         auto e2 = world.Spawn(Position{2, 0, 0});
 
         int count = 0;
-        world.Query<queen::Read<Position>>()
-            .EachWithEntity([&count, e1, e2](queen::Entity entity, const Position& pos) {
+        world.Query<queen::Read<Position>>().EachWithEntity(
+            [&count, e1, e2](queen::Entity entity, const Position& pos) {
                 if (entity == e1)
                 {
                     larvae::AssertEqual(pos.x, 1.0f);
@@ -360,4 +354,4 @@ namespace
         world.Despawn(e1);
         world.Despawn(e2);
     });
-}
+} // namespace

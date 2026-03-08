@@ -16,21 +16,16 @@ namespace antennae
         bool prev_buttons[kButtonCount]{};
         bool first_update{true};
 
-        [[nodiscard]] bool IsDown(terra::MouseButton b) const
-        {
-            return buttons[static_cast<int>(b)];
-        }
+        [[nodiscard]] bool IsDown(terra::MouseButton b) const { return buttons[static_cast<int>(b)]; }
 
-        [[nodiscard]] bool JustPressed(terra::MouseButton b) const
-        {
+        [[nodiscard]] bool JustPressed(terra::MouseButton b) const {
             int i = static_cast<int>(b);
             return buttons[i] && !prev_buttons[i];
         }
 
-        [[nodiscard]] bool JustReleased(terra::MouseButton b) const
-        {
+        [[nodiscard]] bool JustReleased(terra::MouseButton b) const {
             int i = static_cast<int>(b);
             return !buttons[i] && prev_buttons[i];
         }
     };
-}
+} // namespace antennae

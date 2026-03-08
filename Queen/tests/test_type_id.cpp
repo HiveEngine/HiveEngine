@@ -1,12 +1,24 @@
-#include <larvae/larvae.h>
 #include <queen/core/type_id.h>
+
+#include <larvae/larvae.h>
 
 namespace
 {
-    struct Position { float x, y, z; };
-    struct Velocity { float dx, dy, dz; };
-    struct Health { int value; };
-    struct Player {};
+    struct Position
+    {
+        float x, y, z;
+    };
+    struct Velocity
+    {
+        float dx, dy, dz;
+    };
+    struct Health
+    {
+        int value;
+    };
+    struct Player
+    {
+    };
 
     auto test1 = larvae::RegisterTest("QueenTypeId", "DifferentTypesHaveDifferentIds", []() {
         constexpr queen::TypeId posId = queen::TypeIdOf<Position>();
@@ -78,4 +90,4 @@ namespace
 
         larvae::AssertTrue(true);
     });
-}
+} // namespace

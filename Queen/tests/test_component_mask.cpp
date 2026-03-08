@@ -1,6 +1,8 @@
-#include <larvae/larvae.h>
-#include <queen/core/component_mask.h>
 #include <comb/linear_allocator.h>
+
+#include <queen/core/component_mask.h>
+
+#include <larvae/larvae.h>
 
 namespace
 {
@@ -10,8 +12,7 @@ namespace
     // Basic Operations
     // ─────────────────────────────────────────────────────────────
 
-    auto test1 = larvae::RegisterTest("QueenComponentMask", "DefaultEmpty", []()
-    {
+    auto test1 = larvae::RegisterTest("QueenComponentMask", "DefaultEmpty", []() {
         comb::LinearAllocator alloc{1024};
         ComponentMask<comb::LinearAllocator> mask{alloc};
 
@@ -20,8 +21,7 @@ namespace
         larvae::AssertEqual(mask.Count(), size_t{0});
     });
 
-    auto test2 = larvae::RegisterTest("QueenComponentMask", "SetSingle", []()
-    {
+    auto test2 = larvae::RegisterTest("QueenComponentMask", "SetSingle", []() {
         comb::LinearAllocator alloc{1024};
         ComponentMask<comb::LinearAllocator> mask{alloc};
 
@@ -36,8 +36,7 @@ namespace
         larvae::AssertFalse(mask.None());
     });
 
-    auto test3 = larvae::RegisterTest("QueenComponentMask", "SetMultiple", []()
-    {
+    auto test3 = larvae::RegisterTest("QueenComponentMask", "SetMultiple", []() {
         comb::LinearAllocator alloc{1024};
         ComponentMask<comb::LinearAllocator> mask{alloc};
 
@@ -57,8 +56,7 @@ namespace
         larvae::AssertEqual(mask.Count(), size_t{5});
     });
 
-    auto test4 = larvae::RegisterTest("QueenComponentMask", "Clear", []()
-    {
+    auto test4 = larvae::RegisterTest("QueenComponentMask", "Clear", []() {
         comb::LinearAllocator alloc{1024};
         ComponentMask<comb::LinearAllocator> mask{alloc};
 
@@ -76,20 +74,18 @@ namespace
         larvae::AssertEqual(mask.Count(), size_t{2});
     });
 
-    auto test5 = larvae::RegisterTest("QueenComponentMask", "ClearNonexistent", []()
-    {
+    auto test5 = larvae::RegisterTest("QueenComponentMask", "ClearNonexistent", []() {
         comb::LinearAllocator alloc{1024};
         ComponentMask<comb::LinearAllocator> mask{alloc};
 
         mask.Set(10);
-        mask.Clear(999);  // Should not crash
+        mask.Clear(999); // Should not crash
 
         larvae::AssertTrue(mask.Test(10));
         larvae::AssertEqual(mask.Count(), size_t{1});
     });
 
-    auto test6 = larvae::RegisterTest("QueenComponentMask", "Toggle", []()
-    {
+    auto test6 = larvae::RegisterTest("QueenComponentMask", "Toggle", []() {
         comb::LinearAllocator alloc{1024};
         ComponentMask<comb::LinearAllocator> mask{alloc};
 
@@ -103,8 +99,7 @@ namespace
         larvae::AssertTrue(mask.Test(5));
     });
 
-    auto test7 = larvae::RegisterTest("QueenComponentMask", "ClearAll", []()
-    {
+    auto test7 = larvae::RegisterTest("QueenComponentMask", "ClearAll", []() {
         comb::LinearAllocator alloc{1024};
         ComponentMask<comb::LinearAllocator> mask{alloc};
 
@@ -121,8 +116,7 @@ namespace
         larvae::AssertEqual(mask.Count(), size_t{0});
     });
 
-    auto test8 = larvae::RegisterTest("QueenComponentMask", "SetAll", []()
-    {
+    auto test8 = larvae::RegisterTest("QueenComponentMask", "SetAll", []() {
         comb::LinearAllocator alloc{1024};
         ComponentMask<comb::LinearAllocator> mask{alloc};
 
@@ -136,8 +130,7 @@ namespace
         larvae::AssertEqual(mask.Count(), size_t{10});
     });
 
-    auto test9 = larvae::RegisterTest("QueenComponentMask", "SetAll64Aligned", []()
-    {
+    auto test9 = larvae::RegisterTest("QueenComponentMask", "SetAll64Aligned", []() {
         comb::LinearAllocator alloc{1024};
         ComponentMask<comb::LinearAllocator> mask{alloc};
 
@@ -155,8 +148,7 @@ namespace
     // Logical Operations
     // ─────────────────────────────────────────────────────────────
 
-    auto test10 = larvae::RegisterTest("QueenComponentMask", "Intersects", []()
-    {
+    auto test10 = larvae::RegisterTest("QueenComponentMask", "Intersects", []() {
         comb::LinearAllocator alloc{1024};
         ComponentMask<comb::LinearAllocator> a{alloc};
         ComponentMask<comb::LinearAllocator> b{alloc};
@@ -173,8 +165,7 @@ namespace
         larvae::AssertTrue(b.Intersects(a));
     });
 
-    auto test11 = larvae::RegisterTest("QueenComponentMask", "Disjoint", []()
-    {
+    auto test11 = larvae::RegisterTest("QueenComponentMask", "Disjoint", []() {
         comb::LinearAllocator alloc{1024};
         ComponentMask<comb::LinearAllocator> a{alloc};
         ComponentMask<comb::LinearAllocator> b{alloc};
@@ -190,8 +181,7 @@ namespace
         larvae::AssertFalse(a.Intersects(b));
     });
 
-    auto test12 = larvae::RegisterTest("QueenComponentMask", "ContainsAll", []()
-    {
+    auto test12 = larvae::RegisterTest("QueenComponentMask", "ContainsAll", []() {
         comb::LinearAllocator alloc{1024};
         ComponentMask<comb::LinearAllocator> superset{alloc};
         ComponentMask<comb::LinearAllocator> subset{alloc};
@@ -208,8 +198,7 @@ namespace
         larvae::AssertFalse(subset.ContainsAll(superset));
     });
 
-    auto test13 = larvae::RegisterTest("QueenComponentMask", "AndOperator", []()
-    {
+    auto test13 = larvae::RegisterTest("QueenComponentMask", "AndOperator", []() {
         comb::LinearAllocator alloc{1024};
         ComponentMask<comb::LinearAllocator> a{alloc};
         ComponentMask<comb::LinearAllocator> b{alloc};
@@ -231,8 +220,7 @@ namespace
         larvae::AssertEqual(result.Count(), size_t{2});
     });
 
-    auto test14 = larvae::RegisterTest("QueenComponentMask", "OrOperator", []()
-    {
+    auto test14 = larvae::RegisterTest("QueenComponentMask", "OrOperator", []() {
         comb::LinearAllocator alloc{1024};
         ComponentMask<comb::LinearAllocator> a{alloc};
         ComponentMask<comb::LinearAllocator> b{alloc};
@@ -252,8 +240,7 @@ namespace
         larvae::AssertEqual(result.Count(), size_t{4});
     });
 
-    auto test15 = larvae::RegisterTest("QueenComponentMask", "XorOperator", []()
-    {
+    auto test15 = larvae::RegisterTest("QueenComponentMask", "XorOperator", []() {
         comb::LinearAllocator alloc{1024};
         ComponentMask<comb::LinearAllocator> a{alloc};
         ComponentMask<comb::LinearAllocator> b{alloc};
@@ -275,12 +262,11 @@ namespace
         larvae::AssertEqual(result.Count(), size_t{2});
     });
 
-    auto test16 = larvae::RegisterTest("QueenComponentMask", "Invert", []()
-    {
+    auto test16 = larvae::RegisterTest("QueenComponentMask", "Invert", []() {
         comb::LinearAllocator alloc{1024};
         ComponentMask<comb::LinearAllocator> mask{alloc};
 
-        mask.SetAll(4);  // Set bits 0,1,2,3
+        mask.SetAll(4); // Set bits 0,1,2,3
         mask.Invert();
 
         larvae::AssertFalse(mask.Test(0));
@@ -288,15 +274,14 @@ namespace
         larvae::AssertFalse(mask.Test(2));
         larvae::AssertFalse(mask.Test(3));
         larvae::AssertTrue(mask.Test(4));
-        larvae::AssertTrue(mask.Test(63));  // All other bits in block are now set
+        larvae::AssertTrue(mask.Test(63)); // All other bits in block are now set
     });
 
     // ─────────────────────────────────────────────────────────────
     // Equality
     // ─────────────────────────────────────────────────────────────
 
-    auto test17 = larvae::RegisterTest("QueenComponentMask", "Equality", []()
-    {
+    auto test17 = larvae::RegisterTest("QueenComponentMask", "Equality", []() {
         comb::LinearAllocator alloc{1024};
         ComponentMask<comb::LinearAllocator> a{alloc};
         ComponentMask<comb::LinearAllocator> b{alloc};
@@ -311,8 +296,7 @@ namespace
         larvae::AssertFalse(a != b);
     });
 
-    auto test18 = larvae::RegisterTest("QueenComponentMask", "Inequality", []()
-    {
+    auto test18 = larvae::RegisterTest("QueenComponentMask", "Inequality", []() {
         comb::LinearAllocator alloc{1024};
         ComponentMask<comb::LinearAllocator> a{alloc};
         ComponentMask<comb::LinearAllocator> b{alloc};
@@ -324,8 +308,7 @@ namespace
         larvae::AssertTrue(a != b);
     });
 
-    auto test19 = larvae::RegisterTest("QueenComponentMask", "EqualityDifferentSizes", []()
-    {
+    auto test19 = larvae::RegisterTest("QueenComponentMask", "EqualityDifferentSizes", []() {
         comb::LinearAllocator alloc{1024};
         ComponentMask<comb::LinearAllocator> a{alloc};
         ComponentMask<comb::LinearAllocator> b{alloc};
@@ -333,7 +316,7 @@ namespace
         a.Set(1);
         b.Set(1);
         b.Set(100);
-        b.Clear(100);  // b now has more blocks but same bits set
+        b.Clear(100); // b now has more blocks but same bits set
 
         larvae::AssertTrue(a == b);
     });
@@ -342,8 +325,7 @@ namespace
     // First/Last Set Bit
     // ─────────────────────────────────────────────────────────────
 
-    auto test20 = larvae::RegisterTest("QueenComponentMask", "FirstSetBit", []()
-    {
+    auto test20 = larvae::RegisterTest("QueenComponentMask", "FirstSetBit", []() {
         comb::LinearAllocator alloc{1024};
         ComponentMask<comb::LinearAllocator> mask{alloc};
 
@@ -354,16 +336,14 @@ namespace
         larvae::AssertEqual(mask.FirstSetBit(), size_t{50});
     });
 
-    auto test21 = larvae::RegisterTest("QueenComponentMask", "FirstSetBitEmpty", []()
-    {
+    auto test21 = larvae::RegisterTest("QueenComponentMask", "FirstSetBitEmpty", []() {
         comb::LinearAllocator alloc{1024};
         ComponentMask<comb::LinearAllocator> mask{alloc};
 
         larvae::AssertEqual(mask.FirstSetBit(), static_cast<size_t>(-1));
     });
 
-    auto test22 = larvae::RegisterTest("QueenComponentMask", "LastSetBit", []()
-    {
+    auto test22 = larvae::RegisterTest("QueenComponentMask", "LastSetBit", []() {
         comb::LinearAllocator alloc{1024};
         ComponentMask<comb::LinearAllocator> mask{alloc};
 
@@ -374,8 +354,7 @@ namespace
         larvae::AssertEqual(mask.LastSetBit(), size_t{150});
     });
 
-    auto test23 = larvae::RegisterTest("QueenComponentMask", "LastSetBitEmpty", []()
-    {
+    auto test23 = larvae::RegisterTest("QueenComponentMask", "LastSetBitEmpty", []() {
         comb::LinearAllocator alloc{1024};
         ComponentMask<comb::LinearAllocator> mask{alloc};
 
@@ -386,8 +365,7 @@ namespace
     // Capacity and Reserve
     // ─────────────────────────────────────────────────────────────
 
-    auto test24 = larvae::RegisterTest("QueenComponentMask", "Capacity", []()
-    {
+    auto test24 = larvae::RegisterTest("QueenComponentMask", "Capacity", []() {
         comb::LinearAllocator alloc{1024};
         ComponentMask<comb::LinearAllocator> mask{alloc};
 
@@ -400,8 +378,7 @@ namespace
         larvae::AssertTrue(mask.Capacity() >= 128);
     });
 
-    auto test25 = larvae::RegisterTest("QueenComponentMask", "Reserve", []()
-    {
+    auto test25 = larvae::RegisterTest("QueenComponentMask", "Reserve", []() {
         comb::LinearAllocator alloc{1024};
         ComponentMask<comb::LinearAllocator> mask{alloc};
 
@@ -420,8 +397,7 @@ namespace
     // Copy/Move
     // ─────────────────────────────────────────────────────────────
 
-    auto test26 = larvae::RegisterTest("QueenComponentMask", "Copy", []()
-    {
+    auto test26 = larvae::RegisterTest("QueenComponentMask", "Copy", []() {
         comb::LinearAllocator alloc{1024};
         ComponentMask<comb::LinearAllocator> original{alloc};
 
@@ -441,8 +417,7 @@ namespace
         larvae::AssertTrue(copy.Test(20));
     });
 
-    auto test27 = larvae::RegisterTest("QueenComponentMask", "CopyAssignment", []()
-    {
+    auto test27 = larvae::RegisterTest("QueenComponentMask", "CopyAssignment", []() {
         comb::LinearAllocator alloc{1024};
         ComponentMask<comb::LinearAllocator> original{alloc};
         ComponentMask<comb::LinearAllocator> copy{alloc};
@@ -450,7 +425,7 @@ namespace
         original.Set(10);
         original.Set(20);
 
-        copy.Set(99);  // Should be overwritten
+        copy.Set(99); // Should be overwritten
 
         copy = original;
 
@@ -464,8 +439,7 @@ namespace
     // Edge Cases
     // ─────────────────────────────────────────────────────────────
 
-    auto test28 = larvae::RegisterTest("QueenComponentMask", "Bit63", []()
-    {
+    auto test28 = larvae::RegisterTest("QueenComponentMask", "Bit63", []() {
         comb::LinearAllocator alloc{1024};
         ComponentMask<comb::LinearAllocator> mask{alloc};
 
@@ -477,8 +451,7 @@ namespace
         larvae::AssertEqual(mask.Count(), size_t{1});
     });
 
-    auto test29 = larvae::RegisterTest("QueenComponentMask", "Bit64", []()
-    {
+    auto test29 = larvae::RegisterTest("QueenComponentMask", "Bit64", []() {
         comb::LinearAllocator alloc{1024};
         ComponentMask<comb::LinearAllocator> mask{alloc};
 
@@ -491,8 +464,7 @@ namespace
         larvae::AssertTrue(mask.BlockCount() >= 2);
     });
 
-    auto test30 = larvae::RegisterTest("QueenComponentMask", "LargeIndex", []()
-    {
+    auto test30 = larvae::RegisterTest("QueenComponentMask", "LargeIndex", []() {
         comb::LinearAllocator alloc{4096};
         ComponentMask<comb::LinearAllocator> mask{alloc};
 
@@ -504,8 +476,7 @@ namespace
         larvae::AssertEqual(mask.Count(), size_t{1});
     });
 
-    auto test31 = larvae::RegisterTest("QueenComponentMask", "StressManyBits", []()
-    {
+    auto test31 = larvae::RegisterTest("QueenComponentMask", "StressManyBits", []() {
         comb::LinearAllocator alloc{8192};
         ComponentMask<comb::LinearAllocator> mask{alloc};
 
@@ -525,4 +496,4 @@ namespace
         }
     });
 
-}  // namespace
+} // namespace

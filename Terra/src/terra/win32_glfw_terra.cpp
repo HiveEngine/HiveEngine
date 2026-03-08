@@ -11,13 +11,12 @@
 
 namespace terra
 {
-    NativeWindow GetNativeWindow(WindowContext *windowContext)
-    {
+    NativeWindow GetNativeWindow(WindowContext* windowContext) {
         NativeWindow nativeWindow;
 
-        nativeWindow.window_ = glfwGetWin32Window(windowContext->window_);
-        nativeWindow.instance_ = nullptr;
+        nativeWindow.m_window = glfwGetWin32Window(windowContext->m_window);
+        nativeWindow.m_instance = nullptr;
 
         return nativeWindow;
     }
-}
+} // namespace terra

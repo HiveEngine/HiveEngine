@@ -1,8 +1,9 @@
 #pragma once
 
+#include <comb/default_allocator.h>
+
 #include <wax/containers/string.h>
 #include <wax/containers/string_view.h>
-#include <comb/default_allocator.h>
 
 namespace nectar
 {
@@ -25,4 +26,4 @@ namespace nectar
     /// Extract extension: "hero.png" -> ".png"
     /// Returns empty view if no extension.
     [[nodiscard]] wax::StringView PathExtension(wax::StringView path);
-}
+} // namespace nectar

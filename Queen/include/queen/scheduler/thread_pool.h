@@ -1,15 +1,18 @@
 #pragma once
 
-#include <queen/scheduler/work_stealing_deque.h>
-#include <queen/scheduler/worker_context.h>
+#include <hive/profiling/profiler.h>
+
 #include <comb/allocator_concepts.h>
 #include <comb/thread_safe_allocator.h>
-#include <hive/profiling/profiler.h>
+
+#include <queen/scheduler/work_stealing_deque.h>
+#include <queen/scheduler/worker_context.h>
+
 #include <atomic>
-#include <thread>
-#include <mutex>
 #include <condition_variable>
 #include <cstdio>
+#include <mutex>
+#include <thread>
 
 namespace queen
 {
@@ -18,10 +21,10 @@ namespace queen
      */
     enum class WorkerState : uint8_t
     {
-        Idle,       // Waiting for work
-        Running,    // Executing a task
-        Stealing,   // Trying to steal work
-        Stopped     // Thread has stopped
+        IDLE,     // Waiting for work
+        RUNNING,  // Executing a task
+        STEALING, // Trying to steal work
+        STOPPED   // Thread has stopped
     };
 
     /**
@@ -29,9 +32,9 @@ namespace queen
      */
     enum class IdleStrategy : uint8_t
     {
-        Spin,   // Busy-wait (lowest latency, highest CPU usage)
-        Yield,  // std::this_thread::yield() (moderate latency/CPU)
-        Park    // Condition variable wait (lowest CPU, higher latency)
+        SPIN,  // Busy-wait (lowest latency, highest CPU usage)
+        YIELD, // std::this_thread::yield() (moderate latency/CPU)
+        PARK   // Condition variable wait (lowest CPU, higher latency)
     };
 
     /**
@@ -42,23 +45,19 @@ namespace queen
      */
     struct Task
     {
-        using Func = void(*)(void* user_data);
+        using Func = void (*)(void* userData);
 
-        Func func{nullptr};
-        void* user_data{nullptr};
+        Func m_func{nullptr};
+        void* m_userData{nullptr};
 
-        void Execute() const
-        {
-            if (func != nullptr)
+        void Execute() const {
+            if (m_func != nullptr)
             {
-                func(user_data);
+                m_func(m_userData);
             }
         }
 
-        [[nodiscard]] bool IsValid() const noexcept
-        {
-            return func != nullptr;
-        }
+        [[nodiscard]] bool IsValid() const noexcept { return m_func != nullptr; }
     };
 
     /**
@@ -77,18 +76,17 @@ namespace queen
      * │ rng_state: uint32_t - random state for victim selection        │
      * └────────────────────────────────────────────────────────────────┘
      */
-    template<comb::Allocator Allocator>
-    struct WorkerContextT
+    template <comb::Allocator Allocator> struct WorkerContextT
     {
         // Use ThreadSafeAllocator for thread-safe deque operations
         using SafeAllocator = comb::ThreadSafeAllocator<Allocator>;
 
-        size_t id{0};
-        std::atomic<WorkerState> state{WorkerState::Idle};
-        std::atomic<bool> should_stop{false};
-        std::thread thread;
-        WorkStealingDeque<Task, SafeAllocator>* deque{nullptr};
-        uint32_t rng_state{0};
+        size_t m_id{0};
+        std::atomic<WorkerState> m_state{WorkerState::IDLE};
+        std::atomic<bool> m_shouldStop{false};
+        std::thread m_thread;
+        WorkStealingDeque<Task, SafeAllocator>* m_deque{nullptr};
+        uint32_t m_rngState{0};
 
         WorkerContextT() = default;
         ~WorkerContextT() = default;
@@ -136,72 +134,64 @@ namespace queen
      *   pool.Stop();
      * @endcode
      */
-    template<comb::Allocator Allocator>
-    class ThreadPool
+    template <comb::Allocator Allocator> class ThreadPool
     {
     public:
         using WorkerContext = WorkerContextT<Allocator>;
         using SafeAllocator = comb::ThreadSafeAllocator<Allocator>;
 
-        explicit ThreadPool(Allocator& allocator,
-                           size_t worker_count = 0,
-                           IdleStrategy idle_strategy = IdleStrategy::Yield,
-                           size_t deque_capacity = 1024)
-            : allocator_{&allocator}
-            , safe_allocator_{allocator}  // Thread-safe wrapper
-            , workers_{nullptr}
-            , global_queue_{nullptr}
-            , worker_count_{worker_count == 0 ? GetDefaultWorkerCount() : worker_count}
-            , idle_strategy_{idle_strategy}
-            , running_{false}
-            , pending_tasks_{0}
-        {
+        explicit ThreadPool(Allocator& allocator, size_t workerCount = 0,
+                            IdleStrategy idleStrategy = IdleStrategy::YIELD, size_t dequeCapacity = 1024)
+            : m_allocator{&allocator}
+            , m_safeAllocator{allocator} // Thread-safe wrapper
+            , m_workers{nullptr}
+            , m_globalQueue{nullptr}
+            , m_workerCount{workerCount == 0 ? GetDefaultWorkerCount() : workerCount}
+            , m_idleStrategy{idleStrategy}
+            , m_running{false}
+            , m_pendingTasks{0} {
             // The deque uses safe_allocator_ internally for Grow() which can happen from any thread
-            void* global_mem = allocator_->Allocate(
-                sizeof(WorkStealingDeque<Task, SafeAllocator>),
-                alignof(WorkStealingDeque<Task, SafeAllocator>)
-            );
-            global_queue_ = new (global_mem) WorkStealingDeque<Task, SafeAllocator>{safe_allocator_, deque_capacity * 4};
+            void* globalMem = m_allocator->Allocate(sizeof(WorkStealingDeque<Task, SafeAllocator>),
+                                                    alignof(WorkStealingDeque<Task, SafeAllocator>));
+            m_globalQueue = new (globalMem) WorkStealingDeque<Task, SafeAllocator>{m_safeAllocator, dequeCapacity * 4};
 
             // Single-threaded setup phase
-            void* mem = allocator_->Allocate(sizeof(WorkerContext) * worker_count_, alignof(WorkerContext));
-            workers_ = static_cast<WorkerContext*>(mem);
+            void* mem = m_allocator->Allocate(sizeof(WorkerContext) * m_workerCount, alignof(WorkerContext));
+            m_workers = static_cast<WorkerContext*>(mem);
 
-            for (size_t i = 0; i < worker_count_; ++i)
+            for (size_t i = 0; i < m_workerCount; ++i)
             {
-                new (&workers_[i]) WorkerContext{};
-                workers_[i].id = i;
-                workers_[i].rng_state = static_cast<uint32_t>(i + 1);
+                new (&m_workers[i]) WorkerContext{};
+                m_workers[i].m_id = i;
+                m_workers[i].m_rngState = static_cast<uint32_t>(i + 1);
 
                 // The deque uses safe_allocator_ internally for Grow() which can happen from workers
-                void* deque_mem = allocator_->Allocate(
-                    sizeof(WorkStealingDeque<Task, SafeAllocator>),
-                    alignof(WorkStealingDeque<Task, SafeAllocator>)
-                );
-                workers_[i].deque = new (deque_mem) WorkStealingDeque<Task, SafeAllocator>{safe_allocator_, deque_capacity};
+                void* dequeMem = m_allocator->Allocate(sizeof(WorkStealingDeque<Task, SafeAllocator>),
+                                                       alignof(WorkStealingDeque<Task, SafeAllocator>));
+                m_workers[i].m_deque =
+                    new (dequeMem) WorkStealingDeque<Task, SafeAllocator>{m_safeAllocator, dequeCapacity};
             }
         }
 
-        ~ThreadPool()
-        {
+        ~ThreadPool() {
             Stop();
 
-            for (size_t i = 0; i < worker_count_; ++i)
+            for (size_t i = 0; i < m_workerCount; ++i)
             {
-                if (workers_[i].deque != nullptr)
+                if (m_workers[i].m_deque != nullptr)
                 {
-                    workers_[i].deque->~WorkStealingDeque<Task, SafeAllocator>();
-                    allocator_->Deallocate(workers_[i].deque);
+                    m_workers[i].m_deque->~WorkStealingDeque<Task, SafeAllocator>();
+                    m_allocator->Deallocate(m_workers[i].m_deque);
                 }
-                workers_[i].~WorkerContext();
+                m_workers[i].~WorkerContext();
             }
 
-            allocator_->Deallocate(workers_);
+            m_allocator->Deallocate(m_workers);
 
-            if (global_queue_ != nullptr)
+            if (m_globalQueue != nullptr)
             {
-                global_queue_->~WorkStealingDeque<Task, SafeAllocator>();
-                allocator_->Deallocate(global_queue_);
+                m_globalQueue->~WorkStealingDeque<Task, SafeAllocator>();
+                m_allocator->Deallocate(m_globalQueue);
             }
         }
 
@@ -215,17 +205,16 @@ namespace queen
          *
          * Spawns worker threads that begin executing tasks.
          */
-        void Start()
-        {
-            if (running_.exchange(true))
+        void Start() {
+            if (m_running.exchange(true))
             {
                 return; // Already running
             }
 
-            for (size_t i = 0; i < worker_count_; ++i)
+            for (size_t i = 0; i < m_workerCount; ++i)
             {
-                workers_[i].should_stop.store(false, std::memory_order_relaxed);
-                workers_[i].thread = std::thread(&ThreadPool::WorkerMain, this, &workers_[i]);
+                m_workers[i].m_shouldStop.store(false, std::memory_order_relaxed);
+                m_workers[i].m_thread = std::thread(&ThreadPool::WorkerMain, this, &m_workers[i]);
             }
         }
 
@@ -234,26 +223,25 @@ namespace queen
          *
          * Signals all workers to stop and waits for them to finish.
          */
-        void Stop()
-        {
-            if (!running_.exchange(false))
+        void Stop() {
+            if (!m_running.exchange(false))
             {
                 return; // Already stopped
             }
 
-            for (size_t i = 0; i < worker_count_; ++i)
+            for (size_t i = 0; i < m_workerCount; ++i)
             {
-                workers_[i].should_stop.store(true, std::memory_order_release);
+                m_workers[i].m_shouldStop.store(true, std::memory_order_release);
             }
 
             // Wake all parked workers so they see should_stop
-            park_cv_.notify_all();
+            m_parkCv.notify_all();
 
-            for (size_t i = 0; i < worker_count_; ++i)
+            for (size_t i = 0; i < m_workerCount; ++i)
             {
-                if (workers_[i].thread.joinable())
+                if (m_workers[i].m_thread.joinable())
                 {
-                    workers_[i].thread.join();
+                    m_workers[i].m_thread.join();
                 }
             }
         }
@@ -267,25 +255,24 @@ namespace queen
          * @param func Function pointer to execute
          * @param user_data User data passed to function
          */
-        void Submit(Task::Func func, void* user_data)
-        {
+        void Submit(Task::Func func, void* userData) {
             HIVE_PROFILE_SCOPE_N("ThreadPool::Submit");
 
-            Task task{func, user_data};
+            Task task{func, userData};
 
             // Increment pending count BEFORE pushing (prevents race with workers)
-            pending_tasks_.fetch_add(1, std::memory_order_release);
+            m_pendingTasks.fetch_add(1, std::memory_order_release);
 
             // Push to global queue - protected by mutex for multi-producer safety
             {
-                std::lock_guard<HIVE_PROFILE_LOCKABLE_BASE(std::mutex)> lock{submit_mutex_};
-                global_queue_->Push(task);
+                std::lock_guard<HIVE_PROFILE_LOCKABLE_BASE(std::mutex)> lock{m_submitMutex};
+                m_globalQueue->Push(task);
             }
 
             // Wake a parked worker if using Park strategy
-            if (idle_strategy_ == IdleStrategy::Park)
+            if (m_idleStrategy == IdleStrategy::PARK)
             {
-                park_cv_.notify_one();
+                m_parkCv.notify_one();
             }
         }
 
@@ -300,11 +287,10 @@ namespace queen
          * @param func Function pointer to execute
          * @param user_data User data passed to function
          */
-        void SubmitTo([[maybe_unused]] size_t worker_idx, Task::Func func, void* user_data)
-        {
+        void SubmitTo([[maybe_unused]] size_t workerIdx, Task::Func func, void* userData) {
             // External threads cannot push to worker deques (Chase-Lev constraint)
             // All submissions go through the global queue
-            Submit(func, user_data);
+            Submit(func, userData);
         }
 
         /**
@@ -312,9 +298,8 @@ namespace queen
          *
          * Blocks until all tasks have finished executing.
          */
-        void WaitAll()
-        {
-            while (pending_tasks_.load(std::memory_order_acquire) > 0)
+        void WaitAll() {
+            while (m_pendingTasks.load(std::memory_order_acquire) > 0)
             {
                 ApplyIdleStrategy();
             }
@@ -323,113 +308,99 @@ namespace queen
         /**
          * Check if there are pending tasks
          */
-        [[nodiscard]] bool HasPendingTasks() const noexcept
-        {
-            return pending_tasks_.load(std::memory_order_acquire) > 0;
+        [[nodiscard]] bool HasPendingTasks() const noexcept {
+            return m_pendingTasks.load(std::memory_order_acquire) > 0;
         }
 
         /**
          * Get the number of pending tasks
          */
-        [[nodiscard]] int64_t PendingTaskCount() const noexcept
-        {
-            return pending_tasks_.load(std::memory_order_acquire);
+        [[nodiscard]] int64_t PendingTaskCount() const noexcept {
+            return m_pendingTasks.load(std::memory_order_acquire);
         }
 
-        [[nodiscard]] bool IsRunning() const noexcept
-        {
-            return running_.load(std::memory_order_acquire);
-        }
+        [[nodiscard]] bool IsRunning() const noexcept { return m_running.load(std::memory_order_acquire); }
 
-        [[nodiscard]] size_t WorkerCount() const noexcept
-        {
-            return worker_count_;
-        }
+        [[nodiscard]] size_t WorkerCount() const noexcept { return m_workerCount; }
 
-        [[nodiscard]] IdleStrategy GetIdleStrategy() const noexcept
-        {
-            return idle_strategy_;
-        }
+        [[nodiscard]] IdleStrategy GetIdleStrategy() const noexcept { return m_idleStrategy; }
 
-        [[nodiscard]] WorkerState GetWorkerState(size_t index) const noexcept
-        {
-            if (index >= worker_count_) return WorkerState::Stopped;
-            return workers_[index].state.load(std::memory_order_acquire);
+        [[nodiscard]] WorkerState GetWorkerState(size_t index) const noexcept {
+            if (index >= m_workerCount)
+                return WorkerState::STOPPED;
+            return m_workers[index].m_state.load(std::memory_order_acquire);
         }
 
     private:
-        static size_t GetDefaultWorkerCount() noexcept
-        {
+        static size_t GetDefaultWorkerCount() noexcept {
             size_t count = std::thread::hardware_concurrency();
             return count > 0 ? count : 4;
         }
 
         // Simple xorshift32 for fast random numbers
-        static uint32_t XorShift32(uint32_t& state) noexcept
-        {
+        static uint32_t XorShift32(uint32_t& state) noexcept {
             state ^= state << 13;
             state ^= state >> 17;
             state ^= state << 5;
             return state;
         }
 
-        void WorkerMain(WorkerContext* ctx)
-        {
+        void WorkerMain(WorkerContext* ctx) {
             constexpr int kSpinAttempts = 64; // Spin before yielding
-            int idle_spins = 0;
+            int idleSpins = 0;
 
             // Name this thread for Tracy
-            char thread_name[32];
-            std::snprintf(thread_name, sizeof(thread_name), "Worker %zu", ctx->id);
-            HIVE_PROFILE_THREAD(thread_name);
+            char threadName[32];
+            std::snprintf(threadName, sizeof(threadName), "Worker %zu", ctx->m_id);
+            HIVE_PROFILE_THREAD(threadName);
 
             // Set worker index for this thread (used by World::Query for per-thread allocators)
-            queen::WorkerContext::SetCurrentWorkerIndex(ctx->id);
+            queen::WorkerContext::SetCurrentWorkerIndex(ctx->m_id);
 
-            while (!ctx->should_stop.load(std::memory_order_acquire))
+            while (!ctx->m_shouldStop.load(std::memory_order_acquire))
             {
                 Task task{};
 
                 // 1. Try to pop from own local deque (for subtasks pushed by self)
-                if (auto local_task = ctx->deque->Pop())
+                if (auto localTask = ctx->m_deque->Pop())
                 {
-                    task = local_task.value();
-                    idle_spins = 0;
+                    task = localTask.value();
+                    idleSpins = 0;
                 }
                 // 2. Try to steal from global queue (main submission point)
-                else if (auto global_task = global_queue_->Steal())
+                else if (auto globalTask = m_globalQueue->Steal())
                 {
-                    task = global_task.value();
-                    idle_spins = 0;
+                    task = globalTask.value();
+                    idleSpins = 0;
                 }
                 // 3. Try to steal from other workers
                 else
                 {
-                    ctx->state.store(WorkerState::Stealing, std::memory_order_relaxed);
+                    ctx->m_state.store(WorkerState::STEALING, std::memory_order_relaxed);
                     task = TrySteal(ctx);
                     if (task.IsValid())
                     {
-                        idle_spins = 0;
+                        idleSpins = 0;
                     }
                 }
 
                 if (task.IsValid())
                 {
-                    ctx->state.store(WorkerState::Running, std::memory_order_relaxed);
+                    ctx->m_state.store(WorkerState::RUNNING, std::memory_order_relaxed);
                     {
                         HIVE_PROFILE_SCOPE_N("TaskExecute");
                         task.Execute();
                     }
-                    pending_tasks_.fetch_sub(1, std::memory_order_release);
+                    m_pendingTasks.fetch_sub(1, std::memory_order_release);
                 }
                 else
                 {
-                    ctx->state.store(WorkerState::Idle, std::memory_order_relaxed);
-                    ++idle_spins;
-                    if (idle_spins >= kSpinAttempts)
+                    ctx->m_state.store(WorkerState::IDLE, std::memory_order_relaxed);
+                    ++idleSpins;
+                    if (idleSpins >= kSpinAttempts)
                     {
                         ApplyIdleStrategy();
-                        idle_spins = 0;
+                        idleSpins = 0;
                     }
                     else
                     {
@@ -440,39 +411,38 @@ namespace queen
             }
 
             // Drain any remaining tasks before stopping
-            while (auto local_task = ctx->deque->Pop())
+            while (auto localTask = ctx->m_deque->Pop())
             {
-                local_task.value().Execute();
-                pending_tasks_.fetch_sub(1, std::memory_order_release);
+                localTask.value().Execute();
+                m_pendingTasks.fetch_sub(1, std::memory_order_release);
             }
 
             // Also drain global queue
-            while (auto global_task = global_queue_->Steal())
+            while (auto globalTask = m_globalQueue->Steal())
             {
-                global_task.value().Execute();
-                pending_tasks_.fetch_sub(1, std::memory_order_release);
+                globalTask.value().Execute();
+                m_pendingTasks.fetch_sub(1, std::memory_order_release);
             }
 
             // Clear worker index when thread stops
             queen::WorkerContext::ClearCurrentWorkerIndex();
-            ctx->state.store(WorkerState::Stopped, std::memory_order_release);
+            ctx->m_state.store(WorkerState::STOPPED, std::memory_order_release);
         }
 
-        Task TrySteal(WorkerContext* ctx)
-        {
+        Task TrySteal(WorkerContext* ctx) {
             HIVE_PROFILE_SCOPE_N("TrySteal");
             // Random starting point to reduce contention
-            uint32_t start = XorShift32(ctx->rng_state) % static_cast<uint32_t>(worker_count_);
+            uint32_t start = XorShift32(ctx->m_rngState) % static_cast<uint32_t>(m_workerCount);
 
-            for (size_t i = 0; i < worker_count_; ++i)
+            for (size_t i = 0; i < m_workerCount; ++i)
             {
-                size_t victim = (static_cast<size_t>(start) + i) % worker_count_;
-                if (victim == ctx->id)
+                size_t victim = (static_cast<size_t>(start) + i) % m_workerCount;
+                if (victim == ctx->m_id)
                 {
                     continue;
                 }
 
-                if (auto stolen = workers_[victim].deque->Steal())
+                if (auto stolen = m_workers[victim].m_deque->Steal())
                 {
                     return stolen.value();
                 }
@@ -481,41 +451,39 @@ namespace queen
             return Task{};
         }
 
-        void ApplyIdleStrategy()
-        {
-            switch (idle_strategy_)
+        void ApplyIdleStrategy() {
+            switch (m_idleStrategy)
             {
-            case IdleStrategy::Spin:
-                // Busy-wait: do nothing (compiler barrier to prevent optimization)
-                std::atomic_signal_fence(std::memory_order_seq_cst);
-                break;
+                case IdleStrategy::SPIN:
+                    // Busy-wait: do nothing (compiler barrier to prevent optimization)
+                    std::atomic_signal_fence(std::memory_order_seq_cst);
+                    break;
 
-            case IdleStrategy::Yield:
-                std::this_thread::yield();
-                break;
+                case IdleStrategy::YIELD:
+                    std::this_thread::yield();
+                    break;
 
-            case IdleStrategy::Park:
-            {
-                std::unique_lock<std::mutex> lock{park_mutex_};
-                park_cv_.wait_for(lock, std::chrono::milliseconds(1), [this] {
-                    return pending_tasks_.load(std::memory_order_acquire) > 0
-                        || !running_.load(std::memory_order_acquire);
-                });
-                break;
-            }
+                case IdleStrategy::PARK: {
+                    std::unique_lock<std::mutex> lock{m_parkMutex};
+                    m_parkCv.wait_for(lock, std::chrono::milliseconds(1), [this] {
+                        return m_pendingTasks.load(std::memory_order_acquire) > 0 ||
+                               !m_running.load(std::memory_order_acquire);
+                    });
+                    break;
+                }
             }
         }
 
-        Allocator* allocator_;
-        SafeAllocator safe_allocator_;  // Thread-safe wrapper for deque allocations (Grow)
-        WorkerContext* workers_;
-        WorkStealingDeque<Task, SafeAllocator>* global_queue_;  // Main submission queue
-        mutable HIVE_PROFILE_LOCKABLE_N(std::mutex, submit_mutex_, "SubmitMutex");
-        std::condition_variable park_cv_;   // Wakes parked workers
-        std::mutex park_mutex_;             // Protects park_cv_ (not tracked, used with condition_variable)
-        size_t worker_count_;
-        IdleStrategy idle_strategy_;
-        std::atomic<bool> running_;
-        std::atomic<int64_t> pending_tasks_;
+        Allocator* m_allocator;
+        SafeAllocator m_safeAllocator; // Thread-safe wrapper for deque allocations (Grow)
+        WorkerContext* m_workers;
+        WorkStealingDeque<Task, SafeAllocator>* m_globalQueue; // Main submission queue
+        mutable HIVE_PROFILE_LOCKABLE_N(std::mutex, m_submitMutex, "SubmitMutex");
+        std::condition_variable m_parkCv; // Wakes parked workers
+        std::mutex m_parkMutex;           // Protects park_cv_ (not tracked, used with condition_variable)
+        size_t m_workerCount;
+        IdleStrategy m_idleStrategy;
+        std::atomic<bool> m_running;
+        std::atomic<int64_t> m_pendingTasks;
     };
-}
+} // namespace queen

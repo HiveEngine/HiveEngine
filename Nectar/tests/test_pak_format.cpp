@@ -1,15 +1,18 @@
-#include <larvae/larvae.h>
+#include <comb/default_allocator.h>
+
+#include <nectar/pak/asset_manifest.h>
+#include <nectar/pak/compression.h>
 #include <nectar/pak/crc32.h>
 #include <nectar/pak/npak_format.h>
-#include <nectar/pak/compression.h>
-#include <nectar/pak/asset_manifest.h>
-#include <comb/default_allocator.h>
+
+#include <larvae/larvae.h>
+
 #include <cstring>
 
-namespace {
+namespace
+{
 
-    auto& GetPakAlloc()
-    {
+    auto& GetPakAlloc() {
         static comb::ModuleAllocator alloc{"TestPakFmt", 4 * 1024 * 1024};
         return alloc.Get();
     }
@@ -63,8 +66,7 @@ namespace {
         larvae::AssertTrue(compressed.Size() > 0);
         larvae::AssertTrue(compressed.Size() < sizeof(src));
 
-        auto decompressed = nectar::Decompress(
-            compressed.View(), sizeof(src), nectar::CompressionMethod::LZ4, alloc);
+        auto decompressed = nectar::Decompress(compressed.View(), sizeof(src), nectar::CompressionMethod::LZ4, alloc);
         larvae::AssertEqual(decompressed.Size(), sizeof(src));
         larvae::AssertTrue(std::memcmp(decompressed.Data(), src, sizeof(src)) == 0);
     });
@@ -77,12 +79,11 @@ namespace {
             src[i] = static_cast<uint8_t>(i % 13);
 
         wax::ByteSpan input{src, sizeof(src)};
-        auto compressed = nectar::Compress(input, nectar::CompressionMethod::Zstd, alloc);
+        auto compressed = nectar::Compress(input, nectar::CompressionMethod::ZSTD, alloc);
         larvae::AssertTrue(compressed.Size() > 0);
         larvae::AssertTrue(compressed.Size() < sizeof(src));
 
-        auto decompressed = nectar::Decompress(
-            compressed.View(), sizeof(src), nectar::CompressionMethod::Zstd, alloc);
+        auto decompressed = nectar::Decompress(compressed.View(), sizeof(src), nectar::CompressionMethod::ZSTD, alloc);
         larvae::AssertEqual(decompressed.Size(), sizeof(src));
         larvae::AssertTrue(std::memcmp(decompressed.Data(), src, sizeof(src)) == 0);
     });
@@ -93,7 +94,7 @@ namespace {
         uint8_t src[] = {1, 2, 3, 4, 5};
         wax::ByteSpan input{src, sizeof(src)};
 
-        auto compressed = nectar::Compress(input, nectar::CompressionMethod::None, alloc);
+        auto compressed = nectar::Compress(input, nectar::CompressionMethod::NONE, alloc);
         larvae::AssertEqual(compressed.Size(), sizeof(src));
         larvae::AssertTrue(std::memcmp(compressed.Data(), src, sizeof(src)) == 0);
     });
@@ -123,17 +124,14 @@ namespace {
     // Format struct sizes (compile-time, but verify at runtime too)
     // =========================================================================
 
-    auto t9 = larvae::RegisterTest("NectarPakFmt", "HeaderSize", []() {
-        larvae::AssertEqual(sizeof(nectar::NpakHeader), size_t{32});
-    });
+    auto t9 = larvae::RegisterTest("NectarPakFmt", "HeaderSize",
+                                   []() { larvae::AssertEqual(sizeof(nectar::NpakHeader), size_t{32}); });
 
-    auto t10 = larvae::RegisterTest("NectarPakFmt", "AssetEntrySize", []() {
-        larvae::AssertEqual(sizeof(nectar::NpakAssetEntry), size_t{28});
-    });
+    auto t10 = larvae::RegisterTest("NectarPakFmt", "AssetEntrySize",
+                                    []() { larvae::AssertEqual(sizeof(nectar::NpakAssetEntry), size_t{28}); });
 
-    auto t11 = larvae::RegisterTest("NectarPakFmt", "BlockEntrySize", []() {
-        larvae::AssertEqual(sizeof(nectar::NpakBlockEntry), size_t{13});
-    });
+    auto t11 = larvae::RegisterTest("NectarPakFmt", "BlockEntrySize",
+                                    []() { larvae::AssertEqual(sizeof(nectar::NpakBlockEntry), size_t{13}); });
 
     // =========================================================================
     // AssetManifest
@@ -198,8 +196,7 @@ namespace {
         {
             char path[64];
             int len = std::snprintf(path, sizeof(path), "asset_%u.bin", i);
-            manifest.Add(wax::StringView{path, static_cast<size_t>(len)},
-                         nectar::ContentHash{i, i * 100});
+            manifest.Add(wax::StringView{path, static_cast<size_t>(len)}, nectar::ContentHash{i, i * 100});
         }
 
         larvae::AssertEqual(manifest.Count(), size_t{20});

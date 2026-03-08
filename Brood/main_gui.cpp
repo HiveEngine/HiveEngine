@@ -1,118 +1,115 @@
-#include <larvae/larvae.h>
 #include <hive/core/log.h>
+
 #include <comb/debug/global_memory_tracker.h>
 
-#include "larvae_runner_config.h"
+#include <larvae/larvae.h>
+
+#include <GLFW/glfw3.h>
+#include <algorithm>
+#include <atomic>
+#include <chrono>
+#include <map>
+#include <mutex>
+#include <random>
+#include <set>
+#include <sstream>
+#include <string>
+#include <thread>
+#include <vector>
 
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
-
-#include <GLFW/glfw3.h>
-
-#include <vector>
-#include <string>
-#include <set>
-#include <map>
-#include <thread>
-#include <mutex>
-#include <atomic>
-#include <chrono>
-#include <sstream>
-#include <algorithm>
-#include <random>
+#include "larvae_runner_config.h"
 
 namespace
 {
     // Application state
     struct TestEntry
     {
-        std::string suite_name;
-        std::string test_name;
-        std::string full_name;
-        bool selected = true;
+        std::string m_suiteName;
+        std::string m_testName;
+        std::string m_fullName;
+        bool m_selected = true;
     };
 
     struct TestResultEntry
     {
-        std::string suite_name;
-        std::string test_name;
-        larvae::TestStatus status;
-        std::string error_message;
-        double duration_ms;
-        int iteration;
+        std::string m_suiteName;
+        std::string m_testName;
+        larvae::TestStatus m_status;
+        std::string m_errorMessage;
+        double m_durationMs;
+        int m_iteration;
     };
 
     struct TestStatistics
     {
-        int total_runs = 0;
-        int passed = 0;
-        int failed = 0;
-        double min_duration_ms = 0.0;
-        double max_duration_ms = 0.0;
-        double avg_duration_ms = 0.0;
-        double total_duration_ms = 0.0;
-        std::string last_error;
+        int m_totalRuns = 0;
+        int m_passed = 0;
+        int m_failed = 0;
+        double m_minDurationMs = 0.0;
+        double m_maxDurationMs = 0.0;
+        double m_avgDurationMs = 0.0;
+        double m_totalDurationMs = 0.0;
+        std::string m_lastError;
     };
 
     struct RunHistoryEntry
     {
-        std::string timestamp;
-        int total_tests = 0;
-        int passed = 0;
-        int failed = 0;
-        double duration_ms = 0.0;
-        int iterations = 0;
+        std::string m_timestamp;
+        int m_totalTests = 0;
+        int m_passed = 0;
+        int m_failed = 0;
+        double m_durationMs = 0.0;
+        int m_iterations = 0;
     };
 
     struct RunnerState
     {
-        std::vector<TestEntry> all_tests;
-        std::map<std::string, bool> suite_selection;
-        std::map<std::string, bool> test_selection;
-        std::vector<TestResultEntry> results;
-        std::vector<std::string> log_lines;
+        std::vector<TestEntry> m_allTests;
+        std::map<std::string, bool> m_suiteSelection;
+        std::map<std::string, bool> m_testSelection;
+        std::vector<TestResultEntry> m_results;
+        std::vector<std::string> m_logLines;
 
-        std::map<std::string, TestStatistics> test_statistics;
-        std::vector<RunHistoryEntry> run_history;
+        std::map<std::string, TestStatistics> m_testStatistics;
+        std::vector<RunHistoryEntry> m_runHistory;
 
-        std::atomic<bool> is_running{false};
-        std::atomic<bool> should_stop{false};
-        std::atomic<int> current_iteration{0};
-        std::atomic<int> total_iterations{1};
-        std::atomic<int> tests_completed{0};
-        std::atomic<int> tests_total{0};
-        std::atomic<int> tests_passed{0};
-        std::atomic<int> tests_failed{0};
+        std::atomic<bool> m_isRunning{false};
+        std::atomic<bool> m_shouldStop{false};
+        std::atomic<int> m_currentIteration{0};
+        std::atomic<int> m_totalIterations{1};
+        std::atomic<int> m_testsCompleted{0};
+        std::atomic<int> m_testsTotal{0};
+        std::atomic<int> m_testsPassed{0};
+        std::atomic<int> m_testsFailed{0};
 
-        std::mutex results_mutex;
-        std::mutex log_mutex;
+        std::mutex m_resultsMutex;
+        std::mutex m_logMutex;
 
-        std::thread runner_thread;
+        std::thread m_runnerThread;
 
-        larvae::RunnerGuiConfig config;
+        larvae::RunnerGuiConfig m_config;
 
-        char test_filter[256] = "";
-        bool show_individual_tests = false;
-        std::chrono::steady_clock::time_point run_start_time;
+        char m_testFilter[256] = "";
+        bool m_showIndividualTests = false;
+        std::chrono::steady_clock::time_point m_runStartTime;
     };
 
     RunnerState g_state;
 
-    void AddLogLine(const std::string& line)
-    {
-        std::lock_guard<std::mutex> lock{g_state.log_mutex};
+    void AddLogLine(const std::string& line) {
+        std::lock_guard<std::mutex> lock{g_state.m_logMutex};
         g_state.log_lines.push_back(line);
     }
 
-    void ClearLog()
-    {
-        std::lock_guard<std::mutex> lock{g_state.log_mutex};
+    void ClearLog() {
+        std::lock_guard<std::mutex> lock{g_state.m_logMutex};
         g_state.log_lines.clear();
     }
 
-    void DiscoverTests()
-    {
+    void DiscoverTests() {
         g_state.all_tests.clear();
         g_state.suite_selection.clear();
         g_state.test_selection.clear();
@@ -156,28 +153,27 @@ namespace
         }
     }
 
-    void UpdateTestStatistics(const TestResultEntry& result)
-    {
-        std::string full_name = result.suite_name + "." + result.test_name;
-        auto& stats = g_state.test_statistics[full_name];
+    void UpdateTestStatistics(const TestResultEntry& result) {
+        std::string fullName = result.m_suiteName + "." + result.m_testName;
+        auto& stats = g_state.test_statistics[fullName];
 
         stats.total_runs++;
-        stats.total_duration_ms += result.duration_ms;
+        stats.total_duration_ms += result.m_durationMs;
 
-        if (result.status == larvae::TestStatus::Passed)
+        if (result.m_status == larvae::TestStatus::Passed)
         {
             stats.passed++;
         }
-        else if (result.status == larvae::TestStatus::Failed)
+        else if (result.m_status == larvae::TestStatus::Failed)
         {
             stats.failed++;
-            stats.last_error = result.error_message;
+            stats.last_error = result.m_errorMessage;
         }
 
         if (stats.total_runs == 1)
         {
-            stats.min_duration_ms = result.duration_ms;
-            stats.max_duration_ms = result.duration_ms;
+            stats.min_duration_ms = result.m_durationMs;
+            stats.max_duration_ms = result.m_durationMs;
         }
         else
         {
@@ -187,8 +183,7 @@ namespace
         stats.avg_duration_ms = stats.total_duration_ms / stats.total_runs;
     }
 
-    void AddRunToHistory()
-    {
+    void AddRunToHistory() {
         RunHistoryEntry entry;
 
         // Get current timestamp
@@ -196,17 +191,16 @@ namespace
         auto time = std::chrono::system_clock::to_time_t(now);
         char buffer[64];
         std::strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", std::localtime(&time));
-        entry.timestamp = buffer;
+        entry.m_timestamp = buffer;
 
-        entry.total_tests = g_state.tests_completed.load();
-        entry.passed = g_state.tests_passed.load();
-        entry.failed = g_state.tests_failed.load();
-        entry.iterations = g_state.config.repeat_count;
+        entry.m_totalTests = g_state.tests_completed.load();
+        entry.m_passed = g_state.tests_passed.load();
+        entry.m_failed = g_state.tests_failed.load();
+        entry.m_iterations = g_state.m_config.m_repeatCount;
 
-        auto end_time = std::chrono::steady_clock::now();
-        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(
-            end_time - g_state.run_start_time);
-        entry.duration_ms = static_cast<double>(duration.count());
+        auto endTime = std::chrono::steady_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - g_state.m_runStartTime);
+        entry.m_durationMs = static_cast<double>(duration.count());
 
         g_state.run_history.push_back(entry);
 
@@ -217,8 +211,7 @@ namespace
         }
     }
 
-    std::string GetCurrentTimestamp()
-    {
+    std::string GetCurrentTimestamp() {
         auto now = std::chrono::system_clock::now();
         auto time = std::chrono::system_clock::to_time_t(now);
         char buffer[64];
@@ -226,17 +219,17 @@ namespace
         return buffer;
     }
 
-    void RunSelectedTests()
-    {
-        if (g_state.is_running) return;
+    void RunSelectedTests() {
+        if (g_state.is_running)
+            return;
 
         g_state.is_running = true;
         g_state.should_stop = false;
-        g_state.run_start_time = std::chrono::steady_clock::now();
+        g_state.m_runStartTime = std::chrono::steady_clock::now();
 
         // Collect selected tests
-        std::vector<larvae::TestInfo> selected_tests;
-        const auto& all_registered = larvae::TestRegistry::GetInstance().GetTests();
+        std::vector<larvae::TestInfo> selectedTests;
+        const auto& allRegistered = larvae::TestRegistry::GetInstance().GetTests();
 
         for (const auto& test_info : all_registered)
         {
@@ -250,49 +243,51 @@ namespace
 
         // Reset counters
         {
-            std::lock_guard<std::mutex> lock{g_state.results_mutex};
+            std::lock_guard<std::mutex> lock{g_state.m_resultsMutex};
             g_state.results.clear();
         }
         ClearLog();
 
         g_state.tests_completed = 0;
-        g_state.tests_total = static_cast<int>(selected_tests.size() * g_state.config.repeat_count);
+        g_state.tests_total = static_cast<int>(selected_tests.size() * g_state.m_config.m_repeatCount);
         g_state.tests_passed = 0;
         g_state.tests_failed = 0;
         g_state.current_iteration = 0;
-        g_state.total_iterations = g_state.config.repeat_count;
+        g_state.total_iterations = g_state.m_config.m_repeatCount;
 
         // Start runner thread
-        g_state.runner_thread = std::thread([selected_tests]() {
-            AddLogLine("[==========] Running " + std::to_string(selected_tests.size()) +
-                       " test(s), " + std::to_string(g_state.config.repeat_count) + " iteration(s)");
+        g_state.m_runnerThread = std::thread([selected_tests]() {
+            AddLogLine("[==========] Running " + std::to_string(selected_tests.size()) + " test(s), " +
+                       std::to_string(g_state.m_config.m_repeatCount) + " iteration(s)");
 
-            std::vector<larvae::TestInfo> tests_to_run = selected_tests;
+            std::vector<larvae::TestInfo> testsToRun = selected_tests;
 
-            for (int iter = 0; iter < g_state.config.repeat_count; ++iter)
+            for (int iter = 0; iter < g_state.m_config.m_repeatCount; ++iter)
             {
-                if (g_state.should_stop) break;
+                if (g_state.should_stop)
+                    break;
 
                 g_state.current_iteration = iter + 1;
 
-                if (g_state.config.repeat_count > 1)
+                if (g_state.m_config.m_repeatCount > 1)
                 {
-                    AddLogLine("\n[----------] Iteration " + std::to_string(iter + 1) +
-                               " of " + std::to_string(g_state.config.repeat_count));
+                    AddLogLine("\n[----------] Iteration " + std::to_string(iter + 1) + " of " +
+                               std::to_string(g_state.m_config.m_repeatCount));
                 }
 
-                if (g_state.config.shuffle)
+                if (g_state.m_config.m_shuffle)
                 {
                     std::random_device rd;
                     std::mt19937 g{rd()};
                     std::ranges::shuffle(tests_to_run, g);
                 }
 
-                std::string current_suite;
+                std::string currentSuite;
 
                 for (const auto& test : tests_to_run)
                 {
-                    if (g_state.should_stop) break;
+                    if (g_state.should_stop)
+                        break;
 
                     if (test.suite_name != current_suite)
                     {
@@ -344,8 +339,7 @@ namespace
                         result.error_message = error_message;
                         g_state.tests_failed++;
 
-                        AddLogLine("[  FAILED  ] " + test.GetFullName() +
-                                   " (" + std::to_string(duration_ms) + " ms)");
+                        AddLogLine("[  FAILED  ] " + test.GetFullName() + " (" + std::to_string(duration_ms) + " ms)");
 
                         if (g_state.config.verbose && !error_message.empty())
                         {
@@ -363,8 +357,7 @@ namespace
                         result.status = larvae::TestStatus::Passed;
                         g_state.tests_passed++;
 
-                        AddLogLine("[    OK    ] " + test.GetFullName() +
-                                   " (" + std::to_string(duration_ms) + " ms)");
+                        AddLogLine("[    OK    ] " + test.GetFullName() + " (" + std::to_string(duration_ms) + " ms)");
                     }
 
                     {
@@ -388,12 +381,12 @@ namespace
             g_state.is_running = false;
         });
 
-        g_state.runner_thread.detach();
+        g_state.m_runnerThread.detach();
     }
 
-    void RunFailedTestsOnly()
-    {
-        if (g_state.is_running) return;
+    void RunFailedTestsOnly() {
+        if (g_state.is_running)
+            return;
 
         // Deselect all, then select only failed
         for (auto& [name, selected] : g_state.test_selection)
@@ -402,7 +395,7 @@ namespace
         }
 
         {
-            std::lock_guard<std::mutex> lock{g_state.results_mutex};
+            std::lock_guard<std::mutex> lock{g_state.m_resultsMutex};
             for (const auto& result : g_state.results)
             {
                 if (result.status == larvae::TestStatus::Failed)
@@ -416,8 +409,7 @@ namespace
         RunSelectedTests();
     }
 
-    void SetupDarkTheme()
-    {
+    void SetupDarkTheme() {
         ImGuiStyle& style = ImGui::GetStyle();
 
         // Window
@@ -536,10 +528,9 @@ namespace
         colors[ImGuiCol_ModalWindowDimBg] = ImVec4(0.00f, 0.00f, 0.00f, 0.60f);
     }
 
-    void RenderSuitesPanel()
-    {
-        float available_height = ImGui::GetContentRegionAvail().y;
-        ImGui::BeginChild("SuitesPanel", ImVec2(0, available_height * 0.65f), true);
+    void RenderSuitesPanel() {
+        float availableHeight = ImGui::GetContentRegionAvail().y;
+        ImGui::BeginChild("SuitesPanel", ImVec2(0, availableHeight * 0.65f), true);
 
         ImGui::Text("Test Suites");
         ImGui::Separator();
@@ -571,10 +562,10 @@ namespace
         ImGui::Spacing();
 
         ImGui::SetNextItemWidth(-1);
-        ImGui::InputTextWithHint("##TestFilter", "Filter tests...", g_state.test_filter, sizeof(g_state.test_filter));
+        ImGui::InputTextWithHint("##TestFilter", "Filter tests...", g_state.m_testFilter, sizeof(g_state.m_testFilter));
 
         ImGui::Spacing();
-        ImGui::Checkbox("Show individual tests", &g_state.show_individual_tests);
+        ImGui::Checkbox("Show individual tests", &g_state.m_showIndividualTests);
         ImGui::Spacing();
 
         for (auto& [suite, suite_selected] : g_state.suite_selection)
@@ -617,12 +608,14 @@ namespace
                     }
                 }
 
-                std::string suite_label = suite + " (" + std::to_string(selected_count) + "/" + std::to_string(test_count) + ")";
+                std::string suite_label =
+                    suite + " (" + std::to_string(selected_count) + "/" + std::to_string(test_count) + ")";
                 if (ImGui::TreeNode(suite_label.c_str()))
                 {
                     for (const auto& test : g_state.all_tests)
                     {
-                        if (test.suite_name != suite) continue;
+                        if (test.suite_name != suite)
+                            continue;
 
                         if (strlen(g_state.test_filter) > 0)
                         {
@@ -649,12 +642,14 @@ namespace
                                 {
                                     const auto& stats = stats_it->second;
                                     ImGui::BeginTooltip();
-                                    ImGui::Text("Runs: %d (Pass: %d, Fail: %d)", stats.total_runs, stats.passed, stats.failed);
-                                    ImGui::Text("Duration: %.2f ms (avg), %.2f-%.2f ms (range)",
-                                                stats.avg_duration_ms, stats.min_duration_ms, stats.max_duration_ms);
+                                    ImGui::Text("Runs: %d (Pass: %d, Fail: %d)", stats.total_runs, stats.passed,
+                                                stats.failed);
+                                    ImGui::Text("Duration: %.2f ms (avg), %.2f-%.2f ms (range)", stats.avg_duration_ms,
+                                                stats.min_duration_ms, stats.max_duration_ms);
                                     if (!stats.last_error.empty())
                                     {
-                                        ImGui::TextColored(ImVec4(1.0f, 0.4f, 0.4f, 1.0f), "Last error: %s", stats.last_error.c_str());
+                                        ImGui::TextColored(ImVec4(1.0f, 0.4f, 0.4f, 1.0f), "Last error: %s",
+                                                           stats.last_error.c_str());
                                     }
                                     ImGui::EndTooltip();
                                 }
@@ -690,25 +685,24 @@ namespace
         ImGui::EndChild();
     }
 
-    void RenderPlaylistsPanel()
-    {
+    void RenderPlaylistsPanel() {
         ImGui::BeginChild("PlaylistsPanel", ImVec2(0, 0), true);
 
         ImGui::Text("Playlists");
         ImGui::Separator();
 
-        static char new_playlist_name[64] = "";
+        static char s_newPlaylistName[64] = "";
 
         ImGui::SetNextItemWidth(170);
-        ImGui::InputText("##NewPlaylist", new_playlist_name, sizeof(new_playlist_name));
+        ImGui::InputText("##NewPlaylist", s_newPlaylistName, sizeof(s_newPlaylistName));
         ImGui::SameLine();
         if (ImGui::Button("+", ImVec2(25, 0)))
         {
-            if (strlen(new_playlist_name) > 0)
+            if (strlen(s_newPlaylistName) > 0)
             {
                 larvae::TestPlaylist playlist;
-                playlist.name = new_playlist_name;
-                playlist.enabled = true;
+                playlist.m_name = s_newPlaylistName;
+                playlist.m_enabled = true;
 
                 for (const auto& [suite, selected] : g_state.suite_selection)
                 {
@@ -718,8 +712,8 @@ namespace
                     }
                 }
 
-                g_state.config.playlists.push_back(playlist);
-                new_playlist_name[0] = '\0';
+                g_state.m_config.m_playlists.push_back(playlist);
+                s_newPlaylistName[0] = '\0';
             }
         }
         if (ImGui::IsItemHovered())
@@ -731,17 +725,17 @@ namespace
         ImGui::Separator();
         ImGui::Spacing();
 
-        int playlist_to_remove = -1;
-        for (size_t i = 0; i < g_state.config.playlists.size(); ++i)
+        int playlistToRemove = -1;
+        for (size_t i = 0; i < g_state.m_config.m_playlists.size(); ++i)
         {
-            auto& playlist = g_state.config.playlists[i];
+            auto& playlist = g_state.m_config.m_playlists[i];
 
             ImGui::PushID(static_cast<int>(i));
 
-            ImGui::Checkbox("##enabled", &playlist.enabled);
+            ImGui::Checkbox("##enabled", &playlist.m_enabled);
             ImGui::SameLine();
 
-            if (ImGui::TreeNode(playlist.name.c_str()))
+            if (ImGui::TreeNode(playlist.m_name.c_str()))
             {
                 ImGui::Text("Patterns:");
                 for (const auto& pattern : playlist.test_patterns)
@@ -773,7 +767,7 @@ namespace
                 ImGui::SameLine();
                 if (ImGui::Button("Delete"))
                 {
-                    playlist_to_remove = static_cast<int>(i);
+                    playlistToRemove = static_cast<int>(i);
                 }
 
                 ImGui::TreePop();
@@ -782,16 +776,15 @@ namespace
             ImGui::PopID();
         }
 
-        if (playlist_to_remove >= 0)
+        if (playlistToRemove >= 0)
         {
-            g_state.config.playlists.erase(g_state.config.playlists.begin() + playlist_to_remove);
+            g_state.m_config.m_playlists.erase(g_state.m_config.m_playlists.begin() + playlistToRemove);
         }
 
         ImGui::EndChild();
     }
 
-    void RenderControlPanel()
-    {
+    void RenderControlPanel() {
         ImGui::BeginChild("ControlPanel", ImVec2(0, 120), true);
 
         ImGui::Text("Run Configuration");
@@ -799,28 +792,30 @@ namespace
 
         // Repeat count
         ImGui::SetNextItemWidth(100);
-        ImGui::InputInt("Iterations", &g_state.config.repeat_count);
-        if (g_state.config.repeat_count < 1) g_state.config.repeat_count = 1;
-        if (g_state.config.repeat_count > 1000) g_state.config.repeat_count = 1000;
+        ImGui::InputInt("Iterations", &g_state.m_config.m_repeatCount);
+        if (g_state.m_config.m_repeatCount < 1)
+            g_state.m_config.m_repeatCount = 1;
+        if (g_state.m_config.m_repeatCount > 1000)
+            g_state.m_config.m_repeatCount = 1000;
 
         ImGui::SameLine(200);
-        ImGui::Checkbox("Shuffle", &g_state.config.shuffle);
+        ImGui::Checkbox("Shuffle", &g_state.m_config.m_shuffle);
 
         ImGui::SameLine(300);
-        ImGui::Checkbox("Stop on Failure", &g_state.config.stop_on_failure);
+        ImGui::Checkbox("Stop on Failure", &g_state.m_config.m_stopOnFailure);
 
         ImGui::SameLine(450);
-        ImGui::Checkbox("Verbose", &g_state.config.verbose);
+        ImGui::Checkbox("Verbose", &g_state.m_config.m_verbose);
 
         ImGui::SameLine(550);
-        ImGui::Checkbox("Auto-scroll Log", &g_state.config.auto_scroll_log);
+        ImGui::Checkbox("Auto-scroll Log", &g_state.m_config.m_autoScrollLog);
 
         ImGui::Spacing();
 
         // Run/Stop buttons
-        bool is_running = g_state.is_running;
+        bool isRunning = g_state.is_running;
 
-        if (!is_running)
+        if (!isRunning)
         {
             ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.6f, 0.2f, 1.0f));
             ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.3f, 0.7f, 0.3f, 1.0f));
@@ -836,9 +831,9 @@ namespace
             ImGui::SameLine();
 
             // Rerun Failed button (only if there are failed tests)
-            bool has_failed = false;
+            bool hasFailed = false;
             {
-                std::lock_guard<std::mutex> lock{g_state.results_mutex};
+                std::lock_guard<std::mutex> lock{g_state.m_resultsMutex};
                 for (const auto& result : g_state.results)
                 {
                     if (result.status == larvae::TestStatus::Failed)
@@ -849,7 +844,7 @@ namespace
                 }
             }
 
-            if (has_failed)
+            if (hasFailed)
             {
                 ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.7f, 0.5f, 0.2f, 1.0f));
                 ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.8f, 0.6f, 0.3f, 1.0f));
@@ -880,20 +875,16 @@ namespace
         ImGui::SameLine();
 
         // Progress info
-        if (is_running)
+        if (isRunning)
         {
-            ImGui::Text("Iteration %d/%d | Tests: %d/%d | Passed: %d | Failed: %d",
-                        g_state.current_iteration.load(),
-                        g_state.total_iterations.load(),
-                        g_state.tests_completed.load(),
-                        g_state.tests_total.load(),
-                        g_state.tests_passed.load(),
-                        g_state.tests_failed.load());
+            ImGui::Text("Iteration %d/%d | Tests: %d/%d | Passed: %d | Failed: %d", g_state.current_iteration.load(),
+                        g_state.total_iterations.load(), g_state.tests_completed.load(), g_state.tests_total.load(),
+                        g_state.tests_passed.load(), g_state.tests_failed.load());
 
             // Progress bar
             float progress = g_state.tests_total > 0
-                ? static_cast<float>(g_state.tests_completed) / static_cast<float>(g_state.tests_total)
-                : 0.0f;
+                                 ? static_cast<float>(g_state.tests_completed) / static_cast<float>(g_state.tests_total)
+                                 : 0.0f;
 
             ImGui::SameLine(500);
             ImGui::SetNextItemWidth(300);
@@ -901,16 +892,14 @@ namespace
         }
         else if (!g_state.results.empty())
         {
-            ImGui::Text("Completed | Passed: %d | Failed: %d",
-                        g_state.tests_passed.load(),
+            ImGui::Text("Completed | Passed: %d | Failed: %d", g_state.tests_passed.load(),
                         g_state.tests_failed.load());
         }
 
         ImGui::EndChild();
     }
 
-    void RenderResultsPanel()
-    {
+    void RenderResultsPanel() {
         ImGui::BeginChild("ResultsPanel", ImVec2(0, 250), true);
 
         if (ImGui::BeginTabBar("ResultsTabs"))
@@ -918,8 +907,8 @@ namespace
             if (ImGui::BeginTabItem("Results"))
             {
                 if (ImGui::BeginTable("ResultsTable", 5,
-                    ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg |
-                    ImGuiTableFlags_Resizable | ImGuiTableFlags_ScrollY))
+                                      ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable |
+                                          ImGuiTableFlags_ScrollY))
                 {
                     ImGui::TableSetupColumn("Iter", ImGuiTableColumnFlags_WidthFixed, 40);
                     ImGui::TableSetupColumn("Status", ImGuiTableColumnFlags_WidthFixed, 60);
@@ -928,7 +917,7 @@ namespace
                     ImGui::TableSetupColumn("Duration", ImGuiTableColumnFlags_WidthFixed, 80);
                     ImGui::TableHeadersRow();
 
-                    std::lock_guard<std::mutex> lock{g_state.results_mutex};
+                    std::lock_guard<std::mutex> lock{g_state.m_resultsMutex};
 
                     for (const auto& result : g_state.results)
                     {
@@ -975,8 +964,8 @@ namespace
             if (ImGui::BeginTabItem("Failed Only"))
             {
                 if (ImGui::BeginTable("FailedTable", 5,
-                    ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg |
-                    ImGuiTableFlags_Resizable | ImGuiTableFlags_ScrollY))
+                                      ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable |
+                                          ImGuiTableFlags_ScrollY))
                 {
                     ImGui::TableSetupColumn("Iter", ImGuiTableColumnFlags_WidthFixed, 40);
                     ImGui::TableSetupColumn("Suite", ImGuiTableColumnFlags_WidthStretch);
@@ -985,11 +974,12 @@ namespace
                     ImGui::TableSetupColumn("Error", ImGuiTableColumnFlags_WidthStretch);
                     ImGui::TableHeadersRow();
 
-                    std::lock_guard<std::mutex> lock{g_state.results_mutex};
+                    std::lock_guard<std::mutex> lock{g_state.m_resultsMutex};
 
                     for (const auto& result : g_state.results)
                     {
-                        if (result.status != larvae::TestStatus::Failed) continue;
+                        if (result.status != larvae::TestStatus::Failed)
+                            continue;
 
                         ImGui::TableNextRow();
 
@@ -1017,9 +1007,8 @@ namespace
             if (ImGui::BeginTabItem("Statistics"))
             {
                 if (ImGui::BeginTable("StatsTable", 7,
-                    ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg |
-                    ImGuiTableFlags_Resizable | ImGuiTableFlags_ScrollY |
-                    ImGuiTableFlags_Sortable))
+                                      ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable |
+                                          ImGuiTableFlags_ScrollY | ImGuiTableFlags_Sortable))
                 {
                     ImGui::TableSetupColumn("Test", ImGuiTableColumnFlags_WidthStretch);
                     ImGui::TableSetupColumn("Runs", ImGuiTableColumnFlags_WidthFixed, 50);
@@ -1032,7 +1021,8 @@ namespace
 
                     for (const auto& [test_name, stats] : g_state.test_statistics)
                     {
-                        if (stats.total_runs == 0) continue;
+                        if (stats.total_runs == 0)
+                            continue;
 
                         ImGui::TableNextRow();
 
@@ -1087,8 +1077,8 @@ namespace
             if (ImGui::BeginTabItem("History"))
             {
                 if (ImGui::BeginTable("HistoryTable", 6,
-                    ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg |
-                    ImGuiTableFlags_Resizable | ImGuiTableFlags_ScrollY))
+                                      ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable |
+                                          ImGuiTableFlags_ScrollY))
                 {
                     ImGui::TableSetupColumn("Timestamp", ImGuiTableColumnFlags_WidthFixed, 140);
                     ImGui::TableSetupColumn("Iterations", ImGuiTableColumnFlags_WidthFixed, 70);
@@ -1152,8 +1142,7 @@ namespace
         ImGui::EndChild();
     }
 
-    void RenderLogPanel()
-    {
+    void RenderLogPanel() {
         ImGui::BeginChild("LogPanel", ImVec2(0, 0), true);
 
         ImGui::Text("Log Output");
@@ -1168,7 +1157,7 @@ namespace
         ImGui::BeginChild("LogContent", ImVec2(0, 0), false, ImGuiWindowFlags_HorizontalScrollbar);
 
         {
-            std::lock_guard<std::mutex> lock{g_state.log_mutex};
+            std::lock_guard<std::mutex> lock{g_state.m_logMutex};
 
             for (const auto& line : g_state.log_lines)
             {
@@ -1210,7 +1199,7 @@ namespace
                 }
             }
 
-            if (g_state.config.auto_scroll_log && ImGui::GetScrollY() >= ImGui::GetScrollMaxY())
+            if (g_state.m_config.m_autoScrollLog && ImGui::GetScrollY() >= ImGui::GetScrollMaxY())
             {
                 ImGui::SetScrollHereY(1.0f);
             }
@@ -1220,21 +1209,17 @@ namespace
         ImGui::EndChild();
     }
 
-    void RenderMainWindow()
-    {
+    void RenderMainWindow() {
         ImGuiViewport* viewport = ImGui::GetMainViewport();
         ImGui::SetNextWindowPos(viewport->WorkPos);
         ImGui::SetNextWindowSize(viewport->WorkSize);
 
-        ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoTitleBar |
-                                        ImGuiWindowFlags_NoResize |
-                                        ImGuiWindowFlags_NoMove |
-                                        ImGuiWindowFlags_NoCollapse |
-                                        ImGuiWindowFlags_NoBringToFrontOnFocus |
-                                        ImGuiWindowFlags_NoNavFocus |
-                                        ImGuiWindowFlags_MenuBar;
+        ImGuiWindowFlags windowFlags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize |
+                                       ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse |
+                                       ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus |
+                                       ImGuiWindowFlags_MenuBar;
 
-        ImGui::Begin("Larvae Test Runner", nullptr, window_flags);
+        ImGui::Begin("Larvae Test Runner", nullptr, windowFlags);
 
         // Menu bar
         if (ImGui::BeginMenuBar())
@@ -1244,7 +1229,7 @@ namespace
                 if (ImGui::MenuItem("Save Config"))
                 {
                     // Update selected suites before saving
-                    g_state.config.selected_suites.clear();
+                    g_state.m_config.m_selectedSuites.clear();
                     for (const auto& [suite, selected] : g_state.suite_selection)
                     {
                         if (selected)
@@ -1252,12 +1237,12 @@ namespace
                             g_state.config.selected_suites.push_back(suite);
                         }
                     }
-                    g_state.config.Save();
+                    g_state.m_config.Save();
                 }
 
                 if (ImGui::MenuItem("Reload Config"))
                 {
-                    g_state.config.Load();
+                    g_state.m_config.Load();
                     DiscoverTests();
                 }
 
@@ -1273,8 +1258,8 @@ namespace
 
             if (ImGui::BeginMenu("View"))
             {
-                ImGui::MenuItem("Auto-scroll Log", nullptr, &g_state.config.auto_scroll_log);
-                ImGui::MenuItem("Verbose Output", nullptr, &g_state.config.verbose);
+                ImGui::MenuItem("Auto-scroll Log", nullptr, &g_state.m_config.m_autoScrollLog);
+                ImGui::MenuItem("Verbose Output", nullptr, &g_state.m_config.m_verbose);
                 ImGui::EndMenu();
             }
 
@@ -1321,10 +1306,9 @@ namespace
 
         ImGui::End();
     }
-}
+} // namespace
 
-int main(int argc, char** argv)
-{
+int main(int argc, char** argv) {
     // Initialize logging
     hive::LogManager logManager;
     hive::ConsoleLogger logger{hive::LogManager::GetInstance()};
@@ -1344,15 +1328,12 @@ int main(int argc, char** argv)
 #endif
 
     // Load configuration
-    g_state.config.Load();
+    g_state.m_config.Load();
 
     // Create window
-    GLFWwindow* window = glfwCreateWindow(
-        static_cast<int>(g_state.config.window_width),
-        static_cast<int>(g_state.config.window_height),
-        "Larvae Test Runner - HiveEngine",
-        nullptr,
-        nullptr);
+    GLFWwindow* window = glfwCreateWindow(static_cast<int>(g_state.m_config.m_windowWidth),
+                                          static_cast<int>(g_state.m_config.m_windowHeight),
+                                          "Larvae Test Runner - HiveEngine", nullptr, nullptr);
 
     if (!window)
     {
@@ -1394,9 +1375,9 @@ int main(int argc, char** argv)
 
         // Rendering
         ImGui::Render();
-        int display_w, display_h;
-        glfwGetFramebufferSize(window, &display_w, &display_h);
-        glViewport(0, 0, display_w, display_h);
+        int displayW, displayH;
+        glfwGetFramebufferSize(window, &displayW, &displayH);
+        glViewport(0, 0, displayW, displayH);
         glClearColor(0.1f, 0.1f, 0.12f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
@@ -1407,10 +1388,10 @@ int main(int argc, char** argv)
     // Save configuration before exit
     int width, height;
     glfwGetWindowSize(window, &width, &height);
-    g_state.config.window_width = static_cast<float>(width);
-    g_state.config.window_height = static_cast<float>(height);
+    g_state.m_config.m_windowWidth = static_cast<float>(width);
+    g_state.m_config.m_windowHeight = static_cast<float>(height);
 
-    g_state.config.selected_suites.clear();
+    g_state.m_config.m_selectedSuites.clear();
     for (const auto& [suite, selected] : g_state.suite_selection)
     {
         if (selected)
@@ -1418,7 +1399,7 @@ int main(int argc, char** argv)
             g_state.config.selected_suites.push_back(suite);
         }
     }
-    g_state.config.Save();
+    g_state.m_config.Save();
 
     // Cleanup
     ImGui_ImplOpenGL3_Shutdown();
@@ -1435,8 +1416,7 @@ int main(int argc, char** argv)
 #ifdef _WIN32
 #include <windows.h>
 
-int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
-{
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
     (void)hInstance;
     (void)hPrevInstance;
     (void)lpCmdLine;

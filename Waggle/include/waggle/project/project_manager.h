@@ -1,8 +1,11 @@
 #pragma once
 
-#include <nectar/project/project_file.h>
 #include <comb/default_allocator.h>
+
 #include <wax/containers/string_view.h>
+
+#include <nectar/project/project_file.h>
+
 #include <cstdint>
 
 namespace nectar
@@ -22,14 +25,14 @@ namespace nectar
     class HotReloadManager;
     class IAssetImporter;
     class IAssetCooker;
-}
+} // namespace nectar
 
 namespace waggle
 {
     struct ProjectConfig
     {
-        bool enable_hot_reload{false};
-        uint32_t watcher_interval_ms{500};
+        bool m_enableHotReload{false};
+        uint32_t m_watcherIntervalMs{500};
     };
 
     class ProjectManager
@@ -41,8 +44,7 @@ namespace waggle
         ProjectManager(const ProjectManager&) = delete;
         ProjectManager& operator=(const ProjectManager&) = delete;
 
-        [[nodiscard]] bool Open(wax::StringView project_hive_path,
-                                const ProjectConfig& config = {});
+        [[nodiscard]] bool Open(wax::StringView projectHivePath, const ProjectConfig& config = {});
         void Close();
         [[nodiscard]] bool IsOpen() const noexcept;
 
@@ -66,25 +68,25 @@ namespace waggle
         void Update();
 
     private:
-        comb::DefaultAllocator* alloc_;
-        bool open_{false};
+        comb::DefaultAllocator* m_alloc;
+        bool m_open{false};
 
-        nectar::ProjectFile project_;
-        nectar::ProjectPaths paths_;
+        nectar::ProjectFile m_project;
+        nectar::ProjectPaths m_paths;
 
-        nectar::VirtualFilesystem* vfs_{};
-        nectar::DiskMountSource* assets_mount_{};
-        nectar::DiskMountSource* cas_mount_{};
-        nectar::CasStore* cas_{};
-        nectar::IOScheduler* io_{};
-        nectar::AssetServer* server_{};
-        nectar::ImporterRegistry* importer_registry_{};
-        nectar::AssetDatabase* import_db_{};
-        nectar::ImportPipeline* import_pipeline_{};
-        nectar::CookerRegistry* cooker_registry_{};
-        nectar::CookCache* cook_cache_{};
-        nectar::CookPipeline* cook_pipeline_{};
-        nectar::PollingFileWatcher* watcher_{};
-        nectar::HotReloadManager* hot_reload_{};
+        nectar::VirtualFilesystem* m_vfs{};
+        nectar::DiskMountSource* m_assetsMount{};
+        nectar::DiskMountSource* m_casMount{};
+        nectar::CasStore* m_cas{};
+        nectar::IOScheduler* m_io{};
+        nectar::AssetServer* m_server{};
+        nectar::ImporterRegistry* m_importerRegistry{};
+        nectar::AssetDatabase* m_importDb{};
+        nectar::ImportPipeline* m_importPipeline{};
+        nectar::CookerRegistry* m_cookerRegistry{};
+        nectar::CookCache* m_cookCache{};
+        nectar::CookPipeline* m_cookPipeline{};
+        nectar::PollingFileWatcher* m_watcher{};
+        nectar::HotReloadManager* m_hotReload{};
     };
-}
+} // namespace waggle

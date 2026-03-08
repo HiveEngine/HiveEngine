@@ -1,6 +1,8 @@
-#include <larvae/larvae.h>
 #include <wax/containers/fixed_string.h>
 #include <wax/containers/string_view.h>
+
+#include <larvae/larvae.h>
+
 #include <string>
 
 namespace
@@ -9,25 +11,27 @@ namespace
     // Wax::FixedString Benchmarks
     // =============================================================================
 
-    auto bench1 = larvae::RegisterBenchmark("WaxFixedString", "ConstructSmallString", [](larvae::BenchmarkState& state) {
-        while (state.KeepRunning())
-        {
-            wax::FixedString str{"Hello"};
-            larvae::DoNotOptimize(str.Data());
-        }
+    auto bench1 =
+        larvae::RegisterBenchmark("WaxFixedString", "ConstructSmallString", [](larvae::BenchmarkState& state) {
+            while (state.KeepRunning())
+            {
+                wax::FixedString str{"Hello"};
+                larvae::DoNotOptimize(str.Data());
+            }
 
-        state.SetItemsProcessed(state.iterations());
-    });
+            state.SetItemsProcessed(state.iterations());
+        });
 
-    auto bench2 = larvae::RegisterBenchmark("WaxFixedString", "ConstructMaxCapacity", [](larvae::BenchmarkState& state) {
-        while (state.KeepRunning())
-        {
-            wax::FixedString str{"1234567890123456789012"};
-            larvae::DoNotOptimize(str.Data());
-        }
+    auto bench2 =
+        larvae::RegisterBenchmark("WaxFixedString", "ConstructMaxCapacity", [](larvae::BenchmarkState& state) {
+            while (state.KeepRunning())
+            {
+                wax::FixedString str{"1234567890123456789012"};
+                larvae::DoNotOptimize(str.Data());
+            }
 
-        state.SetItemsProcessed(state.iterations());
-    });
+            state.SetItemsProcessed(state.iterations());
+        });
 
     auto bench3 = larvae::RegisterBenchmark("WaxFixedString", "AppendChars", [](larvae::BenchmarkState& state) {
         while (state.KeepRunning())
@@ -162,15 +166,16 @@ namespace
     // Comparison: FixedString vs std::string (small strings)
     // =============================================================================
 
-    auto bench13 = larvae::RegisterBenchmark("StdStringSmall", "ConstructSmallString", [](larvae::BenchmarkState& state) {
-        while (state.KeepRunning())
-        {
-            std::string str{"Hello"};
-            larvae::DoNotOptimize(str.data());
-        }
+    auto bench13 =
+        larvae::RegisterBenchmark("StdStringSmall", "ConstructSmallString", [](larvae::BenchmarkState& state) {
+            while (state.KeepRunning())
+            {
+                std::string str{"Hello"};
+                larvae::DoNotOptimize(str.data());
+            }
 
-        state.SetItemsProcessed(state.iterations());
-    });
+            state.SetItemsProcessed(state.iterations());
+        });
 
     auto bench14 = larvae::RegisterBenchmark("StdStringSmall", "AppendChars", [](larvae::BenchmarkState& state) {
         while (state.KeepRunning())
@@ -210,4 +215,4 @@ namespace
 
         state.SetItemsProcessed(state.iterations());
     });
-}
+} // namespace

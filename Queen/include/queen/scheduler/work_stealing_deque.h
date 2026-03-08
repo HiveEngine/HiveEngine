@@ -1,9 +1,10 @@
 #pragma once
 
 #include <comb/allocator_concepts.h>
+
 #include <atomic>
-#include <optional>
 #include <cstdint>
+#include <optional>
 
 namespace queen
 {
@@ -32,24 +33,21 @@ namespace queen
      * @tparam T Element type (typically Task*)
      * @tparam Allocator Memory allocator type
      */
-    template<typename T, comb::Allocator Allocator>
-    class CircularBuffer
+    template <typename T, comb::Allocator Allocator> class CircularBuffer
     {
     public:
         explicit CircularBuffer(Allocator& allocator, size_t capacity)
-            : allocator_{&allocator}
-            , capacity_{capacity}
-            , mask_{capacity - 1}
-        {
-            void* mem = allocator_->Allocate(sizeof(T) * capacity_, alignof(T));
-            data_ = static_cast<T*>(mem);
+            : m_allocator{&allocator}
+            , m_capacity{capacity}
+            , m_mask{capacity - 1} {
+            void* mem = m_allocator->Allocate(sizeof(T) * m_capacity, alignof(T));
+            m_data = static_cast<T*>(mem);
         }
 
-        ~CircularBuffer()
-        {
-            if (data_ != nullptr)
+        ~CircularBuffer() {
+            if (m_data != nullptr)
             {
-                allocator_->Deallocate(data_);
+                m_allocator->Deallocate(m_data);
             }
         }
 
@@ -58,24 +56,22 @@ namespace queen
         CircularBuffer(CircularBuffer&&) = delete;
         CircularBuffer& operator=(CircularBuffer&&) = delete;
 
-        [[nodiscard]] size_t Capacity() const noexcept { return capacity_; }
+        [[nodiscard]] size_t Capacity() const noexcept { return m_capacity; }
 
-        // No-sanitize: owner Put and thief Get always access different physical slots
-        // (guaranteed by modular arithmetic + grow check). See class comment.
-        #if defined(__clang__)
+// No-sanitize: owner Put and thief Get always access different physical slots
+// (guaranteed by modular arithmetic + grow check). See class comment.
+#if defined(__clang__)
         [[clang::no_sanitize("thread")]]
-        #endif
-        [[nodiscard]] T Get(int64_t index) const noexcept
-        {
-            return data_[static_cast<size_t>(index) & mask_];
+#endif
+        [[nodiscard]] T Get(int64_t index) const noexcept {
+            return m_data[static_cast<size_t>(index) & m_mask];
         }
 
-        #if defined(__clang__)
+#if defined(__clang__)
         [[clang::no_sanitize("thread")]]
-        #endif
-        void Put(int64_t index, T value) noexcept
-        {
-            data_[static_cast<size_t>(index) & mask_] = value;
+#endif
+        void Put(int64_t index, T value) noexcept {
+            m_data[static_cast<size_t>(index) & m_mask] = value;
         }
 
         /**
@@ -85,25 +81,24 @@ namespace queen
          * @param top Current top index (inclusive lower bound)
          * @return Pointer to new larger buffer
          */
-        [[nodiscard]] CircularBuffer* Grow(int64_t bottom, int64_t top)
-        {
-            size_t new_capacity = capacity_ * 2;
-            void* mem = allocator_->Allocate(sizeof(CircularBuffer), alignof(CircularBuffer));
-            auto* new_buffer = new (mem) CircularBuffer{*allocator_, new_capacity};
+        [[nodiscard]] CircularBuffer* Grow(int64_t bottom, int64_t top) {
+            size_t newCapacity = m_capacity * 2;
+            void* mem = m_allocator->Allocate(sizeof(CircularBuffer), alignof(CircularBuffer));
+            auto* newBuffer = new (mem) CircularBuffer{*m_allocator, newCapacity};
 
             for (int64_t i = top; i < bottom; ++i)
             {
-                new_buffer->Put(i, Get(i));
+                newBuffer->Put(i, Get(i));
             }
 
-            return new_buffer;
+            return newBuffer;
         }
 
     private:
-        Allocator* allocator_;
-        T* data_;
-        size_t capacity_;
-        size_t mask_;
+        Allocator* m_allocator;
+        T* m_data;
+        size_t m_capacity;
+        size_t m_mask;
     };
 
     /**
@@ -143,28 +138,26 @@ namespace queen
      *   auto stolen = deque.Steal();  // Returns task1 (FIFO)
      * @endcode
      */
-    template<typename T, comb::Allocator Allocator>
-    class WorkStealingDeque
+    template <typename T, comb::Allocator Allocator> class WorkStealingDeque
     {
     public:
-        explicit WorkStealingDeque(Allocator& allocator, size_t initial_capacity = 1024)
-            : allocator_{&allocator}
-            , top_{0}
-            , bottom_{0}
-            , retired_head_{nullptr}
-        {
-            void* mem = allocator_->Allocate(sizeof(CircularBuffer<T, Allocator>), alignof(CircularBuffer<T, Allocator>));
-            auto* initial_buffer = new (mem) CircularBuffer<T, Allocator>{allocator, initial_capacity};
-            buffer_.store(initial_buffer, std::memory_order_relaxed);
+        explicit WorkStealingDeque(Allocator& allocator, size_t initialCapacity = 1024)
+            : m_allocator{&allocator}
+            , m_top{0}
+            , m_bottom{0}
+            , m_retiredHead{nullptr} {
+            void* mem =
+                m_allocator->Allocate(sizeof(CircularBuffer<T, Allocator>), alignof(CircularBuffer<T, Allocator>));
+            auto* initialBuffer = new (mem) CircularBuffer<T, Allocator>{allocator, initialCapacity};
+            m_buffer.store(initialBuffer, std::memory_order_relaxed);
         }
 
-        ~WorkStealingDeque()
-        {
-            auto* buf = buffer_.load(std::memory_order_relaxed);
+        ~WorkStealingDeque() {
+            auto* buf = m_buffer.load(std::memory_order_relaxed);
             if (buf != nullptr)
             {
                 buf->~CircularBuffer<T, Allocator>();
-                allocator_->Deallocate(buf);
+                m_allocator->Deallocate(buf);
             }
             FreeRetiredBuffers();
         }
@@ -182,23 +175,22 @@ namespace queen
          *
          * @param item Item to push
          */
-        void Push(T item)
-        {
-            int64_t b = bottom_.load(std::memory_order_relaxed);
-            int64_t t = top_.load(std::memory_order_acquire);
-            auto* buf = buffer_.load(std::memory_order_relaxed);
+        void Push(T item) {
+            int64_t b = m_bottom.load(std::memory_order_relaxed);
+            int64_t t = m_top.load(std::memory_order_acquire);
+            auto* buf = m_buffer.load(std::memory_order_relaxed);
 
             if (b - t > static_cast<int64_t>(buf->Capacity()) - 1)
             {
-                auto* old_buf = buf;
+                auto* oldBuf = buf;
                 buf = buf->Grow(b, t);
-                buffer_.store(buf, std::memory_order_release);
-                RetireBuffer(old_buf);
+                m_buffer.store(buf, std::memory_order_release);
+                RetireBuffer(oldBuf);
             }
 
             buf->Put(b, item);
             // Release store ensures the item is visible before bottom is incremented
-            bottom_.store(b + 1, std::memory_order_release);
+            m_bottom.store(b + 1, std::memory_order_release);
         }
 
         /**
@@ -209,32 +201,29 @@ namespace queen
          *
          * @return The popped item or std::nullopt
          */
-        [[nodiscard]] std::optional<T> Pop()
-        {
-            int64_t b = bottom_.load(std::memory_order_relaxed) - 1;
-            auto* buf = buffer_.load(std::memory_order_relaxed);
-            bottom_.store(b, std::memory_order_relaxed);
+        [[nodiscard]] std::optional<T> Pop() {
+            int64_t b = m_bottom.load(std::memory_order_relaxed) - 1;
+            auto* buf = m_buffer.load(std::memory_order_relaxed);
+            m_bottom.store(b, std::memory_order_relaxed);
             std::atomic_thread_fence(std::memory_order_seq_cst);
-            int64_t t = top_.load(std::memory_order_relaxed);
+            int64_t t = m_top.load(std::memory_order_relaxed);
 
             if (t <= b)
             {
                 T item = buf->Get(b);
                 if (t == b)
                 {
-                    if (!top_.compare_exchange_strong(t, t + 1,
-                                                       std::memory_order_seq_cst,
-                                                       std::memory_order_relaxed))
+                    if (!m_top.compare_exchange_strong(t, t + 1, std::memory_order_seq_cst, std::memory_order_relaxed))
                     {
-                        bottom_.store(b + 1, std::memory_order_relaxed);
+                        m_bottom.store(b + 1, std::memory_order_relaxed);
                         return std::nullopt;
                     }
-                    bottom_.store(b + 1, std::memory_order_relaxed);
+                    m_bottom.store(b + 1, std::memory_order_relaxed);
                 }
                 return item;
             }
 
-            bottom_.store(b + 1, std::memory_order_relaxed);
+            m_bottom.store(b + 1, std::memory_order_relaxed);
             return std::nullopt;
         }
 
@@ -247,19 +236,16 @@ namespace queen
          *
          * @return The stolen item or std::nullopt
          */
-        [[nodiscard]] std::optional<T> Steal()
-        {
-            int64_t t = top_.load(std::memory_order_acquire);
+        [[nodiscard]] std::optional<T> Steal() {
+            int64_t t = m_top.load(std::memory_order_acquire);
             std::atomic_thread_fence(std::memory_order_seq_cst);
-            int64_t b = bottom_.load(std::memory_order_acquire);
+            int64_t b = m_bottom.load(std::memory_order_acquire);
 
             if (t < b)
             {
-                auto* buf = buffer_.load(std::memory_order_acquire);
+                auto* buf = m_buffer.load(std::memory_order_acquire);
                 T item = buf->Get(t);
-                if (!top_.compare_exchange_strong(t, t + 1,
-                                                   std::memory_order_seq_cst,
-                                                   std::memory_order_relaxed))
+                if (!m_top.compare_exchange_strong(t, t + 1, std::memory_order_seq_cst, std::memory_order_relaxed))
                 {
                     return std::nullopt;
                 }
@@ -276,10 +262,9 @@ namespace queen
          *
          * @return true if the deque appears empty
          */
-        [[nodiscard]] bool IsEmpty() const noexcept
-        {
-            int64_t t = top_.load(std::memory_order_acquire);
-            int64_t b = bottom_.load(std::memory_order_acquire);
+        [[nodiscard]] bool IsEmpty() const noexcept {
+            int64_t t = m_top.load(std::memory_order_acquire);
+            int64_t b = m_bottom.load(std::memory_order_acquire);
             return t >= b;
         }
 
@@ -290,45 +275,42 @@ namespace queen
          *
          * @return Approximate number of items
          */
-        [[nodiscard]] size_t Size() const noexcept
-        {
-            int64_t t = top_.load(std::memory_order_acquire);
-            int64_t b = bottom_.load(std::memory_order_acquire);
+        [[nodiscard]] size_t Size() const noexcept {
+            int64_t t = m_top.load(std::memory_order_acquire);
+            int64_t b = m_bottom.load(std::memory_order_acquire);
             return static_cast<size_t>(b > t ? b - t : 0);
         }
 
     private:
         struct RetiredNode
         {
-            CircularBuffer<T, Allocator>* buffer;
-            RetiredNode* next;
+            CircularBuffer<T, Allocator>* m_buffer;
+            RetiredNode* m_next;
         };
 
-        void RetireBuffer(CircularBuffer<T, Allocator>* buf)
-        {
-            void* mem = allocator_->Allocate(sizeof(RetiredNode), alignof(RetiredNode));
-            auto* node = new (mem) RetiredNode{buf, retired_head_};
-            retired_head_ = node;
+        void RetireBuffer(CircularBuffer<T, Allocator>* buf) {
+            void* mem = m_allocator->Allocate(sizeof(RetiredNode), alignof(RetiredNode));
+            auto* node = new (mem) RetiredNode{buf, m_retiredHead};
+            m_retiredHead = node;
         }
 
-        void FreeRetiredBuffers()
-        {
-            RetiredNode* node = retired_head_;
+        void FreeRetiredBuffers() {
+            RetiredNode* node = m_retiredHead;
             while (node != nullptr)
             {
-                RetiredNode* next = node->next;
-                node->buffer->~CircularBuffer<T, Allocator>();
-                allocator_->Deallocate(node->buffer);
-                allocator_->Deallocate(node);
+                RetiredNode* next = node->m_next;
+                node->m_buffer->~CircularBuffer<T, Allocator>();
+                m_allocator->Deallocate(node->m_buffer);
+                m_allocator->Deallocate(node);
                 node = next;
             }
-            retired_head_ = nullptr;
+            m_retiredHead = nullptr;
         }
 
-        Allocator* allocator_;
-        std::atomic<int64_t> top_;
-        std::atomic<int64_t> bottom_;
-        std::atomic<CircularBuffer<T, Allocator>*> buffer_;
-        RetiredNode* retired_head_;
+        Allocator* m_allocator;
+        std::atomic<int64_t> m_top;
+        std::atomic<int64_t> m_bottom;
+        std::atomic<CircularBuffer<T, Allocator>*> m_buffer;
+        RetiredNode* m_retiredHead;
     };
-}
+} // namespace queen

@@ -1,6 +1,8 @@
-#include <larvae/larvae.h>
-#include <queen/storage/archetype_graph.h>
 #include <comb/linear_allocator.h>
+
+#include <queen/storage/archetype_graph.h>
+
+#include <larvae/larvae.h>
 
 namespace
 {
@@ -204,4 +206,4 @@ namespace
         auto* back_to_empty = graph.GetOrCreateRemoveTarget<Position>(*back_to_a);
         larvae::AssertTrue(back_to_empty == empty);
     });
-}
+} // namespace

@@ -1,42 +1,43 @@
-#define _CRT_SECURE_NO_WARNINGS
-#include <nectar/pak/pak_reader.h>
+#define CRT_SECURE_NO_WARNINGS
+#include <hive/profiling/profiler.h>
+
 #include <nectar/pak/compression.h>
 #include <nectar/pak/crc32.h>
-#include <hive/profiling/profiler.h>
+#include <nectar/pak/pak_reader.h>
+
 #include <cstring>
 #include <memory>
 
 namespace nectar
 {
-    PakReader::~PakReader()
-    {
-        if (file_)
-            std::fclose(file_);
-        if (manifest_ && alloc_)
+    PakReader::~PakReader() {
+        if (m_file)
+            std::fclose(m_file);
+        if (m_manifest && m_alloc)
         {
-            std::destroy_at(manifest_);
-            alloc_->Deallocate(manifest_);
+            std::destroy_at(m_manifest);
+            m_alloc->Deallocate(m_manifest);
         }
-        if (asset_entries_ && alloc_)
+        if (m_assetEntries && m_alloc)
         {
-            std::destroy_at(asset_entries_);
-            alloc_->Deallocate(asset_entries_);
+            std::destroy_at(m_assetEntries);
+            m_alloc->Deallocate(m_assetEntries);
         }
-        if (block_entries_ && alloc_)
+        if (m_blockEntries && m_alloc)
         {
-            std::destroy_at(block_entries_);
-            alloc_->Deallocate(block_entries_);
+            std::destroy_at(m_blockEntries);
+            m_alloc->Deallocate(m_blockEntries);
         }
     }
 
-    PakReader* PakReader::Open(wax::StringView path, comb::DefaultAllocator& alloc)
-    {
+    PakReader* PakReader::Open(wax::StringView path, comb::DefaultAllocator& alloc) {
         HIVE_PROFILE_SCOPE_N("PakReader::Open");
-        wax::String path_str{alloc};
-        path_str.Append(path.Data(), path.Size());
+        wax::String pathStr{alloc};
+        pathStr.Append(path.Data(), path.Size());
 
-        FILE* file = std::fopen(path_str.CStr(), "rb");
-        if (!file) return nullptr;
+        FILE* file = std::fopen(pathStr.CStr(), "rb");
+        if (!file)
+            return nullptr;
 
         // Read header
         NpakHeader header{};
@@ -46,152 +47,158 @@ namespace nectar
             return nullptr;
         }
 
-        if (header.magic != kNpakMagic || header.version != kNpakVersion)
+        if (header.m_magic != kNpakMagic || header.m_version != kNpakVersion)
         {
             std::fclose(file);
             return nullptr;
         }
 
         // Read TOC
-        if (std::fseek(file, static_cast<long>(header.toc_offset), SEEK_SET) != 0)
+        if (std::fseek(file, static_cast<long>(header.m_tocOffset), SEEK_SET) != 0)
         {
             std::fclose(file);
             return nullptr;
         }
 
-        wax::ByteBuffer toc_buf{alloc};
-        toc_buf.Resize(header.toc_size);
-        if (std::fread(toc_buf.Data(), 1, header.toc_size, file) != header.toc_size)
+        wax::ByteBuffer tocBuf{alloc};
+        tocBuf.Resize(header.m_tocSize);
+        if (std::fread(tocBuf.Data(), 1, header.m_tocSize, file) != header.m_tocSize)
         {
             std::fclose(file);
             return nullptr;
         }
 
-        uint32_t computed_crc = Crc32(toc_buf.Data(), header.toc_size);
-        if (computed_crc != header.toc_crc32)
+        uint32_t computedCrc = Crc32(tocBuf.Data(), header.m_tocSize);
+        if (computedCrc != header.m_tocCrc32)
         {
             std::fclose(file);
             return nullptr;
         }
 
         // Parse TOC
-        const uint8_t* ptr = toc_buf.Data();
-        const uint8_t* end = ptr + header.toc_size;
-
-        if (ptr + sizeof(uint32_t) > end) { std::fclose(file); return nullptr; }
-        uint32_t asset_count = 0;
-        std::memcpy(&asset_count, ptr, sizeof(uint32_t));
-        ptr += sizeof(uint32_t);
-
-        size_t asset_bytes = asset_count * sizeof(NpakAssetEntry);
-        if (ptr + asset_bytes > end) { std::fclose(file); return nullptr; }
-
-        // Allocate vectors on heap via allocator
-        void* av_mem = alloc.Allocate(sizeof(wax::Vector<NpakAssetEntry>), alignof(wax::Vector<NpakAssetEntry>));
-        auto* asset_vec = new (av_mem) wax::Vector<NpakAssetEntry>{alloc};
-        asset_vec->Resize(asset_count);
-        if (asset_count > 0)
-            std::memcpy(&(*asset_vec)[0], ptr, asset_bytes);
-        ptr += asset_bytes;
+        const uint8_t* ptr = tocBuf.Data();
+        const uint8_t* end = ptr + header.m_tocSize;
 
         if (ptr + sizeof(uint32_t) > end)
         {
-            std::destroy_at(asset_vec);
-            alloc.Deallocate(av_mem);
             std::fclose(file);
             return nullptr;
         }
-        uint32_t block_count = 0;
-        std::memcpy(&block_count, ptr, sizeof(uint32_t));
+        uint32_t assetCount = 0;
+        std::memcpy(&assetCount, ptr, sizeof(uint32_t));
         ptr += sizeof(uint32_t);
 
-        size_t block_bytes = block_count * sizeof(NpakBlockEntry);
-        if (ptr + block_bytes > end)
+        size_t assetBytes = assetCount * sizeof(NpakAssetEntry);
+        if (ptr + assetBytes > end)
         {
-            std::destroy_at(asset_vec);
-            alloc.Deallocate(av_mem);
             std::fclose(file);
             return nullptr;
         }
 
-        void* bv_mem = alloc.Allocate(sizeof(wax::Vector<NpakBlockEntry>), alignof(wax::Vector<NpakBlockEntry>));
-        auto* block_vec = new (bv_mem) wax::Vector<NpakBlockEntry>{alloc};
-        block_vec->Resize(block_count);
-        if (block_count > 0)
-            std::memcpy(&(*block_vec)[0], ptr, block_bytes);
+        // Allocate vectors on heap via allocator
+        void* avMem = alloc.Allocate(sizeof(wax::Vector<NpakAssetEntry>), alignof(wax::Vector<NpakAssetEntry>));
+        auto* assetVec = new (avMem) wax::Vector<NpakAssetEntry>{alloc};
+        assetVec->Resize(assetCount);
+        if (assetCount > 0)
+            std::memcpy(&(*assetVec)[0], ptr, assetBytes);
+        ptr += assetBytes;
+
+        if (ptr + sizeof(uint32_t) > end)
+        {
+            std::destroy_at(assetVec);
+            alloc.Deallocate(avMem);
+            std::fclose(file);
+            return nullptr;
+        }
+        uint32_t blockCount = 0;
+        std::memcpy(&blockCount, ptr, sizeof(uint32_t));
+        ptr += sizeof(uint32_t);
+
+        size_t blockBytes = blockCount * sizeof(NpakBlockEntry);
+        if (ptr + blockBytes > end)
+        {
+            std::destroy_at(assetVec);
+            alloc.Deallocate(avMem);
+            std::fclose(file);
+            return nullptr;
+        }
+
+        void* bvMem = alloc.Allocate(sizeof(wax::Vector<NpakBlockEntry>), alignof(wax::Vector<NpakBlockEntry>));
+        auto* blockVec = new (bvMem) wax::Vector<NpakBlockEntry>{alloc};
+        blockVec->Resize(blockCount);
+        if (blockCount > 0)
+            std::memcpy(&(*blockVec)[0], ptr, blockBytes);
 
         // Build reader
-        void* reader_mem = alloc.Allocate(sizeof(PakReader), alignof(PakReader));
-        auto* reader = new (reader_mem) PakReader{};
-        reader->alloc_ = &alloc;
-        reader->file_ = file;
-        reader->header_ = header;
-        reader->asset_entries_ = asset_vec;
-        reader->block_entries_ = block_vec;
+        void* readerMem = alloc.Allocate(sizeof(PakReader), alignof(PakReader));
+        auto* reader = new (readerMem) PakReader{};
+        reader->m_alloc = &alloc;
+        reader->m_file = file;
+        reader->m_header = header;
+        reader->m_assetEntries = assetVec;
+        reader->m_blockEntries = blockVec;
 
         // Try to load manifest
-        const NpakAssetEntry* manifest_entry = reader->FindAsset(kManifestSentinel);
-        if (manifest_entry)
+        const NpakAssetEntry* manifestEntry = reader->FindAsset(kManifestSentinel);
+        if (manifestEntry)
         {
-            auto manifest_blob = reader->Read(kManifestSentinel, alloc);
-            if (manifest_blob.Size() > 0)
+            auto manifestBlob = reader->Read(kManifestSentinel, alloc);
+            if (manifestBlob.Size() > 0)
             {
-                void* m_mem = alloc.Allocate(sizeof(AssetManifest), alignof(AssetManifest));
-                reader->manifest_ = new (m_mem) AssetManifest{
-                    AssetManifest::Deserialize(manifest_blob.View(), alloc)};
+                void* mMem = alloc.Allocate(sizeof(AssetManifest), alignof(AssetManifest));
+                reader->m_manifest = new (mMem) AssetManifest{AssetManifest::Deserialize(manifestBlob.View(), alloc)};
             }
         }
 
         return reader;
     }
 
-    wax::ByteBuffer PakReader::Read(ContentHash hash, comb::DefaultAllocator& alloc)
-    {
+    wax::ByteBuffer PakReader::Read(ContentHash hash, comb::DefaultAllocator& alloc) {
         HIVE_PROFILE_SCOPE_N("PakReader::Read");
         wax::ByteBuffer result{alloc};
 
         const NpakAssetEntry* entry = FindAsset(hash);
-        if (!entry) return result;
+        if (!entry)
+            return result;
 
-        size_t remaining = entry->uncompressed_size;
+        size_t remaining = entry->m_uncompressedSize;
         result.Resize(remaining);
 
         // Calculate how many blocks this asset spans
-        size_t offset_in_first_block = entry->offset_in_block;
-        size_t dst_offset = 0;
-        uint32_t block_idx = entry->first_block;
+        size_t offsetInFirstBlock = entry->m_offsetInBlock;
+        size_t dstOffset = 0;
+        uint32_t blockIdx = entry->m_firstBlock;
 
-        while (remaining > 0 && block_idx < block_entries_->Size())
+        while (remaining > 0 && blockIdx < m_blockEntries->Size())
         {
-            const auto& be = (*block_entries_)[block_idx];
+            const auto& be = (*m_blockEntries)[blockIdx];
 
             // Read compressed block from file
             wax::ByteBuffer compressed{alloc};
-            compressed.Resize(be.compressed_size);
+            compressed.Resize(be.m_compressedSize);
 
-            std::fseek(file_, static_cast<long>(be.file_offset), SEEK_SET);
-            size_t read = std::fread(compressed.Data(), 1, be.compressed_size, file_);
-            if (read != be.compressed_size)
+            std::fseek(m_file, static_cast<long>(be.m_fileOffset), SEEK_SET);
+            size_t read = std::fread(compressed.Data(), 1, be.m_compressedSize, m_file);
+            if (read != be.m_compressedSize)
             {
                 result.Clear();
                 return result;
             }
 
             // Decompress block
-            size_t block_uncompressed = kBlockSize;
+            size_t blockUncompressed = kBlockSize;
             // Last block might be smaller
-            if (remaining + offset_in_first_block < kBlockSize)
-                block_uncompressed = remaining + offset_in_first_block;
+            if (remaining + offsetInFirstBlock < kBlockSize)
+                blockUncompressed = remaining + offsetInFirstBlock;
 
             wax::ByteBuffer decompressed{alloc};
-            if (be.compression == CompressionMethod::None)
+            if (be.m_compression == CompressionMethod::NONE)
             {
                 decompressed = static_cast<wax::ByteBuffer&&>(compressed);
             }
             else
             {
-                decompressed = Decompress(
-                    compressed.View(), block_uncompressed, be.compression, alloc);
+                decompressed = Decompress(compressed.View(), blockUncompressed, be.m_compression, alloc);
                 if (decompressed.Size() == 0)
                 {
                     result.Clear();
@@ -200,14 +207,14 @@ namespace nectar
             }
 
             // Copy relevant portion to result
-            size_t copy_offset = (block_idx == entry->first_block) ? offset_in_first_block : 0;
-            size_t available = decompressed.Size() - copy_offset;
-            size_t to_copy = remaining < available ? remaining : available;
+            size_t copyOffset = (blockIdx == entry->m_firstBlock) ? offsetInFirstBlock : 0;
+            size_t available = decompressed.Size() - copyOffset;
+            size_t toCopy = remaining < available ? remaining : available;
 
-            std::memcpy(result.Data() + dst_offset, decompressed.Data() + copy_offset, to_copy);
-            dst_offset += to_copy;
-            remaining -= to_copy;
-            ++block_idx;
+            std::memcpy(result.Data() + dstOffset, decompressed.Data() + copyOffset, toCopy);
+            dstOffset += toCopy;
+            remaining -= toCopy;
+            ++blockIdx;
         }
 
         if (remaining > 0)
@@ -219,51 +226,45 @@ namespace nectar
         return result;
     }
 
-    bool PakReader::Contains(ContentHash hash) const
-    {
+    bool PakReader::Contains(ContentHash hash) const {
         return FindAsset(hash) != nullptr;
     }
 
-    const AssetManifest* PakReader::GetManifest() const
-    {
-        return manifest_;
+    const AssetManifest* PakReader::GetManifest() const {
+        return m_manifest;
     }
 
-    size_t PakReader::AssetCount() const noexcept
-    {
-        return asset_entries_ ? asset_entries_->Size() : 0;
+    size_t PakReader::AssetCount() const noexcept {
+        return m_assetEntries ? m_assetEntries->Size() : 0;
     }
 
-    size_t PakReader::BlockCount() const noexcept
-    {
-        return block_entries_ ? block_entries_->Size() : 0;
+    size_t PakReader::BlockCount() const noexcept {
+        return m_blockEntries ? m_blockEntries->Size() : 0;
     }
 
-    size_t PakReader::GetAssetSize(ContentHash hash) const
-    {
+    size_t PakReader::GetAssetSize(ContentHash hash) const {
         const auto* entry = FindAsset(hash);
-        return entry ? entry->uncompressed_size : 0;
+        return entry ? entry->m_uncompressedSize : 0;
     }
 
-    const NpakAssetEntry* PakReader::FindAsset(ContentHash hash) const
-    {
-        if (!asset_entries_ || asset_entries_->Size() == 0)
+    const NpakAssetEntry* PakReader::FindAsset(ContentHash hash) const {
+        if (!m_assetEntries || m_assetEntries->Size() == 0)
             return nullptr;
 
         // Binary search — entries are sorted by content_hash
         size_t lo = 0;
-        size_t hi = asset_entries_->Size();
+        size_t hi = m_assetEntries->Size();
         while (lo < hi)
         {
             size_t mid = lo + (hi - lo) / 2;
-            const auto& mid_hash = (*asset_entries_)[mid].content_hash;
-            if (mid_hash == hash)
-                return &(*asset_entries_)[mid];
-            if (mid_hash < hash)
+            const auto& midHash = (*m_assetEntries)[mid].m_contentHash;
+            if (midHash == hash)
+                return &(*m_assetEntries)[mid];
+            if (midHash < hash)
                 lo = mid + 1;
             else
                 hi = mid;
         }
         return nullptr;
     }
-}
+} // namespace nectar

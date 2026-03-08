@@ -1,18 +1,18 @@
-#define _CRT_SECURE_NO_WARNINGS
-#include <nectar/cas/cas_store.h>
+#define CRT_SECURE_NO_WARNINGS
 #include <hive/profiling/profiler.h>
-#include <filesystem>
+
+#include <nectar/cas/cas_store.h>
+
 #include <cstdio>
+#include <filesystem>
 
 namespace nectar
 {
-    CasStore::CasStore(comb::DefaultAllocator& alloc, wax::StringView root_dir)
-        : alloc_{&alloc}
-        , root_dir_{alloc, root_dir}
-    {}
+    CasStore::CasStore(comb::DefaultAllocator& alloc, wax::StringView rootDir)
+        : m_alloc{&alloc}
+        , m_rootDir{alloc, rootDir} {}
 
-    ContentHash CasStore::Store(wax::ByteSpan data)
-    {
+    ContentHash CasStore::Store(wax::ByteSpan data) {
         HIVE_PROFILE_SCOPE_N("CasStore::Store");
         ContentHash hash = ContentHash::FromData(data);
 
@@ -20,7 +20,7 @@ namespace nectar
         if (Contains(hash))
             return hash;
 
-        wax::String path{*alloc_};
+        wax::String path{*m_alloc};
         BuildBlobPath(hash, path);
 
         auto parent = std::filesystem::path{std::string{path.CStr()}}.parent_path();
@@ -37,12 +37,11 @@ namespace nectar
         return hash;
     }
 
-    wax::ByteBuffer CasStore::Load(ContentHash hash)
-    {
+    wax::ByteBuffer CasStore::Load(ContentHash hash) {
         HIVE_PROFILE_SCOPE_N("CasStore::Load");
-        wax::ByteBuffer buffer{*alloc_};
+        wax::ByteBuffer buffer{*m_alloc};
 
-        wax::String path{*alloc_};
+        wax::String path{*m_alloc};
         BuildBlobPath(hash, path);
 
         FILE* file = std::fopen(path.CStr(), "rb");
@@ -50,56 +49,51 @@ namespace nectar
             return buffer;
 
         std::fseek(file, 0, SEEK_END);
-        long file_size = std::ftell(file);
+        long fileSize = std::ftell(file);
         std::fseek(file, 0, SEEK_SET);
 
-        if (file_size > 0)
+        if (fileSize > 0)
         {
-            buffer.Resize(static_cast<size_t>(file_size));
-            std::fread(buffer.Data(), 1, static_cast<size_t>(file_size), file);
+            buffer.Resize(static_cast<size_t>(fileSize));
+            std::fread(buffer.Data(), 1, static_cast<size_t>(fileSize), file);
         }
 
         std::fclose(file);
         return buffer;
     }
 
-    bool CasStore::Contains(ContentHash hash) const
-    {
-        wax::String path{*alloc_};
+    bool CasStore::Contains(ContentHash hash) const {
+        wax::String path{*m_alloc};
         BuildBlobPath(hash, path);
         return std::filesystem::exists(path.CStr());
     }
 
-    bool CasStore::Remove(ContentHash hash)
-    {
-        wax::String path{*alloc_};
+    bool CasStore::Remove(ContentHash hash) {
+        wax::String path{*m_alloc};
         BuildBlobPath(hash, path);
 
         std::error_code ec;
         return std::filesystem::remove(path.CStr(), ec);
     }
 
-    wax::StringView CasStore::RootDir() const noexcept
-    {
-        return root_dir_.View();
+    wax::StringView CasStore::RootDir() const noexcept {
+        return m_rootDir.View();
     }
 
-    void CasStore::BuildBlobPath(ContentHash hash, wax::String& out) const
-    {
+    void CasStore::BuildBlobPath(ContentHash hash, wax::String& out) const {
         auto hex = hash.ToString();
         // root/ab/cd/abcdef0123456789...
-        out.Append(root_dir_.View().Data(), root_dir_.View().Size());
+        out.Append(m_rootDir.View().Data(), m_rootDir.View().Size());
         out.Append('/');
-        out.Append(hex.CStr(), 2);       // first 2 hex chars
+        out.Append(hex.CStr(), 2); // first 2 hex chars
         out.Append('/');
-        out.Append(hex.CStr() + 2, 2);   // next 2 hex chars
+        out.Append(hex.CStr() + 2, 2); // next 2 hex chars
         out.Append('/');
-        out.Append(hex.CStr(), hex.Size());  // full hash
+        out.Append(hex.CStr(), hex.Size()); // full hash
     }
 
-    void CasStore::EnsureDirectoryExists(wax::StringView dir_path) const
-    {
+    void CasStore::EnsureDirectoryExists(wax::StringView dirPath) const {
         std::error_code ec;
-        std::filesystem::create_directories(std::string{dir_path.Data(), dir_path.Size()}, ec);
+        std::filesystem::create_directories(std::string{dirPath.Data(), dirPath.Size()}, ec);
     }
-}
+} // namespace nectar

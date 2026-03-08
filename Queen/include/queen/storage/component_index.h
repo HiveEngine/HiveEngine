@@ -1,10 +1,12 @@
 #pragma once
 
+#include <comb/allocator_concepts.h>
+
+#include <wax/containers/hash_map.h>
+#include <wax/containers/vector.h>
+
 #include <queen/core/type_id.h>
 #include <queen/storage/archetype.h>
-#include <comb/allocator_concepts.h>
-#include <wax/containers/vector.h>
-#include <wax/containers/hash_map.h>
 
 namespace queen
 {
@@ -49,17 +51,14 @@ namespace queen
      *   }
      * @endcode
      */
-    template<comb::Allocator Allocator>
-    class ComponentIndex
+    template <comb::Allocator Allocator> class ComponentIndex
     {
     public:
         using ArchetypeList = wax::Vector<Archetype<Allocator>*>;
 
         explicit ComponentIndex(Allocator& allocator)
-            : allocator_{&allocator}
-            , index_{allocator}
-        {
-        }
+            : m_allocator{&allocator}
+            , m_index{allocator} {}
 
         ~ComponentIndex() = default;
 
@@ -68,37 +67,31 @@ namespace queen
         ComponentIndex(ComponentIndex&&) = default;
         ComponentIndex& operator=(ComponentIndex&&) = default;
 
-        void RegisterArchetype(Archetype<Allocator>* archetype)
-        {
+        void RegisterArchetype(Archetype<Allocator>* archetype) {
             const auto& types = archetype->GetComponentTypes();
             for (size_t i = 0; i < types.Size(); ++i)
             {
-                TypeId type_id = types[i];
-                ArchetypeList* list = index_.Find(type_id);
+                TypeId typeId = types[i];
+                ArchetypeList* list = m_index.Find(typeId);
                 if (list == nullptr)
                 {
-                    index_.Insert(type_id, ArchetypeList{*allocator_});
-                    list = index_.Find(type_id);
+                    m_index.Insert(typeId, ArchetypeList{*m_allocator});
+                    list = m_index.Find(typeId);
                 }
                 list->PushBack(archetype);
             }
         }
 
-        template<typename T>
-        [[nodiscard]] const ArchetypeList* GetArchetypesWith() const noexcept
-        {
+        template <typename T> [[nodiscard]] const ArchetypeList* GetArchetypesWith() const noexcept {
             return GetArchetypesWith(TypeIdOf<T>());
         }
 
-        [[nodiscard]] const ArchetypeList* GetArchetypesWith(TypeId type_id) const noexcept
-        {
-            return index_.Find(type_id);
+        [[nodiscard]] const ArchetypeList* GetArchetypesWith(TypeId typeId) const noexcept {
+            return m_index.Find(typeId);
         }
 
-        template<typename... Types>
-        [[nodiscard]] ArchetypeList GetArchetypesWithAll() const
-        {
-            ArchetypeList result{*allocator_};
+        template <typename... Types> [[nodiscard]] ArchetypeList GetArchetypesWithAll() const {
+            ArchetypeList result{*m_allocator};
 
             if constexpr (sizeof...(Types) == 0)
             {
@@ -106,51 +99,50 @@ namespace queen
             }
             else
             {
-                TypeId type_ids[] = {TypeIdOf<Types>()...};
-                return GetArchetypesWithAll(type_ids, sizeof...(Types));
+                TypeId typeIds[] = {TypeIdOf<Types>()...};
+                return GetArchetypesWithAll(typeIds, sizeof...(Types));
             }
         }
 
-        [[nodiscard]] ArchetypeList GetArchetypesWithAll(const TypeId* type_ids, size_t count) const
-        {
-            ArchetypeList result{*allocator_};
+        [[nodiscard]] ArchetypeList GetArchetypesWithAll(const TypeId* typeIds, size_t count) const {
+            ArchetypeList result{*m_allocator};
 
             if (count == 0)
             {
                 return result;
             }
 
-            size_t smallest_idx = 0;
-            size_t smallest_size = SIZE_MAX;
+            size_t smallestIdx = 0;
+            size_t smallestSize = SIZE_MAX;
             for (size_t i = 0; i < count; ++i)
             {
-                const ArchetypeList* list = GetArchetypesWith(type_ids[i]);
+                const ArchetypeList* list = GetArchetypesWith(typeIds[i]);
                 if (list == nullptr)
                 {
                     return result;
                 }
-                if (list->Size() < smallest_size)
+                if (list->Size() < smallestSize)
                 {
-                    smallest_size = list->Size();
-                    smallest_idx = i;
+                    smallestSize = list->Size();
+                    smallestIdx = i;
                 }
             }
 
-            const ArchetypeList* smallest = GetArchetypesWith(type_ids[smallest_idx]);
+            const ArchetypeList* smallest = GetArchetypesWith(typeIds[smallestIdx]);
             for (size_t i = 0; i < smallest->Size(); ++i)
             {
                 Archetype<Allocator>* arch = (*smallest)[i];
-                bool has_all = true;
+                bool hasAll = true;
 
-                for (size_t j = 0; j < count && has_all; ++j)
+                for (size_t j = 0; j < count && hasAll; ++j)
                 {
-                    if (!arch->HasComponent(type_ids[j]))
+                    if (!arch->HasComponent(typeIds[j]))
                     {
-                        has_all = false;
+                        hasAll = false;
                     }
                 }
 
-                if (has_all)
+                if (hasAll)
                 {
                     result.PushBack(arch);
                 }
@@ -159,13 +151,10 @@ namespace queen
             return result;
         }
 
-        [[nodiscard]] size_t ComponentTypeCount() const noexcept
-        {
-            return index_.Count();
-        }
+        [[nodiscard]] size_t ComponentTypeCount() const noexcept { return m_index.Count(); }
 
     private:
-        Allocator* allocator_;
-        wax::HashMap<TypeId, ArchetypeList> index_;
+        Allocator* m_allocator;
+        wax::HashMap<TypeId, ArchetypeList> m_index;
     };
-}
+} // namespace queen

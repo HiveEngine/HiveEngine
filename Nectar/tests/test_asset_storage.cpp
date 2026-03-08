@@ -1,10 +1,13 @@
-#include <larvae/larvae.h>
-#include <nectar/server/asset_storage.h>
-#include <nectar/server/asset_loader.h>
 #include <comb/default_allocator.h>
 #include <comb/new.h>
 
-namespace {
+#include <nectar/server/asset_loader.h>
+#include <nectar/server/asset_storage.h>
+
+#include <larvae/larvae.h>
+
+namespace
+{
 
     struct DummyAsset
     {
@@ -14,20 +17,18 @@ namespace {
     class DummyLoader final : public nectar::AssetLoader<DummyAsset>
     {
     public:
-        DummyAsset* Load(wax::ByteSpan, comb::DefaultAllocator& alloc) override
-        {
+        DummyAsset* Load(wax::ByteSpan, comb::DefaultAllocator& alloc) override {
             auto* a = comb::New<DummyAsset>(alloc);
             a->id = 777;
             return a;
         }
-        void Unload(DummyAsset* asset, comb::DefaultAllocator& alloc) override
-        {
-            if (asset) comb::Delete(alloc, asset);
+        void Unload(DummyAsset* asset, comb::DefaultAllocator& alloc) override {
+            if (asset)
+                comb::Delete(alloc, asset);
         }
     };
 
-    auto& GetStorageAlloc()
-    {
+    auto& GetStorageAlloc() {
         static comb::ModuleAllocator alloc{"TestStorage", 4 * 1024 * 1024};
         return alloc.Get();
     }
@@ -82,7 +83,7 @@ namespace {
         asset->id = 42;
 
         storage.SetAsset(handle, asset);
-        storage.SetStatus(handle.index, nectar::AssetStatus::Ready);
+        storage.SetStatus(handle.m_index, nectar::AssetStatus::READY);
 
         auto* got = storage.GetAsset(handle);
         larvae::AssertNotNull(got);
@@ -100,10 +101,10 @@ namespace {
         auto handle = storage.AllocateSlot();
         auto* asset = comb::New<DummyAsset>(alloc);
         storage.SetAsset(handle, asset);
-        storage.SetStatus(handle.index, nectar::AssetStatus::Ready);
+        storage.SetStatus(handle.m_index, nectar::AssetStatus::READY);
 
         // Unload to increment generation
-        storage.UnloadSlot(handle.index, handle.generation);
+        storage.UnloadSlot(handle.m_index, handle.m_generation);
 
         auto* got = storage.GetAsset(handle);
         larvae::AssertNull(got);
@@ -118,7 +119,7 @@ namespace {
         nectar::AssetStorageFor<DummyAsset> storage{alloc, 8};
 
         auto handle = storage.AllocateSlot();
-        larvae::AssertEqual(storage.GetRefCount(handle.index), uint32_t{0});
+        larvae::AssertEqual(storage.GetRefCount(handle.m_index), uint32_t{0});
     });
 
     auto t7 = larvae::RegisterTest("NectarAssetStorage", "IncrementDecrementRef", []() {
@@ -126,12 +127,12 @@ namespace {
         nectar::AssetStorageFor<DummyAsset> storage{alloc, 8};
 
         auto handle = storage.AllocateSlot();
-        storage.IncrementRef(handle.index);
-        storage.IncrementRef(handle.index);
-        larvae::AssertEqual(storage.GetRefCount(handle.index), uint32_t{2});
+        storage.IncrementRef(handle.m_index);
+        storage.IncrementRef(handle.m_index);
+        larvae::AssertEqual(storage.GetRefCount(handle.m_index), uint32_t{2});
 
-        storage.DecrementRef(handle.index);
-        larvae::AssertEqual(storage.GetRefCount(handle.index), uint32_t{1});
+        storage.DecrementRef(handle.m_index);
+        larvae::AssertEqual(storage.GetRefCount(handle.m_index), uint32_t{1});
     });
 
     // =========================================================================
@@ -143,19 +144,16 @@ namespace {
         nectar::AssetStorageFor<DummyAsset> storage{alloc, 8};
 
         auto handle = storage.AllocateSlot();
-        larvae::AssertEqual(
-            static_cast<uint8_t>(storage.GetStatus(handle.index)),
-            static_cast<uint8_t>(nectar::AssetStatus::NotLoaded));
+        larvae::AssertEqual(static_cast<uint8_t>(storage.GetStatus(handle.m_index)),
+                            static_cast<uint8_t>(nectar::AssetStatus::NOT_LOADED));
 
-        storage.SetStatus(handle.index, nectar::AssetStatus::Loading);
-        larvae::AssertEqual(
-            static_cast<uint8_t>(storage.GetStatus(handle.index)),
-            static_cast<uint8_t>(nectar::AssetStatus::Loading));
+        storage.SetStatus(handle.m_index, nectar::AssetStatus::LOADING);
+        larvae::AssertEqual(static_cast<uint8_t>(storage.GetStatus(handle.m_index)),
+                            static_cast<uint8_t>(nectar::AssetStatus::LOADING));
 
-        storage.SetStatus(handle.index, nectar::AssetStatus::Ready);
-        larvae::AssertEqual(
-            static_cast<uint8_t>(storage.GetStatus(handle.index)),
-            static_cast<uint8_t>(nectar::AssetStatus::Ready));
+        storage.SetStatus(handle.m_index, nectar::AssetStatus::READY);
+        larvae::AssertEqual(static_cast<uint8_t>(storage.GetStatus(handle.m_index)),
+                            static_cast<uint8_t>(nectar::AssetStatus::READY));
     });
 
     // =========================================================================
@@ -167,13 +165,12 @@ namespace {
         nectar::AssetStorageFor<DummyAsset> storage{alloc, 8};
 
         auto handle = storage.AllocateSlot();
-        storage.SetError(handle.index, nectar::AssetErrorInfo{nectar::AssetError::FileNotFound, wax::String{}});
+        storage.SetError(handle.m_index, nectar::AssetErrorInfo{nectar::AssetError::FILE_NOT_FOUND, wax::String{}});
 
-        auto* err = storage.GetError(handle.index);
+        auto* err = storage.GetError(handle.m_index);
         larvae::AssertNotNull(err);
-        larvae::AssertEqual(
-            static_cast<uint8_t>(err->code),
-            static_cast<uint8_t>(nectar::AssetError::FileNotFound));
+        larvae::AssertEqual(static_cast<uint8_t>(err->m_code),
+                            static_cast<uint8_t>(nectar::AssetError::FILE_NOT_FOUND));
     });
 
     // =========================================================================
@@ -188,7 +185,7 @@ namespace {
         storage.SetPlaceholder(&placeholder);
 
         auto handle = storage.AllocateSlot();
-        storage.SetStatus(handle.index, nectar::AssetStatus::Loading);
+        storage.SetStatus(handle.m_index, nectar::AssetStatus::LOADING);
 
         auto* got = storage.GetAssetOrPlaceholder(handle);
         larvae::AssertNotNull(got);
@@ -215,7 +212,7 @@ namespace {
         larvae::AssertTrue(h3.IsNull());
 
         // Unload first slot
-        storage.UnloadSlot(h1.index, h1.generation);
+        storage.UnloadSlot(h1.m_index, h1.m_generation);
         larvae::AssertEqual(storage.Count(), size_t{1});
 
         // Can allocate again
@@ -224,7 +221,7 @@ namespace {
         larvae::AssertEqual(storage.Count(), size_t{2});
 
         // Old handle is stale (generation incremented)
-        larvae::AssertFalse(storage.IsHandleValid(h1.index, h1.generation));
+        larvae::AssertFalse(storage.IsHandleValid(h1.m_index, h1.m_generation));
     });
 
     // =========================================================================
@@ -241,9 +238,9 @@ namespace {
         auto h = storage.AllocateSlot();
         auto* asset = loader.Load(wax::ByteSpan{}, alloc);
         storage.SetAsset(h, asset);
-        storage.SetStatus(h.index, nectar::AssetStatus::Ready);
+        storage.SetStatus(h.m_index, nectar::AssetStatus::READY);
 
-        larvae::AssertEqual(storage.GetRefCount(h.index), uint32_t{0});
+        larvae::AssertEqual(storage.GetRefCount(h.m_index), uint32_t{0});
         larvae::AssertEqual(storage.Count(), size_t{1});
 
         size_t collected = storage.CollectGarbage(0);
@@ -251,4 +248,4 @@ namespace {
         larvae::AssertEqual(storage.Count(), size_t{0});
     });
 
-}
+} // namespace

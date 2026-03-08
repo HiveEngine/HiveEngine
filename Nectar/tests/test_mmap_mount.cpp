@@ -1,42 +1,40 @@
 #define _CRT_SECURE_NO_WARNINGS
-#include <larvae/larvae.h>
+#include <comb/default_allocator.h>
+
 #include <nectar/io/mapped_file.h>
 #include <nectar/vfs/mmap_mount.h>
 #include <nectar/vfs/virtual_filesystem.h>
-#include <comb/default_allocator.h>
+
+#include <larvae/larvae.h>
+
 #include <cstdio>
 #include <cstring>
 #include <filesystem>
 
-namespace {
+namespace
+{
 
-    auto& GetMmapAlloc()
-    {
+    auto& GetMmapAlloc() {
         static comb::ModuleAllocator alloc{"TestMmap", 4 * 1024 * 1024};
         return alloc.Get();
     }
 
-    const char* MmapTestDir()
-    {
-        static std::string path =
-            (std::filesystem::temp_directory_path() / "hive_test_mmap_dir").string();
+    const char* MmapTestDir() {
+        static std::string path = (std::filesystem::temp_directory_path() / "hive_test_mmap_dir").string();
         return path.c_str();
     }
 
-    void SetupMmapDir()
-    {
+    void SetupMmapDir() {
         std::error_code ec;
         std::filesystem::create_directories(MmapTestDir(), ec);
     }
 
-    void CleanupMmapDir()
-    {
+    void CleanupMmapDir() {
         std::error_code ec;
         std::filesystem::remove_all(MmapTestDir(), ec);
     }
 
-    void WriteTestFile(const char* relative, const char* content)
-    {
+    void WriteTestFile(const char* relative, const char* content) {
         std::string path = std::string(MmapTestDir()) + "/" + relative;
 
         // Create parent dirs if needed
@@ -52,8 +50,7 @@ namespace {
         }
     }
 
-    std::string FullPath(const char* relative)
-    {
+    std::string FullPath(const char* relative) {
         return std::string(MmapTestDir()) + "/" + relative;
     }
 
@@ -66,8 +63,7 @@ namespace {
         WriteTestFile("hello.txt", "Hello World!");
 
         auto path = FullPath("hello.txt");
-        auto mapped = nectar::MappedFile::Open(
-            wax::StringView{path.c_str(), path.size()});
+        auto mapped = nectar::MappedFile::Open(wax::StringView{path.c_str(), path.size()});
 
         larvae::AssertTrue(mapped.IsValid());
         larvae::AssertEqual(mapped.Size(), std::strlen("Hello World!"));
@@ -87,8 +83,7 @@ namespace {
         WriteTestFile("data.bin", "ABCDEFGH");
 
         auto path = FullPath("data.bin");
-        auto mapped = nectar::MappedFile::Open(
-            wax::StringView{path.c_str(), path.size()});
+        auto mapped = nectar::MappedFile::Open(wax::StringView{path.c_str(), path.size()});
 
         larvae::AssertTrue(mapped.IsValid());
         larvae::AssertTrue(std::memcmp(mapped.Data(), "ABCDEFGH", 8) == 0);
@@ -105,8 +100,7 @@ namespace {
         WriteTestFile("move.txt", "movable");
 
         auto path = FullPath("move.txt");
-        auto a = nectar::MappedFile::Open(
-            wax::StringView{path.c_str(), path.size()});
+        auto a = nectar::MappedFile::Open(wax::StringView{path.c_str(), path.size()});
         larvae::AssertTrue(a.IsValid());
 
         // Move construct

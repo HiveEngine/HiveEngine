@@ -1,39 +1,44 @@
-#include <waggle/engine_runner.h>
-#include <waggle/project/project_manager.h>
-#include <waggle/project/project_context.h>
-#include <waggle/project/gameplay_module.h>
-#include <nectar/project/project_file.h>
-
-#include <hive/core/moduleregistry.h>
-#include <hive/core/module.h>
-#include <hive/core/log.h>
-#include <comb/debug/global_memory_tracker.h>
 #include <hive/HiveConfig.h>
+#include <hive/core/log.h>
+#include <hive/core/module.h>
+#include <hive/core/moduleregistry.h>
 
+#include <comb/debug/global_memory_tracker.h>
 #include <comb/default_allocator.h>
 #include <comb/new.h>
+
+#include <nectar/project/project_file.h>
+
+#include <waggle/engine_runner.h>
+#include <waggle/project/gameplay_module.h>
+#include <waggle/project/project_context.h>
+#include <waggle/project/project_manager.h>
 
 #if HIVE_FEATURE_VULKAN || HIVE_FEATURE_D3D12
 #include <swarm/swarm.h>
 #endif
 
 #if HIVE_MODE_EDITOR
-#include <forge/imgui_integration.h>
-#include <forge/hierarchy_panel.h>
-#include <forge/inspector_panel.h>
-#include <forge/asset_browser.h>
-#include <forge/toolbar.h>
-#include <forge/selection.h>
-#include <forge/undo.h>
-#include <terra/platform/glfw_terra.h>
 #include <queen/reflect/component_registry.h>
+
+#include <terra/platform/glfw_terra.h>
+
+#include <forge/asset_browser.h>
+#include <forge/hierarchy_panel.h>
+#include <forge/imgui_integration.h>
+#include <forge/inspector_panel.h>
+#include <forge/selection.h>
+#include <forge/toolbar.h>
+#include <forge/undo.h>
+
 #include <imgui.h>
+
 #include <imgui_internal.h>
 #endif
 
 #include <cstdio>
-#include <cstring>
 #include <cstdlib>
+#include <cstring>
 #include <filesystem>
 #include <iostream>
 #include <memory>
@@ -42,324 +47,321 @@
 namespace
 {
 
-static const hive::LogCategory LogLauncher{"Hive.Launcher"};
+    static const hive::LogCategory LOG_LAUNCHER{"Hive.Launcher"};
 
-class LauncherModule : public hive::Module
-{
-public:
-    LauncherModule() : logger_{log_mgr_} {}
-    const char* GetName() const override { return "LauncherModule"; }
-protected:
-    void DoInitialize() override { Module::DoInitialize(); }
-    void DoShutdown() override { Module::DoShutdown(); }
-private:
-    hive::LogManager log_mgr_;
-    hive::ConsoleLogger logger_;
-};
+    class LauncherModule : public hive::Module
+    {
+    public:
+        LauncherModule()
+            : m_logger{m_logMgr} {}
+        const char* GetName() const override { return "LauncherModule"; }
 
-void RegisterLauncherModule()
-{
-    hive::ModuleRegistry::GetInstance().RegisterModule([]() -> std::unique_ptr<hive::Module> {
-        return std::make_unique<LauncherModule>();
-    });
-}
+    protected:
+        void DoInitialize() override { Module::DoInitialize(); }
+        void DoShutdown() override { Module::DoShutdown(); }
 
-struct LauncherState
-{
-    comb::ModuleAllocator alloc{"Launcher", 1024 * 1024 * 1024};
-    waggle::ProjectManager* project{nullptr};
-    waggle::GameplayModule gameplay;
-    const char* project_path{nullptr};
+    private:
+        hive::LogManager m_logMgr;
+        hive::ConsoleLogger m_logger;
+    };
+
+    void RegisterLauncherModule() {
+        hive::ModuleRegistry::GetInstance().RegisterModule(
+            []() -> std::unique_ptr<hive::Module> { return std::make_unique<LauncherModule>(); });
+    }
+
+    struct LauncherState
+    {
+        comb::ModuleAllocator m_alloc{"Launcher", size_t{1024} * 1024 * 1024};
+        waggle::ProjectManager* m_project{nullptr};
+        waggle::GameplayModule m_gameplay;
+        const char* m_projectPath{nullptr};
 
 #if HIVE_MODE_EDITOR
-    forge::EditorSelection selection;
-    std::unique_ptr<forge::UndoStack> undo{std::make_unique<forge::UndoStack>()};
-    forge::GizmoState gizmo;
-    forge::PlayState play_state{forge::PlayState::Editing};
-    queen::ComponentRegistry<256> component_registry;
-    std::string assets_root;
-    bool first_frame{true};
-    swarm::ViewportRT* viewport_rt{nullptr};
-    void* viewport_texture{nullptr};
+        forge::EditorSelection m_selection;
+        std::unique_ptr<forge::UndoStack> m_undo{std::make_unique<forge::UndoStack>()};
+        forge::GizmoState m_gizmo;
+        forge::PlayState m_playState{forge::PlayState::EDITING};
+        queen::ComponentRegistry<256> m_componentRegistry;
+        std::string m_assetsRoot;
+        bool m_firstFrame{true};
+        swarm::ViewportRT* m_viewportRt{nullptr};
+        void* m_viewportTexture{nullptr};
 #endif
-};
+    };
 
 #if HIVE_MODE_EDITOR
-void SetupDefaultDockLayout(ImGuiID dockspace_id)
-{
-    ImGui::DockBuilderRemoveNode(dockspace_id);
-    ImGui::DockBuilderAddNode(dockspace_id, ImGuiDockNodeFlags_DockSpace);
-    ImGui::DockBuilderSetNodeSize(dockspace_id, ImGui::GetMainViewport()->Size);
+    void SetupDefaultDockLayout(ImGuiID dockspaceId) {
+        ImGui::DockBuilderRemoveNode(dockspaceId);
+        ImGui::DockBuilderAddNode(dockspaceId, ImGuiDockNodeFlags_DockSpace);
+        ImGui::DockBuilderSetNodeSize(dockspaceId, ImGui::GetMainViewport()->Size);
 
-    ImGuiID center = dockspace_id;
-    ImGuiID left   = ImGui::DockBuilderSplitNode(center, ImGuiDir_Left, 0.20f, nullptr, &center);
-    ImGuiID right  = ImGui::DockBuilderSplitNode(center, ImGuiDir_Right, 0.25f, nullptr, &center);
-    ImGuiID bottom = ImGui::DockBuilderSplitNode(center, ImGuiDir_Down, 0.25f, nullptr, &center);
+        ImGuiID center = dockspaceId;
+        const ImGuiID left = ImGui::DockBuilderSplitNode(center, ImGuiDir_Left, 0.20f, nullptr, &center);
+        const ImGuiID right = ImGui::DockBuilderSplitNode(center, ImGuiDir_Right, 0.25f, nullptr, &center);
+        const ImGuiID bottom = ImGui::DockBuilderSplitNode(center, ImGuiDir_Down, 0.25f, nullptr, &center);
 
-    ImGui::DockBuilderDockWindow("Hierarchy", left);
-    ImGui::DockBuilderDockWindow("Inspector", right);
-    ImGui::DockBuilderDockWindow("Asset Browser", bottom);
-    ImGui::DockBuilderDockWindow("Viewport", center);
+        ImGui::DockBuilderDockWindow("Hierarchy", left);
+        ImGui::DockBuilderDockWindow("Inspector", right);
+        ImGui::DockBuilderDockWindow("Asset Browser", bottom);
+        ImGui::DockBuilderDockWindow("Viewport", center);
 
-    ImGui::DockBuilderFinish(dockspace_id);
-}
-
-void DrawEditor(waggle::EngineContext& ctx, LauncherState& state)
-{
-    // Fullscreen dockspace
-    ImGuiWindowFlags window_flags = ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoDocking
-        | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize
-        | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoBringToFrontOnFocus
-        | ImGuiWindowFlags_NoNavFocus;
-
-    const ImGuiViewport* viewport = ImGui::GetMainViewport();
-    ImGui::SetNextWindowPos(viewport->WorkPos);
-    ImGui::SetNextWindowSize(viewport->WorkSize);
-    ImGui::SetNextWindowViewport(viewport->ID);
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-
-    ImGui::Begin("DockSpace", nullptr, window_flags);
-    ImGui::PopStyleVar(3);
-
-    ImGuiID dockspace_id = ImGui::GetID("HiveEditorDockSpace");
-    if (state.first_frame)
-    {
-        SetupDefaultDockLayout(dockspace_id);
-        state.first_frame = false;
+        ImGui::DockBuilderFinish(dockspaceId);
     }
-    ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), ImGuiDockNodeFlags_None);
 
-    // Menu bar with toolbar
-    if (ImGui::BeginMenuBar())
-    {
-        if (ImGui::BeginMenu("File"))
+    void DrawEditor(waggle::EngineContext& ctx, LauncherState& state) {
+        // Fullscreen dockspace
+        const ImGuiWindowFlags windowFlags = ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoDocking |
+                                             ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse |
+                                             ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
+                                             ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
+
+        const ImGuiViewport* viewport = ImGui::GetMainViewport();
+        ImGui::SetNextWindowPos(viewport->WorkPos);
+        ImGui::SetNextWindowSize(viewport->WorkSize);
+        ImGui::SetNextWindowViewport(viewport->ID);
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+
+        ImGui::Begin("DockSpace", nullptr, windowFlags);
+        ImGui::PopStyleVar(3);
+
+        const ImGuiID dockspaceId = ImGui::GetID("HiveEditorDockSpace");
+        if (state.m_firstFrame)
         {
-            if (ImGui::MenuItem("Exit"))
-                ctx.app->RequestStop();
-            ImGui::EndMenu();
+            SetupDefaultDockLayout(dockspaceId);
+            state.m_firstFrame = false;
         }
+        ImGui::DockSpace(dockspaceId, ImVec2(0.0f, 0.0f), ImGuiDockNodeFlags_None);
 
-        ImGui::SeparatorEx(ImGuiSeparatorFlags_Vertical, 2.f);
-
-        forge::ToolbarAction action = forge::DrawToolbarButtons(state.play_state, state.gizmo);
-        if (action.play_pressed)
-            state.play_state = forge::PlayState::Playing;
-        if (action.pause_pressed)
-            state.play_state = forge::PlayState::Paused;
-        if (action.stop_pressed)
-            state.play_state = forge::PlayState::Editing;
-
-        ImGui::EndMenuBar();
-    }
-
-    ImGui::End(); // DockSpace
-
-    // Hierarchy
-    if (ImGui::Begin("Hierarchy"))
-        forge::DrawHierarchyPanel(*ctx.world, state.selection);
-    ImGui::End();
-
-    // Inspector
-    if (ImGui::Begin("Inspector"))
-        forge::DrawInspectorPanel(*ctx.world, state.selection, state.component_registry, *state.undo);
-    ImGui::End();
-
-    // Asset Browser
-    if (ImGui::Begin("Asset Browser"))
-        forge::DrawAssetBrowser(state.assets_root.c_str());
-    ImGui::End();
-
-    // Viewport
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-    if (ImGui::Begin("Viewport"))
-    {
-        ImVec2 size = ImGui::GetContentRegionAvail();
-        if (state.viewport_rt && state.viewport_texture && size.x > 0 && size.y > 0)
+        // Menu bar with toolbar
+        if (ImGui::BeginMenuBar())
         {
-            uint32_t w = static_cast<uint32_t>(size.x);
-            uint32_t h = static_cast<uint32_t>(size.y);
-            if (w != swarm::GetViewportRTWidth(state.viewport_rt) || h != swarm::GetViewportRTHeight(state.viewport_rt))
+            if (ImGui::BeginMenu("File"))
             {
-                forge::ForgeUnregisterViewportRT(state.viewport_texture);
-                swarm::ResizeViewportRT(state.viewport_rt, w, h);
-                state.viewport_texture = forge::ForgeRegisterViewportRT(ctx.render_context, state.viewport_rt);
+                if (ImGui::MenuItem("Exit"))
+                    ctx.m_app->RequestStop();
+                ImGui::EndMenu();
             }
-            ImGui::Image(state.viewport_texture, size);
+
+            ImGui::SeparatorEx(ImGuiSeparatorFlags_Vertical, 2.f);
+
+            const forge::ToolbarAction action = forge::DrawToolbarButtons(state.m_playState, state.m_gizmo);
+            if (action.m_playPressed)
+                state.m_playState = forge::PlayState::PLAYING;
+            if (action.m_pausePressed)
+                state.m_playState = forge::PlayState::PAUSED;
+            if (action.m_stopPressed)
+                state.m_playState = forge::PlayState::EDITING;
+
+            ImGui::EndMenuBar();
         }
+
+        ImGui::End(); // DockSpace
+
+        // Hierarchy
+        if (ImGui::Begin("Hierarchy"))
+            forge::DrawHierarchyPanel(*ctx.m_world, state.m_selection);
+        ImGui::End();
+
+        // Inspector
+        if (ImGui::Begin("Inspector"))
+            forge::DrawInspectorPanel(*ctx.m_world, state.m_selection, state.m_componentRegistry, *state.m_undo);
+        ImGui::End();
+
+        // Asset Browser
+        if (ImGui::Begin("Asset Browser"))
+            forge::DrawAssetBrowser(state.m_assetsRoot.c_str());
+        ImGui::End();
+
+        // Viewport
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+        if (ImGui::Begin("Viewport"))
+        {
+            const ImVec2 size = ImGui::GetContentRegionAvail();
+            if (state.m_viewportRt != nullptr && state.m_viewportTexture != nullptr && size.x > 0 && size.y > 0)
+            {
+                const uint32_t w = static_cast<uint32_t>(size.x);
+                const uint32_t h = static_cast<uint32_t>(size.y);
+                if (w != swarm::GetViewportRTWidth(state.m_viewportRt) ||
+                    h != swarm::GetViewportRTHeight(state.m_viewportRt))
+                {
+                    forge::ForgeUnregisterViewportRT(state.m_viewportTexture);
+                    swarm::ResizeViewportRT(state.m_viewportRt, w, h);
+                    state.m_viewportTexture = forge::ForgeRegisterViewportRT(ctx.m_renderContext, state.m_viewportRt);
+                }
+                ImGui::Image(state.m_viewportTexture, size);
+            }
+        }
+        ImGui::End();
+        ImGui::PopStyleVar();
     }
-    ImGui::End();
-    ImGui::PopStyleVar();
-}
 #endif
 
 } // anonymous namespace
 
-int main(int argc, char* argv[])
-{
+int main(int argc, char* argv[]) {
     std::error_code ec;
-    std::filesystem::path project_path;
+    std::filesystem::path projectPath;
 
     if (argc >= 2)
     {
-        project_path = argv[1];
+        projectPath = argv[1];
     }
     else
     {
-        project_path = std::filesystem::current_path(ec) / "project.hive";
+        projectPath = std::filesystem::current_path(ec) / "project.hive";
     }
 
-    if (!std::filesystem::exists(project_path, ec) || ec)
+    if (!std::filesystem::exists(projectPath, ec) || ec)
     {
-        std::fprintf(stderr, "Error: project file not found: %s\n",
-                     project_path.string().c_str());
+        std::fprintf(stderr, "Error: project file not found: %s\n", projectPath.string().c_str());
         std::fprintf(stderr, "Usage: hive_launcher [path/to/project.hive]\n");
         return 1;
     }
 
-    project_path = std::filesystem::absolute(project_path, ec);
-    auto path_str = project_path.generic_string();
+    projectPath = std::filesystem::absolute(projectPath, ec);
+    auto pathStr = projectPath.generic_string();
 
-    std::string window_title = "HiveEngine";
+    std::string windowTitle = "HiveEngine";
     {
-        comb::ModuleAllocator tmp_alloc{"TmpProjectParse", 4 * 1024 * 1024};
-        nectar::ProjectFile pf{tmp_alloc.Get()};
-        auto result = pf.LoadFromDisk({path_str.c_str(), path_str.size()});
-        if (result.success && pf.Name().Size() > 0)
+        comb::ModuleAllocator tmpAlloc{"TmpProjectParse", size_t{4} * 1024 * 1024};
+        nectar::ProjectFile pf{tmpAlloc.Get()};
+        auto result = pf.LoadFromDisk({pathStr.c_str(), pathStr.size()});
+        if (result.m_success && pf.Name().Size() > 0)
         {
-            window_title += " - ";
-            window_title.append(pf.Name().Data(), pf.Name().Size());
+            windowTitle += " - ";
+            windowTitle.append(pf.Name().Data(), pf.Name().Size());
         }
     }
 
     int result = 0;
     {
         LauncherState state{};
-        state.project_path = path_str.c_str();
+        state.m_projectPath = pathStr.c_str();
 
         waggle::EngineConfig config{};
-        config.window_title = window_title.c_str();
+        config.m_windowTitle = windowTitle.c_str();
 #if HIVE_MODE_EDITOR
-        config.window_width = 1920;
-        config.window_height = 1080;
-        config.mode = waggle::EngineMode::Editor;
+        config.m_windowWidth = 1920;
+        config.m_windowHeight = 1080;
+        config.m_mode = waggle::EngineMode::EDITOR;
 #elif HIVE_MODE_HEADLESS
-        config.mode = waggle::EngineMode::Headless;
+        config.m_mode = waggle::EngineMode::HEADLESS;
 #endif
 
         waggle::EngineCallbacks callbacks{};
-        callbacks.on_register_modules = RegisterLauncherModule;
+        callbacks.m_onRegisterModules = RegisterLauncherModule;
 
-        callbacks.on_setup = [](waggle::EngineContext& ctx, void* ud) -> bool {
+        callbacks.m_onSetup = [](waggle::EngineContext& ctx, void* ud) -> bool {
             auto& s = *static_cast<LauncherState*>(ud);
-            auto& alloc = s.alloc.Get();
-            auto& world = *ctx.world;
+            auto& alloc = s.m_alloc.Get();
+            auto& world = *ctx.m_world;
 
-            s.project = comb::New<waggle::ProjectManager>(alloc, alloc);
-            waggle::ProjectConfig proj_config{.enable_hot_reload = true, .watcher_interval_ms = 500};
-            if (!s.project->Open({s.project_path, std::strlen(s.project_path)}, proj_config))
+            s.m_project = comb::New<waggle::ProjectManager>(alloc, alloc);
+            const waggle::ProjectConfig projConfig{.m_enableHotReload = true, .m_watcherIntervalMs = 500};
+            if (!s.m_project->Open({s.m_projectPath, std::strlen(s.m_projectPath)}, projConfig))
             {
-                hive::LogError(LogLauncher, "Failed to open project: {}", s.project_path);
-                comb::Delete(alloc, s.project);
-                s.project = nullptr;
+                hive::LogError(LOG_LAUNCHER, "Failed to open project: {}", s.m_projectPath);
+                comb::Delete(alloc, s.m_project);
+                s.m_project = nullptr;
                 return false;
             }
 
-            const auto& proj = s.project->Project();
-            hive::LogInfo(LogLauncher, "Project '{}' v{}",
-                          std::string{proj.Name().Data(), proj.Name().Size()},
+            const auto& proj = s.m_project->Project();
+            hive::LogInfo(LOG_LAUNCHER, "Project '{}' v{}", std::string{proj.Name().Data(), proj.Name().Size()},
                           std::string{proj.Version().Data(), proj.Version().Size()});
 
-            world.InsertResource(waggle::ProjectContext{s.project});
+            world.InsertResource(waggle::ProjectContext{s.m_project});
 
 #if HIVE_MODE_EDITOR
-            if (ctx.render_context && ctx.window)
+            if (ctx.m_renderContext && ctx.m_window)
             {
-                forge::ForgeImGuiInit(ctx.render_context, ctx.window->window_);
-                s.viewport_rt = swarm::CreateViewportRT(ctx.render_context, 1280, 720);
-                s.viewport_texture = forge::ForgeRegisterViewportRT(ctx.render_context, s.viewport_rt);
+                forge::ForgeImGuiInit(ctx.m_renderContext, ctx.m_window->m_window);
+                s.m_viewportRt = swarm::CreateViewportRT(ctx.m_renderContext, 1280, 720);
+                s.m_viewportTexture = forge::ForgeRegisterViewportRT(ctx.m_renderContext, s.m_viewportRt);
             }
 #endif
 
-            auto root = std::string{s.project->Paths().root.CStr(), s.project->Paths().root.Size()};
+            auto root = std::string{s.m_project->Paths().m_root.CStr(), s.m_project->Paths().m_root.Size()};
 #if HIVE_MODE_EDITOR
-            s.assets_root = root + "/assets";
+            s.m_assetsRoot = root + "/assets";
 #endif
 #if HIVE_PLATFORM_WINDOWS
-            auto dll_path = root + "/gameplay.dll";
+            auto dllPath = root + "/gameplay.dll";
 #else
-            auto dll_path = root + "/gameplay.so";
+            auto dllPath = root + "/gameplay.so";
 #endif
 
             std::error_code ec;
-            if (std::filesystem::exists(dll_path, ec) && !ec)
+            if (std::filesystem::exists(dllPath, ec) && !ec)
             {
-                if (s.gameplay.Load(dll_path.c_str()))
+                if (s.m_gameplay.Load(dllPath.c_str()))
                 {
-                    if (!s.gameplay.Register(world))
-                        hive::LogWarning(LogLauncher, "Gameplay DLL Register() failed");
+                    if (!s.m_gameplay.Register(world))
+                        hive::LogWarning(LOG_LAUNCHER, "Gameplay DLL Register() failed");
                 }
                 else
-                    hive::LogWarning(LogLauncher, "Failed to load gameplay DLL: {}", s.gameplay.GetError());
+                    hive::LogWarning(LOG_LAUNCHER, "Failed to load gameplay DLL: {}", s.m_gameplay.GetError());
             }
             else
             {
-                hive::LogInfo(LogLauncher, "No gameplay DLL found at {}", dll_path);
+                hive::LogInfo(LOG_LAUNCHER, "No gameplay DLL found at {}", dllPath);
             }
 
             return true;
         };
 
-        callbacks.on_frame = [](waggle::EngineContext& ctx, void* ud) {
+        callbacks.m_onFrame = [](waggle::EngineContext& ctx, void* ud) {
             auto& s = *static_cast<LauncherState*>(ud);
-            s.project->Update();
+            s.m_project->Update();
 
 #if HIVE_MODE_EDITOR
-            if (ctx.render_context)
+            if (ctx.m_renderContext)
             {
-                if (s.viewport_rt)
+                if (s.m_viewportRt)
                 {
-                    swarm::BeginViewportRT(ctx.render_context, s.viewport_rt);
-                    swarm::DrawPipeline(ctx.render_context);
-                    swarm::EndViewportRT(ctx.render_context, s.viewport_rt);
+                    swarm::BeginViewportRT(ctx.m_renderContext, s.m_viewportRt);
+                    swarm::DrawPipeline(ctx.m_renderContext);
+                    swarm::EndViewportRT(ctx.m_renderContext, s.m_viewportRt);
                 }
 
                 forge::ForgeImGuiNewFrame();
                 DrawEditor(ctx, s);
-                forge::ForgeImGuiRender(ctx.render_context);
+                forge::ForgeImGuiRender(ctx.m_renderContext);
             }
 #elif HIVE_FEATURE_VULKAN || HIVE_FEATURE_D3D12
-            if (ctx.render_context)
-                swarm::DrawPipeline(ctx.render_context);
+            if (ctx.m_renderContext)
+                swarm::DrawPipeline(ctx.m_renderContext);
 #endif
         };
 
-        callbacks.on_shutdown = [](waggle::EngineContext& ctx, void* ud) {
+        callbacks.m_onShutdown = [](waggle::EngineContext& ctx, void* ud) {
             auto& s = *static_cast<LauncherState*>(ud);
-            auto& world = *ctx.world;
+            auto& world = *ctx.m_world;
 
 #if HIVE_MODE_EDITOR
-            if (ctx.render_context)
+            if (ctx.m_renderContext)
             {
-                swarm::WaitForIdle(ctx.render_context);
-                if (s.viewport_texture)
-                    forge::ForgeUnregisterViewportRT(s.viewport_texture);
-                if (s.viewport_rt)
-                    swarm::DestroyViewportRT(s.viewport_rt);
-                forge::ForgeImGuiShutdown(ctx.render_context);
+                swarm::WaitForIdle(ctx.m_renderContext);
+                if (s.m_viewportTexture)
+                    forge::ForgeUnregisterViewportRT(s.m_viewportTexture);
+                if (s.m_viewportRt)
+                    swarm::DestroyViewportRT(s.m_viewportRt);
+                forge::ForgeImGuiShutdown(ctx.m_renderContext);
             }
 #endif
 
-            if (s.gameplay.IsRegistered())
-                s.gameplay.Unregister(world);
+            if (s.m_gameplay.IsRegistered())
+                s.m_gameplay.Unregister(world);
 
-            if (s.project)
+            if (s.m_project)
             {
                 world.RemoveResource<waggle::ProjectContext>();
-                s.project->Close();
-                comb::Delete(s.alloc.Get(), s.project);
-                s.project = nullptr;
+                s.m_project->Close();
+                comb::Delete(s.m_alloc.Get(), s.m_project);
+                s.m_project = nullptr;
             }
 
             // gameplay.Unload() is NOT called here: the World still has system
@@ -369,7 +371,7 @@ int main(int argc, char* argv[])
             // call FreeLibrary after Run() returns and the World is destroyed.
         };
 
-        callbacks.user_data = &state;
+        callbacks.m_userData = &state;
         result = waggle::Run(config, callbacks);
     }
     comb::debug::ReportLiveAllocatorLeaks();

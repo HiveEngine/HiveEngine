@@ -1,16 +1,15 @@
+#include <swarm/platform/diligent_swarm.h>
+#include <swarm/platform/linux_swarm.h>
 #include <swarm/precomp.h>
 #include <swarm/swarm.h>
-#include <swarm/platform/linux_swarm.h>
-#include <swarm/platform/diligent_swarm.h>
 
 #include <EngineFactoryVk.h>
 namespace swarm
 {
-    extern bool InitRenderContextCommon(RenderContext *renderContext);
+    extern bool InitRenderContextCommon(RenderContext* renderContext);
 
-    bool InitRenderContextWayland(RenderContext &renderContext, wl_display *display, wl_surface *surface,
-                                   uint32_t width, uint32_t height)
-    {
+    bool InitRenderContextWayland(RenderContext& renderContext, wl_display* display, wl_surface* surface,
+                                  uint32_t width, uint32_t height) {
         if (!InitRenderContextCommon(&renderContext))
         {
             return false;
@@ -18,27 +17,26 @@ namespace swarm
 
         if (display && surface)
         {
-            //Create swapchain
+            // Create swapchain
             auto* factory = Diligent::GetEngineFactoryVk();
 
             Diligent::SwapChainDesc desc;
             desc.Width = width;
             desc.Height = height;
 
-
             Diligent::LinuxNativeWindow nativeWindow;
 
             nativeWindow.pDisplay = display;
             nativeWindow.pWaylandSurface = surface;
-            factory->CreateSwapChainVk(renderContext.device_, renderContext.context_, desc, nativeWindow, &renderContext.swapchain_);
+            factory->CreateSwapChainVk(renderContext.device_, renderContext.context_, desc, nativeWindow,
+                                       &renderContext.swapchain_);
         }
 
         return true;
     }
 
-    bool InitRenderContextX11(RenderContext &renderContext, Display *display, Window window,
-                              uint32_t width, uint32_t height)
-    {
+    bool InitRenderContextX11(RenderContext& renderContext, Display* display, Window window, uint32_t width,
+                              uint32_t height) {
         if (!InitRenderContextCommon(&renderContext))
         {
             return false;
@@ -46,7 +44,7 @@ namespace swarm
 
         if (display && window)
         {
-            //Create swapchain
+            // Create swapchain
             auto* factory = Diligent::GetEngineFactoryVk();
 
             Diligent::SwapChainDesc desc;
@@ -56,9 +54,10 @@ namespace swarm
 
             nativeWindow.pDisplay = display;
             nativeWindow.WindowId = window;
-            factory->CreateSwapChainVk(renderContext.device_, renderContext.context_, desc, nativeWindow, &renderContext.swapchain_);
+            factory->CreateSwapChainVk(renderContext.device_, renderContext.context_, desc, nativeWindow,
+                                       &renderContext.swapchain_);
         }
 
         return true;
     }
-}
+} // namespace swarm

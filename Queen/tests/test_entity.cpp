@@ -1,7 +1,10 @@
-#include <larvae/larvae.h>
-#include <queen/core/entity.h>
-#include <wax/containers/hash_set.h>
 #include <comb/linear_allocator.h>
+
+#include <wax/containers/hash_set.h>
+
+#include <queen/core/entity.h>
+
+#include <larvae/larvae.h>
 
 namespace
 {
@@ -94,9 +97,8 @@ namespace
         larvae::AssertTrue(set.Contains(e2));
     });
 
-    auto test9 = larvae::RegisterTest("QueenEntity", "SizeIs8Bytes", []() {
-        larvae::AssertEqual(sizeof(queen::Entity), size_t{8});
-    });
+    auto test9 = larvae::RegisterTest("QueenEntity", "SizeIs8Bytes",
+                                      []() { larvae::AssertEqual(sizeof(queen::Entity), size_t{8}); });
 
     auto test10 = larvae::RegisterTest("QueenEntity", "MaxValues", []() {
         queen::Entity e{queen::Entity::kMaxIndex, queen::Entity::kMaxGeneration};
@@ -104,4 +106,4 @@ namespace
         larvae::AssertEqual(e.Index(), queen::Entity::kMaxIndex);
         larvae::AssertEqual(e.Generation(), queen::Entity::kMaxGeneration);
     });
-}
+} // namespace

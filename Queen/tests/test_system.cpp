@@ -1,6 +1,8 @@
-#include <larvae/larvae.h>
-#include <queen/world/world.h>
 #include <comb/linear_allocator.h>
+
+#include <queen/world/world.h>
+
+#include <larvae/larvae.h>
 
 namespace
 {
@@ -19,7 +21,9 @@ namespace
         int current, max;
     };
 
-    struct Tag {};
+    struct Tag
+    {
+    };
 
     // ─────────────────────────────────────────────────────────────
     // SystemId Tests
@@ -143,7 +147,7 @@ namespace
         queen::AccessDescriptor<comb::LinearAllocator> access1{alloc};
         queen::AccessDescriptor<comb::LinearAllocator> access2{alloc};
 
-        access1.SetWorldAccess(queen::WorldAccess::Exclusive);
+        access1.SetWorldAccess(queen::WorldAccess::EXCLUSIVE);
 
         larvae::AssertTrue(access1.ConflictsWith(access2));
         larvae::AssertTrue(access2.ConflictsWith(access1));
@@ -159,10 +163,8 @@ namespace
 
         int call_count = 0;
 
-        queen::SystemId id = world.System<queen::Read<Position>>("TestSystem")
-            .Each([&](const Position&) {
-                ++call_count;
-            });
+        queen::SystemId id =
+            world.System<queen::Read<Position>>("TestSystem").Each([&](const Position&) { ++call_count; });
 
         larvae::AssertTrue(id.IsValid());
         larvae::AssertEqual(world.SystemCount(), size_t{1});
@@ -177,10 +179,8 @@ namespace
 
         int call_count = 0;
 
-        queen::SystemId id = world.System<queen::Read<Position>>("CountSystem")
-            .Each([&](const Position&) {
-                ++call_count;
-            });
+        queen::SystemId id =
+            world.System<queen::Read<Position>>("CountSystem").Each([&](const Position&) { ++call_count; });
 
         world.RunSystem(id);
 
@@ -194,11 +194,11 @@ namespace
         queen::Entity e = world.Spawn(Position{0.0f, 0.0f, 0.0f}, Velocity{1.0f, 2.0f, 3.0f});
 
         queen::SystemId id = world.System<queen::Read<Velocity>, queen::Write<Position>>("Movement")
-            .Each([](const Velocity& vel, Position& pos) {
-                pos.x += vel.dx;
-                pos.y += vel.dy;
-                pos.z += vel.dz;
-            });
+                                 .Each([](const Velocity& vel, Position& pos) {
+                                     pos.x += vel.dx;
+                                     pos.y += vel.dy;
+                                     pos.z += vel.dz;
+                                 });
 
         world.RunSystem(id);
 
@@ -215,14 +215,10 @@ namespace
         queen::Entity e = world.Spawn(Position{0.0f, 0.0f, 0.0f}, Velocity{1.0f, 0.0f, 0.0f});
 
         queen::SystemId sys1 = world.System<queen::Read<Velocity>, queen::Write<Position>>("ApplyVelocity")
-            .Each([](const Velocity& vel, Position& pos) {
-                pos.x += vel.dx;
-            });
+                                   .Each([](const Velocity& vel, Position& pos) { pos.x += vel.dx; });
 
-        queen::SystemId sys2 = world.System<queen::Write<Position>>("DoublePosition")
-            .Each([](Position& pos) {
-                pos.x *= 2.0f;
-            });
+        queen::SystemId sys2 =
+            world.System<queen::Write<Position>>("DoublePosition").Each([](Position& pos) { pos.x *= 2.0f; });
 
         world.RunSystem(sys1);
         world.RunSystem(sys2);
@@ -241,17 +237,15 @@ namespace
         int sys1_order = -1;
         int sys2_order = -1;
 
-        world.System<queen::Write<Position>>("First")
-            .Each([&](Position& pos) {
-                pos.x += 1.0f;
-                sys1_order = order++;
-            });
+        world.System<queen::Write<Position>>("First").Each([&](Position& pos) {
+            pos.x += 1.0f;
+            sys1_order = order++;
+        });
 
-        world.System<queen::Write<Position>>("Second")
-            .Each([&](Position& pos) {
-                pos.x *= 2.0f;
-                sys2_order = order++;
-            });
+        world.System<queen::Write<Position>>("Second").Each([&](Position& pos) {
+            pos.x *= 2.0f;
+            sys2_order = order++;
+        });
 
         world.RunAllSystems();
 
@@ -270,10 +264,8 @@ namespace
 
         int call_count = 0;
 
-        queen::SystemId id = world.System<queen::Read<Position>>("Disabled")
-            .Each([&](const Position&) {
-                ++call_count;
-            });
+        queen::SystemId id =
+            world.System<queen::Read<Position>>("Disabled").Each([&](const Position&) { ++call_count; });
 
         world.SetSystemEnabled(id, false);
         world.RunSystem(id);
@@ -289,10 +281,7 @@ namespace
 
         int call_count = 0;
 
-        queen::SystemId id = world.System<queen::Read<Position>>("Toggle")
-            .Each([&](const Position&) {
-                ++call_count;
-            });
+        queen::SystemId id = world.System<queen::Read<Position>>("Toggle").Each([&](const Position&) { ++call_count; });
 
         world.SetSystemEnabled(id, false);
         world.RunSystem(id);
@@ -313,10 +302,12 @@ namespace
         queen::Entity found1 = queen::Entity::Invalid();
         queen::Entity found2 = queen::Entity::Invalid();
 
-        queen::SystemId id = world.System<queen::Read<Position>>("FindEntity")
-            .EachWithEntity([&](queen::Entity e, const Position& pos) {
-                if (pos.x == 1.0f) found1 = e;
-                if (pos.x == 2.0f) found2 = e;
+        queen::SystemId id =
+            world.System<queen::Read<Position>>("FindEntity").EachWithEntity([&](queen::Entity e, const Position& pos) {
+                if (pos.x == 1.0f)
+                    found1 = e;
+                if (pos.x == 2.0f)
+                    found2 = e;
             });
 
         world.RunSystem(id);
@@ -329,8 +320,8 @@ namespace
         comb::LinearAllocator alloc{262144};
         queen::World world{};
 
-        world.System<queen::Read<Position>, queen::Write<Velocity>>("AccessTest")
-            .Each([](const Position&, Velocity&) {});
+        world.System<queen::Read<Position>, queen::Write<Velocity>>("AccessTest").Each([](const Position&, Velocity&) {
+        });
 
         auto* storage = &world.GetSystemStorage();
         auto* system = storage->GetSystemByName("AccessTest");
@@ -360,8 +351,7 @@ namespace
         comb::LinearAllocator alloc{262144};
         queen::World world{};
 
-        world.System<queen::Read<Position>>("MySystemName")
-            .Each([](const Position&) {});
+        world.System<queen::Read<Position>>("MySystemName").Each([](const Position&) {});
 
         auto* system = world.GetSystemStorage().GetSystemByName("MySystemName");
 
@@ -377,10 +367,8 @@ namespace
 
         int call_count = 0;
 
-        queen::SystemId id = world.System<queen::Read<Position>>("NoMatch")
-            .Each([&](const Position&) {
-                ++call_count;
-            });
+        queen::SystemId id =
+            world.System<queen::Read<Position>>("NoMatch").Each([&](const Position&) { ++call_count; });
 
         world.RunSystem(id);
 
@@ -397,13 +385,11 @@ namespace
 
         float sum = 0.0f;
 
-        queen::SystemId id = world.System<queen::Read<Position>>("SumPosition")
-            .Each([&](const Position& pos) {
-                sum += pos.x;
-            });
+        queen::SystemId id =
+            world.System<queen::Read<Position>>("SumPosition").Each([&](const Position& pos) { sum += pos.x; });
 
         world.RunSystem(id);
 
         larvae::AssertEqual(sum, 6.0f);
     });
-}
+} // namespace

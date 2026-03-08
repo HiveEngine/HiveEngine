@@ -1,19 +1,17 @@
-#include <larvae/benchmark_runner.h>
 #include <larvae/benchmark_registry.h>
+#include <larvae/benchmark_runner.h>
+
 #include <algorithm>
-#include <iostream>
 #include <iomanip>
+#include <iostream>
 #include <numeric>
 
 namespace larvae
 {
     BenchmarkRunner::BenchmarkRunner(BenchmarkConfig config)
-        : config_{std::move(config)}
-    {
-    }
+        : config_{std::move(config)} {}
 
-    std::vector<BenchmarkResult> BenchmarkRunner::RunAll()
-    {
+    std::vector<BenchmarkResult> BenchmarkRunner::RunAll() {
         std::vector<BenchmarkResult> results;
         const auto& benchmarks = BenchmarkRegistry::GetInstance().GetBenchmarks();
 
@@ -33,8 +31,7 @@ namespace larvae
         return results;
     }
 
-    bool BenchmarkRunner::MatchesFilter(const std::string& full_name) const
-    {
+    bool BenchmarkRunner::MatchesFilter(const std::string& full_name) const {
         const auto& pattern = config_.filter;
 
         if (pattern == "*")
@@ -63,10 +60,8 @@ namespace larvae
         return full_name == pattern;
     }
 
-    BenchmarkResult BenchmarkRunner::RunSingle(const char* suite_name,
-                                               const char* benchmark_name,
-                                               std::function<void(BenchmarkState&)> benchmark_func)
-    {
+    BenchmarkResult BenchmarkRunner::RunSingle(const char* suite_name, const char* benchmark_name,
+                                               std::function<void(BenchmarkState&)> benchmark_func) {
         for (size_t i = 0; i < config_.warmup_runs; ++i)
         {
             BenchmarkState warmup_state{config_.min_iterations};
@@ -124,8 +119,7 @@ namespace larvae
         return result;
     }
 
-    size_t BenchmarkRunner::DetermineIterations(std::function<void(BenchmarkState&)> benchmark_func)
-    {
+    size_t BenchmarkRunner::DetermineIterations(std::function<void(BenchmarkState&)> benchmark_func) {
         size_t iterations = config_.min_iterations;
 
         while (true)
@@ -149,8 +143,7 @@ namespace larvae
         return iterations;
     }
 
-    void PrintBenchmarkResults(const std::vector<BenchmarkResult>& results)
-    {
+    void PrintBenchmarkResults(const std::vector<BenchmarkResult>& results) {
         if (results.empty())
         {
             std::cout << "No benchmarks matched the filter.\n";
@@ -160,14 +153,8 @@ namespace larvae
         std::cout << "Running " << results.size() << " benchmark(s)...\n";
         std::cout << std::string(90, '-') << '\n';
 
-        std::cout << std::left
-                  << std::setw(40) << "Benchmark"
-                  << std::right
-                  << std::setw(12) << "Time"
-                  << std::setw(12) << "Min"
-                  << std::setw(12) << "Max"
-                  << std::setw(14) << "Iterations"
-                  << '\n';
+        std::cout << std::left << std::setw(40) << "Benchmark" << std::right << std::setw(12) << "Time" << std::setw(12)
+                  << "Min" << std::setw(12) << "Max" << std::setw(14) << "Iterations" << '\n';
 
         std::cout << std::string(90, '-') << '\n';
 
@@ -195,29 +182,20 @@ namespace larvae
                 return oss.str();
             };
 
-            std::cout << std::left
-                      << std::setw(40) << full_name
-                      << std::right
-                      << std::setw(12) << format_time(result.median_time)
-                      << std::setw(12) << format_time(result.min_time)
-                      << std::setw(12) << format_time(result.max_time)
-                      << std::setw(14) << result.iterations
-                      << '\n';
+            std::cout << std::left << std::setw(40) << full_name << std::right << std::setw(12)
+                      << format_time(result.median_time) << std::setw(12) << format_time(result.min_time)
+                      << std::setw(12) << format_time(result.max_time) << std::setw(14) << result.iterations << '\n';
 
             if (result.bytes_per_second > 0)
             {
                 double mb_per_sec = result.bytes_per_second / (1024 * 1024);
-                std::cout << std::setw(40) << ""
-                          << std::right
-                          << "  Throughput: " << std::fixed << std::setprecision(2)
+                std::cout << std::setw(40) << "" << std::right << "  Throughput: " << std::fixed << std::setprecision(2)
                           << mb_per_sec << " MB/s\n";
             }
 
             if (result.items_per_second > 0)
             {
-                std::cout << std::setw(40) << ""
-                          << std::right
-                          << "  Items/sec: " << std::fixed << std::setprecision(0)
+                std::cout << std::setw(40) << "" << std::right << "  Items/sec: " << std::fixed << std::setprecision(0)
                           << result.items_per_second << '\n';
             }
         }
@@ -225,8 +203,7 @@ namespace larvae
         std::cout << std::string(90, '-') << '\n';
     }
 
-    BenchmarkConfig ParseBenchmarkCommandLine(int argc, char** argv)
-    {
+    BenchmarkConfig ParseBenchmarkCommandLine(int argc, char** argv) {
         BenchmarkConfig config{};
 
         for (int i = 1; i < argc; ++i)
@@ -259,4 +236,4 @@ namespace larvae
 
         return config;
     }
-}
+} // namespace larvae

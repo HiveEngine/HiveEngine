@@ -1,11 +1,14 @@
-#include <larvae/larvae.h>
 #include <hive/core/radix_sort.h>
+
+#include <larvae/larvae.h>
+
 #include <vector>
 
-namespace {
+namespace
+{
 
-    using hive::SortItem;
     using hive::RadixSort;
+    using hive::SortItem;
 
     // =========================================================================
     // Edge cases
@@ -31,7 +34,7 @@ namespace {
     // =========================================================================
 
     auto t_small_sorted = larvae::RegisterTest("RadixSort", "SmallAlreadySorted", []() {
-        SortItem<int> data[5]{{1,10}, {2,20}, {3,30}, {4,40}, {5,50}};
+        SortItem<int> data[5]{{1, 10}, {2, 20}, {3, 30}, {4, 40}, {5, 50}};
         SortItem<int> scratch[5]{};
         RadixSort(data, scratch, 5);
         for (uint32_t i = 0; i < 5; ++i)
@@ -39,7 +42,7 @@ namespace {
     });
 
     auto t_small_reverse = larvae::RegisterTest("RadixSort", "SmallReverse", []() {
-        SortItem<int> data[5]{{5,50}, {4,40}, {3,30}, {2,20}, {1,10}};
+        SortItem<int> data[5]{{5, 50}, {4, 40}, {3, 30}, {2, 20}, {1, 10}};
         SortItem<int> scratch[5]{};
         RadixSort(data, scratch, 5);
         for (uint32_t i = 0; i < 5; ++i)
@@ -50,7 +53,7 @@ namespace {
     });
 
     auto t_small_stability = larvae::RegisterTest("RadixSort", "SmallStability", []() {
-        SortItem<int> data[4]{{7,0}, {7,1}, {7,2}, {7,3}};
+        SortItem<int> data[4]{{7, 0}, {7, 1}, {7, 2}, {7, 3}};
         SortItem<int> scratch[4]{};
         RadixSort(data, scratch, 4);
         for (uint32_t i = 0; i < 4; ++i)

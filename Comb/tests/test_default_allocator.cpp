@@ -1,20 +1,24 @@
-#include <larvae/larvae.h>
-#include <comb/default_allocator.h>
 #include <comb/debug/global_memory_tracker.h>
+#include <comb/default_allocator.h>
 #include <comb/new.h>
+
+#include <larvae/larvae.h>
 
 namespace
 {
-    constexpr size_t operator""_KB(unsigned long long kb) { return kb * 1024; }
-    constexpr size_t operator""_MB(unsigned long long mb) { return mb * 1024 * 1024; }
+    constexpr size_t operator""_KB(unsigned long long kb) {
+        return kb * 1024;
+    }
+    constexpr size_t operator""_MB(unsigned long long mb) {
+        return mb * 1024 * 1024;
+    }
 
     // =============================================================================
     // DefaultAllocator Concept
     // =============================================================================
 
-    auto test1 = larvae::RegisterTest("DefaultAllocator", "ConceptSatisfaction", []() {
-        larvae::AssertTrue((comb::Allocator<comb::DefaultAllocator>));
-    });
+    auto test1 = larvae::RegisterTest("DefaultAllocator", "ConceptSatisfaction",
+                                      []() { larvae::AssertTrue((comb::Allocator<comb::DefaultAllocator>)); });
 
     // =============================================================================
     // DefaultAllocator Basic Usage
@@ -40,7 +44,9 @@ namespace
         {
             int x;
             float y;
-            TestObj(int a, float b) : x{a}, y{b} {}
+            TestObj(int a, float b)
+                : x{a}
+                , y{b} {}
         };
 
         TestObj* obj = comb::New<TestObj>(alloc, 42, 3.14f);
@@ -139,8 +145,7 @@ namespace
 
         {
             comb::ModuleAllocator module{"TrackedModule", 1_MB};
-            larvae::AssertEqual(comb::debug::GlobalMemoryTracker::GetInstance().GetAllocatorCount(),
-                                count_before + 1);
+            larvae::AssertEqual(comb::debug::GlobalMemoryTracker::GetInstance().GetAllocatorCount(), count_before + 1);
         }
 
         larvae::AssertEqual(comb::debug::GlobalMemoryTracker::GetInstance().GetAllocatorCount(), count_before);
@@ -216,7 +221,7 @@ namespace
         size_t idx = comb::ModuleRegistry::GetInstance().GetCount() - 1;
         const auto& entry = comb::ModuleRegistry::GetInstance().GetEntry(idx);
 
-        larvae::AssertStringEqual(entry.name, "EntryTestModule");
-        larvae::AssertEqual(entry.allocator, &module);
+        larvae::AssertStringEqual(entry.m_name, "EntryTestModule");
+        larvae::AssertEqual(entry.m_allocator, &module);
     });
-}
+} // namespace

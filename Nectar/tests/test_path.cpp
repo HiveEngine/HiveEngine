@@ -1,11 +1,13 @@
-#include <larvae/larvae.h>
-#include <nectar/vfs/path.h>
 #include <comb/default_allocator.h>
 
-namespace {
+#include <nectar/vfs/path.h>
 
-    auto& GetPathAlloc()
-    {
+#include <larvae/larvae.h>
+
+namespace
+{
+
+    auto& GetPathAlloc() {
         static comb::ModuleAllocator alloc{"TestPath", 1 * 1024 * 1024};
         return alloc.Get();
     }
@@ -125,4 +127,4 @@ namespace {
         larvae::AssertEqual(e.Size(), size_t{0});
     });
 
-}
+} // namespace

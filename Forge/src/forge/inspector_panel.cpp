@@ -1,390 +1,428 @@
+#include <hive/math/types.h>
+
+#include <queen/core/type_id.h>
+#include <queen/reflect/component_registry.h>
+#include <queen/reflect/field_attributes.h>
+#include <queen/reflect/field_info.h>
+#include <queen/world/world.h>
+
 #include <forge/inspector_panel.h>
 #include <forge/selection.h>
 #include <forge/undo.h>
 
-#include <queen/world/world.h>
-#include <queen/reflect/component_registry.h>
-#include <queen/reflect/field_info.h>
-#include <queen/reflect/field_attributes.h>
-#include <queen/core/type_id.h>
-
-#include <hive/math/types.h>
-
 #include <imgui.h>
 
-#include <cstring>
+#include <cmath>
 #include <cstdio>
+#include <cstring>
 
 namespace forge
 {
-    struct DragState
+    namespace
     {
-        queen::Entity entity{};
-        queen::TypeId type_id{0};
-        uint16_t offset{0};
-        uint16_t size{0};
-        std::byte before[64]{};
-        bool active{false};
-    };
-
-    static DragState s_drag{};
-
-    static void BeginDrag(queen::Entity entity, queen::TypeId type_id,
-                          uint16_t offset, uint16_t size, const void* current)
-    {
-        if (s_drag.active) return;
-        s_drag.entity = entity;
-        s_drag.type_id = type_id;
-        s_drag.offset = offset;
-        s_drag.size = size;
-        if (size <= sizeof(s_drag.before))
-            std::memcpy(s_drag.before, current, size);
-        s_drag.active = true;
-    }
-
-    static void EndDrag(UndoStack& undo, const void* current)
-    {
-        if (!s_drag.active) return;
-        s_drag.active = false;
-        // Only push if value actually changed
-        if (std::memcmp(s_drag.before, current, s_drag.size) != 0)
+        struct DragState
         {
-            undo.PushSetField(s_drag.entity, s_drag.type_id,
-                              s_drag.offset, s_drag.size,
-                              s_drag.before, current);
+            queen::Entity m_entity{};
+            queen::TypeId m_typeId{0};
+            uint16_t m_offset{0};
+            uint16_t m_size{0};
+            std::byte m_before[64]{};
+            bool m_active{false};
+        };
+
+        DragState g_sDrag{};
+
+        void BeginDrag(queen::Entity entity, queen::TypeId typeId, uint16_t offset, uint16_t size,
+                       const void* current) {
+            if (g_sDrag.m_active)
+            {
+                return;
+            }
+
+            g_sDrag.m_entity = entity;
+            g_sDrag.m_typeId = typeId;
+            g_sDrag.m_offset = offset;
+            g_sDrag.m_size = size;
+            if (size <= sizeof(g_sDrag.m_before))
+            {
+                std::memcpy(g_sDrag.m_before, current, size);
+            }
+            g_sDrag.m_active = true;
         }
-    }
 
-    [[nodiscard]] static const char* GetFieldDisplayName(const queen::FieldInfo& field) noexcept
-    {
-        if (field.attributes && field.attributes->display_name)
-            return field.attributes->display_name;
-        return field.name;
-    }
+        void EndDrag(UndoStack& undo, const void* current) {
+            if (!g_sDrag.m_active)
+            {
+                return;
+            }
 
-    [[nodiscard]] static bool HasFlag(const queen::FieldInfo& field, queen::FieldFlag flag) noexcept
-    {
-        return field.attributes && field.attributes->HasFlag(flag);
-    }
+            g_sDrag.m_active = false;
+            if (std::memcmp(g_sDrag.m_before, current, g_sDrag.m_size) != 0)
+            {
+                undo.PushSetField(g_sDrag.m_entity, g_sDrag.m_typeId, g_sDrag.m_offset, g_sDrag.m_size,
+                                  g_sDrag.m_before, current);
+            }
+        }
 
-    static bool DrawFloat3Widget(const char* label, void* data, const queen::FieldInfo& field,
-                                 queen::Entity entity, queen::TypeId type_id,
-                                 uint16_t base_offset, UndoStack& undo)
-    {
-        auto* v = static_cast<float*>(data);
-        uint16_t offset = static_cast<uint16_t>(base_offset + field.offset);
+        [[nodiscard]] const char* GetFieldDisplayName(const queen::FieldInfo& field) noexcept {
+            if (field.m_attributes != nullptr && field.m_attributes->m_displayName != nullptr)
+            {
+                return field.m_attributes->m_displayName;
+            }
 
-        if (HasFlag(field, queen::FieldFlag::Color))
-        {
-            if (ImGui::ColorEdit3(label, v))
+            return field.m_name;
+        }
+
+        [[nodiscard]] bool HasFlag(const queen::FieldInfo& field, queen::FieldFlag flag) noexcept {
+            return field.m_attributes != nullptr && field.m_attributes->HasFlag(flag);
+        }
+
+        bool DrawFloat3Widget(const char* label, void* data, const queen::FieldInfo& field, queen::Entity entity,
+                              queen::TypeId typeId, uint16_t baseOffset, UndoStack& undo) {
+            auto* value = static_cast<float*>(data);
+            const uint16_t offset = static_cast<uint16_t>(baseOffset + field.m_offset);
+
+            if (HasFlag(field, queen::FieldFlag::COLOR))
+            {
+                if (ImGui::ColorEdit3(label, value))
+                {
+                    if (ImGui::IsItemActivated())
+                    {
+                        BeginDrag(entity, typeId, offset, 12, value);
+                    }
+                    return true;
+                }
+                if (ImGui::IsItemDeactivatedAfterEdit())
+                {
+                    EndDrag(undo, value);
+                }
+                return false;
+            }
+
+            float speed = 0.01f;
+            if (field.m_attributes != nullptr && field.m_attributes->HasRange())
+            {
+                speed = (field.m_attributes->m_max - field.m_attributes->m_min) / 500.f;
+            }
+
+            if (ImGui::DragFloat3(label, value, speed))
             {
                 if (ImGui::IsItemActivated())
-                    BeginDrag(entity, type_id, offset, 12, v);
+                {
+                    BeginDrag(entity, typeId, offset, 12, value);
+                }
                 return true;
             }
             if (ImGui::IsItemDeactivatedAfterEdit())
-                EndDrag(undo, v);
-            return false;
-        }
-
-        float speed = 0.01f;
-        if (field.attributes && field.attributes->HasRange())
-            speed = (field.attributes->max - field.attributes->min) / 500.f;
-
-        if (ImGui::DragFloat3(label, v, speed))
-        {
-            if (ImGui::IsItemActivated())
-                BeginDrag(entity, type_id, offset, 12, v);
-            return true;
-        }
-        if (ImGui::IsItemDeactivatedAfterEdit())
-            EndDrag(undo, v);
-        return false;
-    }
-
-    // Displayed as Euler angles in degrees
-    static bool DrawQuatWidget(const char* label, void* data,
-                               queen::Entity entity, queen::TypeId type_id,
-                               uint16_t base_offset, const queen::FieldInfo& field,
-                               UndoStack& undo)
-    {
-        auto* q = static_cast<float*>(data); // x, y, z, w
-        uint16_t offset = static_cast<uint16_t>(base_offset + field.offset);
-
-        float sinr = 2.f * (q[3] * q[0] + q[1] * q[2]);
-        float cosr = 1.f - 2.f * (q[0] * q[0] + q[1] * q[1]);
-        float pitch = atan2f(sinr, cosr) * (180.f / 3.14159265f);
-
-        float sinp = 2.f * (q[3] * q[1] - q[2] * q[0]);
-        float yaw;
-        if (fabsf(sinp) >= 1.f)
-            yaw = copysignf(90.f, sinp);
-        else
-            yaw = asinf(sinp) * (180.f / 3.14159265f);
-
-        float siny = 2.f * (q[3] * q[2] + q[0] * q[1]);
-        float cosy = 1.f - 2.f * (q[1] * q[1] + q[2] * q[2]);
-        float roll = atan2f(siny, cosy) * (180.f / 3.14159265f);
-
-        float euler[3] = {pitch, yaw, roll};
-        bool changed = false;
-
-        if (ImGui::DragFloat3(label, euler, 0.5f))
-        {
-            if (ImGui::IsItemActivated())
-                BeginDrag(entity, type_id, offset, 16, q);
-
-            float p = euler[0] * (3.14159265f / 180.f) * 0.5f;
-            float y = euler[1] * (3.14159265f / 180.f) * 0.5f;
-            float r = euler[2] * (3.14159265f / 180.f) * 0.5f;
-
-            float cp = cosf(p), sp = sinf(p);
-            float cy = cosf(y), sy = sinf(y);
-            float cr = cosf(r), sr = sinf(r);
-
-            q[0] = sr * cp * cy - cr * sp * sy; // x
-            q[1] = cr * sp * cy + sr * cp * sy; // y
-            q[2] = cr * cp * sy - sr * sp * cy; // z
-            q[3] = cr * cp * cy + sr * sp * sy; // w
-            changed = true;
-        }
-        if (ImGui::IsItemDeactivatedAfterEdit())
-            EndDrag(undo, q);
-
-        return changed;
-    }
-
-    static bool DrawField(const queen::FieldInfo& field, void* component_data,
-                          queen::Entity entity, queen::TypeId type_id,
-                          uint16_t base_offset, UndoStack& undo)
-    {
-        if (HasFlag(field, queen::FieldFlag::Hidden))
-            return false;
-
-        const char* label = GetFieldDisplayName(field);
-        void* field_data = static_cast<std::byte*>(component_data) + field.offset;
-        uint16_t offset = static_cast<uint16_t>(base_offset + field.offset);
-        bool read_only = HasFlag(field, queen::FieldFlag::ReadOnly);
-        bool changed = false;
-
-        if (read_only)
-            ImGui::BeginDisabled();
-
-        switch (field.type)
-        {
-        case queen::FieldType::Float32:
-        {
-            auto* v = static_cast<float*>(field_data);
-            float speed = 0.01f;
-            float f_min = 0.f, f_max = 0.f;
-            if (field.attributes && field.attributes->HasRange())
             {
-                f_min = field.attributes->min;
-                f_max = field.attributes->max;
-                speed = (f_max - f_min) / 500.f;
+                EndDrag(undo, value);
             }
+            return false;
+        }
 
-            if (HasFlag(field, queen::FieldFlag::Angle))
+        bool DrawQuatWidget(const char* label, void* data, queen::Entity entity, queen::TypeId typeId,
+                            uint16_t baseOffset, const queen::FieldInfo& field, UndoStack& undo) {
+            auto* q = static_cast<float*>(data);
+            const uint16_t offset = static_cast<uint16_t>(baseOffset + field.m_offset);
+
+            const float sinr = 2.f * (q[3] * q[0] + q[1] * q[2]);
+            const float cosr = 1.f - 2.f * (q[0] * q[0] + q[1] * q[1]);
+            const float pitch = std::atan2(sinr, cosr) * (180.f / 3.14159265f);
+
+            const float sinp = 2.f * (q[3] * q[1] - q[2] * q[0]);
+            float yaw = 0.f;
+            if (std::fabs(sinp) >= 1.f)
             {
-                // SliderAngle expects radians, displays degrees
-                changed = ImGui::SliderAngle(label, v,
-                    field.attributes ? field.attributes->min * (180.f / 3.14159265f) : -360.f,
-                    field.attributes ? field.attributes->max * (180.f / 3.14159265f) : 360.f);
+                yaw = std::copysign(90.f, sinp);
             }
             else
             {
-                changed = ImGui::DragFloat(label, v, speed, f_min, f_max);
+                yaw = std::asin(sinp) * (180.f / 3.14159265f);
             }
 
-            if (ImGui::IsItemActivated())
-                BeginDrag(entity, type_id, offset, static_cast<uint16_t>(field.size), field_data);
-            if (ImGui::IsItemDeactivatedAfterEdit())
-                EndDrag(undo, field_data);
-            break;
-        }
+            const float siny = 2.f * (q[3] * q[2] + q[0] * q[1]);
+            const float cosy = 1.f - 2.f * (q[1] * q[1] + q[2] * q[2]);
+            const float roll = std::atan2(siny, cosy) * (180.f / 3.14159265f);
 
-        case queen::FieldType::Float64:
-        {
-            auto* v = static_cast<double*>(field_data);
-            float fv = static_cast<float>(*v);
-            if (ImGui::DragFloat(label, &fv, 0.01f))
-            {
-                *v = static_cast<double>(fv);
-                changed = true;
-            }
-            if (ImGui::IsItemActivated())
-                BeginDrag(entity, type_id, offset, static_cast<uint16_t>(field.size), field_data);
-            if (ImGui::IsItemDeactivatedAfterEdit())
-                EndDrag(undo, field_data);
-            break;
-        }
+            float euler[3] = {pitch, yaw, roll};
+            bool changed = false;
 
-        case queen::FieldType::Int32:
-        {
-            auto* v = static_cast<int32_t*>(field_data);
-            int i_min = 0, i_max = 0;
-            if (field.attributes && field.attributes->HasRange())
+            if (ImGui::DragFloat3(label, euler, 0.5f))
             {
-                i_min = static_cast<int>(field.attributes->min);
-                i_max = static_cast<int>(field.attributes->max);
-            }
-            changed = ImGui::DragInt(label, v, 1.f, i_min, i_max);
-            if (ImGui::IsItemActivated())
-                BeginDrag(entity, type_id, offset, static_cast<uint16_t>(field.size), field_data);
-            if (ImGui::IsItemDeactivatedAfterEdit())
-                EndDrag(undo, field_data);
-            break;
-        }
-
-        case queen::FieldType::Uint32:
-        {
-            auto* v = static_cast<uint32_t*>(field_data);
-            int iv = static_cast<int>(*v);
-            if (ImGui::DragInt(label, &iv, 1.f, 0, 0))
-            {
-                *v = static_cast<uint32_t>(iv);
-                changed = true;
-            }
-            if (ImGui::IsItemActivated())
-                BeginDrag(entity, type_id, offset, static_cast<uint16_t>(field.size), field_data);
-            if (ImGui::IsItemDeactivatedAfterEdit())
-                EndDrag(undo, field_data);
-            break;
-        }
-
-        case queen::FieldType::Bool:
-        {
-            auto* v = static_cast<bool*>(field_data);
-            bool before = *v;
-            if (ImGui::Checkbox(label, v))
-            {
-                undo.PushSetField(entity, type_id, offset,
-                                  static_cast<uint16_t>(field.size), &before, v);
-                changed = true;
-            }
-            break;
-        }
-
-        case queen::FieldType::Struct:
-        {
-            if (field.size == sizeof(hive::math::Float3) &&
-                field.nested_type_id == queen::TypeIdOf<hive::math::Float3>())
-            {
-                changed = DrawFloat3Widget(label, field_data, field,
-                                           entity, type_id, base_offset, undo);
-            }
-            else if (field.size == sizeof(hive::math::Quat) &&
-                     field.nested_type_id == queen::TypeIdOf<hive::math::Quat>())
-            {
-                changed = DrawQuatWidget(label, field_data,
-                                         entity, type_id, base_offset, field, undo);
-            }
-            else if (field.nested_fields && field.nested_field_count > 0)
-            {
-                if (ImGui::TreeNode(label))
+                if (ImGui::IsItemActivated())
                 {
-                    for (size_t i = 0; i < field.nested_field_count; ++i)
-                    {
-                        changed |= DrawField(field.nested_fields[i], field_data,
-                                             entity, type_id,
-                                             static_cast<uint16_t>(base_offset + field.offset), undo);
-                    }
-                    ImGui::TreePop();
+                    BeginDrag(entity, typeId, offset, 16, q);
                 }
+
+                const float p = euler[0] * (3.14159265f / 180.f) * 0.5f;
+                const float y = euler[1] * (3.14159265f / 180.f) * 0.5f;
+                const float r = euler[2] * (3.14159265f / 180.f) * 0.5f;
+
+                const float cp = std::cos(p);
+                const float sp = std::sin(p);
+                const float cy = std::cos(y);
+                const float sy = std::sin(y);
+                const float cr = std::cos(r);
+                const float sr = std::sin(r);
+
+                q[0] = sr * cp * cy - cr * sp * sy;
+                q[1] = cr * sp * cy + sr * cp * sy;
+                q[2] = cr * cp * sy - sr * sp * cy;
+                q[3] = cr * cp * cy + sr * sp * sy;
+                changed = true;
             }
-            else
+
+            if (ImGui::IsItemDeactivatedAfterEdit())
             {
-                ImGui::TextDisabled("%s (opaque)", label);
+                EndDrag(undo, q);
             }
-            break;
+
+            return changed;
         }
 
-        case queen::FieldType::Enum:
-        {
-            if (field.enum_info && field.enum_info->IsValid())
+        bool DrawField(const queen::FieldInfo& field, void* componentData, queen::Entity entity, queen::TypeId typeId,
+                       uint16_t baseOffset, UndoStack& undo) {
+            if (HasFlag(field, queen::FieldFlag::HIDDEN))
             {
-                int64_t current_val = 0;
-                std::memcpy(&current_val, field_data, field.size <= 8 ? field.size : 8);
+                return false;
+            }
 
-                const char* current_name = field.enum_info->NameOf(current_val);
-                if (!current_name) current_name = "???";
+            const char* label = GetFieldDisplayName(field);
+            void* fieldData = static_cast<std::byte*>(componentData) + field.m_offset;
+            const uint16_t offset = static_cast<uint16_t>(baseOffset + field.m_offset);
+            const bool readOnly = HasFlag(field, queen::FieldFlag::READ_ONLY);
+            bool changed = false;
 
-                if (ImGui::BeginCombo(label, current_name))
-                {
-                    for (size_t i = 0; i < field.enum_info->entry_count; ++i)
+            if (readOnly)
+            {
+                ImGui::BeginDisabled();
+            }
+
+            switch (field.m_type)
+            {
+                case queen::FieldType::FLOAT32: {
+                    auto* value = static_cast<float*>(fieldData);
+                    float speed = 0.01f;
+                    float minValue = 0.f;
+                    float maxValue = 0.f;
+                    if (field.m_attributes != nullptr && field.m_attributes->HasRange())
                     {
-                        const auto& entry = field.enum_info->entries[i];
-                        bool selected = (entry.value == current_val);
-                        if (ImGui::Selectable(entry.name, selected))
+                        minValue = field.m_attributes->m_min;
+                        maxValue = field.m_attributes->m_max;
+                        speed = (maxValue - minValue) / 500.f;
+                    }
+
+                    if (HasFlag(field, queen::FieldFlag::ANGLE))
+                    {
+                        changed = ImGui::SliderAngle(
+                            label, value,
+                            field.m_attributes ? field.m_attributes->m_min * (180.f / 3.14159265f) : -360.f,
+                            field.m_attributes ? field.m_attributes->m_max * (180.f / 3.14159265f) : 360.f);
+                    }
+                    else
+                    {
+                        changed = ImGui::DragFloat(label, value, speed, minValue, maxValue);
+                    }
+
+                    if (ImGui::IsItemActivated())
+                    {
+                        BeginDrag(entity, typeId, offset, static_cast<uint16_t>(field.m_size), fieldData);
+                    }
+                    if (ImGui::IsItemDeactivatedAfterEdit())
+                    {
+                        EndDrag(undo, fieldData);
+                    }
+                    break;
+                }
+
+                case queen::FieldType::FLOAT64: {
+                    auto* value = static_cast<double*>(fieldData);
+                    float floatValue = static_cast<float>(*value);
+                    if (ImGui::DragFloat(label, &floatValue, 0.01f))
+                    {
+                        *value = static_cast<double>(floatValue);
+                        changed = true;
+                    }
+                    if (ImGui::IsItemActivated())
+                    {
+                        BeginDrag(entity, typeId, offset, static_cast<uint16_t>(field.m_size), fieldData);
+                    }
+                    if (ImGui::IsItemDeactivatedAfterEdit())
+                    {
+                        EndDrag(undo, fieldData);
+                    }
+                    break;
+                }
+
+                case queen::FieldType::INT32: {
+                    auto* value = static_cast<int32_t*>(fieldData);
+                    int minValue = 0;
+                    int maxValue = 0;
+                    if (field.m_attributes != nullptr && field.m_attributes->HasRange())
+                    {
+                        minValue = static_cast<int>(field.m_attributes->m_min);
+                        maxValue = static_cast<int>(field.m_attributes->m_max);
+                    }
+                    changed = ImGui::DragInt(label, value, 1.f, minValue, maxValue);
+                    if (ImGui::IsItemActivated())
+                    {
+                        BeginDrag(entity, typeId, offset, static_cast<uint16_t>(field.m_size), fieldData);
+                    }
+                    if (ImGui::IsItemDeactivatedAfterEdit())
+                    {
+                        EndDrag(undo, fieldData);
+                    }
+                    break;
+                }
+
+                case queen::FieldType::UINT32: {
+                    auto* value = static_cast<uint32_t*>(fieldData);
+                    int intValue = static_cast<int>(*value);
+                    if (ImGui::DragInt(label, &intValue, 1.f, 0, 0))
+                    {
+                        *value = static_cast<uint32_t>(intValue);
+                        changed = true;
+                    }
+                    if (ImGui::IsItemActivated())
+                    {
+                        BeginDrag(entity, typeId, offset, static_cast<uint16_t>(field.m_size), fieldData);
+                    }
+                    if (ImGui::IsItemDeactivatedAfterEdit())
+                    {
+                        EndDrag(undo, fieldData);
+                    }
+                    break;
+                }
+
+                case queen::FieldType::BOOL: {
+                    auto* value = static_cast<bool*>(fieldData);
+                    const bool before = *value;
+                    if (ImGui::Checkbox(label, value))
+                    {
+                        undo.PushSetField(entity, typeId, offset, static_cast<uint16_t>(field.m_size), &before, value);
+                        changed = true;
+                    }
+                    break;
+                }
+
+                case queen::FieldType::STRUCT: {
+                    if (field.m_size == sizeof(hive::math::Float3) &&
+                        field.m_nestedTypeId == queen::TypeIdOf<hive::math::Float3>())
+                    {
+                        changed = DrawFloat3Widget(label, fieldData, field, entity, typeId, baseOffset, undo);
+                    }
+                    else if (field.m_size == sizeof(hive::math::Quat) &&
+                             field.m_nestedTypeId == queen::TypeIdOf<hive::math::Quat>())
+                    {
+                        changed = DrawQuatWidget(label, fieldData, entity, typeId, baseOffset, field, undo);
+                    }
+                    else if (field.m_nestedFields != nullptr && field.m_nestedFieldCount > 0)
+                    {
+                        if (ImGui::TreeNode(label))
                         {
-                            std::byte before[8]{};
-                            std::memcpy(before, field_data, field.size);
-                            std::memcpy(field_data, &entry.value, field.size);
-                            undo.PushSetField(entity, type_id, offset,
-                                              static_cast<uint16_t>(field.size), before, field_data);
-                            changed = true;
+                            for (size_t i = 0; i < field.m_nestedFieldCount; ++i)
+                            {
+                                changed |= DrawField(field.m_nestedFields[i], fieldData, entity, typeId,
+                                                     static_cast<uint16_t>(baseOffset + field.m_offset), undo);
+                            }
+                            ImGui::TreePop();
                         }
-                        if (selected) ImGui::SetItemDefaultFocus();
                     }
-                    ImGui::EndCombo();
+                    else
+                    {
+                        ImGui::TextDisabled("%s (opaque)", label);
+                    }
+                    break;
                 }
+
+                case queen::FieldType::ENUM: {
+                    if (field.m_enumInfo != nullptr && field.m_enumInfo->IsValid())
+                    {
+                        int64_t currentValue = 0;
+                        std::memcpy(&currentValue, fieldData, field.m_size <= 8 ? field.m_size : 8);
+
+                        const char* currentName = field.m_enumInfo->NameOf(currentValue);
+                        if (currentName == nullptr)
+                        {
+                            currentName = "???";
+                        }
+
+                        if (ImGui::BeginCombo(label, currentName))
+                        {
+                            for (size_t i = 0; i < field.m_enumInfo->m_entryCount; ++i)
+                            {
+                                const auto& entry = field.m_enumInfo->m_entries[i];
+                                const bool selected = entry.m_value == currentValue;
+                                if (ImGui::Selectable(entry.m_name, selected))
+                                {
+                                    std::byte before[8]{};
+                                    std::memcpy(before, fieldData, field.m_size);
+                                    std::memcpy(fieldData, &entry.m_value, field.m_size);
+                                    undo.PushSetField(entity, typeId, offset, static_cast<uint16_t>(field.m_size),
+                                                      before, fieldData);
+                                    changed = true;
+                                }
+                                if (selected)
+                                {
+                                    ImGui::SetItemDefaultFocus();
+                                }
+                            }
+                            ImGui::EndCombo();
+                        }
+                    }
+                    else
+                    {
+                        ImGui::TextDisabled("%s (enum, no info)", label);
+                    }
+                    break;
+                }
+
+                default:
+                    ImGui::TextDisabled("%s (unsupported type %d)", label, static_cast<int>(field.m_type));
+                    break;
             }
-            else
+
+            if (readOnly)
             {
-                ImGui::TextDisabled("%s (enum, no info)", label);
+                ImGui::EndDisabled();
             }
-            break;
-        }
 
-        default:
-            ImGui::TextDisabled("%s (unsupported type %d)", label, static_cast<int>(field.type));
-            break;
-        }
-
-        if (read_only)
-            ImGui::EndDisabled();
-
-        // Tooltip
-        if (field.attributes && field.attributes->tooltip && ImGui::IsItemHovered())
-            ImGui::SetTooltip("%s", field.attributes->tooltip);
-
-        return changed;
-    }
-
-    static void DrawComponent(queen::World& world, queen::Entity entity,
-                              queen::TypeId type_id, void* component_data,
-                              const queen::ComponentReflection& reflection,
-                              UndoStack& undo)
-    {
-        const char* type_name = reflection.name ? reflection.name : "Component";
-
-        ImGuiTreeNodeFlags header_flags = ImGuiTreeNodeFlags_DefaultOpen
-                                        | ImGuiTreeNodeFlags_Framed
-                                        | ImGuiTreeNodeFlags_AllowOverlap;
-
-        bool open = ImGui::CollapsingHeader(type_name, header_flags);
-
-        if (open)
-        {
-            ImGui::PushID(static_cast<int>(type_id));
-            ImGui::Indent(4.f);
-
-            for (size_t i = 0; i < reflection.field_count; ++i)
+            if (field.m_attributes != nullptr && field.m_attributes->m_tooltip != nullptr && ImGui::IsItemHovered())
             {
-                DrawField(reflection.fields[i], component_data,
-                          entity, type_id, 0, undo);
+                ImGui::SetTooltip("%s", field.m_attributes->m_tooltip);
             }
 
-            ImGui::Unindent(4.f);
-            ImGui::PopID();
+            return changed;
         }
-    }
+
+        void DrawComponent(queen::World& world, queen::Entity entity, queen::TypeId typeId, void* componentData,
+                           const queen::ComponentReflection& reflection, UndoStack& undo) {
+            IM_UNUSED(world);
+
+            const char* typeName = reflection.m_name != nullptr ? reflection.m_name : "Component";
+
+            const ImGuiTreeNodeFlags headerFlags =
+                ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_AllowOverlap;
+
+            if (ImGui::CollapsingHeader(typeName, headerFlags))
+            {
+                ImGui::PushID(static_cast<int>(typeId));
+                ImGui::Indent(4.f);
+
+                for (size_t i = 0; i < reflection.m_fieldCount; ++i)
+                {
+                    DrawField(reflection.m_fields[i], componentData, entity, typeId, 0, undo);
+                }
+
+                ImGui::Unindent(4.f);
+                ImGui::PopID();
+            }
+        }
+    } // namespace
 
     void DrawInspectorPanel(queen::World& world, EditorSelection& selection,
-                            const queen::ComponentRegistry<256>& registry,
-                            UndoStack& undo)
-    {
-        queen::Entity entity = selection.Primary();
+                            const queen::ComponentRegistry<256>& registry, UndoStack& undo) {
+        const queen::Entity entity = selection.Primary();
         if (entity.IsNull() || !world.IsAlive(entity))
         {
             ImGui::TextDisabled("No entity selected");
@@ -394,14 +432,20 @@ namespace forge
         ImGui::Text("Entity %u", entity.Index());
         ImGui::Separator();
 
-        world.ForEachComponentType(entity, [&](queen::TypeId type_id) {
-            const auto* reg = registry.Find(type_id);
-            if (!reg || !reg->HasReflection()) return;
+        world.ForEachComponentType(entity, [&](queen::TypeId typeId) {
+            const auto* reg = registry.Find(typeId);
+            if (reg == nullptr || !reg->HasReflection())
+            {
+                return;
+            }
 
-            void* comp = world.GetComponentRaw(entity, type_id);
-            if (!comp) return;
+            void* comp = world.GetComponentRaw(entity, typeId);
+            if (comp == nullptr)
+            {
+                return;
+            }
 
-            DrawComponent(world, entity, type_id, comp, reg->reflection, undo);
+            DrawComponent(world, entity, typeId, comp, reg->m_reflection, undo);
         });
     }
-}
+} // namespace forge

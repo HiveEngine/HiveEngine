@@ -1,10 +1,10 @@
-#include <nectar/vfs/path.h>
 #include <wax/containers/vector.h>
+
+#include <nectar/vfs/path.h>
 
 namespace nectar
 {
-    wax::String NormalizePath(wax::StringView path, comb::DefaultAllocator& alloc)
-    {
+    wax::String NormalizePath(wax::StringView path, comb::DefaultAllocator& alloc) {
         if (path.Size() == 0)
             return wax::String{alloc};
 
@@ -34,8 +34,10 @@ namespace nectar
                 start = i + 1;
 
                 // Skip empty segments and '.'
-                if (seg.Size() == 0) continue;
-                if (seg.Size() == 1 && seg[0] == '.') continue;
+                if (seg.Size() == 0)
+                    continue;
+                if (seg.Size() == 1 && seg[0] == '.')
+                    continue;
 
                 // Handle '..'
                 if (seg.Size() == 2 && seg[0] == '.' && seg[1] == '.')
@@ -60,28 +62,25 @@ namespace nectar
         return result;
     }
 
-    wax::StringView PathParent(wax::StringView path)
-    {
+    wax::StringView PathParent(wax::StringView path) {
         size_t pos = path.RFind('/');
         if (pos == wax::StringView::npos)
             return wax::StringView{};
         return path.Substr(0, pos);
     }
 
-    wax::StringView PathFilename(wax::StringView path)
-    {
+    wax::StringView PathFilename(wax::StringView path) {
         size_t pos = path.RFind('/');
         if (pos == wax::StringView::npos)
             return path;
         return path.Substr(pos + 1);
     }
 
-    wax::StringView PathExtension(wax::StringView path)
-    {
+    wax::StringView PathExtension(wax::StringView path) {
         auto filename = PathFilename(path);
         size_t pos = filename.RFind('.');
         if (pos == wax::StringView::npos || pos == 0)
             return wax::StringView{};
         return filename.Substr(pos);
     }
-}
+} // namespace nectar

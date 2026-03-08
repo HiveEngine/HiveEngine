@@ -1,7 +1,9 @@
 #pragma once
 
-#include <comb/allocator_concepts.h>
 #include <hive/profiling/profiler.h>
+
+#include <comb/allocator_concepts.h>
+
 #include <mutex>
 
 namespace comb
@@ -39,8 +41,7 @@ namespace comb
      *
      * @tparam Allocator The underlying allocator type (must satisfy comb::Allocator)
      */
-    template<Allocator UnderlyingAllocator>
-    class ThreadSafeAllocator
+    template <Allocator UnderlyingAllocator> class ThreadSafeAllocator
     {
     public:
         /**
@@ -49,8 +50,7 @@ namespace comb
          * @param allocator Reference to the underlying allocator (must outlive this wrapper)
          */
         explicit ThreadSafeAllocator(UnderlyingAllocator& allocator) noexcept
-            : allocator_{&allocator}
-        {}
+            : m_allocator{&allocator} {}
 
         ~ThreadSafeAllocator() = default;
 
@@ -60,17 +60,15 @@ namespace comb
 
         // Movable
         ThreadSafeAllocator(ThreadSafeAllocator&& other) noexcept
-            : allocator_{other.allocator_}
-        {
-            other.allocator_ = nullptr;
+            : m_allocator{other.m_allocator} {
+            other.m_allocator = nullptr;
         }
 
-        ThreadSafeAllocator& operator=(ThreadSafeAllocator&& other) noexcept
-        {
+        ThreadSafeAllocator& operator=(ThreadSafeAllocator&& other) noexcept {
             if (this != &other)
             {
-                allocator_ = other.allocator_;
-                other.allocator_ = nullptr;
+                m_allocator = other.m_allocator;
+                other.m_allocator = nullptr;
             }
             return *this;
         }
@@ -83,10 +81,9 @@ namespace comb
          * @param tag Optional allocation tag for debugging
          * @return Pointer to allocated memory, or nullptr if out of memory
          */
-        [[nodiscard]] void* Allocate(size_t size, size_t alignment, const char* tag = nullptr)
-        {
-            std::lock_guard<HIVE_PROFILE_LOCKABLE_BASE(std::mutex)> lock{mutex_};
-            return allocator_->Allocate(size, alignment, tag);
+        [[nodiscard]] void* Allocate(size_t size, size_t alignment, const char* tag = nullptr) {
+            std::lock_guard<HIVE_PROFILE_LOCKABLE_BASE(std::mutex)> lock{m_mutex};
+            return m_allocator->Allocate(size, alignment, tag);
         }
 
         /**
@@ -94,10 +91,9 @@ namespace comb
          *
          * @param ptr Pointer to deallocate
          */
-        void Deallocate(void* ptr)
-        {
-            std::lock_guard<HIVE_PROFILE_LOCKABLE_BASE(std::mutex)> lock{mutex_};
-            allocator_->Deallocate(ptr);
+        void Deallocate(void* ptr) {
+            std::lock_guard<HIVE_PROFILE_LOCKABLE_BASE(std::mutex)> lock{m_mutex};
+            m_allocator->Deallocate(ptr);
         }
 
         /**
@@ -106,10 +102,7 @@ namespace comb
          * Safe to call without a lock because the block header is
          * immutable between Allocate and Deallocate.
          */
-        [[nodiscard]] size_t GetBlockUsableSize(const void* ptr) const
-        {
-            return allocator_->GetBlockUsableSize(ptr);
-        }
+        [[nodiscard]] size_t GetBlockUsableSize(const void* ptr) const { return m_allocator->GetBlockUsableSize(ptr); }
 
         /**
          * Get the underlying allocator (not thread-safe access!)
@@ -118,44 +111,33 @@ namespace comb
          * Prefer using the wrapper's methods (GetUsedMemory, GetTotalMemory) which are mutex-protected.
          * Only use Underlying() for allocator-specific methods not exposed by the wrapper.
          */
-        [[nodiscard]] UnderlyingAllocator& Underlying() noexcept
-        {
-            return *allocator_;
-        }
+        [[nodiscard]] UnderlyingAllocator& Underlying() noexcept { return *m_allocator; }
 
-        [[nodiscard]] const UnderlyingAllocator& Underlying() const noexcept
-        {
-            return *allocator_;
-        }
+        [[nodiscard]] const UnderlyingAllocator& Underlying() const noexcept { return *m_allocator; }
 
         /**
          * Get allocator name
          */
-        [[nodiscard]] const char* GetName() const noexcept
-        {
-            return "ThreadSafeAllocator";
-        }
+        [[nodiscard]] const char* GetName() const noexcept { return "ThreadSafeAllocator"; }
 
         /**
          * Get used memory (delegates to underlying, may not be thread-safe depending on allocator)
          */
-        [[nodiscard]] size_t GetUsedMemory() const
-        {
-            std::lock_guard<HIVE_PROFILE_LOCKABLE_BASE(std::mutex)> lock{mutex_};
-            return allocator_->GetUsedMemory();
+        [[nodiscard]] size_t GetUsedMemory() const {
+            std::lock_guard<HIVE_PROFILE_LOCKABLE_BASE(std::mutex)> lock{m_mutex};
+            return m_allocator->GetUsedMemory();
         }
 
         /**
          * Get total memory capacity
          */
-        [[nodiscard]] size_t GetTotalMemory() const
-        {
-            std::lock_guard<HIVE_PROFILE_LOCKABLE_BASE(std::mutex)> lock{mutex_};
-            return allocator_->GetTotalMemory();
+        [[nodiscard]] size_t GetTotalMemory() const {
+            std::lock_guard<HIVE_PROFILE_LOCKABLE_BASE(std::mutex)> lock{m_mutex};
+            return m_allocator->GetTotalMemory();
         }
 
     private:
-        UnderlyingAllocator* allocator_;
-        mutable HIVE_PROFILE_LOCKABLE_N(std::mutex, mutex_, "AllocatorMutex");
+        UnderlyingAllocator* m_allocator;
+        mutable HIVE_PROFILE_LOCKABLE_N(std::mutex, m_mutex, "AllocatorMutex");
     };
-}
+} // namespace comb

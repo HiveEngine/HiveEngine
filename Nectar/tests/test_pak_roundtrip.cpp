@@ -1,31 +1,31 @@
 #define _CRT_SECURE_NO_WARNINGS
-#include <larvae/larvae.h>
+#include <comb/default_allocator.h>
+
+#include <nectar/core/content_hash.h>
+#include <nectar/pak/npak_format.h>
 #include <nectar/pak/pak_builder.h>
 #include <nectar/pak/pak_reader.h>
-#include <nectar/pak/npak_format.h>
-#include <nectar/core/content_hash.h>
-#include <comb/default_allocator.h>
-#include <cstring>
+
+#include <larvae/larvae.h>
+
 #include <cstdio>
+#include <cstring>
 #include <filesystem>
 
-namespace {
+namespace
+{
 
-    auto& GetPakRtAlloc()
-    {
+    auto& GetPakRtAlloc() {
         static comb::ModuleAllocator alloc{"TestPakRT", 8 * 1024 * 1024};
         return alloc.Get();
     }
 
-    const char* TempPakPath()
-    {
-        static std::string path =
-            (std::filesystem::temp_directory_path() / "hive_test_output.npak").string();
+    const char* TempPakPath() {
+        static std::string path = (std::filesystem::temp_directory_path() / "hive_test_output.npak").string();
         return path.c_str();
     }
 
-    void CleanupTempPak()
-    {
+    void CleanupTempPak() {
         std::remove(TempPakPath());
     }
 
@@ -40,8 +40,7 @@ namespace {
 
         {
             nectar::PakBuilder builder{alloc};
-            builder.AddBlob(hash, wax::ByteSpan{data, sizeof(data)},
-                            nectar::CompressionMethod::None);
+            builder.AddBlob(hash, wax::ByteSpan{data, sizeof(data)}, nectar::CompressionMethod::NONE);
             larvae::AssertTrue(builder.Build(TempPakPath()));
         }
 
@@ -71,9 +70,9 @@ namespace {
 
         {
             nectar::PakBuilder builder{alloc};
-            builder.AddBlob(h1, {d1, sizeof(d1)}, nectar::CompressionMethod::None);
-            builder.AddBlob(h2, {d2, sizeof(d2)}, nectar::CompressionMethod::None);
-            builder.AddBlob(h3, {d3, sizeof(d3)}, nectar::CompressionMethod::None);
+            builder.AddBlob(h1, {d1, sizeof(d1)}, nectar::CompressionMethod::NONE);
+            builder.AddBlob(h2, {d2, sizeof(d2)}, nectar::CompressionMethod::NONE);
+            builder.AddBlob(h3, {d3, sizeof(d3)}, nectar::CompressionMethod::NONE);
             larvae::AssertTrue(builder.Build(TempPakPath()));
         }
 
@@ -113,7 +112,7 @@ namespace {
 
         {
             nectar::PakBuilder builder{alloc};
-            builder.AddBlob(hash, data.View(), nectar::CompressionMethod::None);
+            builder.AddBlob(hash, data.View(), nectar::CompressionMethod::NONE);
             larvae::AssertTrue(builder.Build(TempPakPath()));
         }
 
@@ -174,7 +173,7 @@ namespace {
 
         {
             nectar::PakBuilder builder{alloc};
-            builder.AddBlob(hash, {data, kSize}, nectar::CompressionMethod::Zstd);
+            builder.AddBlob(hash, {data, kSize}, nectar::CompressionMethod::ZSTD);
             larvae::AssertTrue(builder.Build(TempPakPath()));
         }
 
@@ -210,8 +209,8 @@ namespace {
         {
             nectar::PakBuilder builder{alloc};
             builder.AddBlob(h1, {d1, kSize}, nectar::CompressionMethod::LZ4);
-            builder.AddBlob(h2, {d2, kSize}, nectar::CompressionMethod::Zstd);
-            builder.AddBlob(h3, {d3, kSize}, nectar::CompressionMethod::None);
+            builder.AddBlob(h2, {d2, kSize}, nectar::CompressionMethod::ZSTD);
+            builder.AddBlob(h3, {d3, kSize}, nectar::CompressionMethod::NONE);
             larvae::AssertTrue(builder.Build(TempPakPath()));
         }
 
@@ -245,7 +244,7 @@ namespace {
 
         {
             nectar::PakBuilder builder{alloc};
-            builder.AddBlob(hash, {data, sizeof(data)}, nectar::CompressionMethod::None);
+            builder.AddBlob(hash, {data, sizeof(data)}, nectar::CompressionMethod::NONE);
             larvae::AssertTrue(builder.Build(TempPakPath()));
         }
 
@@ -268,7 +267,7 @@ namespace {
 
         {
             nectar::PakBuilder builder{alloc};
-            builder.AddBlob(hash, {data, sizeof(data)}, nectar::CompressionMethod::None);
+            builder.AddBlob(hash, {data, sizeof(data)}, nectar::CompressionMethod::NONE);
             larvae::AssertTrue(builder.Build(TempPakPath()));
         }
 
@@ -321,8 +320,8 @@ namespace {
 
         {
             nectar::PakBuilder builder{alloc};
-            builder.AddBlob(h1, {d1, sizeof(d1)}, nectar::CompressionMethod::None);
-            builder.AddBlob(h2, {d2, sizeof(d2)}, nectar::CompressionMethod::None);
+            builder.AddBlob(h1, {d1, sizeof(d1)}, nectar::CompressionMethod::NONE);
+            builder.AddBlob(h2, {d2, sizeof(d2)}, nectar::CompressionMethod::NONE);
             builder.SetManifest(manifest);
             larvae::AssertTrue(builder.Build(TempPakPath()));
         }

@@ -1,23 +1,26 @@
 #pragma once
 
-#include <comb/allocator_concepts.h>
 #include <hive/core/assert.h>
 #include <hive/profiling/profiler.h>
+
+#include <comb/allocator_concepts.h>
 #include <comb/platform.h>
-#include <cstddef>
+
 #include <algorithm>
-#include <cstring>  // For memset
+#include <cstddef>
+#include <cstring> // For memset
 #include <memory>
 
 // Memory debugging (zero overhead when disabled)
 #if COMB_MEM_DEBUG
-    #include <comb/debug/mem_debug_config.h>
-    #include <comb/debug/allocation_registry.h>
-    #include <comb/debug/allocation_history.h>
-    #include <comb/debug/global_memory_tracker.h>
-    #include <comb/debug/platform_utils.h>
-    #include <hive/core/log.h>
-    #include <comb/combmodule.h>
+#include <hive/core/log.h>
+
+#include <comb/combmodule.h>
+#include <comb/debug/allocation_history.h>
+#include <comb/debug/allocation_registry.h>
+#include <comb/debug/global_memory_tracker.h>
+#include <comb/debug/mem_debug_config.h>
+#include <comb/debug/platform_utils.h>
 #endif
 
 namespace comb
@@ -90,8 +93,7 @@ namespace comb
      *   enemyPool.Reset();
      * @endcode
      */
-    template<typename T>
-    class PoolAllocator
+    template <typename T> class PoolAllocator
     {
     public:
         /**
@@ -100,8 +102,7 @@ namespace comb
          */
         explicit PoolAllocator(size_t capacity)
             : capacity_{capacity}
-            , used_count_{0}
-        {
+            , used_count_{0} {
             hive::Assert(capacity > 0, "Pool capacity must be > 0");
 
             constexpr size_t base_slot_size = (sizeof(T) > sizeof(void*)) ? sizeof(T) : sizeof(void*);
@@ -109,10 +110,9 @@ namespace comb
 #if COMB_MEM_DEBUG
             // Front guard offset padded for proper user data alignment
             constexpr size_t user_align = (alignof(T) > alignof(void*)) ? alignof(T) : alignof(void*);
-            constexpr size_t aligned_guard_front =
-                (debug::GuardSize + user_align - 1) & ~(user_align - 1);
+            constexpr size_t aligned_guard_front = (debug::guardSize + user_align - 1) & ~(user_align - 1);
             // Slot: [front padding][user data][back guard], rounded for next slot alignment
-            constexpr size_t slot_size_raw = aligned_guard_front + base_slot_size + debug::GuardSize;
+            constexpr size_t slot_size_raw = aligned_guard_front + base_slot_size + debug::guardSize;
             constexpr size_t slot_size = (slot_size_raw + user_align - 1) & ~(user_align - 1);
 #else
             constexpr size_t slot_size = base_slot_size;
@@ -131,8 +131,7 @@ namespace comb
 #endif
         }
 
-        ~PoolAllocator()
-        {
+        ~PoolAllocator() {
 #if COMB_MEM_DEBUG
             if (registry_)
             {
@@ -171,8 +170,7 @@ namespace comb
             other.total_size_ = 0;
         }
 
-        PoolAllocator& operator=(PoolAllocator&& other) noexcept
-        {
+        PoolAllocator& operator=(PoolAllocator&& other) noexcept {
             if (this != &other)
             {
 #if COMB_MEM_DEBUG
@@ -224,12 +222,11 @@ namespace comb
          * but ignored since pool only handles T-sized objects.
          * tag parameter is zero-cost when COMB_MEM_DEBUG=0.
          */
-        [[nodiscard]] void* Allocate(size_t size, size_t alignment, const char* tag = nullptr)
-        {
+        [[nodiscard]] void* Allocate(size_t size, size_t alignment, const char* tag = nullptr) {
 #if COMB_MEM_DEBUG
             void* ptr = AllocateDebug(size, alignment, tag);
 #else
-            (void)tag;  // Suppress unused warning
+            (void)tag; // Suppress unused warning
 
             hive::Assert(size <= sizeof(T), "PoolAllocator can only allocate sizeof(T) bytes");
             hive::Assert(alignment <= alignof(T), "PoolAllocator alignment limited to alignof(T)");
@@ -260,8 +257,7 @@ namespace comb
          * IMPORTANT: Pointer must have been allocated from THIS pool.
          * No validation is performed - deallocating wrong pointer is undefined behavior.
          */
-        void Deallocate(void* ptr)
-        {
+        void Deallocate(void* ptr) {
             if (!ptr)
                 return;
 
@@ -283,15 +279,13 @@ namespace comb
          * Rebuilds free-list to initial state
          * Does NOT call destructors on objects!
          */
-        void Reset()
-        {
+        void Reset() {
             constexpr size_t base_slot_size = (sizeof(T) > sizeof(void*)) ? sizeof(T) : sizeof(void*);
 
 #if COMB_MEM_DEBUG
             constexpr size_t user_align = (alignof(T) > alignof(void*)) ? alignof(T) : alignof(void*);
-            constexpr size_t aligned_guard_front =
-                (debug::GuardSize + user_align - 1) & ~(user_align - 1);
-            constexpr size_t slot_size_raw = aligned_guard_front + base_slot_size + debug::GuardSize;
+            constexpr size_t aligned_guard_front = (debug::guardSize + user_align - 1) & ~(user_align - 1);
+            constexpr size_t slot_size_raw = aligned_guard_front + base_slot_size + debug::guardSize;
             constexpr size_t slot_size = (slot_size_raw + user_align - 1) & ~(user_align - 1);
             constexpr size_t guard_offset = aligned_guard_front;
 #else
@@ -325,55 +319,37 @@ namespace comb
          * Get number of objects currently allocated
          * @return Number of objects in use
          */
-        [[nodiscard]] size_t GetUsedMemory() const
-        {
-            return used_count_ * sizeof(T);
-        }
+        [[nodiscard]] size_t GetUsedMemory() const { return used_count_ * sizeof(T); }
 
         /**
          * Get total capacity of pool
          * @return Total bytes for all objects
          */
-        [[nodiscard]] size_t GetTotalMemory() const
-        {
-            return capacity_ * sizeof(T);
-        }
+        [[nodiscard]] size_t GetTotalMemory() const { return capacity_ * sizeof(T); }
 
         /**
          * Get allocator name for debugging
          * @return "PoolAllocator"
          */
-        [[nodiscard]] const char* GetName() const
-        {
-            return "PoolAllocator";
-        }
+        [[nodiscard]] const char* GetName() const { return "PoolAllocator"; }
 
         /**
          * Get pool capacity
          * @return Maximum number of objects
          */
-        [[nodiscard]] size_t GetCapacity() const
-        {
-            return capacity_;
-        }
+        [[nodiscard]] size_t GetCapacity() const { return capacity_; }
 
         /**
          * Get number of objects currently in use
          * @return Number of allocated objects
          */
-        [[nodiscard]] size_t GetUsedCount() const
-        {
-            return used_count_;
-        }
+        [[nodiscard]] size_t GetUsedCount() const { return used_count_; }
 
         /**
          * Get number of free slots available
          * @return Number of objects that can still be allocated
          */
-        [[nodiscard]] size_t GetFreeCount() const
-        {
-            return capacity_ - used_count_;
-        }
+        [[nodiscard]] size_t GetFreeCount() const { return capacity_ - used_count_; }
 
     private:
         void* memory_block_{nullptr};
@@ -393,7 +369,7 @@ namespace comb
 #endif
     };
 
-    template<typename T>
+    template <typename T>
     concept ValidPoolAllocator = Allocator<PoolAllocator<T>>;
 
 #if COMB_MEM_DEBUG
@@ -401,9 +377,7 @@ namespace comb
     // Debug Implementation (Template methods - must be in header)
     // ========================================================================
 
-    template<typename T>
-    void* PoolAllocator<T>::AllocateDebug(size_t size, size_t alignment, const char* tag)
-    {
+    template <typename T> void* PoolAllocator<T>::AllocateDebug(size_t size, size_t alignment, const char* tag) {
         using namespace debug;
 
         hive::Assert(size <= sizeof(T), "PoolAllocator can only allocate sizeof(T) bytes");
@@ -412,8 +386,7 @@ namespace comb
         // Pool exhausted - check BEFORE adding guard bytes
         if (!free_list_head_)
         {
-            hive::LogError(comb::LogCombRoot,
-                           "[MEM_DEBUG] [{}] Pool exhausted: size={}, capacity={}, tag={}",
+            hive::LogError(comb::LOG_COMB_ROOT, "[MEM_DEBUG] [{}] Pool exhausted: size={}, capacity={}, tag={}",
                            GetName(), sizeof(T), capacity_, tag ? tag : "<no tag>");
             return nullptr;
         }
@@ -437,18 +410,18 @@ namespace comb
         // 3. Initialize memory with pattern (detect uninitialized reads)
         if constexpr (kMemDebugEnabled)
         {
-            std::memset(userPtr, AllocatedMemoryPattern, sizeof(T));
+            std::memset(userPtr, allocatedMemoryPattern, sizeof(T));
         }
 
         // 4. Register allocation
         AllocationInfo info{};
-        info.address = userPtr;
-        info.size = sizeof(T);
-        info.alignment = alignof(T);
-        info.timestamp = GetTimestamp();
-        info.tag = tag;
-        info.allocationId = registry_->GetNextAllocationId();
-        info.threadId = GetThreadId();
+        info.m_address = userPtr;
+        info.m_size = sizeof(T);
+        info.m_alignment = alignof(T);
+        info.m_timestamp = GetTimestamp();
+        info.m_tag = tag;
+        info.m_allocationId = registry_->GetNextAllocationId();
+        info.m_threadId = GetThreadId();
 
 #if COMB_MEM_DEBUG_CALLSTACKS
         CaptureCallstack(info.callstack, info.callstackDepth);
@@ -464,19 +437,17 @@ namespace comb
         return userPtr;
     }
 
-    template<typename T>
-    void PoolAllocator<T>::DeallocateDebug(void* ptr)
-    {
+    template <typename T> void PoolAllocator<T>::DeallocateDebug(void* ptr) {
         using namespace debug;
 
-        if (!ptr) return;
+        if (!ptr)
+            return;
 
         // 1. Find allocation info
         auto* info = registry_->FindAllocation(ptr);
         if (!info)
         {
-            hive::LogError(comb::LogCombRoot,
-                           "[MEM_DEBUG] [{}] Double-free or invalid pointer detected! Address: {}",
+            hive::LogError(comb::LOG_COMB_ROOT, "[MEM_DEBUG] [{}] Double-free or invalid pointer detected! Address: {}",
                            GetName(), ptr);
             hive::Assert(false, "Double-free or invalid pointer (not found in registry)");
             return;
@@ -487,19 +458,19 @@ namespace comb
         {
             if (!info->CheckGuards())
             {
-                if (info->ReadGuardFront() != GuardMagic)
+                if (info->ReadGuardFront() != guardMagic)
                 {
-                    hive::LogError(comb::LogCombRoot,
+                    hive::LogError(comb::LOG_COMB_ROOT,
                                    "[MEM_DEBUG] [{}] Buffer UNDERRUN detected! Address: {}, Size: {}, Tag: {}",
-                                   GetName(), ptr, info->size, info->GetTagOrDefault());
+                                   GetName(), ptr, info->m_size, info->GetTagOrDefault());
                     hive::Assert(false, "Buffer underrun detected");
                 }
 
-                if (info->ReadGuardBack() != GuardMagic)
+                if (info->ReadGuardBack() != guardMagic)
                 {
-                    hive::LogError(comb::LogCombRoot,
+                    hive::LogError(comb::LOG_COMB_ROOT,
                                    "[MEM_DEBUG] [{}] Buffer OVERRUN detected! Address: {}, Size: {}, Tag: {}",
-                                   GetName(), ptr, info->size, info->GetTagOrDefault());
+                                   GetName(), ptr, info->m_size, info->GetTagOrDefault());
                     hive::Assert(false, "Buffer overrun detected");
                 }
             }
@@ -507,7 +478,7 @@ namespace comb
 
         // 3. Fill with freed pattern (detect use-after-free)
 #if COMB_MEM_DEBUG_USE_AFTER_FREE
-        std::memset(ptr, FreedMemoryPattern, sizeof(T));
+        std::memset(ptr, freedMemoryPattern, sizeof(T));
 #endif
 
         // 4. Record deallocation in history
@@ -529,4 +500,4 @@ namespace comb
     }
 
 #endif // COMB_MEM_DEBUG
-}
+} // namespace comb

@@ -1,142 +1,131 @@
-#include <waggle/project/gameplay_module.h>
+#include <hive/core/log.h>
 
 #include <queen/world/world.h>
-#include <hive/core/log.h>
+
+#include <waggle/project/gameplay_module.h>
 
 #include <utility>
 
 namespace
 {
 
-static const hive::LogCategory LogGameplay{"Waggle.GameplayModule"};
+    static const hive::LogCategory LOG_GAMEPLAY{"Waggle.GameplayModule"};
 
 } // namespace
 
 namespace waggle
 {
 
-GameplayModule::~GameplayModule()
-{
-    Unload();
-}
-
-GameplayModule::GameplayModule(GameplayModule&& other) noexcept
-    : lib_{std::move(other.lib_)}
-    , register_fn_{other.register_fn_}
-    , unregister_fn_{other.unregister_fn_}
-    , version_fn_{other.version_fn_}
-    , registered_{other.registered_}
-{
-    other.register_fn_ = nullptr;
-    other.unregister_fn_ = nullptr;
-    other.version_fn_ = nullptr;
-    other.registered_ = false;
-}
-
-GameplayModule& GameplayModule::operator=(GameplayModule&& other) noexcept
-{
-    if (this != &other)
-    {
+    GameplayModule::~GameplayModule() {
         Unload();
-        lib_ = std::move(other.lib_);
-        register_fn_ = other.register_fn_;
-        unregister_fn_ = other.unregister_fn_;
-        version_fn_ = other.version_fn_;
-        registered_ = other.registered_;
-        other.register_fn_ = nullptr;
-        other.unregister_fn_ = nullptr;
-        other.version_fn_ = nullptr;
-        other.registered_ = false;
-    }
-    return *this;
-}
-
-bool GameplayModule::Load(const char* dll_path)
-{
-    Unload();
-
-    if (!lib_.Load(dll_path))
-    {
-        hive::LogError(LogGameplay, "Failed to load gameplay DLL: {}", lib_.GetError());
-        return false;
     }
 
-    register_fn_ = lib_.GetFunction<GameplayRegisterFn>("HiveGameplayRegister");
-    if (!register_fn_)
-    {
-        hive::LogError(LogGameplay, "DLL missing required symbol HiveGameplayRegister");
-        lib_.Unload();
-        return false;
+    GameplayModule::GameplayModule(GameplayModule&& other) noexcept
+        : m_lib{std::move(other.m_lib)}
+        , m_registerFn{other.m_registerFn}
+        , m_unregisterFn{other.m_unregisterFn}
+        , m_versionFn{other.m_versionFn}
+        , m_registered{other.m_registered} {
+        other.m_registerFn = nullptr;
+        other.m_unregisterFn = nullptr;
+        other.m_versionFn = nullptr;
+        other.m_registered = false;
     }
 
-    unregister_fn_ = lib_.GetFunction<GameplayUnregisterFn>("HiveGameplayUnregister");
-    version_fn_ = lib_.GetFunction<GameplayVersionFn>("HiveGameplayVersion");
+    GameplayModule& GameplayModule::operator=(GameplayModule&& other) noexcept {
+        if (this != &other)
+        {
+            Unload();
+            m_lib = std::move(other.m_lib);
+            m_registerFn = other.m_registerFn;
+            m_unregisterFn = other.m_unregisterFn;
+            m_versionFn = other.m_versionFn;
+            m_registered = other.m_registered;
+            other.m_registerFn = nullptr;
+            other.m_unregisterFn = nullptr;
+            other.m_versionFn = nullptr;
+            other.m_registered = false;
+        }
+        return *this;
+    }
 
-    hive::LogInfo(LogGameplay, "Gameplay module loaded (version: {})",
-                  version_fn_ ? version_fn_() : "unknown");
-    return true;
-}
+    bool GameplayModule::Load(const char* dllPath) {
+        Unload();
 
-void GameplayModule::Unload()
-{
-    register_fn_ = nullptr;
-    unregister_fn_ = nullptr;
-    version_fn_ = nullptr;
-    registered_ = false;
-    lib_.Unload();
-}
+        if (!m_lib.Load(dllPath))
+        {
+            hive::LogError(LOG_GAMEPLAY, "Failed to load gameplay DLL: {}", m_lib.GetError());
+            return false;
+        }
 
-bool GameplayModule::Register(queen::World& world)
-{
-    if (!register_fn_)
-        return false;
+        m_registerFn = m_lib.GetFunction<GameplayRegisterFn>("HiveGameplayRegister");
+        if (m_registerFn == nullptr)
+        {
+            hive::LogError(LOG_GAMEPLAY, "DLL missing required symbol HiveGameplayRegister");
+            m_lib.Unload();
+            return false;
+        }
 
-    register_fn_(world);
-    world.InvalidateScheduler();
-    registered_ = true;
-    return true;
-}
+        m_unregisterFn = m_lib.GetFunction<GameplayUnregisterFn>("HiveGameplayUnregister");
+        m_versionFn = m_lib.GetFunction<GameplayVersionFn>("HiveGameplayVersion");
 
-void GameplayModule::Unregister(queen::World& world)
-{
-    if (!registered_)
-        return;
+        hive::LogInfo(LOG_GAMEPLAY, "Gameplay module loaded (version: {})",
+                      m_versionFn != nullptr ? m_versionFn() : "unknown");
+        return true;
+    }
 
-    if (unregister_fn_)
-        unregister_fn_(world);
+    void GameplayModule::Unload() {
+        m_registerFn = nullptr;
+        m_unregisterFn = nullptr;
+        m_versionFn = nullptr;
+        m_registered = false;
+        m_lib.Unload();
+    }
 
-    registered_ = false;
-}
+    bool GameplayModule::Register(queen::World& world) {
+        if (m_registerFn == nullptr)
+            return false;
 
-bool GameplayModule::Reload(const char* dll_path, queen::World& world)
-{
-    Unregister(world);
-    Unload();
+        m_registerFn(world);
+        world.InvalidateScheduler();
+        m_registered = true;
+        return true;
+    }
 
-    if (!Load(dll_path))
-        return false;
+    void GameplayModule::Unregister(queen::World& world) {
+        if (!m_registered)
+            return;
 
-    return Register(world);
-}
+        if (m_unregisterFn != nullptr)
+            m_unregisterFn(world);
 
-bool GameplayModule::IsLoaded() const noexcept
-{
-    return lib_.IsLoaded();
-}
+        m_registered = false;
+    }
 
-bool GameplayModule::IsRegistered() const noexcept
-{
-    return registered_;
-}
+    bool GameplayModule::Reload(const char* dllPath, queen::World& world) {
+        Unregister(world);
+        Unload();
 
-const char* GameplayModule::Version() const noexcept
-{
-    return version_fn_ ? version_fn_() : "";
-}
+        if (!Load(dllPath))
+            return false;
 
-const char* GameplayModule::GetError() const noexcept
-{
-    return lib_.GetError();
-}
+        return Register(world);
+    }
+
+    bool GameplayModule::IsLoaded() const noexcept {
+        return m_lib.IsLoaded();
+    }
+
+    bool GameplayModule::IsRegistered() const noexcept {
+        return m_registered;
+    }
+
+    const char* GameplayModule::Version() const noexcept {
+        return m_versionFn != nullptr ? m_versionFn() : "";
+    }
+
+    const char* GameplayModule::GetError() const noexcept {
+        return m_lib.GetError();
+    }
 
 } // namespace waggle

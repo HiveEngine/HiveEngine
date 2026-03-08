@@ -1,8 +1,10 @@
 #pragma once
 
-#include <queen/core/type_id.h>
-#include <wax/containers/vector.h>
 #include <comb/allocator_concepts.h>
+
+#include <wax/containers/vector.h>
+
+#include <queen/core/type_id.h>
 
 namespace queen
 {
@@ -11,10 +13,10 @@ namespace queen
      */
     enum class WorldAccess : uint8_t
     {
-        None,       // No direct world access
-        Read,       // Read-only world access
-        Write,      // Read-write world access
-        Exclusive,  // Exclusive access (blocks all other systems)
+        NONE,      // No direct world access
+        READ,      // Read-only world access
+        WRITE,     // Read-write world access
+        EXCLUSIVE, // Exclusive access (blocks all other systems)
     };
 
     /**
@@ -55,92 +57,43 @@ namespace queen
      *   }
      * @endcode
      */
-    template<comb::Allocator Allocator>
-    class AccessDescriptor
+    template <comb::Allocator Allocator> class AccessDescriptor
     {
     public:
         explicit AccessDescriptor(Allocator& allocator)
-            : component_reads_{allocator}
-            , component_writes_{allocator}
-            , resource_reads_{allocator}
-            , resource_writes_{allocator}
-            , world_access_{WorldAccess::None}
-        {
-        }
+            : m_componentReads{allocator}
+            , m_componentWrites{allocator}
+            , m_resourceReads{allocator}
+            , m_resourceWrites{allocator}
+            , m_worldAccess{WorldAccess::NONE} {}
 
-        template<typename T>
-        void AddComponentRead()
-        {
-            AddUnique(component_reads_, TypeIdOf<T>());
-        }
+        template <typename T> void AddComponentRead() { AddUnique(m_componentReads, TypeIdOf<T>()); }
 
-        template<typename T>
-        void AddComponentWrite()
-        {
-            AddUnique(component_writes_, TypeIdOf<T>());
-        }
+        template <typename T> void AddComponentWrite() { AddUnique(m_componentWrites, TypeIdOf<T>()); }
 
-        template<typename T>
-        void AddResourceRead()
-        {
-            AddUnique(resource_reads_, TypeIdOf<T>());
-        }
+        template <typename T> void AddResourceRead() { AddUnique(m_resourceReads, TypeIdOf<T>()); }
 
-        template<typename T>
-        void AddResourceWrite()
-        {
-            AddUnique(resource_writes_, TypeIdOf<T>());
-        }
+        template <typename T> void AddResourceWrite() { AddUnique(m_resourceWrites, TypeIdOf<T>()); }
 
-        void AddComponentRead(TypeId type_id)
-        {
-            AddUnique(component_reads_, type_id);
-        }
+        void AddComponentRead(TypeId typeId) { AddUnique(m_componentReads, typeId); }
 
-        void AddComponentWrite(TypeId type_id)
-        {
-            AddUnique(component_writes_, type_id);
-        }
+        void AddComponentWrite(TypeId typeId) { AddUnique(m_componentWrites, typeId); }
 
-        void AddResourceRead(TypeId type_id)
-        {
-            AddUnique(resource_reads_, type_id);
-        }
+        void AddResourceRead(TypeId typeId) { AddUnique(m_resourceReads, typeId); }
 
-        void AddResourceWrite(TypeId type_id)
-        {
-            AddUnique(resource_writes_, type_id);
-        }
+        void AddResourceWrite(TypeId typeId) { AddUnique(m_resourceWrites, typeId); }
 
-        void SetWorldAccess(WorldAccess access) noexcept
-        {
-            world_access_ = access;
-        }
+        void SetWorldAccess(WorldAccess access) noexcept { m_worldAccess = access; }
 
-        [[nodiscard]] WorldAccess GetWorldAccess() const noexcept
-        {
-            return world_access_;
-        }
+        [[nodiscard]] WorldAccess GetWorldAccess() const noexcept { return m_worldAccess; }
 
-        [[nodiscard]] const wax::Vector<TypeId>& ComponentReads() const noexcept
-        {
-            return component_reads_;
-        }
+        [[nodiscard]] const wax::Vector<TypeId>& ComponentReads() const noexcept { return m_componentReads; }
 
-        [[nodiscard]] const wax::Vector<TypeId>& ComponentWrites() const noexcept
-        {
-            return component_writes_;
-        }
+        [[nodiscard]] const wax::Vector<TypeId>& ComponentWrites() const noexcept { return m_componentWrites; }
 
-        [[nodiscard]] const wax::Vector<TypeId>& ResourceReads() const noexcept
-        {
-            return resource_reads_;
-        }
+        [[nodiscard]] const wax::Vector<TypeId>& ResourceReads() const noexcept { return m_resourceReads; }
 
-        [[nodiscard]] const wax::Vector<TypeId>& ResourceWrites() const noexcept
-        {
-            return resource_writes_;
-        }
+        [[nodiscard]] const wax::Vector<TypeId>& ResourceWrites() const noexcept { return m_resourceWrites; }
 
         /**
          * Check if this descriptor conflicts with another
@@ -152,24 +105,22 @@ namespace queen
          * @param other The other access descriptor
          * @return true if systems cannot run in parallel
          */
-        [[nodiscard]] bool ConflictsWith(const AccessDescriptor& other) const noexcept
-        {
-            if (world_access_ == WorldAccess::Exclusive ||
-                other.world_access_ == WorldAccess::Exclusive)
+        [[nodiscard]] bool ConflictsWith(const AccessDescriptor& other) const noexcept {
+            if (m_worldAccess == WorldAccess::EXCLUSIVE || other.m_worldAccess == WorldAccess::EXCLUSIVE)
             {
                 return true;
             }
 
-            if (HasOverlap(component_writes_, other.component_reads_) ||
-                HasOverlap(component_writes_, other.component_writes_) ||
-                HasOverlap(component_reads_, other.component_writes_))
+            if (HasOverlap(m_componentWrites, other.m_componentReads) ||
+                HasOverlap(m_componentWrites, other.m_componentWrites) ||
+                HasOverlap(m_componentReads, other.m_componentWrites))
             {
                 return true;
             }
 
-            if (HasOverlap(resource_writes_, other.resource_reads_) ||
-                HasOverlap(resource_writes_, other.resource_writes_) ||
-                HasOverlap(resource_reads_, other.resource_writes_))
+            if (HasOverlap(m_resourceWrites, other.m_resourceReads) ||
+                HasOverlap(m_resourceWrites, other.m_resourceWrites) ||
+                HasOverlap(m_resourceReads, other.m_resourceWrites))
             {
                 return true;
             }
@@ -180,47 +131,34 @@ namespace queen
         /**
          * Check if this descriptor is empty (no access)
          */
-        [[nodiscard]] bool IsEmpty() const noexcept
-        {
-            return component_reads_.IsEmpty() &&
-                   component_writes_.IsEmpty() &&
-                   resource_reads_.IsEmpty() &&
-                   resource_writes_.IsEmpty() &&
-                   world_access_ == WorldAccess::None;
+        [[nodiscard]] bool IsEmpty() const noexcept {
+            return m_componentReads.IsEmpty() && m_componentWrites.IsEmpty() && m_resourceReads.IsEmpty() &&
+                   m_resourceWrites.IsEmpty() && m_worldAccess == WorldAccess::NONE;
         }
 
         /**
          * Check if this is a pure system (no ECS data access)
          */
-        [[nodiscard]] bool IsPure() const noexcept
-        {
-            return IsEmpty();
-        }
+        [[nodiscard]] bool IsPure() const noexcept { return IsEmpty(); }
 
         /**
          * Check if this system requires exclusive access
          */
-        [[nodiscard]] bool IsExclusive() const noexcept
-        {
-            return world_access_ == WorldAccess::Exclusive;
-        }
+        [[nodiscard]] bool IsExclusive() const noexcept { return m_worldAccess == WorldAccess::EXCLUSIVE; }
 
     private:
-        static void AddUnique(wax::Vector<TypeId>& vec, TypeId type_id)
-        {
+        static void AddUnique(wax::Vector<TypeId>& vec, TypeId typeId) {
             for (size_t i = 0; i < vec.Size(); ++i)
             {
-                if (vec[i] == type_id)
+                if (vec[i] == typeId)
                 {
                     return;
                 }
             }
-            vec.PushBack(type_id);
+            vec.PushBack(typeId);
         }
 
-        static bool HasOverlap(const wax::Vector<TypeId>& a,
-                               const wax::Vector<TypeId>& b) noexcept
-        {
+        static bool HasOverlap(const wax::Vector<TypeId>& a, const wax::Vector<TypeId>& b) noexcept {
             for (size_t i = 0; i < a.Size(); ++i)
             {
                 for (size_t j = 0; j < b.Size(); ++j)
@@ -234,10 +172,10 @@ namespace queen
             return false;
         }
 
-        wax::Vector<TypeId> component_reads_;
-        wax::Vector<TypeId> component_writes_;
-        wax::Vector<TypeId> resource_reads_;
-        wax::Vector<TypeId> resource_writes_;
-        WorldAccess world_access_;
+        wax::Vector<TypeId> m_componentReads;
+        wax::Vector<TypeId> m_componentWrites;
+        wax::Vector<TypeId> m_resourceReads;
+        wax::Vector<TypeId> m_resourceWrites;
+        WorldAccess m_worldAccess;
     };
-}
+} // namespace queen

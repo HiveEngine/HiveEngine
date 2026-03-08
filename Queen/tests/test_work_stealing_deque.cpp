@@ -1,9 +1,12 @@
-#include <larvae/larvae.h>
-#include <queen/scheduler/work_stealing_deque.h>
 #include <comb/linear_allocator.h>
+
+#include <queen/scheduler/work_stealing_deque.h>
+
+#include <larvae/larvae.h>
+
+#include <atomic>
 #include <thread>
 #include <vector>
-#include <atomic>
 
 namespace
 {
@@ -39,15 +42,15 @@ namespace
         // Index 8 wraps to slot 0, index 9 wraps to slot 1, etc.
         buffer.Put(0, 10);
         buffer.Put(7, 77);
-        buffer.Put(8, 88);   // Wraps to slot 0, overwriting 10
-        buffer.Put(9, 99);   // Wraps to slot 1
+        buffer.Put(8, 88); // Wraps to slot 0, overwriting 10
+        buffer.Put(9, 99); // Wraps to slot 1
 
         // Index 8 maps to same slot as index 0 (8 & 7 = 0)
         larvae::AssertEqual(buffer.Get(8), 88);
-        larvae::AssertEqual(buffer.Get(0), 88);  // Same as index 8
+        larvae::AssertEqual(buffer.Get(0), 88); // Same as index 8
         larvae::AssertEqual(buffer.Get(7), 77);
         larvae::AssertEqual(buffer.Get(9), 99);
-        larvae::AssertEqual(buffer.Get(1), 99);  // Same as index 9
+        larvae::AssertEqual(buffer.Get(1), 99); // Same as index 9
     });
 
     auto test4 = larvae::RegisterTest("QueenCircularBuffer", "Grow", []() {
@@ -254,8 +257,7 @@ namespace
         std::atomic<int> total_stolen{0};
         std::atomic<bool> done_producing{false};
 
-        auto stealer_func = [&]()
-        {
+        auto stealer_func = [&]() {
             int local_count = 0;
             while (!done_producing.load(std::memory_order_acquire) || !deque.IsEmpty())
             {
@@ -304,8 +306,7 @@ namespace
         std::atomic<int> total_stolen{0};
         std::atomic<bool> done{false};
 
-        auto stealer_func = [&]()
-        {
+        auto stealer_func = [&]() {
             int local_count = 0;
             while (!done.load(std::memory_order_acquire))
             {
@@ -377,8 +378,7 @@ namespace
             std::atomic<int> pop_got{0};
             std::atomic<int> steal_got{0};
 
-            std::thread stealer([&]()
-            {
+            std::thread stealer([&]() {
                 auto result = deque.Steal();
                 if (result.has_value())
                 {
@@ -414,8 +414,7 @@ namespace
         std::atomic<int> consumed{0};
         std::atomic<bool> done{false};
 
-        auto owner_func = [&]()
-        {
+        auto owner_func = [&]() {
             int local_produced = 0;
             int local_consumed = 0;
 
@@ -444,8 +443,7 @@ namespace
             done.store(true, std::memory_order_release);
         };
 
-        auto stealer_func = [&]()
-        {
+        auto stealer_func = [&]() {
             int local_stolen = 0;
             while (!done.load(std::memory_order_acquire))
             {
@@ -483,7 +481,9 @@ namespace
             deque.Push(i);
         }
 
-        while (deque.Pop().has_value()) {}
+        while (deque.Pop().has_value())
+        {
+        }
 
         larvae::AssertTrue(deque.IsEmpty());
         larvae::AssertEqual(deque.Size(), size_t{0});
@@ -491,4 +491,4 @@ namespace
         larvae::AssertFalse(deque.Pop().has_value());
         larvae::AssertFalse(deque.Steal().has_value());
     });
-}
+} // namespace

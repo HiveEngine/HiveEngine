@@ -1,226 +1,231 @@
-#include <waggle/engine_runner.h>
-
-#include <hive/core/moduleregistry.h>
 #include <hive/core/log.h>
+#include <hive/core/moduleregistry.h>
 #include <hive/profiling/profiler.h>
 
+#include <waggle/engine_runner.h>
+
 #if HIVE_FEATURE_GLFW
-#include <terra/terra.h>
 #include <terra/platform/glfw_terra.h>
+#include <terra/terra.h>
+
 #include <antennae/input.h>
 #include <antennae/keyboard.h>
 #endif
 
 #if (HIVE_FEATURE_VULKAN || HIVE_FEATURE_D3D12) && HIVE_FEATURE_GLFW
-#include <swarm/swarm.h>
 #include <swarm/platform/diligent_swarm.h>
+#include <swarm/swarm.h>
 #ifdef _WIN32
-    #define TERRA_NATIVE_WIN32
-    #include <terra/terra_native.h>
-    #include <swarm/platform/win32_swarm.h>
+#define TERRA_NATIVE_WIN32
+#include <swarm/platform/win32_swarm.h>
+
+#include <terra/terra_native.h>
 #elif defined(__linux__)
-    #define TERRA_NATIVE_LINUX
-    #include <terra/terra_native.h>
-    #include <swarm/platform/linux_swarm.h>
+#define TERRA_NATIVE_LINUX
+#include <swarm/platform/linux_swarm.h>
+
+#include <terra/terra_native.h>
 #endif
 #endif
 
-static const hive::LogCategory LogEngine{"Waggle.EngineRunner"};
+static const hive::LogCategory LOG_ENGINE{"Waggle.EngineRunner"};
 
 namespace waggle
 {
 
-int Run(const EngineConfig& config, const EngineCallbacks& callbacks)
-{
-    // ---- Module system ----
-    hive::ModuleRegistry moduleRegistry;
-    if (callbacks.on_register_modules)
-        callbacks.on_register_modules();
-    moduleRegistry.CreateModules();
-    moduleRegistry.ConfigureModules();
-    moduleRegistry.InitModules();
+    int Run(const EngineConfig& config, const EngineCallbacks& callbacks) {
+        // ---- Module system ----
+        hive::ModuleRegistry moduleRegistry;
+        if (callbacks.m_onRegisterModules != nullptr)
+            callbacks.m_onRegisterModules();
+        moduleRegistry.CreateModules();
+        moduleRegistry.ConfigureModules();
+        moduleRegistry.InitModules();
 
-    // ---- App (ECS world + fixed timestep) ----
-    App app{config.app};
-    auto& world = app.GetWorld();
+        // ---- App (ECS world + fixed timestep) ----
+        App app{config.m_app};
+        auto& world = app.GetWorld();
 
-    EngineContext ctx{};
-    ctx.app = &app;
-    ctx.world = &world;
+        EngineContext ctx{};
+        ctx.m_app = &app;
+        ctx.m_world = &world;
 
-    bool graphical = (config.mode != EngineMode::Headless);
+        const bool graphical = (config.m_mode != EngineMode::HEADLESS);
 
 #if HIVE_FEATURE_GLFW
-    terra::WindowContext window_ctx{};
-    window_ctx.title_ = config.window_title;
-    window_ctx.width_ = static_cast<int>(config.window_width);
-    window_ctx.height_ = static_cast<int>(config.window_height);
-    terra::WindowContext* window_ptr = nullptr;
+        terra::WindowContext windowCtx{};
+        windowCtx.m_title = config.m_windowTitle;
+        windowCtx.m_width = static_cast<int>(config.m_windowWidth);
+        windowCtx.m_height = static_cast<int>(config.m_windowHeight);
+        terra::WindowContext* windowPtr = nullptr;
 
 #if HIVE_FEATURE_VULKAN || HIVE_FEATURE_D3D12
-    swarm::RenderContext render_ctx{};
-    bool renderer_active = false;
+        swarm::RenderContext renderCtx{};
+        bool rendererActive = false;
 #endif
 
-    if (graphical)
-    {
-        // ---- Window ----
-        if (!terra::InitSystem())
+        if (graphical)
         {
-            hive::LogError(LogEngine, "Failed to initialize windowing backend");
-            moduleRegistry.ShutdownModules();
-            return 1;
-        }
-
-        if (!terra::InitWindowContext(&window_ctx))
-        {
-            hive::LogError(LogEngine, "Failed to create window");
-            terra::ShutdownSystem();
-            moduleRegistry.ShutdownModules();
-            return 1;
-        }
-        window_ptr = &window_ctx;
-        ctx.window = window_ptr;
-
-        // ---- Renderer ----
-#if HIVE_FEATURE_VULKAN || HIVE_FEATURE_D3D12
-        if (config.auto_renderer)
-        {
-            if (!swarm::InitSystem())
+            // ---- Window ----
+            if (!terra::InitSystem())
             {
-                hive::LogError(LogEngine, "Failed to initialize Swarm");
-                terra::ShutdownWindowContext(window_ptr);
-                terra::ShutdownSystem();
+                hive::LogError(LOG_ENGINE, "Failed to initialize windowing backend");
                 moduleRegistry.ShutdownModules();
                 return 1;
             }
 
-            terra::NativeWindow native = terra::GetNativeWindow(window_ptr);
-            bool render_ok = false;
+            if (!terra::InitWindowContext(&windowCtx))
+            {
+                hive::LogError(LOG_ENGINE, "Failed to create window");
+                terra::ShutdownSystem();
+                moduleRegistry.ShutdownModules();
+                return 1;
+            }
+            windowPtr = &windowCtx;
+            ctx.m_window = windowPtr;
+
+            // ---- Renderer ----
+#if HIVE_FEATURE_VULKAN || HIVE_FEATURE_D3D12
+            if (config.m_autoRenderer)
+            {
+                if (!swarm::InitSystem())
+                {
+                    hive::LogError(LOG_ENGINE, "Failed to initialize Swarm");
+                    terra::ShutdownWindowContext(windowPtr);
+                    terra::ShutdownSystem();
+                    moduleRegistry.ShutdownModules();
+                    return 1;
+                }
+
+                terra::NativeWindow native = terra::GetNativeWindow(windowPtr);
+                bool renderOk = false;
 
 #ifdef _WIN32
-            render_ok = swarm::InitRenderContextWin32(&render_ctx, native.instance_, native.window_,
-                static_cast<uint32_t>(window_ctx.width_), static_cast<uint32_t>(window_ctx.height_));
+                renderOk = swarm::InitRenderContextWin32(&renderCtx, native.m_instance, native.m_window,
+                                                         static_cast<uint32_t>(windowCtx.m_width),
+                                                         static_cast<uint32_t>(windowCtx.m_height));
 #elif defined(__linux__)
-            switch (native.type_)
-            {
-                case terra::NativeWindowType::X11:
-                    render_ok = swarm::InitRenderContextX11(render_ctx, native.x11Display_, native.x11Window_,
-                        static_cast<uint32_t>(window_ctx.width_), static_cast<uint32_t>(window_ctx.height_));
-                    break;
-                case terra::NativeWindowType::WAYLAND:
-                    render_ok = swarm::InitRenderContextWayland(render_ctx, native.wlDisplay_, native.wlSurface_,
-                        static_cast<uint32_t>(window_ctx.width_), static_cast<uint32_t>(window_ctx.height_));
-                    break;
-            }
+                switch (native.type_)
+                {
+                    case terra::NativeWindowType::X11:
+                        renderOk = swarm::InitRenderContextX11(renderCtx, native.x11Display_, native.x11Window_,
+                                                               static_cast<uint32_t>(windowCtx.m_width),
+                                                               static_cast<uint32_t>(windowCtx.m_height));
+                        break;
+                    case terra::NativeWindowType::WAYLAND:
+                        renderOk = swarm::InitRenderContextWayland(renderCtx, native.wlDisplay_, native.wlSurface_,
+                                                                   static_cast<uint32_t>(windowCtx.m_width),
+                                                                   static_cast<uint32_t>(windowCtx.m_height));
+                        break;
+                }
 #endif
 
-            if (!render_ok)
+                if (!renderOk)
+                {
+                    hive::LogError(LOG_ENGINE, "Failed to create render context");
+                    swarm::ShutdownSystem();
+                    terra::ShutdownWindowContext(windowPtr);
+                    terra::ShutdownSystem();
+                    moduleRegistry.ShutdownModules();
+                    return 1;
+                }
+
+                swarm::SetupGraphicPipeline(renderCtx);
+                ctx.m_renderContext = &renderCtx;
+                rendererActive = true;
+            }
+#endif
+        }
+#else
+        (void)graphical;
+#endif
+
+        // ---- Setup callback ----
+        if (callbacks.m_onSetup != nullptr)
+        {
+            if (!callbacks.m_onSetup(ctx, callbacks.m_userData))
             {
-                hive::LogError(LogEngine, "Failed to create render context");
-                swarm::ShutdownSystem();
-                terra::ShutdownWindowContext(window_ptr);
-                terra::ShutdownSystem();
+#if HIVE_FEATURE_GLFW
+                if (graphical)
+                {
+#if HIVE_FEATURE_VULKAN || HIVE_FEATURE_D3D12
+                    if (rendererActive)
+                    {
+                        swarm::ShutdownRenderContext(renderCtx);
+                        swarm::ShutdownSystem();
+                    }
+#endif
+                    terra::ShutdownWindowContext(windowPtr);
+                    terra::ShutdownSystem();
+                }
+#endif
                 moduleRegistry.ShutdownModules();
                 return 1;
             }
-
-            swarm::SetupGraphicPipeline(render_ctx);
-            ctx.render_context = &render_ctx;
-            renderer_active = true;
         }
-#endif
-    }
-#else
-    (void)graphical;
+
+        // ---- Main loop ----
+#if HIVE_FEATURE_GLFW
+        if (graphical)
+        {
+            while (!terra::ShouldWindowClose(windowPtr) && app.IsRunning())
+            {
+                HIVE_PROFILE_SCOPE_N("Frame");
+                terra::PollEvents();
+                antennae::UpdateInput(world, windowPtr);
+
+                if (config.m_autoTick)
+                    app.Tick();
+
+#if HIVE_FEATURE_VULKAN || HIVE_FEATURE_D3D12
+                if (rendererActive)
+                    swarm::BeginFrame(&renderCtx);
 #endif
 
-    // ---- Setup callback ----
-    if (callbacks.on_setup)
-    {
-        if (!callbacks.on_setup(ctx, callbacks.user_data))
-        {
-#if HIVE_FEATURE_GLFW
-            if (graphical)
-            {
+                if (callbacks.m_onFrame != nullptr)
+                    callbacks.m_onFrame(ctx, callbacks.m_userData);
+
 #if HIVE_FEATURE_VULKAN || HIVE_FEATURE_D3D12
-                if (renderer_active)
-                {
-                    swarm::ShutdownRenderContext(render_ctx);
-                    swarm::ShutdownSystem();
-                }
+                if (rendererActive)
+                    swarm::EndFrame(&renderCtx);
 #endif
-                terra::ShutdownWindowContext(window_ptr);
-                terra::ShutdownSystem();
+            }
+        }
+        else
+#endif
+        {
+            while (app.IsRunning())
+            {
+                HIVE_PROFILE_SCOPE_N("Frame");
+                if (config.m_autoTick)
+                    app.Tick();
+
+                if (callbacks.m_onFrame != nullptr)
+                    callbacks.m_onFrame(ctx, callbacks.m_userData);
+            }
+        }
+
+        // ---- Shutdown callback ----
+        if (callbacks.m_onShutdown != nullptr)
+            callbacks.m_onShutdown(ctx, callbacks.m_userData);
+
+        // ---- Cleanup ----
+#if HIVE_FEATURE_GLFW
+        if (graphical)
+        {
+#if HIVE_FEATURE_VULKAN || HIVE_FEATURE_D3D12
+            if (rendererActive)
+            {
+                swarm::ShutdownRenderContext(renderCtx);
+                swarm::ShutdownSystem();
             }
 #endif
-            moduleRegistry.ShutdownModules();
-            return 1;
-        }
-    }
-
-    // ---- Main loop ----
-#if HIVE_FEATURE_GLFW
-    if (graphical)
-    {
-        while (!terra::ShouldWindowClose(window_ptr) && app.IsRunning())
-        {
-            HIVE_PROFILE_SCOPE_N("Frame");
-            terra::PollEvents();
-            antennae::UpdateInput(world, window_ptr);
-
-            if (config.auto_tick)
-                app.Tick();
-
-#if HIVE_FEATURE_VULKAN || HIVE_FEATURE_D3D12
-            if (renderer_active)
-                swarm::BeginFrame(&render_ctx);
-#endif
-
-            if (callbacks.on_frame)
-                callbacks.on_frame(ctx, callbacks.user_data);
-
-#if HIVE_FEATURE_VULKAN || HIVE_FEATURE_D3D12
-            if (renderer_active)
-                swarm::EndFrame(&render_ctx);
-#endif
-        }
-    }
-    else
-#endif
-    {
-        while (app.IsRunning())
-        {
-            HIVE_PROFILE_SCOPE_N("Frame");
-            if (config.auto_tick)
-                app.Tick();
-
-            if (callbacks.on_frame)
-                callbacks.on_frame(ctx, callbacks.user_data);
-        }
-    }
-
-    // ---- Shutdown callback ----
-    if (callbacks.on_shutdown)
-        callbacks.on_shutdown(ctx, callbacks.user_data);
-
-    // ---- Cleanup ----
-#if HIVE_FEATURE_GLFW
-    if (graphical)
-    {
-#if HIVE_FEATURE_VULKAN || HIVE_FEATURE_D3D12
-        if (renderer_active)
-        {
-            swarm::ShutdownRenderContext(render_ctx);
-            swarm::ShutdownSystem();
+            terra::ShutdownWindowContext(windowPtr);
+            terra::ShutdownSystem();
         }
 #endif
-        terra::ShutdownWindowContext(window_ptr);
-        terra::ShutdownSystem();
+        moduleRegistry.ShutdownModules();
+        return 0;
     }
-#endif
-    moduleRegistry.ShutdownModules();
-    return 0;
-}
 
 } // namespace waggle

@@ -1,21 +1,23 @@
-#include <larvae/larvae.h>
-#include <nectar/pipeline/import_context.h>
-#include <nectar/pipeline/asset_importer.h>
-#include <nectar/database/asset_database.h>
-#include <nectar/core/asset_id.h>
 #include <comb/default_allocator.h>
+
+#include <nectar/core/asset_id.h>
+#include <nectar/database/asset_database.h>
+#include <nectar/pipeline/asset_importer.h>
+#include <nectar/pipeline/import_context.h>
+
+#include <larvae/larvae.h>
+
 #include <cstring>
 
-namespace {
+namespace
+{
 
-    auto& GetImportAlloc()
-    {
+    auto& GetImportAlloc() {
         static comb::ModuleAllocator alloc{"TestImport", 4 * 1024 * 1024};
         return alloc.Get();
     }
 
-    nectar::AssetId MakeId(uint64_t v)
-    {
+    nectar::AssetId MakeId(uint64_t v) {
         uint8_t bytes[16] = {};
         std::memcpy(bytes, &v, sizeof(v));
         return nectar::AssetId::FromBytes(bytes);
@@ -32,9 +34,9 @@ namespace {
 
         ctx.DeclareHardDep(MakeId(2));
         larvae::AssertEqual(ctx.GetDeclaredDeps().Size(), size_t{1});
-        larvae::AssertTrue(ctx.GetDeclaredDeps()[0].from == MakeId(1));
-        larvae::AssertTrue(ctx.GetDeclaredDeps()[0].to == MakeId(2));
-        larvae::AssertTrue(ctx.GetDeclaredDeps()[0].kind == nectar::DepKind::Hard);
+        larvae::AssertTrue(ctx.GetDeclaredDeps()[0].m_from == MakeId(1));
+        larvae::AssertTrue(ctx.GetDeclaredDeps()[0].m_to == MakeId(2));
+        larvae::AssertTrue(ctx.GetDeclaredDeps()[0].m_kind == nectar::DepKind::HARD);
     });
 
     auto t2 = larvae::RegisterTest("NectarImportContext", "DeclareSoftDep", []() {
@@ -43,7 +45,7 @@ namespace {
         nectar::ImportContext ctx{alloc, db, MakeId(1)};
 
         ctx.DeclareSoftDep(MakeId(3));
-        larvae::AssertTrue(ctx.GetDeclaredDeps()[0].kind == nectar::DepKind::Soft);
+        larvae::AssertTrue(ctx.GetDeclaredDeps()[0].m_kind == nectar::DepKind::SOFT);
     });
 
     auto t3 = larvae::RegisterTest("NectarImportContext", "DeclareBuildDep", []() {
@@ -52,7 +54,7 @@ namespace {
         nectar::ImportContext ctx{alloc, db, MakeId(1)};
 
         ctx.DeclareBuildDep(MakeId(4));
-        larvae::AssertTrue(ctx.GetDeclaredDeps()[0].kind == nectar::DepKind::Build);
+        larvae::AssertTrue(ctx.GetDeclaredDeps()[0].m_kind == nectar::DepKind::BUILD);
     });
 
     auto t4 = larvae::RegisterTest("NectarImportContext", "DeclareInvalidDepIgnored", []() {
@@ -69,10 +71,10 @@ namespace {
         nectar::AssetDatabase db{alloc};
 
         nectar::AssetRecord r{};
-        r.uuid = MakeId(10);
-        r.path = wax::String{alloc, "textures/hero.png"};
-        r.type = wax::String{alloc, "Texture"};
-        r.name = wax::String{alloc, "hero"};
+        r.m_uuid = MakeId(10);
+        r.m_path = wax::String{alloc, "textures/hero.png"};
+        r.m_type = wax::String{alloc, "Texture"};
+        r.m_name = wax::String{alloc, "hero"};
         db.Insert(static_cast<nectar::AssetRecord&&>(r));
 
         nectar::ImportContext ctx{alloc, db, MakeId(1)};
@@ -102,13 +104,15 @@ namespace {
     // Mock AssetImporter
     // =========================================================================
 
-    struct TestImportAsset { int value; };
+    struct TestImportAsset
+    {
+        int value;
+    };
 
     class TestImporter final : public nectar::AssetImporter<TestImportAsset>
     {
     public:
-        wax::Span<const char* const> SourceExtensions() const override
-        {
+        wax::Span<const char* const> SourceExtensions() const override {
             static const char* const exts[] = {".test"};
             return wax::Span<const char* const>{exts, 1};
         }
@@ -117,18 +121,16 @@ namespace {
 
         wax::StringView TypeName() const override { return "TestImportAsset"; }
 
-        nectar::ImportResult Import(wax::ByteSpan source_data,
-                                     const nectar::HiveDocument&,
-                                     nectar::ImportContext&) override
-        {
+        nectar::ImportResult Import(wax::ByteSpan source_data, const nectar::HiveDocument&,
+                                    nectar::ImportContext&) override {
             nectar::ImportResult result{};
             if (source_data.Size() < sizeof(int))
             {
-                result.error_message = wax::String{"Too short"};
+                result.m_errorMessage = wax::String{"Too short"};
                 return result;
             }
-            result.success = true;
-            result.intermediate_data.Append(source_data.Data(), source_data.Size());
+            result.m_success = true;
+            result.m_intermediateData.Append(source_data.Data(), source_data.Size());
             return result;
         }
     };
@@ -145,8 +147,8 @@ namespace {
         std::memcpy(buf, &val, sizeof(int));
 
         auto result = importer.Import(wax::ByteSpan{buf, sizeof(buf)}, doc, ctx);
-        larvae::AssertTrue(result.success);
-        larvae::AssertEqual(result.intermediate_data.Size(), sizeof(int));
+        larvae::AssertTrue(result.m_success);
+        larvae::AssertEqual(result.m_intermediateData.Size(), sizeof(int));
     });
 
     auto t9 = larvae::RegisterTest("NectarImportContext", "MockImporterExtensions", []() {
@@ -159,4 +161,4 @@ namespace {
         larvae::AssertTrue(ext.Equals(".test"));
     });
 
-}
+} // namespace

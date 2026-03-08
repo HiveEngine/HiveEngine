@@ -25,36 +25,23 @@ namespace queen
     {
     public:
         constexpr SystemId() noexcept
-            : index_{kInvalidIndex}
-        {
-        }
+            : m_index{kInvalidIndex} {}
 
         constexpr explicit SystemId(uint32_t index) noexcept
-            : index_{index}
-        {
-        }
+            : m_index{index} {}
 
-        [[nodiscard]] constexpr uint32_t Index() const noexcept { return index_; }
+        [[nodiscard]] constexpr uint32_t Index() const noexcept { return m_index; }
 
-        [[nodiscard]] constexpr bool IsValid() const noexcept
-        {
-            return index_ != kInvalidIndex;
-        }
+        [[nodiscard]] constexpr bool IsValid() const noexcept { return m_index != kInvalidIndex; }
 
-        [[nodiscard]] static constexpr SystemId Invalid() noexcept
-        {
-            return SystemId{};
-        }
+        [[nodiscard]] static constexpr SystemId Invalid() noexcept { return SystemId{}; }
 
         constexpr bool operator==(const SystemId& other) const noexcept = default;
 
-        constexpr bool operator<(const SystemId& other) const noexcept
-        {
-            return index_ < other.index_;
-        }
+        constexpr bool operator<(const SystemId& other) const noexcept { return m_index < other.m_index; }
 
     private:
         static constexpr uint32_t kInvalidIndex = ~uint32_t{0};
-        uint32_t index_;
+        uint32_t m_index;
     };
-}
+} // namespace queen

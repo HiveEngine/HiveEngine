@@ -1,23 +1,20 @@
 #pragma once
 
-#include <vector>
 #include <string>
 #include <unordered_set>
+#include <vector>
 
 namespace hive
 {
     class ModuleContext
     {
     public:
-        template<typename T>
-        void AddDependency()
-        {
-            m_Dependencies.emplace_back(T::GetStaticName());
-        }
+        template <typename T> void AddDependency() { m_dependencies.emplace_back(T::GetStaticName()); }
 
-        const std::vector<std::string> &GetDependencies() const { return m_Dependencies; }
+        const std::vector<std::string>& GetDependencies() const { return m_dependencies; }
+
     private:
-        std::vector<std::string> m_Dependencies;
+        std::vector<std::string> m_dependencies;
     };
 
     class Module
@@ -33,27 +30,20 @@ namespace hive
 
         void Shutdown();
 
-        [[nodiscard]] bool CanInitialize(const std::unordered_set<std::string> &initModulesNames) const;
+        [[nodiscard]] bool CanInitialize(const std::unordered_set<std::string>& initModulesNames) const;
 
-        [[nodiscard]] bool IsInitialized() const { return m_IsInitialized; }
+        [[nodiscard]] bool IsInitialized() const { return m_isInitialized; }
 
     protected:
-        virtual void DoConfigure([[maybe_unused]] ModuleContext &context)
-        {
-        }
+        virtual void DoConfigure([[maybe_unused]] ModuleContext& context) {}
 
-        virtual void DoInitialize()
-        {
-        }
+        virtual void DoInitialize() {}
 
-        virtual void DoShutdown()
-        {
-        }
+        virtual void DoShutdown() {}
 
     private:
-        ModuleContext m_Context;
-        bool m_IsInitialized{false};
+        ModuleContext m_context;
+        bool m_isInitialized{false};
     };
 
-
-}
+} // namespace hive

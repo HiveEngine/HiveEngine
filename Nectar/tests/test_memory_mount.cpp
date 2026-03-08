@@ -1,12 +1,15 @@
-#include <larvae/larvae.h>
-#include <nectar/vfs/memory_mount.h>
 #include <comb/default_allocator.h>
+
+#include <nectar/vfs/memory_mount.h>
+
+#include <larvae/larvae.h>
+
 #include <cstring>
 
-namespace {
+namespace
+{
 
-    auto& GetMemMountAlloc()
-    {
+    auto& GetMemMountAlloc() {
         static comb::ModuleAllocator alloc{"TestMemMount", 2 * 1024 * 1024};
         return alloc.Get();
     }
@@ -56,8 +59,8 @@ namespace {
         mount.AddFile("data.bin", wax::ByteSpan{data, sizeof(data)});
 
         auto info = mount.Stat("data.bin");
-        larvae::AssertTrue(info.exists);
-        larvae::AssertEqual(info.size, size_t{16});
+        larvae::AssertTrue(info.m_exists);
+        larvae::AssertEqual(info.m_size, size_t{16});
     });
 
     auto t6 = larvae::RegisterTest("NectarMemoryMount", "StatNonExistent", []() {
@@ -65,8 +68,8 @@ namespace {
         nectar::MemoryMountSource mount{alloc};
 
         auto info = mount.Stat("nope.bin");
-        larvae::AssertFalse(info.exists);
-        larvae::AssertEqual(info.size, size_t{0});
+        larvae::AssertFalse(info.m_exists);
+        larvae::AssertEqual(info.m_size, size_t{0});
     });
 
     // =========================================================================
@@ -129,20 +132,20 @@ namespace {
         bool found_hero = false, found_villain = false, found_sub = false;
         for (size_t i = 0; i < entries.Size(); ++i)
         {
-            if (entries[i].name.View().Equals("hero.png"))
+            if (entries[i].m_name.View().Equals("hero.png"))
             {
                 found_hero = true;
-                larvae::AssertFalse(entries[i].is_directory);
+                larvae::AssertFalse(entries[i].m_isDirectory);
             }
-            if (entries[i].name.View().Equals("villain.png"))
+            if (entries[i].m_name.View().Equals("villain.png"))
             {
                 found_villain = true;
-                larvae::AssertFalse(entries[i].is_directory);
+                larvae::AssertFalse(entries[i].m_isDirectory);
             }
-            if (entries[i].name.View().Equals("sub"))
+            if (entries[i].m_name.View().Equals("sub"))
             {
                 found_sub = true;
-                larvae::AssertTrue(entries[i].is_directory);
+                larvae::AssertTrue(entries[i].m_isDirectory);
             }
         }
         larvae::AssertTrue(found_hero);
@@ -169,4 +172,4 @@ namespace {
         larvae::AssertEqual(mount.FileCount(), size_t{2});
     });
 
-}
+} // namespace

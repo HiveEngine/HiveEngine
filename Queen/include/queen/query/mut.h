@@ -1,6 +1,7 @@
 #pragma once
 
 #include <queen/core/tick.h>
+
 #include <type_traits>
 
 namespace queen
@@ -39,8 +40,7 @@ namespace queen
      *   });
      * @endcode
      */
-    template<typename T>
-    class Mut
+    template <typename T> class Mut
     {
     public:
         using ComponentType = T;
@@ -48,50 +48,39 @@ namespace queen
         constexpr Mut() noexcept
             : ptr_{nullptr}
             , ticks_{nullptr}
-            , current_tick_{0}
-        {}
+            , current_tick_{0} {}
 
         constexpr Mut(T* ptr, ComponentTicks* ticks, Tick current_tick) noexcept
             : ptr_{ptr}
             , ticks_{ticks}
-            , current_tick_{current_tick}
-        {}
+            , current_tick_{current_tick} {}
 
         /**
          * Access component through arrow operator
          * Marks the component as changed at current_tick
          */
-        [[nodiscard]] T* operator->() noexcept
-        {
+        [[nodiscard]] T* operator->() noexcept {
             MarkChanged();
             return ptr_;
         }
 
-        [[nodiscard]] const T* operator->() const noexcept
-        {
-            return ptr_;
-        }
+        [[nodiscard]] const T* operator->() const noexcept { return ptr_; }
 
         /**
          * Dereference to get component reference
          * Marks the component as changed at current_tick
          */
-        [[nodiscard]] T& operator*() noexcept
-        {
+        [[nodiscard]] T& operator*() noexcept {
             MarkChanged();
             return *ptr_;
         }
 
-        [[nodiscard]] const T& operator*() const noexcept
-        {
-            return *ptr_;
-        }
+        [[nodiscard]] const T& operator*() const noexcept { return *ptr_; }
 
         /**
          * Get raw pointer (marks as changed)
          */
-        [[nodiscard]] T* Get() noexcept
-        {
+        [[nodiscard]] T* Get() noexcept {
             MarkChanged();
             return ptr_;
         }
@@ -99,34 +88,24 @@ namespace queen
         /**
          * Get raw pointer (read-only, does not mark as changed)
          */
-        [[nodiscard]] const T* Get() const noexcept
-        {
-            return ptr_;
-        }
+        [[nodiscard]] const T* Get() const noexcept { return ptr_; }
 
         /**
          * Get raw pointer without marking as changed
          * Use when you need to read without triggering change detection
          */
-        [[nodiscard]] const T* GetReadOnly() const noexcept
-        {
-            return ptr_;
-        }
+        [[nodiscard]] const T* GetReadOnly() const noexcept { return ptr_; }
 
         /**
          * Check if the wrapper holds a valid pointer
          */
-        [[nodiscard]] constexpr explicit operator bool() const noexcept
-        {
-            return ptr_ != nullptr;
-        }
+        [[nodiscard]] constexpr explicit operator bool() const noexcept { return ptr_ != nullptr; }
 
         /**
          * Explicitly mark as changed
          * Useful when you modify through a copied reference
          */
-        void MarkChanged() noexcept
-        {
+        void MarkChanged() noexcept {
             if (ticks_ != nullptr)
             {
                 ticks_->MarkChanged(current_tick_);
@@ -136,26 +115,21 @@ namespace queen
         /**
          * Check if this component was added since last_run
          */
-        [[nodiscard]] bool WasAdded(Tick last_run) const noexcept
-        {
+        [[nodiscard]] bool WasAdded(Tick last_run) const noexcept {
             return ticks_ != nullptr && ticks_->WasAdded(last_run);
         }
 
         /**
          * Check if this component was changed since last_run
          */
-        [[nodiscard]] bool WasChanged(Tick last_run) const noexcept
-        {
+        [[nodiscard]] bool WasChanged(Tick last_run) const noexcept {
             return ticks_ != nullptr && ticks_->WasChanged(last_run);
         }
 
         /**
          * Get the component's ticks (for advanced use)
          */
-        [[nodiscard]] const ComponentTicks* Ticks() const noexcept
-        {
-            return ticks_;
-        }
+        [[nodiscard]] const ComponentTicks* Ticks() const noexcept { return ticks_; }
 
     private:
         T* ptr_;
@@ -166,28 +140,26 @@ namespace queen
     // Type traits to detect Mut<T>
     namespace detail
     {
-        template<typename T>
-        struct IsMut : std::false_type {};
+        template <typename T> struct IsMut : std::false_type
+        {
+        };
 
-        template<typename T>
-        struct IsMut<Mut<T>> : std::true_type {};
+        template <typename T> struct IsMut<Mut<T>> : std::true_type
+        {
+        };
 
-        template<typename T>
-        constexpr bool IsMutV = IsMut<T>::value;
+        template <typename T> constexpr bool IsMutV = IsMut<T>::value;
 
-        template<typename T>
-        struct UnwrapMut
+        template <typename T> struct UnwrapMut
         {
             using type = T;
         };
 
-        template<typename T>
-        struct UnwrapMut<Mut<T>>
+        template <typename T> struct UnwrapMut<Mut<T>>
         {
             using type = T;
         };
 
-        template<typename T>
-        using UnwrapMutT = typename UnwrapMut<T>::type;
-    }
-}
+        template <typename T> using UnwrapMutT = typename UnwrapMut<T>::type;
+    } // namespace detail
+} // namespace queen

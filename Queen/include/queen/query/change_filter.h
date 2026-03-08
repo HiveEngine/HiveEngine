@@ -1,7 +1,7 @@
 #pragma once
 
-#include <queen/core/type_id.h>
 #include <queen/core/tick.h>
+#include <queen/core/type_id.h>
 #include <queen/query/query_term.h>
 
 namespace queen
@@ -11,9 +11,9 @@ namespace queen
      */
     enum class ChangeFilterMode : uint8_t
     {
-        Added,      // Only entities where component was added since last_run
-        Changed,    // Only entities where component was modified since last_run
-        AddedOrChanged  // Either added or changed
+        ADDED,           // Only entities where component was added since last_run
+        CHANGED,         // Only entities where component was modified since last_run
+        ADDED_OR_CHANGED // Either added or changed
     };
 
     /**
@@ -31,37 +31,31 @@ namespace queen
      */
     struct ChangeFilterTerm
     {
-        TypeId type_id = 0;
-        ChangeFilterMode mode = ChangeFilterMode::Changed;
-        TermAccess access = TermAccess::Read;
+        TypeId m_typeId = 0;
+        ChangeFilterMode m_mode = ChangeFilterMode::CHANGED;
+        TermAccess m_access = TermAccess::READ;
 
-        [[nodiscard]] constexpr bool IsValid() const noexcept
-        {
-            return type_id != 0;
-        }
+        [[nodiscard]] constexpr bool IsValid() const noexcept { return m_typeId != 0; }
 
         /**
          * Check if component ticks pass this filter
          */
-        [[nodiscard]] constexpr bool Matches(ComponentTicks ticks, Tick last_run) const noexcept
-        {
-            switch (mode)
+        [[nodiscard]] constexpr bool Matches(ComponentTicks ticks, Tick lastRun) const noexcept {
+            switch (m_mode)
             {
-            case ChangeFilterMode::Added:
-                return ticks.WasAdded(last_run);
-            case ChangeFilterMode::Changed:
-                return ticks.WasChanged(last_run);
-            case ChangeFilterMode::AddedOrChanged:
-                return ticks.WasAddedOrChanged(last_run);
+                case ChangeFilterMode::ADDED:
+                    return ticks.WasAdded(lastRun);
+                case ChangeFilterMode::CHANGED:
+                    return ticks.WasChanged(lastRun);
+                case ChangeFilterMode::ADDED_OR_CHANGED:
+                    return ticks.WasAddedOrChanged(lastRun);
             }
             return false;
         }
 
-        template<typename T>
-        [[nodiscard]] static constexpr ChangeFilterTerm Create(
-            ChangeFilterMode mode,
-            TermAccess access = TermAccess::Read) noexcept
-        {
+        template <typename T>
+        [[nodiscard]] static constexpr ChangeFilterTerm Create(ChangeFilterMode mode,
+                                                               TermAccess access = TermAccess::READ) noexcept {
             return ChangeFilterTerm{TypeIdOf<T>(), mode, access};
         }
     };
@@ -89,23 +83,18 @@ namespace queen
      *   });
      * @endcode
      */
-    template<typename T>
-    struct Added
+    template <typename T> struct Added
     {
         using ComponentType = T;
-        static constexpr ChangeFilterMode mode = ChangeFilterMode::Added;
-        static constexpr TermAccess access = TermAccess::Read;
-        static constexpr TypeId type_id = TypeIdOf<T>();
+        static constexpr ChangeFilterMode mode = ChangeFilterMode::ADDED;
+        static constexpr TermAccess access = TermAccess::READ;
+        static constexpr TypeId typeId = TypeIdOf<T>();
 
-        [[nodiscard]] static constexpr ChangeFilterTerm ToChangeFilter() noexcept
-        {
-            return ChangeFilterTerm{type_id, mode, access};
+        [[nodiscard]] static constexpr ChangeFilterTerm ToChangeFilter() noexcept {
+            return ChangeFilterTerm{typeId, mode, access};
         }
 
-        [[nodiscard]] static constexpr Term ToTerm() noexcept
-        {
-            return Term{type_id, TermOperator::With, access};
-        }
+        [[nodiscard]] static constexpr Term ToTerm() noexcept { return Term{typeId, TermOperator::WITH, access}; }
     };
 
     /**
@@ -127,23 +116,18 @@ namespace queen
      *   });
      * @endcode
      */
-    template<typename T>
-    struct Changed
+    template <typename T> struct Changed
     {
         using ComponentType = T;
-        static constexpr ChangeFilterMode mode = ChangeFilterMode::Changed;
-        static constexpr TermAccess access = TermAccess::Read;
-        static constexpr TypeId type_id = TypeIdOf<T>();
+        static constexpr ChangeFilterMode mode = ChangeFilterMode::CHANGED;
+        static constexpr TermAccess access = TermAccess::READ;
+        static constexpr TypeId typeId = TypeIdOf<T>();
 
-        [[nodiscard]] static constexpr ChangeFilterTerm ToChangeFilter() noexcept
-        {
-            return ChangeFilterTerm{type_id, mode, access};
+        [[nodiscard]] static constexpr ChangeFilterTerm ToChangeFilter() noexcept {
+            return ChangeFilterTerm{typeId, mode, access};
         }
 
-        [[nodiscard]] static constexpr Term ToTerm() noexcept
-        {
-            return Term{type_id, TermOperator::With, access};
-        }
+        [[nodiscard]] static constexpr Term ToTerm() noexcept { return Term{typeId, TermOperator::WITH, access}; }
     };
 
     /**
@@ -158,23 +142,18 @@ namespace queen
      *   });
      * @endcode
      */
-    template<typename T>
-    struct AddedOrChanged
+    template <typename T> struct AddedOrChanged
     {
         using ComponentType = T;
-        static constexpr ChangeFilterMode mode = ChangeFilterMode::AddedOrChanged;
-        static constexpr TermAccess access = TermAccess::Read;
-        static constexpr TypeId type_id = TypeIdOf<T>();
+        static constexpr ChangeFilterMode mode = ChangeFilterMode::ADDED_OR_CHANGED;
+        static constexpr TermAccess access = TermAccess::READ;
+        static constexpr TypeId typeId = TypeIdOf<T>();
 
-        [[nodiscard]] static constexpr ChangeFilterTerm ToChangeFilter() noexcept
-        {
-            return ChangeFilterTerm{type_id, mode, access};
+        [[nodiscard]] static constexpr ChangeFilterTerm ToChangeFilter() noexcept {
+            return ChangeFilterTerm{typeId, mode, access};
         }
 
-        [[nodiscard]] static constexpr Term ToTerm() noexcept
-        {
-            return Term{type_id, TermOperator::With, access};
-        }
+        [[nodiscard]] static constexpr Term ToTerm() noexcept { return Term{typeId, TermOperator::WITH, access}; }
     };
 
     // ─────────────────────────────────────────────────────────────
@@ -183,19 +162,22 @@ namespace queen
 
     namespace detail
     {
-        template<typename T>
-        struct IsChangeFilter : std::false_type {};
+        template <typename T> struct IsChangeFilter : std::false_type
+        {
+        };
 
-        template<typename T>
-        struct IsChangeFilter<Added<T>> : std::true_type {};
+        template <typename T> struct IsChangeFilter<Added<T>> : std::true_type
+        {
+        };
 
-        template<typename T>
-        struct IsChangeFilter<Changed<T>> : std::true_type {};
+        template <typename T> struct IsChangeFilter<Changed<T>> : std::true_type
+        {
+        };
 
-        template<typename T>
-        struct IsChangeFilter<AddedOrChanged<T>> : std::true_type {};
+        template <typename T> struct IsChangeFilter<AddedOrChanged<T>> : std::true_type
+        {
+        };
 
-        template<typename T>
-        constexpr bool IsChangeFilterV = IsChangeFilter<T>::value;
-    }
-}
+        template <typename T> constexpr bool isChangeFilterV = IsChangeFilter<T>::value;
+    } // namespace detail
+} // namespace queen

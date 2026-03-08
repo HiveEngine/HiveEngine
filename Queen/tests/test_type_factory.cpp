@@ -1,8 +1,10 @@
-#include <larvae/larvae.h>
-#include <queen/reflect/component_reflector.h>
-#include <queen/reflect/reflectable.h>
-#include <queen/reflect/component_registry.h>
 #include <queen/core/entity.h>
+#include <queen/reflect/component_reflector.h>
+#include <queen/reflect/component_registry.h>
+#include <queen/reflect/reflectable.h>
+
+#include <larvae/larvae.h>
+
 #include <cstring>
 
 namespace
@@ -13,8 +15,7 @@ namespace
         float y = 2.f;
         float z = 3.f;
 
-        static void Reflect(queen::ComponentReflector<>& r)
-        {
+        static void Reflect(queen::ComponentReflector<>& r) {
             r.Field("x", &Position::x);
             r.Field("y", &Position::y);
             r.Field("z", &Position::z);
@@ -27,15 +28,16 @@ namespace
         float dy = 0.f;
         float dz = 0.f;
 
-        static void Reflect(queen::ComponentReflector<>& r)
-        {
+        static void Reflect(queen::ComponentReflector<>& r) {
             r.Field("dx", &Velocity::dx);
             r.Field("dy", &Velocity::dy);
             r.Field("dz", &Velocity::dz);
         }
     };
 
-    struct TagComponent {};
+    struct TagComponent
+    {
+    };
 
     // Nested struct for testing diff on nested fields
     struct Vec2
@@ -43,8 +45,7 @@ namespace
         float x = 0.f;
         float y = 0.f;
 
-        static void Reflect(queen::ComponentReflector<>& r)
-        {
+        static void Reflect(queen::ComponentReflector<>& r) {
             r.Field("x", &Vec2::x);
             r.Field("y", &Vec2::y);
         }
@@ -55,8 +56,7 @@ namespace
         Vec2 position;
         float rotation = 0.f;
 
-        static void Reflect(queen::ComponentReflector<>& r)
-        {
+        static void Reflect(queen::ComponentReflector<>& r) {
             r.Field("position", &Transform::position);
             r.Field("rotation", &Transform::rotation);
         }
@@ -149,7 +149,7 @@ namespace
         const auto* comp = registry.Find(queen::TypeIdOf<Position>());
         larvae::AssertNotNull(comp);
         larvae::AssertTrue(comp->HasDefault());
-        larvae::AssertNotNull(comp->default_value);
+        larvae::AssertNotNull(comp->m_defaultValue);
     });
 
     auto test_get_default = larvae::RegisterTest("QueenTypeFactory", "GetDefault", []() {
@@ -172,14 +172,15 @@ namespace
         larvae::AssertNull(def);
     });
 
-    auto test_without_reflection_has_default = larvae::RegisterTest("QueenTypeFactory", "WithoutReflectionHasDefault", []() {
-        queen::ComponentRegistry<32> registry;
-        registry.RegisterWithoutReflection<TagComponent>();
+    auto test_without_reflection_has_default =
+        larvae::RegisterTest("QueenTypeFactory", "WithoutReflectionHasDefault", []() {
+            queen::ComponentRegistry<32> registry;
+            registry.RegisterWithoutReflection<TagComponent>();
 
-        const auto* comp = registry.Find(queen::TypeIdOf<TagComponent>());
-        larvae::AssertNotNull(comp);
-        larvae::AssertTrue(comp->HasDefault());
-    });
+            const auto* comp = registry.Find(queen::TypeIdOf<TagComponent>());
+            larvae::AssertNotNull(comp);
+            larvae::AssertTrue(comp->HasDefault());
+        });
 
     // ============================================================
     // DiffWithDefault tests
@@ -189,7 +190,7 @@ namespace
         queen::ComponentRegistry<32> registry;
         registry.Register<Position>();
 
-        Position instance{};  // default values: 1, 2, 3
+        Position instance{}; // default values: 1, 2, 3
         uint64_t mask = registry.DiffWithDefault(queen::TypeIdOf<Position>(), &instance);
 
         larvae::AssertEqual(mask, uint64_t{0});
@@ -200,7 +201,7 @@ namespace
         registry.Register<Position>();
 
         Position instance{};
-        instance.y = 99.f;  // change field index 1
+        instance.y = 99.f; // change field index 1
 
         uint64_t mask = registry.DiffWithDefault(queen::TypeIdOf<Position>(), &instance);
 
@@ -212,8 +213,8 @@ namespace
         registry.Register<Position>();
 
         Position instance{};
-        instance.x = 0.f;   // changed (default is 1.f)
-        instance.z = 0.f;   // changed (default is 3.f)
+        instance.x = 0.f; // changed (default is 1.f)
+        instance.z = 0.f; // changed (default is 3.f)
 
         uint64_t mask = registry.DiffWithDefault(queen::TypeIdOf<Position>(), &instance);
 
@@ -228,7 +229,7 @@ namespace
         registry.Register<Transform>();
 
         Transform instance{};
-        instance.position.x = 5.f;  // change nested field
+        instance.position.x = 5.f; // change nested field
 
         uint64_t mask = registry.DiffWithDefault(queen::TypeIdOf<Transform>(), &instance);
 
@@ -259,4 +260,4 @@ namespace
         // No reflection data -> all-ones
         larvae::AssertEqual(mask, ~uint64_t{0});
     });
-}
+} // namespace

@@ -1,9 +1,11 @@
 #pragma once
 
+#include <comb/allocator_concepts.h>
+
+#include <wax/containers/vector.h>
+
 #include <queen/system/system.h>
 #include <queen/system/system_builder.h>
-#include <wax/containers/vector.h>
-#include <comb/allocator_concepts.h>
 
 namespace queen
 {
@@ -43,15 +45,12 @@ namespace queen
      *   storage.RunAll(world);
      * @endcode
      */
-    template<comb::Allocator Allocator>
-    class SystemStorage
+    template <comb::Allocator Allocator> class SystemStorage
     {
     public:
         explicit SystemStorage(Allocator& allocator)
-            : allocator_{&allocator}
-            , systems_{allocator}
-        {
-        }
+            : m_allocator{&allocator}
+            , m_systems{allocator} {}
 
         ~SystemStorage() = default;
 
@@ -68,14 +67,12 @@ namespace queen
          * @param name System name (for debugging)
          * @return SystemBuilder for further configuration
          */
-        template<typename... Terms>
-        SystemBuilder<Allocator, Terms...> Register(World& world, const char* name)
-        {
-            SystemId id{static_cast<uint32_t>(systems_.Size())};
+        template <typename... Terms> SystemBuilder<Allocator, Terms...> Register(World& world, const char* name) {
+            SystemId id{static_cast<uint32_t>(m_systems.Size())};
 
-            systems_.EmplaceBack(*allocator_, id, name);
+            m_systems.EmplaceBack(*m_allocator, id, name);
 
-            return SystemBuilder<Allocator, Terms...>{world, *allocator_, *this, &systems_[systems_.Size() - 1]};
+            return SystemBuilder<Allocator, Terms...>{world, *m_allocator, *this, &m_systems[m_systems.Size() - 1]};
         }
 
         /**
@@ -89,30 +86,24 @@ namespace queen
          * @param access Access descriptor for dependency resolution (moved)
          * @return System ID
          */
-        template<typename F>
-        SystemId Register(const char* name, F&& func, AccessDescriptor<Allocator>&& access)
-        {
-            SystemId id{static_cast<uint32_t>(systems_.Size())};
+        template <typename F> SystemId Register(const char* name, F&& func, AccessDescriptor<Allocator>&& access) {
+            SystemId id{static_cast<uint32_t>(m_systems.Size())};
 
-            systems_.EmplaceBack(*allocator_, id, name);
+            m_systems.EmplaceBack(*m_allocator, id, name);
 
-            auto& desc = systems_[systems_.Size() - 1];
+            auto& desc = m_systems[m_systems.Size() - 1];
             desc.Access() = std::move(access);
 
             using FuncType = std::decay_t<F>;
-            void* user_data = allocator_->Allocate(sizeof(FuncType), alignof(FuncType));
-            new (user_data) FuncType{std::forward<F>(func)};
+            void* userData = m_allocator->Allocate(sizeof(FuncType), alignof(FuncType));
+            new (userData) FuncType{std::forward<F>(func)};
 
             desc.SetExecutor(
                 [](World& world, void* data) {
                     auto* fn = static_cast<FuncType*>(data);
                     (*fn)(world);
                 },
-                user_data,
-                [](void* data) {
-                    static_cast<FuncType*>(data)->~FuncType();
-                }
-            );
+                userData, [](void* data) { static_cast<FuncType*>(data)->~FuncType(); });
 
             return id;
         }
@@ -123,22 +114,20 @@ namespace queen
          * @param id System identifier
          * @return Pointer to system descriptor, or nullptr if invalid
          */
-        [[nodiscard]] SystemDescriptor<Allocator>* GetSystem(SystemId id)
-        {
-            if (!id.IsValid() || id.Index() >= systems_.Size())
+        [[nodiscard]] SystemDescriptor<Allocator>* GetSystem(SystemId id) {
+            if (!id.IsValid() || id.Index() >= m_systems.Size())
             {
                 return nullptr;
             }
-            return &systems_[id.Index()];
+            return &m_systems[id.Index()];
         }
 
-        [[nodiscard]] const SystemDescriptor<Allocator>* GetSystem(SystemId id) const
-        {
-            if (!id.IsValid() || id.Index() >= systems_.Size())
+        [[nodiscard]] const SystemDescriptor<Allocator>* GetSystem(SystemId id) const {
+            if (!id.IsValid() || id.Index() >= m_systems.Size())
             {
                 return nullptr;
             }
-            return &systems_[id.Index()];
+            return &m_systems[id.Index()];
         }
 
         /**
@@ -147,22 +136,20 @@ namespace queen
          * @param index Index in storage
          * @return Pointer to system descriptor, or nullptr if invalid
          */
-        [[nodiscard]] SystemDescriptor<Allocator>* GetSystemByIndex(size_t index)
-        {
-            if (index >= systems_.Size())
+        [[nodiscard]] SystemDescriptor<Allocator>* GetSystemByIndex(size_t index) {
+            if (index >= m_systems.Size())
             {
                 return nullptr;
             }
-            return &systems_[index];
+            return &m_systems[index];
         }
 
-        [[nodiscard]] const SystemDescriptor<Allocator>* GetSystemByIndex(size_t index) const
-        {
-            if (index >= systems_.Size())
+        [[nodiscard]] const SystemDescriptor<Allocator>* GetSystemByIndex(size_t index) const {
+            if (index >= m_systems.Size())
             {
                 return nullptr;
             }
-            return &systems_[index];
+            return &m_systems[index];
         }
 
         /**
@@ -171,13 +158,12 @@ namespace queen
          * @param name System name
          * @return Pointer to system descriptor, or nullptr if not found
          */
-        [[nodiscard]] SystemDescriptor<Allocator>* GetSystemByName(const char* name)
-        {
-            for (size_t i = 0; i < systems_.Size(); ++i)
+        [[nodiscard]] SystemDescriptor<Allocator>* GetSystemByName(const char* name) {
+            for (size_t i = 0; i < m_systems.Size(); ++i)
             {
-                if (std::strcmp(systems_[i].Name(), name) == 0)
+                if (std::strcmp(m_systems[i].Name(), name) == 0)
                 {
-                    return &systems_[i];
+                    return &m_systems[i];
                 }
             }
             return nullptr;
@@ -189,44 +175,35 @@ namespace queen
          * @param world The world to run the system on
          * @param id System to run
          */
-        void RunSystem(World& world, SystemId id, Tick current_tick)
-        {
+        void RunSystem(World& world, SystemId id, Tick currentTick) {
             SystemDescriptor<Allocator>* system = GetSystem(id);
             if (system != nullptr)
             {
-                system->Execute(world, current_tick);
+                system->Execute(world, currentTick);
             }
         }
 
-        void RunAll(World& world, Tick current_tick)
-        {
-            for (size_t i = 0; i < systems_.Size(); ++i)
+        void RunAll(World& world, Tick currentTick) {
+            for (size_t i = 0; i < m_systems.Size(); ++i)
             {
-                systems_[i].Execute(world, current_tick);
+                m_systems[i].Execute(world, currentTick);
             }
         }
 
         /**
          * Get the number of registered systems
          */
-        [[nodiscard]] size_t SystemCount() const noexcept
-        {
-            return systems_.Size();
-        }
+        [[nodiscard]] size_t SystemCount() const noexcept { return m_systems.Size(); }
 
         /**
          * Check if any systems are registered
          */
-        [[nodiscard]] bool IsEmpty() const noexcept
-        {
-            return systems_.IsEmpty();
-        }
+        [[nodiscard]] bool IsEmpty() const noexcept { return m_systems.IsEmpty(); }
 
         /**
          * Enable or disable a system
          */
-        void SetSystemEnabled(SystemId id, bool enabled)
-        {
+        void SetSystemEnabled(SystemId id, bool enabled) {
             SystemDescriptor<Allocator>* system = GetSystem(id);
             if (system != nullptr)
             {
@@ -237,8 +214,7 @@ namespace queen
         /**
          * Check if a system is enabled
          */
-        [[nodiscard]] bool IsSystemEnabled(SystemId id) const
-        {
+        [[nodiscard]] bool IsSystemEnabled(SystemId id) const {
             const SystemDescriptor<Allocator>* system = GetSystem(id);
             if (system != nullptr)
             {
@@ -248,7 +224,7 @@ namespace queen
         }
 
     private:
-        Allocator* allocator_;
-        wax::Vector<SystemDescriptor<Allocator>> systems_;
+        Allocator* m_allocator;
+        wax::Vector<SystemDescriptor<Allocator>> m_systems;
     };
-}
+} // namespace queen

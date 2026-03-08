@@ -2,40 +2,41 @@
 #include <terra/terra.h>
 
 #if defined(TERRA_NATIVE_LINUX)
-#include <wayland-client.h>
 #include <X11/Xlib.h>
+#include <wayland-client.h>
 namespace terra
 {
     enum class NativeWindowType
     {
-        X11, WAYLAND
+        X11,
+        WAYLAND
     };
     struct NativeWindow
     {
-        wl_display *wlDisplay_{nullptr};
-        wl_surface *wlSurface_{nullptr};
+        wl_display* wlDisplay_{nullptr};
+        wl_surface* wlSurface_{nullptr};
 
-        Display *x11Display_{nullptr};
+        Display* x11Display_{nullptr};
         Window x11Window_{0};
 
         NativeWindowType type_{NativeWindowType::WAYLAND};
     };
-}
+} // namespace terra
 #elif defined(TERRA_NATIVE_WIN32)
 #include <Windows.h>
 namespace terra
 {
     struct NativeWindow
     {
-        HINSTANCE instance_{nullptr};
-        HWND window_{nullptr};
+        HINSTANCE m_instance{nullptr};
+        HWND m_window{nullptr};
     };
-}
+} // namespace terra
 #else
 #error "Please define a TERRA_NATIVE_ in order to active the right platform definition
 #endif
 
 namespace terra
 {
-    NativeWindow GetNativeWindow(WindowContext *windowContext);
+    NativeWindow GetNativeWindow(WindowContext* windowContext);
 }

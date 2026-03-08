@@ -1,6 +1,8 @@
-#include <larvae/larvae.h>
-#include <wax/pointers/handle.h>
 #include <comb/linear_allocator.h>
+
+#include <wax/pointers/handle.h>
+
+#include <larvae/larvae.h>
 
 namespace
 {
@@ -9,8 +11,14 @@ namespace
         int id;
         float x, y;
 
-        Entity() : id{0}, x{0}, y{0} {}
-        Entity(int i, float px, float py) : id{i}, x{px}, y{py} {}
+        Entity()
+            : id{0}
+            , x{0}
+            , y{0} {}
+        Entity(int i, float px, float py)
+            : id{i}
+            , x{px}
+            , y{py} {}
     };
 
     auto test1 = larvae::RegisterTest("WaxHandle", "CreateAndGet", []() {
@@ -80,8 +88,8 @@ namespace
         larvae::AssertFalse(h4.IsNull());
         larvae::AssertEqual(pool.Get(h4)->id, 4);
 
-        larvae::AssertEqual(h4.index, h1.index);
-        larvae::AssertNotEqual(h4.generation, h1.generation);
+        larvae::AssertEqual(h4.m_index, h1.m_index);
+        larvae::AssertNotEqual(h4.m_generation, h1.m_generation);
     });
 
     auto test5 = larvae::RegisterTest("WaxHandle", "InvalidHandle", []() {
@@ -157,7 +165,8 @@ namespace
         static int destructor_count;
         int value;
 
-        NonTrivial(int v) : value{v} {}
+        NonTrivial(int v)
+            : value{v} {}
         ~NonTrivial() { ++destructor_count; }
     };
 
@@ -268,4 +277,4 @@ namespace
         pool.Destroy(h);
         larvae::AssertEqual(pool.Count(), size_t{0});
     });
-}
+} // namespace

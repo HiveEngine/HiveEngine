@@ -1,6 +1,7 @@
 #pragma once
 
 #include <queen/system/system_id.h>
+
 #include <cstdint>
 
 namespace queen
@@ -10,10 +11,10 @@ namespace queen
      */
     enum class SystemState : uint8_t
     {
-        Pending,    // Waiting for dependencies
-        Ready,      // Dependencies satisfied, ready to run
-        Running,    // Currently executing
-        Complete    // Execution finished
+        PENDING, // Waiting for dependencies
+        READY,   // Dependencies satisfied, ready to run
+        RUNNING, // Currently executing
+        COMPLETE // Execution finished
     };
 
     /**
@@ -43,68 +44,61 @@ namespace queen
     {
     public:
         constexpr SystemNode() noexcept
-            : system_id_{}
-            , state_{SystemState::Pending}
-            , dependency_count_{0}
-            , unfinished_deps_{0}
-        {}
+            : m_systemId{}
+            , m_state{SystemState::PENDING}
+            , m_dependencyCount{0}
+            , m_unfinishedDeps{0} {}
 
         constexpr explicit SystemNode(SystemId id) noexcept
-            : system_id_{id}
-            , state_{SystemState::Pending}
-            , dependency_count_{0}
-            , unfinished_deps_{0}
-        {}
+            : m_systemId{id}
+            , m_state{SystemState::PENDING}
+            , m_dependencyCount{0}
+            , m_unfinishedDeps{0} {}
 
-        [[nodiscard]] constexpr SystemId Id() const noexcept { return system_id_; }
-        [[nodiscard]] constexpr SystemState State() const noexcept { return state_; }
-        [[nodiscard]] constexpr uint16_t DependencyCount() const noexcept { return dependency_count_; }
-        [[nodiscard]] constexpr uint16_t UnfinishedDeps() const noexcept { return unfinished_deps_; }
+        [[nodiscard]] constexpr SystemId Id() const noexcept { return m_systemId; }
+        [[nodiscard]] constexpr SystemState State() const noexcept { return m_state; }
+        [[nodiscard]] constexpr uint16_t DependencyCount() const noexcept { return m_dependencyCount; }
+        [[nodiscard]] constexpr uint16_t UnfinishedDeps() const noexcept { return m_unfinishedDeps; }
 
-        constexpr void SetState(SystemState state) noexcept { state_ = state; }
-        constexpr void SetDependencyCount(uint16_t count) noexcept
-        {
-            dependency_count_ = count;
-            unfinished_deps_ = count;
+        constexpr void SetState(SystemState state) noexcept { m_state = state; }
+        constexpr void SetDependencyCount(uint16_t count) noexcept {
+            m_dependencyCount = count;
+            m_unfinishedDeps = count;
         }
 
-        constexpr void IncrementDependencyCount() noexcept
-        {
-            ++dependency_count_;
-            ++unfinished_deps_;
+        constexpr void IncrementDependencyCount() noexcept {
+            ++m_dependencyCount;
+            ++m_unfinishedDeps;
         }
 
         /**
          * Reset to pending state for a new frame
          */
-        constexpr void Reset() noexcept
-        {
-            state_ = SystemState::Pending;
-            unfinished_deps_ = dependency_count_;
+        constexpr void Reset() noexcept {
+            m_state = SystemState::PENDING;
+            m_unfinishedDeps = m_dependencyCount;
         }
 
         /**
          * Decrement unfinished dependency count
          * @return true if all dependencies are now satisfied (ready to run)
          */
-        constexpr bool DecrementDeps() noexcept
-        {
-            if (unfinished_deps_ > 0)
+        constexpr bool DecrementDeps() noexcept {
+            if (m_unfinishedDeps > 0)
             {
-                --unfinished_deps_;
+                --m_unfinishedDeps;
             }
-            return unfinished_deps_ == 0;
+            return m_unfinishedDeps == 0;
         }
 
-        [[nodiscard]] constexpr bool IsReady() const noexcept
-        {
-            return state_ == SystemState::Pending && unfinished_deps_ == 0;
+        [[nodiscard]] constexpr bool IsReady() const noexcept {
+            return m_state == SystemState::PENDING && m_unfinishedDeps == 0;
         }
 
     private:
-        SystemId system_id_;
-        SystemState state_;
-        uint16_t dependency_count_;
-        uint16_t unfinished_deps_;
+        SystemId m_systemId;
+        SystemState m_state;
+        uint16_t m_dependencyCount;
+        uint16_t m_unfinishedDeps;
     };
-}
+} // namespace queen

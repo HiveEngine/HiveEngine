@@ -1,6 +1,6 @@
-#include <testbed/precomp.h>
-#include <testbed/logtestbed.h>
-
 #include <hive/core/log.h>
 
-const hive::LogCategory LogTestbedRoot { "Testbed" };
+#include <testbed/logtestbed.h>
+#include <testbed/precomp.h>
+
+const hive::LogCategory LogTestbedRoot{"Testbed"};

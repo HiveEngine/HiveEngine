@@ -1,11 +1,14 @@
 #pragma once
 
-#include <nectar/pak/npak_format.h>
-#include <nectar/pak/asset_manifest.h>
+#include <comb/default_allocator.h>
+
+#include <wax/containers/string_view.h>
 #include <wax/containers/vector.h>
 #include <wax/serialization/byte_buffer.h>
-#include <wax/containers/string_view.h>
-#include <comb/default_allocator.h>
+
+#include <nectar/pak/asset_manifest.h>
+#include <nectar/pak/npak_format.h>
+
 #include <cstdio>
 
 namespace nectar
@@ -21,8 +24,7 @@ namespace nectar
         PakReader& operator=(const PakReader&) = delete;
 
         /// Open a .npak file. Returns nullptr on failure.
-        [[nodiscard]] static PakReader* Open(
-            wax::StringView path, comb::DefaultAllocator& alloc);
+        [[nodiscard]] static PakReader* Open(wax::StringView path, comb::DefaultAllocator& alloc);
 
         /// Read an asset by ContentHash. Returns empty buffer if not found.
         [[nodiscard]] wax::ByteBuffer Read(ContentHash hash, comb::DefaultAllocator& alloc);
@@ -45,11 +47,11 @@ namespace nectar
         /// Binary search for an asset entry. Returns nullptr if not found.
         [[nodiscard]] const NpakAssetEntry* FindAsset(ContentHash hash) const;
 
-        comb::DefaultAllocator* alloc_{nullptr};
-        FILE* file_{nullptr};
-        NpakHeader header_{};
-        wax::Vector<NpakAssetEntry>* asset_entries_{nullptr};
-        wax::Vector<NpakBlockEntry>* block_entries_{nullptr};
-        AssetManifest* manifest_{nullptr};
+        comb::DefaultAllocator* m_alloc{nullptr};
+        FILE* m_file{nullptr};
+        NpakHeader m_header{};
+        wax::Vector<NpakAssetEntry>* m_assetEntries{nullptr};
+        wax::Vector<NpakBlockEntry>* m_blockEntries{nullptr};
+        AssetManifest* m_manifest{nullptr};
     };
-}
+} // namespace nectar

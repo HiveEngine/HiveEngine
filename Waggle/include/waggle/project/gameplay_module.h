@@ -2,13 +2,16 @@
 
 #include <hive/platform/dynamic_library.h>
 
-namespace queen { class World; }
+namespace queen
+{
+    class World;
+}
 
 namespace waggle
 {
-    using GameplayRegisterFn   = void(*)(queen::World& world);
-    using GameplayUnregisterFn = void(*)(queen::World& world);
-    using GameplayVersionFn    = const char*(*)();
+    using GameplayRegisterFn = void (*)(queen::World& world);
+    using GameplayUnregisterFn = void (*)(queen::World& world);
+    using GameplayVersionFn = const char* (*)();
 
     class GameplayModule
     {
@@ -21,12 +24,12 @@ namespace waggle
         GameplayModule(GameplayModule&&) noexcept;
         GameplayModule& operator=(GameplayModule&&) noexcept;
 
-        [[nodiscard]] bool Load(const char* dll_path);
+        [[nodiscard]] bool Load(const char* dllPath);
         void Unload();
 
         [[nodiscard]] bool Register(queen::World& world);
         void Unregister(queen::World& world);
-        [[nodiscard]] bool Reload(const char* dll_path, queen::World& world);
+        [[nodiscard]] bool Reload(const char* dllPath, queen::World& world);
 
         [[nodiscard]] bool IsLoaded() const noexcept;
         [[nodiscard]] bool IsRegistered() const noexcept;
@@ -34,10 +37,10 @@ namespace waggle
         [[nodiscard]] const char* GetError() const noexcept;
 
     private:
-        hive::DynamicLibrary lib_;
-        GameplayRegisterFn register_fn_{nullptr};
-        GameplayUnregisterFn unregister_fn_{nullptr};
-        GameplayVersionFn version_fn_{nullptr};
-        bool registered_{false};
+        hive::DynamicLibrary m_lib;
+        GameplayRegisterFn m_registerFn{nullptr};
+        GameplayUnregisterFn m_unregisterFn{nullptr};
+        GameplayVersionFn m_versionFn{nullptr};
+        bool m_registered{false};
     };
-}
+} // namespace waggle

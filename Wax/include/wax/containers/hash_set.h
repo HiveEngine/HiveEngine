@@ -1,16 +1,17 @@
 #pragma once
 
+#include <hive/core/assert.h>
+
+#include <comb/memory_resource.h>
+
 #include <cstddef>
 #include <cstdint>
 #include <functional>
 #include <utility>
-#include <comb/memory_resource.h>
-#include <hive/core/assert.h>
 
 namespace wax
 {
-    template<typename K, typename Hash = std::hash<K>>
-    class HashSet
+    template <typename K, typename Hash = std::hash<K>> class HashSet
     {
     private:
         static constexpr uint8_t kEmpty = 0;
@@ -20,12 +21,12 @@ namespace wax
 
         struct Bucket
         {
-            alignas(K) unsigned char key_storage[sizeof(K)];
-            uint8_t state{kEmpty};
-            uint8_t psl{0};
+            alignas(K) unsigned char m_keyStorage[sizeof(K)];
+            uint8_t m_state{kEmpty};
+            uint8_t m_psl{0};
 
-            [[nodiscard]] K* Key() { return reinterpret_cast<K*>(key_storage); }
-            [[nodiscard]] const K* Key() const { return reinterpret_cast<const K*>(key_storage); }
+            [[nodiscard]] K* Key() { return reinterpret_cast<K*>(m_keyStorage); }
+            [[nodiscard]] const K* Key() const { return reinterpret_cast<const K*>(m_keyStorage); }
         };
 
     public:
@@ -33,101 +34,91 @@ namespace wax
         {
         public:
             Iterator(Bucket* buckets, size_t index, size_t capacity)
-                : buckets_{buckets}
-                , index_{index}
-                , capacity_{capacity}
-            {
+                : m_buckets{buckets}
+                , m_index{index}
+                , m_capacity{capacity} {
                 SkipEmpty();
             }
 
-            [[nodiscard]] const K& operator*() const { return *buckets_[index_].Key(); }
+            [[nodiscard]] const K& operator*() const { return *m_buckets[m_index].Key(); }
 
-            Iterator& operator++()
-            {
-                ++index_;
+            Iterator& operator++() {
+                ++m_index;
                 SkipEmpty();
                 return *this;
             }
 
-            bool operator==(const Iterator& other) const { return index_ == other.index_; }
+            bool operator==(const Iterator& other) const { return m_index == other.m_index; }
 
         private:
-            void SkipEmpty()
-            {
-                while (index_ < capacity_ && buckets_[index_].state != kOccupied)
+            void SkipEmpty() {
+                while (m_index < m_capacity && m_buckets[m_index].m_state != kOccupied)
                 {
-                    ++index_;
+                    ++m_index;
                 }
             }
 
-            Bucket* buckets_;
-            size_t index_;
-            size_t capacity_;
+            Bucket* m_buckets;
+            size_t m_index;
+            size_t m_capacity;
         };
 
         class ConstIterator
         {
         public:
             ConstIterator(const Bucket* buckets, size_t index, size_t capacity)
-                : buckets_{buckets}
-                , index_{index}
-                , capacity_{capacity}
-            {
+                : m_buckets{buckets}
+                , m_index{index}
+                , m_capacity{capacity} {
                 SkipEmpty();
             }
 
-            [[nodiscard]] const K& operator*() const { return *buckets_[index_].Key(); }
+            [[nodiscard]] const K& operator*() const { return *m_buckets[m_index].Key(); }
 
-            ConstIterator& operator++()
-            {
-                ++index_;
+            ConstIterator& operator++() {
+                ++m_index;
                 SkipEmpty();
                 return *this;
             }
 
-            bool operator==(const ConstIterator& other) const { return index_ == other.index_; }
+            bool operator==(const ConstIterator& other) const { return m_index == other.m_index; }
 
         private:
-            void SkipEmpty()
-            {
-                while (index_ < capacity_ && buckets_[index_].state != kOccupied)
+            void SkipEmpty() {
+                while (m_index < m_capacity && m_buckets[m_index].m_state != kOccupied)
                 {
-                    ++index_;
+                    ++m_index;
                 }
             }
 
-            const Bucket* buckets_;
-            size_t index_;
-            size_t capacity_;
+            const Bucket* m_buckets;
+            size_t m_index;
+            size_t m_capacity;
         };
 
-        explicit HashSet(size_t initial_capacity = 16)
-            : allocator_{comb::GetDefaultMemoryResource()}
-            , capacity_{NextPowerOfTwo(initial_capacity)}
-            , count_{0}
-        {
-            InitializeBuckets(initial_capacity);
+        explicit HashSet(size_t initialCapacity = 16)
+            : m_allocator{comb::GetDefaultMemoryResource()}
+            , m_capacity{NextPowerOfTwo(initialCapacity)}
+            , m_count{0} {
+            InitializeBuckets(initialCapacity);
         }
 
-        explicit HashSet(comb::MemoryResource allocator, size_t initial_capacity = 16)
-            : allocator_{allocator}
-            , capacity_{NextPowerOfTwo(initial_capacity)}
-            , count_{0}
-        {
-            InitializeBuckets(initial_capacity);
+        explicit HashSet(comb::MemoryResource allocator, size_t initialCapacity = 16)
+            : m_allocator{allocator}
+            , m_capacity{NextPowerOfTwo(initialCapacity)}
+            , m_count{0} {
+            InitializeBuckets(initialCapacity);
         }
 
-        template<comb::Allocator Allocator>
-        HashSet(Allocator& allocator, size_t initial_capacity = 16)
-            : HashSet{comb::MemoryResource{allocator}, initial_capacity}
-        {}
+        template <comb::Allocator Allocator>
+        HashSet(Allocator& allocator, size_t initialCapacity = 16)
+            : HashSet{comb::MemoryResource{allocator}, initialCapacity} {}
 
-        ~HashSet()
-        {
+        ~HashSet() {
             Clear();
-            if (buckets_)
+            if (m_buckets)
             {
-                allocator_.Deallocate(buckets_);
+                m_allocator.Deallocate(m_buckets);
             }
         }
 
@@ -135,65 +126,61 @@ namespace wax
         HashSet& operator=(const HashSet&) = delete;
 
         HashSet(HashSet&& other) noexcept
-            : allocator_{other.allocator_}
-            , buckets_{other.buckets_}
-            , capacity_{other.capacity_}
-            , count_{other.count_}
-        {
-            other.buckets_ = nullptr;
-            other.capacity_ = 0;
-            other.count_ = 0;
+            : m_allocator{other.m_allocator}
+            , m_buckets{other.m_buckets}
+            , m_capacity{other.m_capacity}
+            , m_count{other.m_count} {
+            other.m_buckets = nullptr;
+            other.m_capacity = 0;
+            other.m_count = 0;
         }
 
-        HashSet& operator=(HashSet&& other) noexcept
-        {
+        HashSet& operator=(HashSet&& other) noexcept {
             if (this != &other)
             {
                 Clear();
-                if (buckets_)
+                if (m_buckets)
                 {
-                    allocator_.Deallocate(buckets_);
+                    m_allocator.Deallocate(m_buckets);
                 }
 
-                allocator_ = other.allocator_;
-                buckets_ = other.buckets_;
-                capacity_ = other.capacity_;
-                count_ = other.count_;
+                m_allocator = other.m_allocator;
+                m_buckets = other.m_buckets;
+                m_capacity = other.m_capacity;
+                m_count = other.m_count;
 
-                other.buckets_ = nullptr;
-                other.capacity_ = 0;
-                other.count_ = 0;
+                other.m_buckets = nullptr;
+                other.m_capacity = 0;
+                other.m_count = 0;
             }
             return *this;
         }
 
-        bool Insert(const K& key)
-        {
+        bool Insert(const K& key) {
             if (ShouldRehash())
             {
-                Rehash(capacity_ * 2);
+                Rehash(m_capacity * 2);
             }
             return InsertInternal(key);
         }
 
-        [[nodiscard]] bool Contains(const K& key) const noexcept
-        {
+        [[nodiscard]] bool Contains(const K& key) const noexcept {
             const size_t hash = Hash{}(key);
-            size_t index = hash & (capacity_ - 1);
+            size_t index = hash & (m_capacity - 1);
             uint8_t psl = 0;
 
             while (true)
             {
-                const Bucket& bucket = buckets_[index];
+                const Bucket& bucket = m_buckets[index];
 
-                if (bucket.state == kEmpty)
+                if (bucket.m_state == kEmpty)
                 {
                     return false;
                 }
 
-                if (bucket.state == kOccupied)
+                if (bucket.m_state == kOccupied)
                 {
-                    if (psl > bucket.psl)
+                    if (psl > bucket.m_psl)
                     {
                         return false;
                     }
@@ -205,28 +192,27 @@ namespace wax
                 }
 
                 ++psl;
-                index = (index + 1) & (capacity_ - 1);
+                index = (index + 1) & (m_capacity - 1);
             }
         }
 
-        bool Remove(const K& key)
-        {
+        bool Remove(const K& key) {
             const size_t hash = Hash{}(key);
-            size_t index = hash & (capacity_ - 1);
+            size_t index = hash & (m_capacity - 1);
             uint8_t psl = 0;
 
             while (true)
             {
-                Bucket& bucket = buckets_[index];
+                Bucket& bucket = m_buckets[index];
 
-                if (bucket.state == kEmpty)
+                if (bucket.m_state == kEmpty)
                 {
                     return false;
                 }
 
-                if (bucket.state == kOccupied)
+                if (bucket.m_state == kOccupied)
                 {
-                    if (psl > bucket.psl)
+                    if (psl > bucket.m_psl)
                     {
                         return false;
                     }
@@ -234,155 +220,150 @@ namespace wax
                     if (*bucket.Key() == key)
                     {
                         bucket.Key()->~K();
-                        bucket.state = kDeleted;
-                        --count_;
+                        bucket.m_state = kDeleted;
+                        --m_count;
                         ShiftBackward(index);
                         return true;
                     }
                 }
 
                 ++psl;
-                index = (index + 1) & (capacity_ - 1);
+                index = (index + 1) & (m_capacity - 1);
             }
         }
 
-        void Clear() noexcept
-        {
-            if (buckets_ == nullptr)
+        void Clear() noexcept {
+            if (m_buckets == nullptr)
             {
                 return;
             }
 
-            for (size_t i = 0; i < capacity_; ++i)
+            for (size_t i = 0; i < m_capacity; ++i)
             {
-                if (buckets_[i].state == kOccupied)
+                if (m_buckets[i].m_state == kOccupied)
                 {
-                    buckets_[i].Key()->~K();
+                    m_buckets[i].Key()->~K();
                 }
-                buckets_[i].state = kEmpty;
-                buckets_[i].psl = 0;
+                m_buckets[i].m_state = kEmpty;
+                m_buckets[i].m_psl = 0;
             }
-            count_ = 0;
+            m_count = 0;
         }
 
-        [[nodiscard]] size_t Count() const noexcept { return count_; }
-        [[nodiscard]] size_t Capacity() const noexcept { return capacity_; }
-        [[nodiscard]] bool IsEmpty() const noexcept { return count_ == 0; }
-        [[nodiscard]] float LoadFactor() const noexcept { return static_cast<float>(count_) / static_cast<float>(capacity_); }
-        [[nodiscard]] comb::MemoryResource GetAllocator() const noexcept { return allocator_; }
+        [[nodiscard]] size_t Count() const noexcept { return m_count; }
+        [[nodiscard]] size_t Capacity() const noexcept { return m_capacity; }
+        [[nodiscard]] bool IsEmpty() const noexcept { return m_count == 0; }
+        [[nodiscard]] float LoadFactor() const noexcept {
+            return static_cast<float>(m_count) / static_cast<float>(m_capacity);
+        }
+        [[nodiscard]] comb::MemoryResource GetAllocator() const noexcept { return m_allocator; }
 
-        [[nodiscard]] Iterator begin() noexcept { return Iterator{buckets_, 0, capacity_}; }
-        [[nodiscard]] Iterator end() noexcept { return Iterator{buckets_, capacity_, capacity_}; }
-        [[nodiscard]] ConstIterator begin() const noexcept { return ConstIterator{buckets_, 0, capacity_}; }
-        [[nodiscard]] ConstIterator end() const noexcept { return ConstIterator{buckets_, capacity_, capacity_}; }
+        [[nodiscard]] Iterator Begin() noexcept { return Iterator{m_buckets, 0, m_capacity}; }
+        [[nodiscard]] Iterator End() noexcept { return Iterator{m_buckets, m_capacity, m_capacity}; }
+        [[nodiscard]] ConstIterator Begin() const noexcept { return ConstIterator{m_buckets, 0, m_capacity}; }
+        [[nodiscard]] ConstIterator End() const noexcept { return ConstIterator{m_buckets, m_capacity, m_capacity}; }
 
     private:
-        void InitializeBuckets(size_t initial_capacity)
-        {
-            hive::Assert(initial_capacity > 0, "HashSet capacity must be > 0");
+        void InitializeBuckets(size_t initialCapacity) {
+            hive::Assert(initialCapacity > 0, "HashSet capacity must be > 0");
 
-            buckets_ = static_cast<Bucket*>(allocator_.Allocate(sizeof(Bucket) * capacity_, alignof(Bucket)));
-            hive::Assert(buckets_ != nullptr, "Failed to allocate HashSet buckets");
+            m_buckets = static_cast<Bucket*>(m_allocator.Allocate(sizeof(Bucket) * m_capacity, alignof(Bucket)));
+            hive::Assert(m_buckets != nullptr, "Failed to allocate HashSet buckets");
 
-            for (size_t i = 0; i < capacity_; ++i)
+            for (size_t i = 0; i < m_capacity; ++i)
             {
-                buckets_[i].state = kEmpty;
-                buckets_[i].psl = 0;
+                m_buckets[i].m_state = kEmpty;
+                m_buckets[i].m_psl = 0;
             }
         }
 
-        [[nodiscard]] bool ShouldRehash() const noexcept
-        {
-            return count_ >= static_cast<size_t>(static_cast<float>(capacity_) * kMaxLoadFactor);
+        [[nodiscard]] bool ShouldRehash() const noexcept {
+            return m_count >= static_cast<size_t>(static_cast<float>(m_capacity) * kMaxLoadFactor);
         }
 
-        void Rehash(size_t new_capacity)
-        {
-            Bucket* old_buckets = buckets_;
-            const size_t old_capacity = capacity_;
+        void Rehash(size_t newCapacity) {
+            Bucket* oldBuckets = m_buckets;
+            const size_t oldCapacity = m_capacity;
 
-            capacity_ = new_capacity;
-            buckets_ = static_cast<Bucket*>(allocator_.Allocate(sizeof(Bucket) * capacity_, alignof(Bucket)));
-            hive::Assert(buckets_ != nullptr, "Failed to allocate HashSet buckets during rehash");
+            m_capacity = newCapacity;
+            m_buckets = static_cast<Bucket*>(m_allocator.Allocate(sizeof(Bucket) * m_capacity, alignof(Bucket)));
+            hive::Assert(m_buckets != nullptr, "Failed to allocate HashSet buckets during rehash");
 
-            for (size_t i = 0; i < capacity_; ++i)
+            for (size_t i = 0; i < m_capacity; ++i)
             {
-                buckets_[i].state = kEmpty;
-                buckets_[i].psl = 0;
+                m_buckets[i].m_state = kEmpty;
+                m_buckets[i].m_psl = 0;
             }
 
-            count_ = 0;
+            m_count = 0;
 
-            for (size_t i = 0; i < old_capacity; ++i)
+            for (size_t i = 0; i < oldCapacity; ++i)
             {
-                if (old_buckets[i].state == kOccupied)
+                if (oldBuckets[i].m_state == kOccupied)
                 {
-                    InsertInternal(*old_buckets[i].Key());
-                    old_buckets[i].Key()->~K();
+                    InsertInternal(*oldBuckets[i].Key());
+                    oldBuckets[i].Key()->~K();
                 }
             }
 
-            allocator_.Deallocate(old_buckets);
+            m_allocator.Deallocate(oldBuckets);
         }
 
-        bool InsertInternal(const K& key)
-        {
+        bool InsertInternal(const K& key) {
             const size_t hash = Hash{}(key);
-            size_t index = hash & (capacity_ - 1);
+            size_t index = hash & (m_capacity - 1);
             uint8_t psl = 0;
 
-            K insert_key = key;
+            K insertKey = key;
 
             while (true)
             {
-                Bucket& bucket = buckets_[index];
+                Bucket& bucket = m_buckets[index];
 
-                if (bucket.state == kEmpty || bucket.state == kDeleted)
+                if (bucket.m_state == kEmpty || bucket.m_state == kDeleted)
                 {
-                    new (bucket.key_storage) K(static_cast<K&&>(insert_key));
-                    bucket.state = kOccupied;
-                    bucket.psl = psl;
-                    ++count_;
+                    new (bucket.m_keyStorage) K(static_cast<K&&>(insertKey));
+                    bucket.m_state = kOccupied;
+                    bucket.m_psl = psl;
+                    ++m_count;
                     return true;
                 }
 
-                if (bucket.state == kOccupied && *bucket.Key() == key)
+                if (bucket.m_state == kOccupied && *bucket.Key() == key)
                 {
                     return false;
                 }
 
-                if (psl > bucket.psl)
+                if (psl > bucket.m_psl)
                 {
-                    std::swap(insert_key, *bucket.Key());
-                    std::swap(psl, bucket.psl);
+                    std::swap(insertKey, *bucket.Key());
+                    std::swap(psl, bucket.m_psl);
                 }
 
                 ++psl;
-                index = (index + 1) & (capacity_ - 1);
+                index = (index + 1) & (m_capacity - 1);
             }
         }
 
-        void ShiftBackward(size_t removed_index)
-        {
-            size_t current = removed_index;
-            size_t next = (current + 1) & (capacity_ - 1);
+        void ShiftBackward(size_t removedIndex) {
+            size_t current = removedIndex;
+            size_t next = (current + 1) & (m_capacity - 1);
 
-            while (buckets_[next].state == kOccupied && buckets_[next].psl > 0)
+            while (m_buckets[next].m_state == kOccupied && m_buckets[next].m_psl > 0)
             {
-                new (buckets_[current].key_storage) K(static_cast<K&&>(*buckets_[next].Key()));
-                buckets_[current].state = kOccupied;
-                buckets_[current].psl = buckets_[next].psl - 1;
+                new (m_buckets[current].m_keyStorage) K(static_cast<K&&>(*m_buckets[next].Key()));
+                m_buckets[current].m_state = kOccupied;
+                m_buckets[current].m_psl = m_buckets[next].m_psl - 1;
 
-                buckets_[next].Key()->~K();
-                buckets_[next].state = kEmpty;
+                m_buckets[next].Key()->~K();
+                m_buckets[next].m_state = kEmpty;
 
                 current = next;
-                next = (next + 1) & (capacity_ - 1);
+                next = (next + 1) & (m_capacity - 1);
             }
         }
 
-        static constexpr size_t NextPowerOfTwo(size_t n)
-        {
+        static constexpr size_t NextPowerOfTwo(size_t n) {
             if (n == 0)
             {
                 return 1;
@@ -397,9 +378,9 @@ namespace wax
             return n + 1;
         }
 
-        comb::MemoryResource allocator_;
-        Bucket* buckets_{nullptr};
-        size_t capacity_;
-        size_t count_;
+        comb::MemoryResource m_allocator;
+        Bucket* m_buckets{nullptr};
+        size_t m_capacity;
+        size_t m_count;
     };
-}
+} // namespace wax

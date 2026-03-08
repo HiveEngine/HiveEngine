@@ -1,9 +1,12 @@
-#include <larvae/larvae.h>
-#include <wax/containers/string.h>
-#include <wax/containers/string_view.h>
 #include <comb/linear_allocator.h>
 
-namespace {
+#include <wax/containers/string.h>
+#include <wax/containers/string_view.h>
+
+#include <larvae/larvae.h>
+
+namespace
+{
     // =============================================================================
     // Construction
     // =============================================================================
@@ -14,7 +17,7 @@ namespace {
 
         larvae::AssertEqual(str.Size(), 0u);
         larvae::AssertTrue(str.IsEmpty());
-        larvae::AssertEqual(str.Capacity(), wax::String::SsoCapacity);
+        larvae::AssertEqual(str.Capacity(), wax::String::ssoCapacity);
     });
 
     auto test2 = larvae::RegisterTest("WaxString", "CStringConstructorSSO", []() {
@@ -25,7 +28,7 @@ namespace {
         larvae::AssertFalse(str.IsEmpty());
         larvae::AssertEqual(str[0], 'H');
         larvae::AssertEqual(str[4], 'o');
-        larvae::AssertEqual(str.Capacity(), wax::String::SsoCapacity);
+        larvae::AssertEqual(str.Capacity(), wax::String::ssoCapacity);
     });
 
     auto test3 = larvae::RegisterTest("WaxString", "CStringConstructorHeap", []() {
@@ -34,7 +37,7 @@ namespace {
 
         larvae::AssertEqual(str.Size(), 52u);
         larvae::AssertFalse(str.IsEmpty());
-        larvae::AssertTrue(str.Capacity() > wax::String::SsoCapacity);
+        larvae::AssertTrue(str.Capacity() > wax::String::ssoCapacity);
     });
 
     auto test4 = larvae::RegisterTest("WaxString", "StringViewConstructor", []() {
@@ -183,8 +186,9 @@ namespace {
 
         char result[3];
         size_t i = 0;
-        for (char ch : str) {
-            result[i++] = ch;
+        for (auto it = str.Begin(); it != str.End(); ++it)
+        {
+            result[i++] = *it;
         }
 
         larvae::AssertEqual(result[0], 'a');
@@ -251,7 +255,7 @@ namespace {
         str.ShrinkToFit();
 
         larvae::AssertEqual(str.Size(), 5u);
-        larvae::AssertEqual(str.Capacity(), wax::String::SsoCapacity);
+        larvae::AssertEqual(str.Capacity(), wax::String::ssoCapacity);
     });
 
     // =============================================================================
@@ -322,7 +326,7 @@ namespace {
         str.Append("!!!");
 
         larvae::AssertEqual(str.Size(), 8u);
-        larvae::AssertEqual(str.Capacity(), wax::String::SsoCapacity);
+        larvae::AssertEqual(str.Capacity(), wax::String::ssoCapacity);
     });
 
     auto test29 = larvae::RegisterTest("WaxString", "AppendSSOToHeap", []() {
@@ -331,8 +335,8 @@ namespace {
 
         str.Append(" string that will exceed SSO capacity for sure");
 
-        larvae::AssertTrue(str.Size() > wax::String::SsoCapacity);
-        larvae::AssertTrue(str.Capacity() > wax::String::SsoCapacity);
+        larvae::AssertTrue(str.Size() > wax::String::ssoCapacity);
+        larvae::AssertTrue(str.Capacity() > wax::String::ssoCapacity);
     });
 
     auto test30 = larvae::RegisterTest("WaxString", "PopBack", []() {
@@ -507,7 +511,7 @@ namespace {
         wax::String str{alloc, "1234567890123456789012"};
 
         larvae::AssertEqual(str.Size(), 22u);
-        larvae::AssertEqual(str.Capacity(), wax::String::SsoCapacity);
+        larvae::AssertEqual(str.Capacity(), wax::String::ssoCapacity);
     });
 
     auto test46 = larvae::RegisterTest("WaxString", "SSOBoundary23Chars", []() {
@@ -515,18 +519,18 @@ namespace {
         wax::String str{alloc, "12345678901234567890123"};
 
         larvae::AssertEqual(str.Size(), 23u);
-        larvae::AssertTrue(str.Capacity() > wax::String::SsoCapacity);
+        larvae::AssertTrue(str.Capacity() > wax::String::ssoCapacity);
     });
 
     auto test47 = larvae::RegisterTest("WaxString", "AppendAcrossSSOBoundary", []() {
         comb::LinearAllocator alloc{1024};
         wax::String str{alloc, "1234567890123456789012"};
 
-        larvae::AssertEqual(str.Capacity(), wax::String::SsoCapacity);
+        larvae::AssertEqual(str.Capacity(), wax::String::ssoCapacity);
 
         str.Append('X');
 
         larvae::AssertEqual(str.Size(), 23u);
-        larvae::AssertTrue(str.Capacity() > wax::String::SsoCapacity);
+        larvae::AssertTrue(str.Capacity() > wax::String::ssoCapacity);
     });
-}
+} // namespace

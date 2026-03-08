@@ -1,24 +1,28 @@
 #pragma once
 
-#include <comb/allocator_concepts.h>
 #include <hive/core/assert.h>
 #include <hive/profiling/profiler.h>
-#include <comb/utils.h>
+
+#include <comb/allocator_concepts.h>
 #include <comb/platform.h>
-#include <cstddef>
+#include <comb/utils.h>
+
 #include <array>
+#include <cstddef>
 #include <memory>
 
 // Memory debugging (zero overhead when disabled)
 #if COMB_MEM_DEBUG
-    #include <comb/debug/mem_debug_config.h>
-    #include <comb/debug/allocation_registry.h>
-    #include <comb/debug/allocation_history.h>
-    #include <comb/debug/global_memory_tracker.h>
-    #include <comb/debug/platform_utils.h>
-    #include <hive/core/log.h>
-    #include <comb/combmodule.h>
-    #include <cstring>  // For memset
+#include <hive/core/log.h>
+
+#include <comb/combmodule.h>
+#include <comb/debug/allocation_history.h>
+#include <comb/debug/allocation_registry.h>
+#include <comb/debug/global_memory_tracker.h>
+#include <comb/debug/mem_debug_config.h>
+#include <comb/debug/platform_utils.h>
+
+#include <cstring> // For memset
 #endif
 
 namespace comb
@@ -94,30 +98,29 @@ namespace comb
     class BuddyAllocator
     {
     private:
-        static constexpr size_t MinBlockSize = 64;
-        static constexpr size_t MaxLevels = 28;  // 64B to 8GB
+        static constexpr size_t minBlockSize = 64;
+        static constexpr size_t maxLevels = 28; // 64B to 8GB
 
         struct AllocationHeader
         {
-            size_t size;  // Block size (for deallocation)
+            size_t m_size; // Block size (for deallocation)
         };
 
         // Header padded to max_align_t so user data starts properly aligned.
         // Blocks are power-of-2 sized and naturally aligned (>= 64B),
         // so block + HeaderPrefix is aligned to max_align_t.
-        static constexpr size_t HeaderPrefix =
-            (sizeof(AllocationHeader) + alignof(std::max_align_t) - 1)
-            & ~(alignof(std::max_align_t) - 1);
+        static constexpr size_t headerPrefix =
+            (sizeof(AllocationHeader) + alignof(std::max_align_t) - 1) & ~(alignof(std::max_align_t) - 1);
 
         // Debug: header + front guard, padded for alignment.
         // Front guard lives in the padding between header and user data.
-        static constexpr size_t DebugHeaderPrefix =
-            (sizeof(AllocationHeader) + sizeof(uint32_t) + alignof(std::max_align_t) - 1)
-            & ~(alignof(std::max_align_t) - 1);
+        static constexpr size_t debugHeaderPrefix =
+            (sizeof(AllocationHeader) + sizeof(uint32_t) + alignof(std::max_align_t) - 1) &
+            ~(alignof(std::max_align_t) - 1);
 
         struct FreeBlock
         {
-            FreeBlock* next;
+            FreeBlock* m_next;
         };
 
     public:
@@ -128,109 +131,106 @@ namespace comb
          * Construct buddy allocator with specified capacity
          * Capacity will be rounded up to nearest power-of-2
          */
-        explicit BuddyAllocator(size_t capacity, const char* debug_name = "BuddyAllocator")
-            : capacity_{NextPowerOfTwo(capacity)}
-            , used_memory_{0}
-            , debug_name_{debug_name}
-        {
+        explicit BuddyAllocator(size_t capacity, const char* debugName = "BuddyAllocator")
+            : m_capacity{NextPowerOfTwo(capacity)}
+            , m_usedMemory{0}
+            , m_debugName{debugName} {
             hive::Assert(capacity > 0, "Capacity must be > 0");
 
-            memory_block_ = AllocatePages(capacity_);
-            hive::Assert(memory_block_ != nullptr, "Failed to allocate buddy memory");
+            m_memoryBlock = AllocatePages(m_capacity);
+            hive::Assert(m_memoryBlock != nullptr, "Failed to allocate buddy memory");
 
-            for (size_t i = 0; i < MaxLevels; ++i)
+            for (size_t i = 0; i < maxLevels; ++i)
             {
-                free_lists_[i] = nullptr;
+                m_freeLists[i] = nullptr;
             }
 
-            size_t topLevel = GetLevel(capacity_);
-            auto* block = static_cast<FreeBlock*>(memory_block_);
-            block->next = nullptr;
-            free_lists_[topLevel] = block;
+            size_t topLevel = GetLevel(m_capacity);
+            auto* block = static_cast<FreeBlock*>(m_memoryBlock);
+            block->m_next = nullptr;
+            m_freeLists[topLevel] = block;
 
 #if COMB_MEM_DEBUG
-            registry_ = std::make_unique<debug::AllocationRegistry>();
-            history_ = std::make_unique<debug::AllocationHistory>();
-            debug::GlobalMemoryTracker::GetInstance().RegisterAllocator(GetName(), registry_.get());
+            m_registry = std::make_unique<debug::AllocationRegistry>();
+            m_history = std::make_unique<debug::AllocationHistory>();
+            debug::GlobalMemoryTracker::GetInstance().RegisterAllocator(GetName(), m_registry.get());
 #endif
         }
 
-        ~BuddyAllocator()
-        {
+        ~BuddyAllocator() {
 #if COMB_MEM_DEBUG
-            if (registry_)
+            if (m_registry)
             {
                 if constexpr (debug::kLeakDetectionEnabled)
                 {
-                    registry_->ReportLeaks(GetName());
+                    m_registry->ReportLeaks(GetName());
                 }
-                debug::GlobalMemoryTracker::GetInstance().UnregisterAllocator(registry_.get());
+                debug::GlobalMemoryTracker::GetInstance().UnregisterAllocator(m_registry.get());
             }
 #endif
 
-            if (memory_block_)
+            if (m_memoryBlock)
             {
-                FreePages(memory_block_, capacity_);
+                FreePages(m_memoryBlock, m_capacity);
             }
         }
 
         BuddyAllocator(BuddyAllocator&& other) noexcept
-            : memory_block_{other.memory_block_}
-            , capacity_{other.capacity_}
-            , used_memory_{other.used_memory_}
-            , debug_name_{other.debug_name_}
-            , free_lists_{other.free_lists_}
+            : m_memoryBlock{other.m_memoryBlock}
+            , m_capacity{other.m_capacity}
+            , m_usedMemory{other.m_usedMemory}
+            , m_debugName{other.m_debugName}
+            , m_freeLists{other.m_freeLists}
 #if COMB_MEM_DEBUG
-            , registry_{std::move(other.registry_)}
-            , history_{std::move(other.history_)}
+            , m_registry{std::move(other.m_registry)}
+            , m_history{std::move(other.m_history)}
 #endif
         {
-            other.memory_block_ = nullptr;
-            other.capacity_ = 0;
-            other.used_memory_ = 0;
-            for (size_t i = 0; i < MaxLevels; ++i)
+            other.m_memoryBlock = nullptr;
+            other.m_capacity = 0;
+            other.m_usedMemory = 0;
+            for (size_t i = 0; i < maxLevels; ++i)
             {
-                other.free_lists_[i] = nullptr;
+                other.m_freeLists[i] = nullptr;
             }
         }
 
-        BuddyAllocator& operator=(BuddyAllocator&& other) noexcept
-        {
+        BuddyAllocator& operator=(BuddyAllocator&& other) noexcept {
             if (this != &other)
             {
 #if COMB_MEM_DEBUG
-                if (registry_)
+                if (m_registry)
                 {
                     if constexpr (debug::kLeakDetectionEnabled)
                     {
-                        registry_->ReportLeaks(GetName());
+                        m_registry->ReportLeaks(GetName());
                     }
-                    debug::GlobalMemoryTracker::GetInstance().UnregisterAllocator(registry_.get());
+                    debug::GlobalMemoryTracker::GetInstance().UnregisterAllocator(m_registry.get());
                 }
 #endif
 
-                if (memory_block_)
+                if (m_memoryBlock)
                 {
-                    FreePages(memory_block_, capacity_);
+                    FreePages(m_memoryBlock, m_capacity);
                 }
 
-                memory_block_ = other.memory_block_;
-                capacity_ = other.capacity_;
-                used_memory_ = other.used_memory_;
-                debug_name_ = other.debug_name_;
-                free_lists_ = other.free_lists_;
+                m_memoryBlock = other.m_memoryBlock;
+                m_capacity = other.m_capacity;
+                m_usedMemory = other.m_usedMemory;
+                m_debugName = other.m_debugName;
+                m_freeLists = other.m_freeLists;
 
 #if COMB_MEM_DEBUG
-                registry_ = std::move(other.registry_);
-                history_ = std::move(other.history_);
+                m_registry = std::move(other.m_registry);
+                m_history = std::move(other.m_history);
 #endif
 
-                other.memory_block_ = nullptr;
-                other.capacity_ = 0;
-                other.used_memory_ = 0;
-                for (size_t i = 0; i < MaxLevels; ++i)
+                other.m_memoryBlock = nullptr;
+                other.m_capacity = 0;
+                other.m_usedMemory = 0;
+                for (size_t i = 0; i < maxLevels; ++i)
                 {
-                    other.free_lists_[i] = nullptr;
+                    other.m_freeLists[i] = nullptr;
                 }
             }
             return *this;
@@ -253,15 +253,13 @@ namespace comb
          *
          * IMPORTANT: Does NOT fallback to operator new. Returns nullptr when out of memory.
          */
-        [[nodiscard]] void* Allocate(size_t size, size_t alignment, const char* tag = nullptr)
-        {
+        [[nodiscard]] void* Allocate(size_t size, size_t alignment, const char* tag = nullptr) {
 #if COMB_MEM_DEBUG
             void* ptr = AllocateDebug(size, alignment, tag);
 #else
-            (void)tag;  // Suppress unused warning
+            (void)tag; // Suppress unused warning
 
-            hive::Assert(alignment <= alignof(std::max_align_t),
-                         "BuddyAllocator alignment limited to max_align_t");
+            hive::Assert(alignment <= alignof(std::max_align_t), "BuddyAllocator alignment limited to max_align_t");
 
             size_t totalSize = size + HeaderPrefix;
             size_t blockSize = NextPowerOfTwo(totalSize);
@@ -292,9 +290,7 @@ namespace comb
 
                 size_t splitSize = GetBlockSize(currentLevel);
 
-                auto* buddy = reinterpret_cast<FreeBlock*>(
-                    reinterpret_cast<std::byte*>(block) + splitSize
-                );
+                auto* buddy = reinterpret_cast<FreeBlock*>(reinterpret_cast<std::byte*>(block) + splitSize);
 
                 buddy->next = free_lists_[currentLevel];
                 free_lists_[currentLevel] = buddy;
@@ -324,8 +320,7 @@ namespace comb
          *
          * IMPORTANT: Pointer must have been allocated from THIS allocator.
          */
-        void Deallocate(void* ptr)
-        {
+        void Deallocate(void* ptr) {
             if (!ptr)
                 return;
 
@@ -334,9 +329,7 @@ namespace comb
 #if COMB_MEM_DEBUG
             DeallocateDebug(ptr);
 #else
-            auto* header = reinterpret_cast<AllocationHeader*>(
-                static_cast<std::byte*>(ptr) - HeaderPrefix
-            );
+            auto* header = reinterpret_cast<AllocationHeader*>(static_cast<std::byte*>(ptr) - HeaderPrefix);
 
             size_t blockSize = header->size;
             size_t level = GetLevel(blockSize);
@@ -351,26 +344,17 @@ namespace comb
         /**
          * Get total bytes currently allocated
          */
-        [[nodiscard]] size_t GetUsedMemory() const
-        {
-            return used_memory_;
-        }
+        [[nodiscard]] size_t GetUsedMemory() const { return m_usedMemory; }
 
         /**
          * Get total capacity
          */
-        [[nodiscard]] size_t GetTotalMemory() const
-        {
-            return capacity_;
-        }
+        [[nodiscard]] size_t GetTotalMemory() const { return m_capacity; }
 
         /**
          * Get allocator name for debugging
          */
-        [[nodiscard]] const char* GetName() const
-        {
-            return debug_name_;
-        }
+        [[nodiscard]] const char* GetName() const { return m_debugName; }
 
         /**
          * Get the usable size of an allocation's block
@@ -382,18 +366,15 @@ namespace comb
          * @param ptr User pointer previously returned by Allocate
          * @return Usable byte count, or 0 if ptr is null
          */
-        [[nodiscard]] size_t GetBlockUsableSize(const void* ptr) const
-        {
-            if (!ptr) return 0;
+        [[nodiscard]] size_t GetBlockUsableSize(const void* ptr) const {
+            if (!ptr)
+                return 0;
 #if COMB_MEM_DEBUG
-            auto* header = reinterpret_cast<const AllocationHeader*>(
-                static_cast<const std::byte*>(ptr) - DebugHeaderPrefix
-            );
-            return header->size - DebugHeaderPrefix;
+            auto* header =
+                reinterpret_cast<const AllocationHeader*>(static_cast<const std::byte*>(ptr) - debugHeaderPrefix);
+            return header->m_size - debugHeaderPrefix;
 #else
-            auto* header = reinterpret_cast<const AllocationHeader*>(
-                static_cast<const std::byte*>(ptr) - HeaderPrefix
-            );
+            auto* header = reinterpret_cast<const AllocationHeader*>(static_cast<const std::byte*>(ptr) - HeaderPrefix);
             return header->size - HeaderPrefix;
 #endif
         }
@@ -404,36 +385,34 @@ namespace comb
          * All existing allocations become invalid.
          * Rebuilds the free list as a single top-level block.
          */
-        void Reset()
-        {
-            for (size_t i = 0; i < MaxLevels; ++i)
+        void Reset() {
+            for (size_t i = 0; i < maxLevels; ++i)
             {
-                free_lists_[i] = nullptr;
+                m_freeLists[i] = nullptr;
             }
 
-            size_t topLevel = GetLevel(capacity_);
-            auto* block = static_cast<FreeBlock*>(memory_block_);
-            block->next = nullptr;
-            free_lists_[topLevel] = block;
+            size_t topLevel = GetLevel(m_capacity);
+            auto* block = static_cast<FreeBlock*>(m_memoryBlock);
+            block->m_next = nullptr;
+            m_freeLists[topLevel] = block;
 
-            used_memory_ = 0;
+            m_usedMemory = 0;
 
 #if COMB_MEM_DEBUG
-            if (registry_)
+            if (m_registry)
             {
-                registry_->Clear();
+                m_registry->Clear();
             }
 #endif
         }
 
     private:
         // Convert size to level (0 = 64B, 1 = 128B, 2 = 256B, etc.)
-        [[nodiscard]] constexpr size_t GetLevel(size_t size) const noexcept
-        {
-            size_t blockSize = MinBlockSize;
+        [[nodiscard]] constexpr size_t GetLevel(size_t size) const noexcept {
+            size_t blockSize = minBlockSize;
             size_t level = 0;
 
-            while (blockSize < size && level < MaxLevels)
+            while (blockSize < size && level < maxLevels)
             {
                 blockSize <<= 1;
                 ++level;
@@ -443,40 +422,35 @@ namespace comb
         }
 
         // Convert level to block size
-        [[nodiscard]] constexpr size_t GetBlockSize(size_t level) const noexcept
-        {
-            return MinBlockSize << level;
-        }
+        [[nodiscard]] constexpr size_t GetBlockSize(size_t level) const noexcept { return minBlockSize << level; }
 
         // Calculate buddy offset using XOR
-        [[nodiscard]] size_t GetBuddyOffset(size_t offset, size_t blockSize) const noexcept
-        {
+        [[nodiscard]] size_t GetBuddyOffset(size_t offset, size_t blockSize) const noexcept {
             return offset ^ blockSize;
         }
 
         // Coalesce and insert block into free list
-        void CoalesceAndInsert(void* blockPtr, size_t blockSize, size_t level)
-        {
+        void CoalesceAndInsert(void* blockPtr, size_t blockSize, size_t level) {
             // Calculate offset
-            size_t offset = static_cast<size_t>(static_cast<std::byte*>(blockPtr) -
-                           static_cast<std::byte*>(memory_block_));
+            size_t offset =
+                static_cast<size_t>(static_cast<std::byte*>(blockPtr) - static_cast<std::byte*>(m_memoryBlock));
 
             // Try to merge with buddy
-            while (level < MaxLevels - 1)
+            while (level < maxLevels - 1)
             {
                 size_t buddyOffset = GetBuddyOffset(offset, blockSize);
 
                 // Check if buddy is in our memory range
-                if (buddyOffset >= capacity_)
+                if (buddyOffset >= m_capacity)
                 {
                     break;
                 }
 
-                void* buddyPtr = static_cast<std::byte*>(memory_block_) + buddyOffset;
+                void* buddyPtr = static_cast<std::byte*>(m_memoryBlock) + buddyOffset;
 
                 // Search for buddy in free list
                 FreeBlock* prev = nullptr;
-                FreeBlock* curr = free_lists_[level];
+                FreeBlock* curr = m_freeLists[level];
                 bool buddyFound = false;
 
                 while (curr != nullptr)
@@ -487,22 +461,22 @@ namespace comb
                         break;
                     }
                     prev = curr;
-                    curr = curr->next;
+                    curr = curr->m_next;
                 }
 
                 if (!buddyFound)
                 {
-                    break;  // Buddy not free, stop coalescing
+                    break; // Buddy not free, stop coalescing
                 }
 
                 // Remove buddy from free list
                 if (prev)
                 {
-                    prev->next = curr->next;
+                    prev->m_next = curr->m_next;
                 }
                 else
                 {
-                    free_lists_[level] = curr->next;
+                    m_freeLists[level] = curr->m_next;
                 }
 
                 // Merge: parent is at lower offset
@@ -519,15 +493,15 @@ namespace comb
 
             // Insert merged block into free list
             auto* block = static_cast<FreeBlock*>(blockPtr);
-            block->next = free_lists_[level];
-            free_lists_[level] = block;
+            block->m_next = m_freeLists[level];
+            m_freeLists[level] = block;
         }
 
-        void* memory_block_{nullptr};
-        size_t capacity_{0};
-        size_t used_memory_{0};
-        const char* debug_name_{"BuddyAllocator"};
-        std::array<FreeBlock*, MaxLevels> free_lists_{};
+        void* m_memoryBlock{nullptr};
+        size_t m_capacity{0};
+        size_t m_usedMemory{0};
+        const char* m_debugName{"BuddyAllocator"};
+        std::array<FreeBlock*, maxLevels> m_freeLists{};
 
 #if COMB_MEM_DEBUG
         // Debug tracking (zero overhead when COMB_MEM_DEBUG=0)
@@ -535,8 +509,8 @@ namespace comb
         void DeallocateDebug(void* ptr);
 
         // Use unique_ptr to enable move semantics (AllocationRegistry contains non-movable mutex)
-        std::unique_ptr<debug::AllocationRegistry> registry_;
-        std::unique_ptr<debug::AllocationHistory> history_;
+        std::unique_ptr<debug::AllocationRegistry> m_registry;
+        std::unique_ptr<debug::AllocationHistory> m_history;
 #endif
     };
 
@@ -547,45 +521,42 @@ namespace comb
     // Debug Implementation (Inline methods - must be in header)
     // ========================================================================
 
-    inline void* BuddyAllocator::AllocateDebug(size_t size, size_t alignment, const char* tag)
-    {
+    inline void* BuddyAllocator::AllocateDebug(size_t size, size_t alignment, const char* tag) {
         using namespace debug;
 
-        hive::Assert(alignment <= alignof(std::max_align_t),
-                     "BuddyAllocator alignment limited to max_align_t");
+        hive::Assert(alignment <= alignof(std::max_align_t), "BuddyAllocator alignment limited to max_align_t");
 
         // 1. Calculate space needed
         // Layout: [AllocationHeader][...padding...][GUARD_FRONT (4B)][user data][GUARD_BACK (4B)]
         // User data at block + DebugHeaderPrefix, properly aligned.
         // Front guard fits in the padding (guaranteed by DebugHeaderPrefix formula).
         const size_t guardSize = sizeof(uint32_t);
-        size_t totalSize = DebugHeaderPrefix + size + guardSize;
+        size_t totalSize = debugHeaderPrefix + size + guardSize;
         size_t blockSize = NextPowerOfTwo(totalSize);
-        if (blockSize < MinBlockSize)
+        if (blockSize < minBlockSize)
         {
-            blockSize = MinBlockSize;
+            blockSize = minBlockSize;
         }
 
         size_t level = GetLevel(blockSize);
 
         // 2. Find a free block (release path)
         size_t currentLevel = level;
-        while (currentLevel < MaxLevels && free_lists_[currentLevel] == nullptr)
+        while (currentLevel < maxLevels && m_freeLists[currentLevel] == nullptr)
         {
             ++currentLevel;
         }
 
-        if (currentLevel >= MaxLevels)
+        if (currentLevel >= maxLevels)
         {
-            hive::LogError(comb::LogCombRoot,
-                           "[MEM_DEBUG] [{}] Allocation failed: size={}, alignment={}, tag={}",
+            hive::LogError(comb::LOG_COMB_ROOT, "[MEM_DEBUG] [{}] Allocation failed: size={}, alignment={}, tag={}",
                            GetName(), size, alignment, tag ? tag : "<no tag>");
-            return nullptr;  // No block available
+            return nullptr; // No block available
         }
 
         // Pop block from free list
-        FreeBlock* block = free_lists_[currentLevel];
-        free_lists_[currentLevel] = block->next;
+        FreeBlock* block = m_freeLists[currentLevel];
+        m_freeLists[currentLevel] = block->m_next;
 
         // Split down to desired level
         while (currentLevel > level)
@@ -595,30 +566,28 @@ namespace comb
             size_t splitSize = GetBlockSize(currentLevel);
 
             // Split: second half becomes buddy
-            auto* buddy = reinterpret_cast<FreeBlock*>(
-                reinterpret_cast<std::byte*>(block) + splitSize
-            );
+            auto* buddy = reinterpret_cast<FreeBlock*>(reinterpret_cast<std::byte*>(block) + splitSize);
 
             // Add buddy to free list
-            buddy->next = free_lists_[currentLevel];
-            free_lists_[currentLevel] = buddy;
+            buddy->m_next = m_freeLists[currentLevel];
+            m_freeLists[currentLevel] = buddy;
         }
 
         // Write header
         auto* header = reinterpret_cast<AllocationHeader*>(block);
-        header->size = blockSize;
+        header->m_size = blockSize;
 
         // Track used_memory_ with release layout (no guards) for consistent stats
-        size_t releaseTotalSize = size + HeaderPrefix;
+        size_t releaseTotalSize = size + headerPrefix;
         size_t releaseBlockSize = NextPowerOfTwo(releaseTotalSize);
-        if (releaseBlockSize < MinBlockSize)
+        if (releaseBlockSize < minBlockSize)
         {
-            releaseBlockSize = MinBlockSize;
+            releaseBlockSize = minBlockSize;
         }
-        used_memory_ += releaseBlockSize;
+        m_usedMemory += releaseBlockSize;
 
         // 3. Place guard bytes and user data
-        void* userPtr = reinterpret_cast<std::byte*>(block) + DebugHeaderPrefix;
+        void* userPtr = reinterpret_cast<std::byte*>(block) + debugHeaderPrefix;
 
         WriteGuard(static_cast<std::byte*>(userPtr) - guardSize);
         WriteGuard(static_cast<std::byte*>(userPtr) + size);
@@ -626,45 +595,44 @@ namespace comb
         // 4. Initialize memory with pattern (detect uninitialized reads)
         if constexpr (kMemDebugEnabled)
         {
-            std::memset(userPtr, AllocatedMemoryPattern, size);
+            std::memset(userPtr, allocatedMemoryPattern, size);
         }
 
         // 5. Register allocation
         AllocationInfo info{};
-        info.address = userPtr;
-        info.size = size;
-        info.alignment = alignment;
-        info.timestamp = GetTimestamp();
-        info.tag = tag;
-        info.allocationId = registry_->GetNextAllocationId();
-        info.threadId = GetThreadId();
+        info.m_address = userPtr;
+        info.m_size = size;
+        info.m_alignment = alignment;
+        info.m_timestamp = GetTimestamp();
+        info.m_tag = tag;
+        info.m_allocationId = m_registry->GetNextAllocationId();
+        info.m_threadId = GetThreadId();
 
 #if COMB_MEM_DEBUG_CALLSTACKS
         CaptureCallstack(info.callstack, info.callstackDepth);
 #endif
 
-        registry_->RegisterAllocation(info);
+        m_registry->RegisterAllocation(info);
 
         // 6. Record in history
 #if COMB_MEM_DEBUG_HISTORY
-        history_->RecordAllocation(info);
+        m_history->RecordAllocation(info);
 #endif
 
         return userPtr;
     }
 
-    inline void BuddyAllocator::DeallocateDebug(void* ptr)
-    {
+    inline void BuddyAllocator::DeallocateDebug(void* ptr) {
         using namespace debug;
 
-        if (!ptr) return;
+        if (!ptr)
+            return;
 
         // 1. Find allocation info
-        auto* info = registry_->FindAllocation(ptr);
+        auto* info = m_registry->FindAllocation(ptr);
         if (!info)
         {
-            hive::LogError(comb::LogCombRoot,
-                           "[MEM_DEBUG] [{}] Double-free or invalid pointer detected! Address: {}",
+            hive::LogError(comb::LOG_COMB_ROOT, "[MEM_DEBUG] [{}] Double-free or invalid pointer detected! Address: {}",
                            GetName(), ptr);
             hive::Assert(false, "Double-free or invalid pointer (not found in registry)");
             return;
@@ -675,19 +643,19 @@ namespace comb
         {
             if (!info->CheckGuards())
             {
-                if (info->ReadGuardFront() != GuardMagic)
+                if (info->ReadGuardFront() != guardMagic)
                 {
-                    hive::LogError(comb::LogCombRoot,
+                    hive::LogError(comb::LOG_COMB_ROOT,
                                    "[MEM_DEBUG] [{}] Buffer UNDERRUN detected! Address: {}, Size: {}, Tag: {}",
-                                   GetName(), ptr, info->size, info->GetTagOrDefault());
+                                   GetName(), ptr, info->m_size, info->GetTagOrDefault());
                     hive::Assert(false, "Buffer underrun detected");
                 }
 
-                if (info->ReadGuardBack() != GuardMagic)
+                if (info->ReadGuardBack() != guardMagic)
                 {
-                    hive::LogError(comb::LogCombRoot,
+                    hive::LogError(comb::LOG_COMB_ROOT,
                                    "[MEM_DEBUG] [{}] Buffer OVERRUN detected! Address: {}, Size: {}, Tag: {}",
-                                   GetName(), ptr, info->size, info->GetTagOrDefault());
+                                   GetName(), ptr, info->m_size, info->GetTagOrDefault());
                     hive::Assert(false, "Buffer overrun detected");
                 }
             }
@@ -696,41 +664,41 @@ namespace comb
         // 3. Calculate release block size BEFORE unregistering (info will be destroyed)
         // Track memory using release mode calculation (excluding guard bytes)
         // This ensures GetUsedMemory() returns consistent values between debug and release
-        size_t releaseTotalSize = info->size + HeaderPrefix;
+        size_t releaseTotalSize = info->m_size + headerPrefix;
         size_t releaseBlockSize = NextPowerOfTwo(releaseTotalSize);
-        if (releaseBlockSize < MinBlockSize)
+        if (releaseBlockSize < minBlockSize)
         {
-            releaseBlockSize = MinBlockSize;
+            releaseBlockSize = minBlockSize;
         }
 
         // 4. Fill with freed pattern (detect use-after-free)
 #if COMB_MEM_DEBUG_USE_AFTER_FREE
-        std::memset(ptr, FreedMemoryPattern, info->size);
+        std::memset(ptr, freedMemoryPattern, info->m_size);
 #endif
 
         // 5. Record deallocation in history
 #if COMB_MEM_DEBUG_HISTORY
-        history_->RecordDeallocation(ptr, info->size);
+        m_history->RecordDeallocation(ptr, info->m_size);
 #endif
 
         // 6. Unregister allocation (info pointer becomes invalid after this!)
-        registry_->UnregisterAllocation(ptr);
+        m_registry->UnregisterAllocation(ptr);
 
         // 7. Get block pointer (before header)
         // Layout: [AllocationHeader][...padding...][Guard Front][user data][Guard Back]
         // ptr = userPtr at block + DebugHeaderPrefix
-        void* blockPtr = static_cast<std::byte*>(ptr) - DebugHeaderPrefix;
+        void* blockPtr = static_cast<std::byte*>(ptr) - debugHeaderPrefix;
 
         auto* header = reinterpret_cast<AllocationHeader*>(blockPtr);
-        size_t blockSize = header->size;
+        size_t blockSize = header->m_size;
         size_t level = GetLevel(blockSize);
 
         // Decrement used memory
-        used_memory_ -= releaseBlockSize;
+        m_usedMemory -= releaseBlockSize;
 
         // 8. Start coalescing
         CoalesceAndInsert(blockPtr, blockSize, level);
     }
 
 #endif // COMB_MEM_DEBUG
-}
+} // namespace comb

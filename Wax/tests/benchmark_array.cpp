@@ -1,5 +1,7 @@
-#include <larvae/larvae.h>
 #include <wax/containers/array.h>
+
+#include <larvae/larvae.h>
+
 #include <array>
 
 namespace
@@ -281,4 +283,4 @@ namespace
 
         state.SetItemsProcessed(state.iterations() * 2);
     });
-}
+} // namespace

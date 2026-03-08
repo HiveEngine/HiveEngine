@@ -1,11 +1,13 @@
 #pragma once
 
+#include <comb/default_allocator.h>
+
+#include <wax/containers/string_view.h>
+#include <wax/containers/vector.h>
+
 #include <nectar/core/asset_id.h>
 #include <nectar/core/content_hash.h>
 #include <nectar/pipeline/i_asset_cooker.h>
-#include <wax/containers/string_view.h>
-#include <wax/containers/vector.h>
-#include <comb/default_allocator.h>
 
 namespace nectar
 {
@@ -16,28 +18,25 @@ namespace nectar
 
     struct CookRequest
     {
-        wax::Vector<AssetId> assets;
-        wax::StringView platform;       // "pc", "ps5", etc.
-        size_t worker_count{1};         // 1 = sequential
+        wax::Vector<AssetId> m_assets;
+        wax::StringView m_platform; // "pc", "ps5", etc.
+        size_t m_workerCount{1};    // 1 = sequential
     };
 
     struct CookOutput
     {
-        size_t total{0};
-        size_t cooked{0};        // actually cooked
-        size_t skipped{0};       // cache hit
-        size_t failed{0};
-        wax::Vector<AssetId> failed_assets;
+        size_t m_total{0};
+        size_t m_cooked{0};  // actually cooked
+        size_t m_skipped{0}; // cache hit
+        size_t m_failed{0};
+        wax::Vector<AssetId> m_failedAssets;
     };
 
     /// Orchestrates the cook phase: intermediate → platform-optimized → CAS.
     class CookPipeline
     {
     public:
-        CookPipeline(comb::DefaultAllocator& alloc,
-                     CookerRegistry& registry,
-                     CasStore& cas,
-                     AssetDatabase& db,
+        CookPipeline(comb::DefaultAllocator& alloc, CookerRegistry& registry, CasStore& cas, AssetDatabase& db,
                      CookCache& cache);
 
         /// Cook a batch of assets. Uses TopologicalSortLevels for parallel execution.
@@ -50,18 +49,16 @@ namespace nectar
         void InvalidateCascade(AssetId changed);
 
     private:
-        void CookLevel(const wax::Vector<AssetId>& level,
-                       wax::StringView platform,
-                       size_t worker_count,
+        void CookLevel(const wax::Vector<AssetId>& level, wax::StringView platform, size_t workerCount,
                        CookOutput& output);
 
         [[nodiscard]] ContentHash ComputeCookKey(AssetId id, wax::StringView platform);
         void CookAsset(AssetId id, wax::StringView platform, CookOutput& output);
 
-        comb::DefaultAllocator* alloc_;
-        CookerRegistry* registry_;
-        CasStore* cas_;
-        AssetDatabase* db_;
-        CookCache* cache_;
+        comb::DefaultAllocator* m_alloc;
+        CookerRegistry* m_registry;
+        CasStore* m_cas;
+        AssetDatabase* m_db;
+        CookCache* m_cache;
     };
-}
+} // namespace nectar

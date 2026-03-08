@@ -1,5 +1,7 @@
-#include <larvae/larvae.h>
 #include <comb/slab_allocator.h>
+
+#include <larvae/larvae.h>
+
 #include <vector>
 
 namespace
@@ -34,35 +36,36 @@ namespace
         }
     });
 
-    auto bench2 = larvae::RegisterBenchmark("SlabAllocator", "MediumAllocations_128B", [](larvae::BenchmarkState& state) {
-        comb::SlabAllocator<100000, 32, 64, 128, 256> slabs;
-        std::vector<void*> ptrs;
-        ptrs.reserve(100000);
+    auto bench2 =
+        larvae::RegisterBenchmark("SlabAllocator", "MediumAllocations_128B", [](larvae::BenchmarkState& state) {
+            comb::SlabAllocator<100000, 32, 64, 128, 256> slabs;
+            std::vector<void*> ptrs;
+            ptrs.reserve(100000);
 
-        while (state.KeepRunning())
-        {
-            void* ptr = slabs.Allocate(128, 8);
-            larvae::DoNotOptimize(ptr);
-            if (ptr)
+            while (state.KeepRunning())
             {
-                ptrs.push_back(ptr);
-            }
-
-            if (slabs.GetSlabFreeCount(2) == 0)
-            {
-                for (void* p : ptrs)
+                void* ptr = slabs.Allocate(128, 8);
+                larvae::DoNotOptimize(ptr);
+                if (ptr)
                 {
-                    slabs.Deallocate(p);
+                    ptrs.push_back(ptr);
                 }
-                ptrs.clear();
-            }
-        }
 
-        for (void* ptr : ptrs)
-        {
-            slabs.Deallocate(ptr);
-        }
-    });
+                if (slabs.GetSlabFreeCount(2) == 0)
+                {
+                    for (void* p : ptrs)
+                    {
+                        slabs.Deallocate(p);
+                    }
+                    ptrs.clear();
+                }
+            }
+
+            for (void* ptr : ptrs)
+            {
+                slabs.Deallocate(ptr);
+            }
+        });
 
     auto bench3 = larvae::RegisterBenchmark("SlabAllocator", "MixedSizeAllocations", [](larvae::BenchmarkState& state) {
         comb::SlabAllocator<100000, 16, 32, 64, 128, 256, 512> slabs;
@@ -75,12 +78,24 @@ namespace
             size_t size = 0;
             switch (counter % 6)
             {
-                case 0: size = 16; break;
-                case 1: size = 32; break;
-                case 2: size = 64; break;
-                case 3: size = 128; break;
-                case 4: size = 256; break;
-                case 5: size = 512; break;
+                case 0:
+                    size = 16;
+                    break;
+                case 1:
+                    size = 32;
+                    break;
+                case 2:
+                    size = 64;
+                    break;
+                case 3:
+                    size = 128;
+                    break;
+                case 4:
+                    size = 256;
+                    break;
+                case 5:
+                    size = 512;
+                    break;
             }
 
             void* ptr = slabs.Allocate(size, 8);
@@ -107,19 +122,20 @@ namespace
         }
     });
 
-    auto bench4 = larvae::RegisterBenchmark("SlabAllocator", "AllocationAndDeallocation", [](larvae::BenchmarkState& state) {
-        comb::SlabAllocator<100000, 64> slabs;
+    auto bench4 =
+        larvae::RegisterBenchmark("SlabAllocator", "AllocationAndDeallocation", [](larvae::BenchmarkState& state) {
+            comb::SlabAllocator<100000, 64> slabs;
 
-        while (state.KeepRunning())
-        {
-            void* ptr = slabs.Allocate(64, 8);
-            larvae::DoNotOptimize(ptr);
-            if (ptr)
+            while (state.KeepRunning())
             {
-                slabs.Deallocate(ptr);
+                void* ptr = slabs.Allocate(64, 8);
+                larvae::DoNotOptimize(ptr);
+                if (ptr)
+                {
+                    slabs.Deallocate(ptr);
+                }
             }
-        }
-    });
+        });
 
     auto bench5 = larvae::RegisterBenchmark("SlabAllocator", "RapidRecycling", [](larvae::BenchmarkState& state) {
         comb::SlabAllocator<10, 64> slabs;
@@ -164,38 +180,39 @@ namespace
         }
     });
 
-    auto bench7 = larvae::RegisterBenchmark("SlabAllocator", "SlabSelectionOverhead", [](larvae::BenchmarkState& state) {
-        comb::SlabAllocator<100000, 16, 32, 64, 128, 256, 512, 1024, 2048> slabs;
-        std::vector<void*> ptrs;
-        ptrs.reserve(100000);
-        size_t counter = 0;
+    auto bench7 =
+        larvae::RegisterBenchmark("SlabAllocator", "SlabSelectionOverhead", [](larvae::BenchmarkState& state) {
+            comb::SlabAllocator<100000, 16, 32, 64, 128, 256, 512, 1024, 2048> slabs;
+            std::vector<void*> ptrs;
+            ptrs.reserve(100000);
+            size_t counter = 0;
 
-        while (state.KeepRunning())
-        {
-            size_t size = size_t{16} << (counter % 9);
-            void* ptr = slabs.Allocate(size, 8);
-            larvae::DoNotOptimize(ptr);
-            if (ptr)
+            while (state.KeepRunning())
             {
-                ptrs.push_back(ptr);
-            }
-            ++counter;
-
-            if (ptrs.size() >= 50000)
-            {
-                for (void* p : ptrs)
+                size_t size = size_t{16} << (counter % 9);
+                void* ptr = slabs.Allocate(size, 8);
+                larvae::DoNotOptimize(ptr);
+                if (ptr)
                 {
-                    slabs.Deallocate(p);
+                    ptrs.push_back(ptr);
                 }
-                ptrs.clear();
-            }
-        }
+                ++counter;
 
-        for (void* ptr : ptrs)
-        {
-            slabs.Deallocate(ptr);
-        }
-    });
+                if (ptrs.size() >= 50000)
+                {
+                    for (void* p : ptrs)
+                    {
+                        slabs.Deallocate(p);
+                    }
+                    ptrs.clear();
+                }
+            }
+
+            for (void* ptr : ptrs)
+            {
+                slabs.Deallocate(ptr);
+            }
+        });
 
     auto bench8 = larvae::RegisterBenchmark("SlabAllocator", "UnalignedSizes", [](larvae::BenchmarkState& state) {
         comb::SlabAllocator<100000, 32, 64, 128, 256> slabs;
@@ -208,10 +225,18 @@ namespace
             size_t size = 0;
             switch (counter % 4)
             {
-                case 0: size = 17; break;
-                case 1: size = 50; break;
-                case 2: size = 100; break;
-                case 3: size = 200; break;
+                case 0:
+                    size = 17;
+                    break;
+                case 1:
+                    size = 50;
+                    break;
+                case 2:
+                    size = 100;
+                    break;
+                case 3:
+                    size = 200;
+                    break;
             }
 
             void* ptr = slabs.Allocate(size, 8);
@@ -248,12 +273,24 @@ namespace
             size_t size = 0;
             switch (counter % 6)
             {
-                case 0: size = 16; break;
-                case 1: size = 32; break;
-                case 2: size = 64; break;
-                case 3: size = 128; break;
-                case 4: size = 256; break;
-                case 5: size = 512; break;
+                case 0:
+                    size = 16;
+                    break;
+                case 1:
+                    size = 32;
+                    break;
+                case 2:
+                    size = 64;
+                    break;
+                case 3:
+                    size = 128;
+                    break;
+                case 4:
+                    size = 256;
+                    break;
+                case 5:
+                    size = 512;
+                    break;
             }
 
             void* ptr = malloc(size);
@@ -291,4 +328,4 @@ namespace
             }
         }
     });
-}
+} // namespace

@@ -1,8 +1,9 @@
 #pragma once
 
+#include <comb/allocator_concepts.h>
+
 #include <queen/event/event.h>
 #include <queen/event/event_queue.h>
-#include <comb/allocator_concepts.h>
 
 namespace queen
 {
@@ -54,36 +55,27 @@ namespace queen
      *   }
      * @endcode
      */
-    template<Event T, comb::Allocator Allocator>
-    class EventWriter
+    template <Event T, comb::Allocator Allocator> class EventWriter
     {
     public:
         using EventType = T;
 
         explicit EventWriter(EventQueue<T, Allocator>& queue) noexcept
-            : queue_{&queue}
-        {
-        }
+            : m_queue{&queue} {}
 
         /**
          * Send an event (copy)
          *
          * @param event Event to send
          */
-        void Send(const T& event)
-        {
-            queue_->Push(event);
-        }
+        void Send(const T& event) { m_queue->Push(event); }
 
         /**
          * Send an event (move)
          *
          * @param event Event to send
          */
-        void Send(T&& event)
-        {
-            queue_->Push(std::move(event));
-        }
+        void Send(T&& event) { m_queue->Push(std::move(event)); }
 
         /**
          * Construct and send an event in-place
@@ -92,11 +84,7 @@ namespace queen
          * @param args Arguments forwarded to event constructor
          * @return Reference to the sent event
          */
-        template<typename... Args>
-        T& Emplace(Args&&... args)
-        {
-            return queue_->Emplace(std::forward<Args>(args)...);
-        }
+        template <typename... Args> T& Emplace(Args&&... args) { return m_queue->Emplace(std::forward<Args>(args)...); }
 
         /**
          * Send multiple events from a range
@@ -105,32 +93,24 @@ namespace queen
          * @param first Begin iterator
          * @param last End iterator
          */
-        template<typename InputIt>
-        void SendBatch(InputIt first, InputIt last)
-        {
+        template <typename InputIt> void SendBatch(InputIt first, InputIt last) {
             for (; first != last; ++first)
             {
-                queue_->Push(*first);
+                m_queue->Push(*first);
             }
         }
 
         /**
          * Get number of events sent this frame
          */
-        [[nodiscard]] size_t Count() const noexcept
-        {
-            return queue_->CurrentCount();
-        }
+        [[nodiscard]] size_t Count() const noexcept { return m_queue->CurrentCount(); }
 
         /**
          * Check if no events have been sent this frame
          */
-        [[nodiscard]] bool IsEmpty() const noexcept
-        {
-            return queue_->IsCurrentEmpty();
-        }
+        [[nodiscard]] bool IsEmpty() const noexcept { return m_queue->IsCurrentEmpty(); }
 
     private:
-        EventQueue<T, Allocator>* queue_;
+        EventQueue<T, Allocator>* m_queue;
     };
-}
+} // namespace queen

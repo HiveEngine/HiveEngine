@@ -1,138 +1,143 @@
-#include <nectar/pipeline/hot_reload.h>
-#include <nectar/watcher/file_watcher.h>
 #include <nectar/database/asset_database.h>
 #include <nectar/database/dependency_graph.h>
-#include <nectar/pipeline/import_pipeline.h>
-#include <nectar/pipeline/cook_pipeline.h>
 #include <nectar/hive/hive_document.h>
-#include <hive/profiling/profiler.h>
+#include <nectar/pipeline/cook_pipeline.h>
+#include <nectar/pipeline/hot_reload.h>
+#include <nectar/pipeline/import_pipeline.h>
+#include <nectar/watcher/file_watcher.h>
 
 namespace nectar
 {
-    HotReloadManager::HotReloadManager(comb::DefaultAllocator& alloc,
-                                         IFileWatcher& watcher,
-                                         AssetDatabase& db,
-                                         ImportPipeline& import_pipe,
-                                         CookPipeline& cook_pipe)
-        : alloc_{&alloc}
-        , watcher_{&watcher}
-        , db_{&db}
-        , import_pipe_{&import_pipe}
-        , cook_pipe_{&cook_pipe}
-        , last_reloaded_{alloc}
-        , base_dir_{alloc}
-    {}
+    HotReloadManager::HotReloadManager(comb::DefaultAllocator& alloc, IFileWatcher& watcher, AssetDatabase& db,
+                                       ImportPipeline& importPipe, CookPipeline& cookPipe)
+        : m_alloc{&alloc}
+        , m_watcher{&watcher}
+        , m_db{&db}
+        , m_importPipe{&importPipe}
+        , m_cookPipe{&cookPipe}
+        , m_lastReloaded{alloc}
+        , m_baseDir{alloc} {}
 
-    void HotReloadManager::WatchDirectory(wax::StringView dir)
-    {
-        watcher_->Watch(dir);
+    void HotReloadManager::WatchDirectory(wax::StringView dir) {
+        m_watcher->Watch(dir);
     }
 
-    void HotReloadManager::SetBaseDirectory(wax::StringView base_dir)
-    {
-        base_dir_ = wax::String{*alloc_};
-        base_dir_.Append(base_dir.Data(), base_dir.Size());
+    void HotReloadManager::SetBaseDirectory(wax::StringView baseDir) {
+        m_baseDir = wax::String{*m_alloc};
+        m_baseDir.Append(baseDir.Data(), baseDir.Size());
 
-        // Normalize backslashes
-        for (size_t i = 0; i < base_dir_.Size(); ++i)
-            if (base_dir_[i] == '\\') base_dir_[i] = '/';
+        for (size_t i = 0; i < m_baseDir.Size(); ++i)
+        {
+            if (m_baseDir[i] == '\\')
+            {
+                m_baseDir[i] = '/';
+            }
+        }
 
-        // Trailing slash
-        if (base_dir_.Size() > 0 && base_dir_[base_dir_.Size() - 1] != '/')
-            base_dir_.Append("/", 1);
+        if (m_baseDir.Size() > 0 && m_baseDir[m_baseDir.Size() - 1] != '/')
+        {
+            m_baseDir.Append("/", 1);
+        }
     }
 
-    void HotReloadManager::SetImportSettingsProvider(ImportSettingsProvider fn, void* user_data)
-    {
-        settings_fn_ = fn;
-        settings_user_data_ = user_data;
+    void HotReloadManager::SetImportSettingsProvider(ImportSettingsProvider fn, void* userData) {
+        m_settingsFn = fn;
+        m_settingsUserData = userData;
     }
 
-    size_t HotReloadManager::ProcessChanges(wax::StringView platform)
-    {
+    size_t HotReloadManager::ProcessChanges(wax::StringView platform) {
         HIVE_PROFILE_SCOPE_N("HotReload::ProcessChanges");
-        last_reloaded_.Clear();
+        m_lastReloaded.Clear();
 
-        wax::Vector<FileChange> changes{*alloc_};
-        watcher_->Poll(changes);
+        wax::Vector<FileChange> changes{*m_alloc};
+        m_watcher->Poll(changes);
 
-        if (changes.Size() == 0) return 0;
+        if (changes.Size() == 0)
+        {
+            return 0;
+        }
 
-        // Collect affected asset IDs
-        wax::Vector<AssetId> to_recook{*alloc_};
+        wax::Vector<AssetId> toRecook{*m_alloc};
 
         for (size_t i = 0; i < changes.Size(); ++i)
         {
-            if (changes[i].kind == FileChangeKind::Deleted) continue;
-
-            // Strip base directory to get VFS path
-            wax::StringView lookup_path = changes[i].path.View();
-            wax::String vfs_buf{*alloc_};
-            if (base_dir_.Size() > 0)
+            if (changes[i].m_kind == FileChangeKind::DELETED)
             {
-                auto abs = changes[i].path.View();
-                if (abs.Size() > base_dir_.Size() &&
-                    wax::StringView{abs.Data(), base_dir_.Size()} == base_dir_.View())
+                continue;
+            }
+
+            wax::StringView lookupPath = changes[i].m_path.View();
+            wax::String vfsBuf{*m_alloc};
+            if (m_baseDir.Size() > 0)
+            {
+                auto abs = changes[i].m_path.View();
+                if (abs.Size() > m_baseDir.Size() && wax::StringView{abs.Data(), m_baseDir.Size()} == m_baseDir.View())
                 {
-                    vfs_buf.Append(abs.Data() + base_dir_.Size(),
-                                   abs.Size() - base_dir_.Size());
-                    lookup_path = vfs_buf.View();
+                    vfsBuf.Append(abs.Data() + m_baseDir.Size(), abs.Size() - m_baseDir.Size());
+                    lookupPath = vfsBuf.View();
                 }
             }
 
-            auto* record = db_->FindByPath(lookup_path);
-            if (!record) continue;
+            auto* record = m_db->FindByPath(lookupPath);
+            if (!record)
+            {
+                continue;
+            }
 
-            AssetId id = record->uuid;
+            AssetId id = record->m_uuid;
 
-            // Re-import (with optional settings)
             ImportRequest req;
-            req.source_path = lookup_path;
-            req.asset_id = id;
+            req.m_sourcePath = lookupPath;
+            req.m_assetId = id;
 
             ImportOutput result{};
-            if (settings_fn_)
+            if (m_settingsFn)
             {
-                HiveDocument settings{*alloc_};
-                settings_fn_(id, lookup_path, settings, settings_user_data_);
-                result = import_pipe_->ImportAsset(req, settings);
+                HiveDocument settings{*m_alloc};
+                m_settingsFn(id, lookupPath, settings, m_settingsUserData);
+                result = m_importPipe->ImportAsset(req, settings);
             }
             else
             {
-                result = import_pipe_->ImportAsset(req);
+                result = m_importPipe->ImportAsset(req);
             }
-            if (!result.success) continue;
 
-            // Invalidate cook cache for this asset and all dependents
-            cook_pipe_->InvalidateCascade(id);
+            if (!result.m_success)
+            {
+                continue;
+            }
 
-            // Collect this asset + transitive dependents for re-cook
-            to_recook.PushBack(id);
+            m_cookPipe->InvalidateCascade(id);
+            toRecook.PushBack(id);
 
-            wax::Vector<AssetId> dependents{*alloc_};
-            db_->GetDependencyGraph().GetTransitiveDependents(id, DepKind::All, dependents);
+            wax::Vector<AssetId> dependents{*m_alloc};
+            m_db->GetDependencyGraph().GetTransitiveDependents(id, DepKind::ALL, dependents);
             for (size_t j = 0; j < dependents.Size(); ++j)
-                to_recook.PushBack(dependents[j]);
+            {
+                toRecook.PushBack(dependents[j]);
+            }
         }
 
-        if (to_recook.Size() == 0) return 0;
+        if (toRecook.Size() == 0)
+        {
+            return 0;
+        }
 
-        // Save the list before cooking (CookAll may consume the vector)
-        for (size_t i = 0; i < to_recook.Size(); ++i)
-            last_reloaded_.PushBack(to_recook[i]);
+        for (size_t i = 0; i < toRecook.Size(); ++i)
+        {
+            m_lastReloaded.PushBack(toRecook[i]);
+        }
 
-        // Re-cook
-        CookRequest cook_req;
-        cook_req.assets = static_cast<wax::Vector<AssetId>&&>(to_recook);
-        cook_req.platform = platform;
-        cook_req.worker_count = 1;
-        (void)cook_pipe_->CookAll(cook_req);
+        CookRequest cookReq;
+        cookReq.m_assets = static_cast<wax::Vector<AssetId>&&>(toRecook);
+        cookReq.m_platform = platform;
+        cookReq.m_workerCount = 1;
+        (void)m_cookPipe->CookAll(cookReq);
 
-        return last_reloaded_.Size();
+        return m_lastReloaded.Size();
     }
 
-    const wax::Vector<AssetId>& HotReloadManager::LastReloaded() const noexcept
-    {
-        return last_reloaded_;
+    const wax::Vector<AssetId>& HotReloadManager::LastReloaded() const noexcept {
+        return m_lastReloaded;
     }
-}
+} // namespace nectar

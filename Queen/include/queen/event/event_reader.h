@@ -1,8 +1,9 @@
 #pragma once
 
+#include <comb/allocator_concepts.h>
+
 #include <queen/event/event.h>
 #include <queen/event/event_queue.h>
-#include <comb/allocator_concepts.h>
 
 namespace queen
 {
@@ -61,34 +62,25 @@ namespace queen
      *   size_t count = reader.Count();
      * @endcode
      */
-    template<Event T, comb::Allocator Allocator>
-    class EventReader
+    template <Event T, comb::Allocator Allocator> class EventReader
     {
     public:
         using EventType = T;
         using Iterator = typename EventQueue<T, Allocator>::EventIterator;
 
         explicit EventReader(EventQueue<T, Allocator>& queue) noexcept
-            : queue_{&queue}
-            , cursor_{0}
-        {
-        }
+            : m_queue{&queue}
+            , m_cursor{0} {}
 
         /**
          * Get iterator to first unread event
          */
-        [[nodiscard]] Iterator begin() const
-        {
-            return Iterator{queue_, cursor_};
-        }
+        [[nodiscard]] Iterator Begin() const { return Iterator{m_queue, m_cursor}; }
 
         /**
          * Get iterator past last event
          */
-        [[nodiscard]] Iterator end() const
-        {
-            return Iterator{queue_, queue_->TotalCount()};
-        }
+        [[nodiscard]] Iterator End() const { return Iterator{m_queue, m_queue->TotalCount()}; }
 
         /**
          * Iterate over unread events and advance cursor
@@ -99,82 +91,64 @@ namespace queen
          * @tparam Func Callable with signature void(const T&)
          * @param func Function to call for each event
          */
-        template<typename Func>
-        void Read(Func&& func)
-        {
-            size_t total = queue_->TotalCount();
-            size_t prev_size = queue_->PreviousCount();
+        template <typename Func> void Read(Func&& func) {
+            size_t total = m_queue->TotalCount();
+            size_t prevSize = m_queue->PreviousCount();
 
-            for (size_t i = cursor_; i < total; ++i)
+            for (size_t i = m_cursor; i < total; ++i)
             {
-                if (i < prev_size)
+                if (i < prevSize)
                 {
-                    func(queue_->PreviousBuffer()[i]);
+                    func(m_queue->PreviousBuffer()[i]);
                 }
                 else
                 {
-                    func(queue_->CurrentBuffer()[i - prev_size]);
+                    func(m_queue->CurrentBuffer()[i - prevSize]);
                 }
             }
 
-            cursor_ = total;
+            m_cursor = total;
         }
 
         /**
          * Get number of unread events
          */
-        [[nodiscard]] size_t Count() const noexcept
-        {
-            size_t total = queue_->TotalCount();
-            return total > cursor_ ? total - cursor_ : 0;
+        [[nodiscard]] size_t Count() const noexcept {
+            size_t total = m_queue->TotalCount();
+            return total > m_cursor ? total - m_cursor : 0;
         }
 
         /**
          * Get total number of events (read + unread)
          */
-        [[nodiscard]] size_t TotalCount() const noexcept
-        {
-            return queue_->TotalCount();
-        }
+        [[nodiscard]] size_t TotalCount() const noexcept { return m_queue->TotalCount(); }
 
         /**
          * Check if there are no unread events
          */
-        [[nodiscard]] bool IsEmpty() const noexcept
-        {
-            return cursor_ >= queue_->TotalCount();
-        }
+        [[nodiscard]] bool IsEmpty() const noexcept { return m_cursor >= m_queue->TotalCount(); }
 
         /**
          * Mark all current events as read
          *
          * After calling this, IsEmpty() returns true until new events arrive.
          */
-        void MarkRead() noexcept
-        {
-            cursor_ = queue_->TotalCount();
-        }
+        void MarkRead() noexcept { m_cursor = m_queue->TotalCount(); }
 
         /**
          * Reset cursor to re-read all events
          *
          * Allows re-processing all events from both buffers.
          */
-        void Reset() noexcept
-        {
-            cursor_ = 0;
-        }
+        void Reset() noexcept { m_cursor = 0; }
 
         /**
          * Clear cursor (alias for MarkRead for Bevy-like API)
          */
-        void Clear() noexcept
-        {
-            MarkRead();
-        }
+        void Clear() noexcept { MarkRead(); }
 
     private:
-        EventQueue<T, Allocator>* queue_;
-        size_t cursor_;
+        EventQueue<T, Allocator>* m_queue;
+        size_t m_cursor;
     };
-}
+} // namespace queen

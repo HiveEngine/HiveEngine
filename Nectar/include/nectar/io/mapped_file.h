@@ -1,7 +1,8 @@
 #pragma once
 
-#include <wax/serialization/byte_span.h>
 #include <wax/containers/string_view.h>
+#include <wax/serialization/byte_span.h>
+
 #include <cstddef>
 #include <cstdint>
 
@@ -33,13 +34,13 @@ namespace nectar
     private:
         void Close() noexcept;
 
-        void* data_{nullptr};
-        size_t size_{0};
+        void* m_data{nullptr};
+        size_t m_size{0};
 #ifdef _WIN32
-        void* file_handle_{nullptr};
-        void* mapping_handle_{nullptr};
+        void* m_fileHandle{nullptr};
+        void* m_mappingHandle{nullptr};
 #else
         int fd_{-1};
 #endif
     };
-}
+} // namespace nectar

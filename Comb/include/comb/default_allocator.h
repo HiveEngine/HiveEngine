@@ -2,8 +2,9 @@
 
 #include <comb/buddy_allocator.h>
 #include <comb/thread_safe_allocator.h>
-#include <mutex>
+
 #include <cstdio>
+#include <mutex>
 
 namespace comb
 {
@@ -35,35 +36,32 @@ namespace comb
 
         struct Entry
         {
-            const char* name;
-            ModuleAllocator* allocator;
+            const char* m_name;
+            ModuleAllocator* m_allocator;
         };
 
-        static ModuleRegistry& GetInstance()
-        {
-            static ModuleRegistry instance;
-            return instance;
+        static ModuleRegistry& GetInstance() {
+            static ModuleRegistry s_instance;
+            return s_instance;
         }
 
-        void Register(const char* name, ModuleAllocator* alloc)
-        {
-            std::lock_guard<std::mutex> lock{mutex_};
-            if (count_ < kMaxModules)
+        void Register(const char* name, ModuleAllocator* alloc) {
+            std::lock_guard<std::mutex> lock{m_mutex};
+            if (m_count < kMaxModules)
             {
-                entries_[count_] = {name, alloc};
-                ++count_;
+                m_entries[m_count] = {name, alloc};
+                ++m_count;
             }
         }
 
-        void Unregister(ModuleAllocator* alloc)
-        {
-            std::lock_guard<std::mutex> lock{mutex_};
-            for (size_t i = 0; i < count_; ++i)
+        void Unregister(ModuleAllocator* alloc) {
+            std::lock_guard<std::mutex> lock{m_mutex};
+            for (size_t i = 0; i < m_count; ++i)
             {
-                if (entries_[i].allocator == alloc)
+                if (m_entries[i].m_allocator == alloc)
                 {
-                    entries_[i] = entries_[count_ - 1];
-                    --count_;
+                    m_entries[i] = m_entries[m_count - 1];
+                    --m_count;
                     return;
                 }
             }
@@ -71,15 +69,15 @@ namespace comb
 
         void PrintStats() const;
 
-        [[nodiscard]] size_t GetCount() const noexcept { return count_; }
-        [[nodiscard]] const Entry& GetEntry(size_t index) const noexcept { return entries_[index]; }
+        [[nodiscard]] size_t GetCount() const noexcept { return m_count; }
+        [[nodiscard]] const Entry& GetEntry(size_t index) const noexcept { return m_entries[index]; }
 
     private:
         ModuleRegistry() = default;
 
-        Entry entries_[kMaxModules]{};
-        size_t count_{0};
-        mutable std::mutex mutex_;
+        Entry m_entries[kMaxModules]{};
+        size_t m_count{0};
+        mutable std::mutex m_mutex;
     };
 
     /**
@@ -109,53 +107,48 @@ namespace comb
     {
     public:
         ModuleAllocator(const char* name, size_t capacity)
-            : name_{name}
-            , buddy_{capacity, name}
-            , allocator_{buddy_}
-        {
-            ModuleRegistry::GetInstance().Register(name_, this);
+            : m_name{name}
+            , m_buddy{capacity, name}
+            , m_allocator{m_buddy} {
+            ModuleRegistry::GetInstance().Register(m_name, this);
         }
 
-        ~ModuleAllocator()
-        {
-            ModuleRegistry::GetInstance().Unregister(this);
-        }
+        ~ModuleAllocator() { ModuleRegistry::GetInstance().Unregister(this); }
 
         ModuleAllocator(const ModuleAllocator&) = delete;
         ModuleAllocator& operator=(const ModuleAllocator&) = delete;
         ModuleAllocator(ModuleAllocator&&) = delete;
         ModuleAllocator& operator=(ModuleAllocator&&) = delete;
 
-        [[nodiscard]] DefaultAllocator& Get() noexcept { return allocator_; }
-        [[nodiscard]] const DefaultAllocator& Get() const noexcept { return allocator_; }
+        [[nodiscard]] DefaultAllocator& Get() noexcept { return m_allocator; }
+        [[nodiscard]] const DefaultAllocator& Get() const noexcept { return m_allocator; }
 
-        [[nodiscard]] BuddyAllocator& GetUnderlying() noexcept { return buddy_; }
-        [[nodiscard]] const char* GetName() const noexcept { return name_; }
+        [[nodiscard]] BuddyAllocator& GetUnderlying() noexcept { return m_buddy; }
+        [[nodiscard]] const char* GetName() const noexcept { return m_name; }
 
-        [[nodiscard]] size_t GetUsedMemory() const { return allocator_.GetUsedMemory(); }
-        [[nodiscard]] size_t GetTotalMemory() const { return allocator_.GetTotalMemory(); }
+        [[nodiscard]] size_t GetUsedMemory() const { return m_allocator.GetUsedMemory(); }
+        [[nodiscard]] size_t GetTotalMemory() const { return m_allocator.GetTotalMemory(); }
 
     private:
-        const char* name_;
-        BuddyAllocator buddy_;
-        DefaultAllocator allocator_;
+        const char* m_name;
+        BuddyAllocator m_buddy;
+        DefaultAllocator m_allocator;
     };
 
     /**
      * Print memory stats for all registered modules
      */
-    inline void ModuleRegistry::PrintStats() const
-    {
-        std::lock_guard<std::mutex> lock{mutex_};
+    inline void ModuleRegistry::PrintStats() const {
+        std::lock_guard<std::mutex> lock{m_mutex};
 
         std::printf("========== Module Memory Stats ==========\n");
         size_t totalUsed = 0;
         size_t totalCapacity = 0;
 
-        for (size_t i = 0; i < count_; ++i)
+        for (size_t i = 0; i < m_count; ++i)
         {
-            size_t used = entries_[i].allocator->GetUsedMemory();
-            size_t total = entries_[i].allocator->GetTotalMemory();
+            size_t used = m_entries[i].m_allocator->GetUsedMemory();
+            size_t total = m_entries[i].m_allocator->GetTotalMemory();
             totalUsed += used;
             totalCapacity += total;
 
@@ -163,8 +156,7 @@ namespace comb
             double totalMB = static_cast<double>(total) / (1024.0 * 1024.0);
             double pct = total > 0 ? (static_cast<double>(used) / static_cast<double>(total)) * 100.0 : 0.0;
 
-            std::printf("  %-20s %8.2f / %8.2f MB  (%5.1f%%)\n",
-                        entries_[i].name, usedMB, totalMB, pct);
+            std::printf("  %-20s %8.2f / %8.2f MB  (%5.1f%%)\n", m_entries[i].m_name, usedMB, totalMB, pct);
         }
 
         double totalUsedMB = static_cast<double>(totalUsed) / (1024.0 * 1024.0);
@@ -181,12 +173,10 @@ namespace comb
      *
      * @return Reference to the global default allocator
      */
-    inline DefaultAllocator& GetDefaultAllocator()
-    {
-        static ModuleAllocator global{"Global", 32 * 1024 * 1024};  // 32 MB
-        return global.Get();
+    inline DefaultAllocator& GetDefaultAllocator() {
+        static ModuleAllocator s_global{"Global", 32 * 1024 * 1024}; // 32 MB
+        return s_global.Get();
     }
 
-    static_assert(Allocator<DefaultAllocator>,
-                  "DefaultAllocator must satisfy comb::Allocator concept");
-}
+    static_assert(Allocator<DefaultAllocator>, "DefaultAllocator must satisfy comb::Allocator concept");
+} // namespace comb

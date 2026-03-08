@@ -1,16 +1,18 @@
 #pragma once
 
-#include <queen/scheduler/system_node.h>
-#include <queen/system/system_id.h>
-#include <queen/system/access_descriptor.h>
-#include <wax/containers/vector.h>
-#include <comb/allocator_concepts.h>
 #include <hive/profiling/profiler.h>
+
+#include <comb/allocator_concepts.h>
+
+#include <wax/containers/vector.h>
+
+#include <queen/scheduler/system_node.h>
+#include <queen/system/access_descriptor.h>
+#include <queen/system/system_id.h>
 
 namespace queen
 {
-    template<comb::Allocator Allocator>
-    class SystemStorage;
+    template <comb::Allocator Allocator> class SystemStorage;
 
     /**
      * Graph of system dependencies for scheduling
@@ -38,18 +40,16 @@ namespace queen
      * - Topological sort: O(N + E) where E = number of edges
      * - Reset: O(N)
      */
-    template<comb::Allocator Allocator>
-    class DependencyGraph
+    template <comb::Allocator Allocator> class DependencyGraph
     {
     public:
         explicit DependencyGraph(Allocator& allocator)
-            : nodes_{allocator}
-            , adjacency_{allocator}
-            , roots_{allocator}
-            , execution_order_{allocator}
-            , allocator_{allocator}
-            , dirty_{true}
-        {}
+            : m_nodes{allocator}
+            , m_adjacency{allocator}
+            , m_roots{allocator}
+            , m_executionOrder{allocator}
+            , m_allocator{allocator}
+            , m_dirty{true} {}
 
         DependencyGraph(const DependencyGraph&) = delete;
         DependencyGraph& operator=(const DependencyGraph&) = delete;
@@ -63,154 +63,147 @@ namespace queen
          * edges where systems conflict. Systems registered earlier take
          * precedence (run first) when conflicts occur.
          */
-        void Build(const SystemStorage<Allocator>& storage)
-        {
+        void Build(const SystemStorage<Allocator>& storage) {
             HIVE_PROFILE_SCOPE_N("DependencyGraph::Build");
             Clear();
 
-            const size_t system_count = storage.SystemCount();
-            if (system_count == 0)
+            const size_t systemCount = storage.SystemCount();
+            if (systemCount == 0)
             {
-                dirty_ = false;
+                m_dirty = false;
                 return;
             }
 
-            nodes_.Reserve(system_count);
-            adjacency_.Reserve(system_count);
+            m_nodes.Reserve(systemCount);
+            m_adjacency.Reserve(systemCount);
 
-            for (size_t i = 0; i < system_count; ++i)
+            for (size_t i = 0; i < systemCount; ++i)
             {
                 const auto* system = storage.GetSystemByIndex(i);
                 if (system != nullptr)
                 {
-                    nodes_.PushBack(SystemNode{system->Id()});
-                    adjacency_.PushBack(wax::Vector<uint32_t>{allocator_});
+                    m_nodes.PushBack(SystemNode{system->Id()});
+                    m_adjacency.PushBack(wax::Vector<uint32_t>{m_allocator});
                 }
             }
 
             // System A -> System B means A must run before B
-            for (size_t i = 0; i < system_count; ++i)
+            for (size_t i = 0; i < systemCount; ++i)
             {
-                const auto* system_i = storage.GetSystemByIndex(i);
-                if (system_i == nullptr) continue;
+                const auto* systemI = storage.GetSystemByIndex(i);
+                if (systemI == nullptr)
+                    continue;
 
-                uint16_t dep_count = 0;
+                uint16_t depCount = 0;
 
                 for (size_t j = 0; j < i; ++j)
                 {
-                    const auto* system_j = storage.GetSystemByIndex(j);
-                    if (system_j == nullptr) continue;
+                    const auto* systemJ = storage.GetSystemByIndex(j);
+                    if (systemJ == nullptr)
+                        continue;
 
                     // Check if systems conflict
-                    if (system_i->Access().ConflictsWith(system_j->Access()))
+                    if (systemI->Access().ConflictsWith(systemJ->Access()))
                     {
                         // Earlier system (j) must run before later system (i)
                         // Add i as dependent of j
-                        adjacency_[j].PushBack(static_cast<uint32_t>(i));
-                        ++dep_count;
+                        m_adjacency[j].PushBack(static_cast<uint32_t>(i));
+                        ++depCount;
                     }
                 }
 
-                nodes_[i].SetDependencyCount(dep_count);
+                m_nodes[i].SetDependencyCount(depCount);
             }
 
-            for (size_t i = 0; i < system_count; ++i)
+            for (size_t i = 0; i < systemCount; ++i)
             {
                 const auto* system = storage.GetSystemByIndex(i);
-                if (system == nullptr) continue;
+                if (system == nullptr)
+                    continue;
 
                 // After(id) means: this system must run after id
                 for (uint8_t a = 0; a < system->AfterCount(); ++a)
                 {
-                    SystemId after_id = system->AfterDep(a);
-                    uint32_t after_idx = after_id.Index();
-                    if (after_idx < system_count)
+                    SystemId afterId = system->AfterDep(a);
+                    uint32_t afterIdx = afterId.Index();
+                    if (afterIdx < systemCount)
                     {
-                        adjacency_[after_idx].PushBack(static_cast<uint32_t>(i));
-                        nodes_[i].IncrementDependencyCount();
+                        m_adjacency[afterIdx].PushBack(static_cast<uint32_t>(i));
+                        m_nodes[i].IncrementDependencyCount();
                     }
                 }
 
                 // Before(id) means: this system must run before id
                 for (uint8_t b = 0; b < system->BeforeCount(); ++b)
                 {
-                    SystemId before_id = system->BeforeDep(b);
-                    uint32_t before_idx = before_id.Index();
-                    if (before_idx < system_count)
+                    SystemId beforeId = system->BeforeDep(b);
+                    uint32_t beforeIdx = beforeId.Index();
+                    if (beforeIdx < systemCount)
                     {
-                        adjacency_[i].PushBack(before_idx);
-                        nodes_[before_idx].IncrementDependencyCount();
+                        m_adjacency[i].PushBack(beforeIdx);
+                        m_nodes[beforeIdx].IncrementDependencyCount();
                     }
                 }
             }
 
-            for (size_t i = 0; i < nodes_.Size(); ++i)
+            for (size_t i = 0; i < m_nodes.Size(); ++i)
             {
-                if (nodes_[i].DependencyCount() == 0)
+                if (m_nodes[i].DependencyCount() == 0)
                 {
-                    roots_.PushBack(static_cast<uint32_t>(i));
+                    m_roots.PushBack(static_cast<uint32_t>(i));
                 }
             }
 
             ComputeTopologicalOrder();
 
-            dirty_ = false;
+            m_dirty = false;
         }
 
         /**
          * Reset all nodes to pending state for a new frame
          */
-        void Reset()
-        {
-            for (size_t i = 0; i < nodes_.Size(); ++i)
+        void Reset() {
+            for (size_t i = 0; i < m_nodes.Size(); ++i)
             {
-                nodes_[i].Reset();
+                m_nodes[i].Reset();
             }
         }
 
         /**
          * Mark graph as needing rebuild
          */
-        void MarkDirty() noexcept { dirty_ = true; }
+        void MarkDirty() noexcept { m_dirty = true; }
 
         /**
          * Check if graph needs rebuild
          */
-        [[nodiscard]] bool IsDirty() const noexcept { return dirty_; }
+        [[nodiscard]] bool IsDirty() const noexcept { return m_dirty; }
 
         /**
          * Get the topologically sorted execution order
          */
-        [[nodiscard]] const wax::Vector<uint32_t>& ExecutionOrder() const noexcept
-        {
-            return execution_order_;
-        }
+        [[nodiscard]] const wax::Vector<uint32_t>& ExecutionOrder() const noexcept { return m_executionOrder; }
 
         /**
          * Get root systems (no dependencies)
          */
-        [[nodiscard]] const wax::Vector<uint32_t>& Roots() const noexcept
-        {
-            return roots_;
-        }
+        [[nodiscard]] const wax::Vector<uint32_t>& Roots() const noexcept { return m_roots; }
 
         /**
          * Get node by index
          */
-        [[nodiscard]] SystemNode* GetNode(uint32_t index)
-        {
-            if (index < nodes_.Size())
+        [[nodiscard]] SystemNode* GetNode(uint32_t index) {
+            if (index < m_nodes.Size())
             {
-                return &nodes_[index];
+                return &m_nodes[index];
             }
             return nullptr;
         }
 
-        [[nodiscard]] const SystemNode* GetNode(uint32_t index) const
-        {
-            if (index < nodes_.Size())
+        [[nodiscard]] const SystemNode* GetNode(uint32_t index) const {
+            if (index < m_nodes.Size())
             {
-                return &nodes_[index];
+                return &m_nodes[index];
             }
             return nullptr;
         }
@@ -218,11 +211,10 @@ namespace queen
         /**
          * Get dependents of a node (systems that depend on this one)
          */
-        [[nodiscard]] const wax::Vector<uint32_t>* GetDependents(uint32_t index) const
-        {
-            if (index < adjacency_.Size())
+        [[nodiscard]] const wax::Vector<uint32_t>* GetDependents(uint32_t index) const {
+            if (index < m_adjacency.Size())
             {
-                return &adjacency_[index];
+                return &m_adjacency[index];
             }
             return nullptr;
         }
@@ -230,61 +222,58 @@ namespace queen
         /**
          * Get number of nodes
          */
-        [[nodiscard]] size_t NodeCount() const noexcept { return nodes_.Size(); }
+        [[nodiscard]] size_t NodeCount() const noexcept { return m_nodes.Size(); }
 
         /**
          * Check if graph has cycles (should never happen with proper construction)
          */
-        [[nodiscard]] bool HasCycle() const noexcept
-        {
+        [[nodiscard]] bool HasCycle() const noexcept {
             // If topological sort succeeded, we have all nodes in order
-            return execution_order_.Size() != nodes_.Size();
+            return m_executionOrder.Size() != m_nodes.Size();
         }
 
     private:
-        void Clear()
-        {
-            nodes_.Clear();
-            adjacency_.Clear();
-            roots_.Clear();
-            execution_order_.Clear();
+        void Clear() {
+            m_nodes.Clear();
+            m_adjacency.Clear();
+            m_roots.Clear();
+            m_executionOrder.Clear();
         }
 
-        void ComputeTopologicalOrder()
-        {
-            execution_order_.Clear();
-            execution_order_.Reserve(nodes_.Size());
+        void ComputeTopologicalOrder() {
+            m_executionOrder.Clear();
+            m_executionOrder.Reserve(m_nodes.Size());
 
             // Use Kahn's algorithm
-            wax::Vector<uint16_t> in_degree{allocator_};
-            in_degree.Reserve(nodes_.Size());
-            for (size_t i = 0; i < nodes_.Size(); ++i)
+            wax::Vector<uint16_t> inDegree{m_allocator};
+            inDegree.Reserve(m_nodes.Size());
+            for (size_t i = 0; i < m_nodes.Size(); ++i)
             {
-                in_degree.PushBack(nodes_[i].DependencyCount());
+                inDegree.PushBack(m_nodes[i].DependencyCount());
             }
 
-            wax::Vector<uint32_t> queue{allocator_};
-            queue.Reserve(nodes_.Size());
-            for (size_t i = 0; i < roots_.Size(); ++i)
+            wax::Vector<uint32_t> queue{m_allocator};
+            queue.Reserve(m_nodes.Size());
+            for (size_t i = 0; i < m_roots.Size(); ++i)
             {
-                queue.PushBack(roots_[i]);
+                queue.PushBack(m_roots[i]);
             }
 
-            size_t queue_front = 0;
+            size_t queueFront = 0;
 
-            while (queue_front < queue.Size())
+            while (queueFront < queue.Size())
             {
-                uint32_t current = queue[queue_front++];
-                execution_order_.PushBack(current);
+                uint32_t current = queue[queueFront++];
+                m_executionOrder.PushBack(current);
 
-                const auto& dependents = adjacency_[current];
+                const auto& dependents = m_adjacency[current];
                 for (size_t i = 0; i < dependents.Size(); ++i)
                 {
                     uint32_t dep = dependents[i];
-                    if (in_degree[dep] > 0)
+                    if (inDegree[dep] > 0)
                     {
-                        --in_degree[dep];
-                        if (in_degree[dep] == 0)
+                        --inDegree[dep];
+                        if (inDegree[dep] == 0)
                         {
                             queue.PushBack(dep);
                         }
@@ -293,11 +282,11 @@ namespace queen
             }
         }
 
-        wax::Vector<SystemNode> nodes_;
-        wax::Vector<wax::Vector<uint32_t>> adjacency_;
-        wax::Vector<uint32_t> roots_;
-        wax::Vector<uint32_t> execution_order_;
-        Allocator& allocator_;
-        bool dirty_;
+        wax::Vector<SystemNode> m_nodes;
+        wax::Vector<wax::Vector<uint32_t>> m_adjacency;
+        wax::Vector<uint32_t> m_roots;
+        wax::Vector<uint32_t> m_executionOrder;
+        Allocator& m_allocator;
+        bool m_dirty;
     };
-}
+} // namespace queen

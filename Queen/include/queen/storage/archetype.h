@@ -1,13 +1,17 @@
 #pragma once
 
-#include <queen/core/type_id.h>
-#include <queen/core/entity.h>
-#include <queen/core/component_info.h>
-#include <queen/storage/table.h>
-#include <comb/allocator_concepts.h>
-#include <wax/containers/vector.h>
-#include <wax/containers/hash_map.h>
 #include <hive/core/assert.h>
+
+#include <comb/allocator_concepts.h>
+
+#include <wax/containers/hash_map.h>
+#include <wax/containers/vector.h>
+
+#include <queen/core/component_info.h>
+#include <queen/core/entity.h>
+#include <queen/core/type_id.h>
+#include <queen/storage/table.h>
+
 #include <type_traits>
 
 namespace queen
@@ -16,18 +20,16 @@ namespace queen
 
     namespace detail
     {
-        template<comb::Allocator Allocator>
-        ArchetypeId ComputeArchetypeId(const wax::Vector<TypeId>& sorted_types)
-        {
+        template <comb::Allocator Allocator> ArchetypeId ComputeArchetypeId(const wax::Vector<TypeId>& sortedTypes) {
             ArchetypeId hash = kFnv1aOffset;
-            for (size_t i = 0; i < sorted_types.Size(); ++i)
+            for (size_t i = 0; i < sortedTypes.Size(); ++i)
             {
-                hash ^= sorted_types[i];
+                hash ^= sortedTypes[i];
                 hash *= kFnv1aPrime;
             }
             return hash;
         }
-    }
+    } // namespace detail
 
     /**
      * Archetype definition and storage
@@ -68,26 +70,24 @@ namespace queen
      *   arch.SetComponent<Position>(row, Position{1.0f, 2.0f, 3.0f});
      * @endcode
      */
-    template<comb::Allocator Allocator>
-    class Archetype
+    template <comb::Allocator Allocator> class Archetype
     {
     public:
-        Archetype(Allocator& allocator, wax::Vector<ComponentMeta> component_metas, size_t initial_capacity = 64)
-            : allocator_{&allocator}
-            , component_types_{allocator}
-            , component_metas_{std::move(component_metas)}
-            , table_{allocator, component_metas_, initial_capacity}
-            , add_edges_{allocator}
-            , remove_edges_{allocator}
-        {
-            component_types_.Reserve(component_metas_.Size());
-            for (size_t i = 0; i < component_metas_.Size(); ++i)
+        Archetype(Allocator& allocator, wax::Vector<ComponentMeta> componentMetas, size_t initialCapacity = 64)
+            : m_allocator{&allocator}
+            , m_componentTypes{allocator}
+            , m_componentMetas{std::move(componentMetas)}
+            , m_table{allocator, m_componentMetas, initialCapacity}
+            , m_addEdges{allocator}
+            , m_removeEdges{allocator} {
+            m_componentTypes.Reserve(m_componentMetas.Size());
+            for (size_t i = 0; i < m_componentMetas.Size(); ++i)
             {
-                component_types_.PushBack(component_metas_[i].type_id);
+                m_componentTypes.PushBack(m_componentMetas[i].m_typeId);
             }
 
             SortComponentTypes();
-            id_ = detail::ComputeArchetypeId<Allocator>(component_types_);
+            m_id = detail::ComputeArchetypeId<Allocator>(m_componentTypes);
         }
 
         ~Archetype() = default;
@@ -97,62 +97,39 @@ namespace queen
         Archetype(Archetype&&) = default;
         Archetype& operator=(Archetype&&) = default;
 
-        [[nodiscard]] ArchetypeId GetId() const noexcept { return id_; }
+        [[nodiscard]] ArchetypeId GetId() const noexcept { return m_id; }
 
-        [[nodiscard]] bool HasComponent(TypeId type_id) const noexcept
-        {
-            return BinarySearch(type_id) != SIZE_MAX;
-        }
+        [[nodiscard]] bool HasComponent(TypeId typeId) const noexcept { return BinarySearch(typeId) != SIZE_MAX; }
 
-        template<typename T>
-        [[nodiscard]] bool HasComponent() const noexcept
-        {
-            return HasComponent(TypeIdOf<T>());
-        }
+        template <typename T> [[nodiscard]] bool HasComponent() const noexcept { return HasComponent(TypeIdOf<T>()); }
 
-        [[nodiscard]] size_t GetColumnIndex(TypeId type_id) const noexcept
-        {
-            return BinarySearch(type_id);
-        }
+        [[nodiscard]] size_t GetColumnIndex(TypeId typeId) const noexcept { return BinarySearch(typeId); }
 
-        template<typename T>
-        [[nodiscard]] size_t GetColumnIndex() const noexcept
-        {
+        template <typename T> [[nodiscard]] size_t GetColumnIndex() const noexcept {
             return GetColumnIndex(TypeIdOf<T>());
         }
 
-        uint32_t AllocateRow(Entity entity, Tick current_tick = Tick{0})
-        {
-            return table_.AllocateRow(entity, current_tick);
+        uint32_t AllocateRow(Entity entity, Tick currentTick = Tick{0}) {
+            return m_table.AllocateRow(entity, currentTick);
         }
 
-        Entity FreeRow(uint32_t row)
-        {
-            return table_.FreeRow(row);
+        Entity FreeRow(uint32_t row) { return m_table.FreeRow(row); }
+
+        template <typename T> void SetComponent(uint32_t row, const T& value) {
+            m_table.template SetComponent<T>(row, value);
         }
 
-        template<typename T>
-        void SetComponent(uint32_t row, const T& value)
-        {
-            table_.template SetComponent<T>(row, value);
-        }
-
-        template<typename T>
+        template <typename T>
         void SetComponent(uint32_t row, T&& value)
-            requires(!std::is_lvalue_reference_v<T&&>)
+            requires(!std::is_lvalue_reference_v<T &&>)
         {
-            table_.template SetComponent<T>(row, std::forward<T>(value));
+            m_table.template SetComponent<T>(row, std::forward<T>(value));
         }
 
-        void SetComponent(uint32_t row, TypeId type_id, const void* data)
-        {
-            table_.SetComponent(row, type_id, data);
-        }
+        void SetComponent(uint32_t row, TypeId typeId, const void* data) { m_table.SetComponent(row, typeId, data); }
 
-        template<typename T>
-        [[nodiscard]] T* GetComponent(uint32_t row) noexcept
-        {
-            auto* column = table_.template GetColumn<T>();
+        template <typename T> [[nodiscard]] T* GetComponent(uint32_t row) noexcept {
+            auto* column = m_table.template GetColumn<T>();
             if (column == nullptr)
             {
                 return nullptr;
@@ -160,10 +137,8 @@ namespace queen
             return column->template Get<T>(row);
         }
 
-        template<typename T>
-        [[nodiscard]] const T* GetComponent(uint32_t row) const noexcept
-        {
-            const auto* column = table_.template GetColumn<T>();
+        template <typename T> [[nodiscard]] const T* GetComponent(uint32_t row) const noexcept {
+            const auto* column = m_table.template GetColumn<T>();
             if (column == nullptr)
             {
                 return nullptr;
@@ -171,9 +146,8 @@ namespace queen
             return column->template Get<T>(row);
         }
 
-        [[nodiscard]] void* GetComponentRaw(uint32_t row, TypeId type_id) noexcept
-        {
-            auto* column = table_.GetColumnByTypeId(type_id);
+        [[nodiscard]] void* GetComponentRaw(uint32_t row, TypeId typeId) noexcept {
+            auto* column = m_table.GetColumnByTypeId(typeId);
             if (column == nullptr)
             {
                 return nullptr;
@@ -181,9 +155,8 @@ namespace queen
             return column->GetRaw(row);
         }
 
-        [[nodiscard]] const void* GetComponentRaw(uint32_t row, TypeId type_id) const noexcept
-        {
-            const auto* column = table_.GetColumnByTypeId(type_id);
+        [[nodiscard]] const void* GetComponentRaw(uint32_t row, TypeId typeId) const noexcept {
+            const auto* column = m_table.GetColumnByTypeId(typeId);
             if (column == nullptr)
             {
                 return nullptr;
@@ -191,100 +164,73 @@ namespace queen
             return column->GetRaw(row);
         }
 
-        [[nodiscard]] Entity GetEntity(uint32_t row) const noexcept
-        {
-            return table_.GetEntity(row);
+        [[nodiscard]] Entity GetEntity(uint32_t row) const noexcept { return m_table.GetEntity(row); }
+
+        [[nodiscard]] const Entity* GetEntities() const noexcept { return m_table.GetEntities(); }
+
+        [[nodiscard]] Column<Allocator>* GetColumn(TypeId typeId) noexcept { return m_table.GetColumnByTypeId(typeId); }
+
+        template <typename T> [[nodiscard]] Column<Allocator>* GetColumn() noexcept {
+            return m_table.template GetColumn<T>();
         }
 
-        [[nodiscard]] const Entity* GetEntities() const noexcept
-        {
-            return table_.GetEntities();
-        }
+        [[nodiscard]] size_t EntityCount() const noexcept { return m_table.RowCount(); }
+        [[nodiscard]] size_t ComponentCount() const noexcept { return m_componentTypes.Size(); }
+        [[nodiscard]] bool IsEmpty() const noexcept { return m_table.IsEmpty(); }
 
-        [[nodiscard]] Column<Allocator>* GetColumn(TypeId type_id) noexcept
-        {
-            return table_.GetColumnByTypeId(type_id);
-        }
+        [[nodiscard]] const wax::Vector<TypeId>& GetComponentTypes() const noexcept { return m_componentTypes; }
 
-        template<typename T>
-        [[nodiscard]] Column<Allocator>* GetColumn() noexcept
-        {
-            return table_.template GetColumn<T>();
-        }
+        [[nodiscard]] const wax::Vector<ComponentMeta>& GetComponentMetas() const noexcept { return m_componentMetas; }
 
-        [[nodiscard]] size_t EntityCount() const noexcept { return table_.RowCount(); }
-        [[nodiscard]] size_t ComponentCount() const noexcept { return component_types_.Size(); }
-        [[nodiscard]] bool IsEmpty() const noexcept { return table_.IsEmpty(); }
+        void SetAddEdge(TypeId typeId, Archetype* target) { m_addEdges.Insert(typeId, target); }
 
-        [[nodiscard]] const wax::Vector<TypeId>& GetComponentTypes() const noexcept
-        {
-            return component_types_;
-        }
+        void SetRemoveEdge(TypeId typeId, Archetype* target) { m_removeEdges.Insert(typeId, target); }
 
-        [[nodiscard]] const wax::Vector<ComponentMeta>& GetComponentMetas() const noexcept
-        {
-            return component_metas_;
-        }
-
-        void SetAddEdge(TypeId type_id, Archetype* target)
-        {
-            add_edges_.Insert(type_id, target);
-        }
-
-        void SetRemoveEdge(TypeId type_id, Archetype* target)
-        {
-            remove_edges_.Insert(type_id, target);
-        }
-
-        [[nodiscard]] Archetype* GetAddEdge(TypeId type_id) noexcept
-        {
-            Archetype** result = add_edges_.Find(type_id);
+        [[nodiscard]] Archetype* GetAddEdge(TypeId typeId) noexcept {
+            Archetype** result = m_addEdges.Find(typeId);
             return result ? *result : nullptr;
         }
 
-        [[nodiscard]] Archetype* GetRemoveEdge(TypeId type_id) noexcept
-        {
-            Archetype** result = remove_edges_.Find(type_id);
+        [[nodiscard]] Archetype* GetRemoveEdge(TypeId typeId) noexcept {
+            Archetype** result = m_removeEdges.Find(typeId);
             return result ? *result : nullptr;
         }
 
-        [[nodiscard]] Table<Allocator>& GetTable() noexcept { return table_; }
-        [[nodiscard]] const Table<Allocator>& GetTable() const noexcept { return table_; }
+        [[nodiscard]] Table<Allocator>& GetTable() noexcept { return m_table; }
+        [[nodiscard]] const Table<Allocator>& GetTable() const noexcept { return m_table; }
 
     private:
-        void SortComponentTypes()
-        {
-            for (size_t i = 1; i < component_types_.Size(); ++i)
+        void SortComponentTypes() {
+            for (size_t i = 1; i < m_componentTypes.Size(); ++i)
             {
-                TypeId key = component_types_[i];
+                TypeId key = m_componentTypes[i];
                 size_t j = i;
-                while (j > 0 && component_types_[j - 1] > key)
+                while (j > 0 && m_componentTypes[j - 1] > key)
                 {
-                    component_types_[j] = component_types_[j - 1];
+                    m_componentTypes[j] = m_componentTypes[j - 1];
                     --j;
                 }
-                component_types_[j] = key;
+                m_componentTypes[j] = key;
             }
         }
 
-        [[nodiscard]] size_t BinarySearch(TypeId type_id) const noexcept
-        {
-            if (component_types_.IsEmpty())
+        [[nodiscard]] size_t BinarySearch(TypeId typeId) const noexcept {
+            if (m_componentTypes.IsEmpty())
             {
                 return SIZE_MAX;
             }
 
             size_t left = 0;
-            size_t right = component_types_.Size();
+            size_t right = m_componentTypes.Size();
 
             while (left < right)
             {
                 size_t mid = left + (right - left) / 2;
-                if (component_types_[mid] == type_id)
+                if (m_componentTypes[mid] == typeId)
                 {
                     return mid;
                 }
-                if (component_types_[mid] < type_id)
+                if (m_componentTypes[mid] < typeId)
                 {
                     left = mid + 1;
                 }
@@ -297,12 +243,12 @@ namespace queen
             return SIZE_MAX;
         }
 
-        Allocator* allocator_;
-        ArchetypeId id_;
-        wax::Vector<TypeId> component_types_;
-        wax::Vector<ComponentMeta> component_metas_;
-        Table<Allocator> table_;
-        wax::HashMap<TypeId, Archetype*> add_edges_;
-        wax::HashMap<TypeId, Archetype*> remove_edges_;
+        Allocator* m_allocator;
+        ArchetypeId m_id;
+        wax::Vector<TypeId> m_componentTypes;
+        wax::Vector<ComponentMeta> m_componentMetas;
+        Table<Allocator> m_table;
+        wax::HashMap<TypeId, Archetype*> m_addEdges;
+        wax::HashMap<TypeId, Archetype*> m_removeEdges;
     };
-}
+} // namespace queen

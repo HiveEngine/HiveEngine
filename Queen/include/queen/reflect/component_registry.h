@@ -1,10 +1,12 @@
 #pragma once
 
-#include <queen/reflect/reflectable.h>
-#include <queen/reflect/component_serializer.h>
+#include <hive/core/assert.h>
+
 #include <queen/core/component_info.h>
 #include <queen/core/type_id.h>
-#include <hive/core/assert.h>
+#include <queen/reflect/component_serializer.h>
+#include <queen/reflect/reflectable.h>
+
 #include <cstddef>
 #include <cstring>
 
@@ -18,24 +20,15 @@ namespace queen
      */
     struct RegisteredComponent
     {
-        ComponentMeta meta;
-        ComponentReflection reflection;
-        const void* default_value = nullptr;   // Snapshot of T{} for prefab diff
+        ComponentMeta m_meta;
+        ComponentReflection m_reflection;
+        const void* m_defaultValue = nullptr; // Snapshot of T{} for prefab diff
 
-        [[nodiscard]] constexpr bool IsValid() const noexcept
-        {
-            return meta.IsValid();
-        }
+        [[nodiscard]] constexpr bool IsValid() const noexcept { return m_meta.IsValid(); }
 
-        [[nodiscard]] constexpr bool HasReflection() const noexcept
-        {
-            return reflection.IsValid();
-        }
+        [[nodiscard]] constexpr bool HasReflection() const noexcept { return m_reflection.IsValid(); }
 
-        [[nodiscard]] constexpr bool HasDefault() const noexcept
-        {
-            return default_value != nullptr;
-        }
+        [[nodiscard]] constexpr bool HasDefault() const noexcept { return m_defaultValue != nullptr; }
     };
 
     /**
@@ -84,8 +77,7 @@ namespace queen
      *
      * @tparam MaxComponents Maximum number of component types to support
      */
-    template<size_t MaxComponents = 256>
-    class ComponentRegistry
+    template <size_t MaxComponents = 256> class ComponentRegistry
     {
     public:
         constexpr ComponentRegistry() noexcept = default;
@@ -95,42 +87,40 @@ namespace queen
          *
          * @tparam T Component type (must satisfy Reflectable concept)
          */
-        template<Reflectable T>
-        void Register() noexcept
-        {
-            hive::Assert(count_ < MaxComponents, "ComponentRegistry full");
+        template <Reflectable T> void Register() noexcept {
+            hive::Assert(m_count < MaxComponents, "ComponentRegistry full");
             hive::Assert(Find(TypeIdOf<T>()) == nullptr, "Component already registered");
 
             RegisteredComponent entry;
-            entry.meta = ComponentMeta::Of<T>();
-            entry.reflection = GetReflectionData<T>();
+            entry.m_meta = ComponentMeta::Of<T>();
+            entry.m_reflection = GetReflectionData<T>();
 
             // Capture default-constructed instance for prefab diff
             if constexpr (std::is_default_constructible_v<T>)
             {
-                static const T default_instance{};
-                entry.default_value = &default_instance;
+                static const T DEFAULT_INSTANCE{};
+                entry.m_defaultValue = &DEFAULT_INSTANCE;
             }
 
             // Insert in sorted order by type_id for binary search
-            size_t insert_pos = count_;
-            for (size_t i = 0; i < count_; ++i)
+            size_t insertPos = m_count;
+            for (size_t i = 0; i < m_count; ++i)
             {
-                if (entries_[i].meta.type_id > entry.meta.type_id)
+                if (m_entries[i].m_meta.m_typeId > entry.m_meta.m_typeId)
                 {
-                    insert_pos = i;
+                    insertPos = i;
                     break;
                 }
             }
 
             // Shift elements to make room
-            for (size_t i = count_; i > insert_pos; --i)
+            for (size_t i = m_count; i > insertPos; --i)
             {
-                entries_[i] = entries_[i - 1];
+                m_entries[i] = m_entries[i - 1];
             }
 
-            entries_[insert_pos] = entry;
-            ++count_;
+            m_entries[insertPos] = entry;
+            ++m_count;
         }
 
         /**
@@ -141,41 +131,39 @@ namespace queen
          *
          * @tparam T Component type
          */
-        template<typename T>
-        void RegisterWithoutReflection() noexcept
-        {
-            hive::Assert(count_ < MaxComponents, "ComponentRegistry full");
+        template <typename T> void RegisterWithoutReflection() noexcept {
+            hive::Assert(m_count < MaxComponents, "ComponentRegistry full");
             hive::Assert(Find(TypeIdOf<T>()) == nullptr, "Component already registered");
 
             RegisteredComponent entry;
-            entry.meta = ComponentMeta::Of<T>();
+            entry.m_meta = ComponentMeta::Of<T>();
             // reflection stays default (invalid)
 
             // Capture default-constructed instance
             if constexpr (std::is_default_constructible_v<T>)
             {
-                static const T default_instance{};
-                entry.default_value = &default_instance;
+                static const T DEFAULT_INSTANCE{};
+                entry.m_defaultValue = &DEFAULT_INSTANCE;
             }
 
             // Insert in sorted order
-            size_t insert_pos = count_;
-            for (size_t i = 0; i < count_; ++i)
+            size_t insertPos = m_count;
+            for (size_t i = 0; i < m_count; ++i)
             {
-                if (entries_[i].meta.type_id > entry.meta.type_id)
+                if (m_entries[i].m_meta.m_typeId > entry.m_meta.m_typeId)
                 {
-                    insert_pos = i;
+                    insertPos = i;
                     break;
                 }
             }
 
-            for (size_t i = count_; i > insert_pos; --i)
+            for (size_t i = m_count; i > insertPos; --i)
             {
-                entries_[i] = entries_[i - 1];
+                m_entries[i] = m_entries[i - 1];
             }
 
-            entries_[insert_pos] = entry;
-            ++count_;
+            m_entries[insertPos] = entry;
+            ++m_count;
         }
 
         /**
@@ -183,24 +171,24 @@ namespace queen
          *
          * @return Pointer to RegisteredComponent or nullptr if not found
          */
-        [[nodiscard]] const RegisteredComponent* Find(TypeId type_id) const noexcept
-        {
-            if (count_ == 0) return nullptr;
+        [[nodiscard]] const RegisteredComponent* Find(TypeId typeId) const noexcept {
+            if (m_count == 0)
+                return nullptr;
 
             // Binary search
             size_t left = 0;
-            size_t right = count_;
+            size_t right = m_count;
 
             while (left < right)
             {
                 size_t mid = left + (right - left) / 2;
-                TypeId mid_id = entries_[mid].meta.type_id;
+                TypeId midId = m_entries[mid].m_meta.m_typeId;
 
-                if (mid_id == type_id)
+                if (midId == typeId)
                 {
-                    return &entries_[mid];
+                    return &m_entries[mid];
                 }
-                else if (mid_id < type_id)
+                else if (midId < typeId)
                 {
                     left = mid + 1;
                 }
@@ -218,15 +206,15 @@ namespace queen
          *
          * @return Pointer to RegisteredComponent or nullptr if not found
          */
-        [[nodiscard]] const RegisteredComponent* FindByName(const char* name) const noexcept
-        {
-            if (name == nullptr) return nullptr;
+        [[nodiscard]] const RegisteredComponent* FindByName(const char* name) const noexcept {
+            if (name == nullptr)
+                return nullptr;
 
-            for (size_t i = 0; i < count_; ++i)
+            for (size_t i = 0; i < m_count; ++i)
             {
-                if (detail::StringsEqual(entries_[i].reflection.name, name))
+                if (detail::StringsEqual(m_entries[i].m_reflection.m_name, name))
                 {
-                    return &entries_[i];
+                    return &m_entries[i];
                 }
             }
 
@@ -236,49 +224,32 @@ namespace queen
         /**
          * Get component by index
          */
-        [[nodiscard]] const RegisteredComponent& operator[](size_t index) const noexcept
-        {
-            hive::Assert(index < count_, "Index out of bounds");
-            return entries_[index];
+        [[nodiscard]] const RegisteredComponent& operator[](size_t index) const noexcept {
+            hive::Assert(index < m_count, "Index out of bounds");
+            return m_entries[index];
         }
 
         /**
          * Get number of registered components
          */
-        [[nodiscard]] size_t Count() const noexcept
-        {
-            return count_;
-        }
+        [[nodiscard]] size_t Count() const noexcept { return m_count; }
 
         /**
          * Check if a component type is registered
          */
-        [[nodiscard]] bool Contains(TypeId type_id) const noexcept
-        {
-            return Find(type_id) != nullptr;
-        }
+        [[nodiscard]] bool Contains(TypeId typeId) const noexcept { return Find(typeId) != nullptr; }
 
         /**
          * Check if a component type is registered
          */
-        template<typename T>
-        [[nodiscard]] bool Contains() const noexcept
-        {
-            return Contains(TypeIdOf<T>());
-        }
+        template <typename T> [[nodiscard]] bool Contains() const noexcept { return Contains(TypeIdOf<T>()); }
 
         /**
          * Iterate over all registered components
          */
-        [[nodiscard]] const RegisteredComponent* begin() const noexcept
-        {
-            return entries_;
-        }
+        [[nodiscard]] const RegisteredComponent* Begin() const noexcept { return m_entries; }
 
-        [[nodiscard]] const RegisteredComponent* end() const noexcept
-        {
-            return entries_ + count_;
-        }
+        [[nodiscard]] const RegisteredComponent* End() const noexcept { return m_entries + m_count; }
 
         /**
          * Default-construct a component into pre-allocated memory
@@ -287,11 +258,11 @@ namespace queen
          * @param dst Pre-allocated memory (must be at least meta.size bytes, properly aligned)
          * @return true if constructed, false if type not found
          */
-        [[nodiscard]] bool Construct(TypeId type_id, void* dst) const noexcept
-        {
-            const RegisteredComponent* comp = Find(type_id);
-            if (comp == nullptr || comp->meta.construct == nullptr) return false;
-            comp->meta.construct(dst);
+        [[nodiscard]] bool Construct(TypeId typeId, void* dst) const noexcept {
+            const RegisteredComponent* comp = Find(typeId);
+            if (comp == nullptr || comp->m_meta.m_construct == nullptr)
+                return false;
+            comp->m_meta.m_construct(dst);
             return true;
         }
 
@@ -303,11 +274,11 @@ namespace queen
          * @param src Source component
          * @return true if cloned, false if type not found
          */
-        [[nodiscard]] bool Clone(TypeId type_id, void* dst, const void* src) const noexcept
-        {
-            const RegisteredComponent* comp = Find(type_id);
-            if (comp == nullptr || comp->meta.copy == nullptr) return false;
-            comp->meta.copy(dst, src);
+        [[nodiscard]] bool Clone(TypeId typeId, void* dst, const void* src) const noexcept {
+            const RegisteredComponent* comp = Find(typeId);
+            if (comp == nullptr || comp->m_meta.m_copy == nullptr)
+                return false;
+            comp->m_meta.m_copy(dst, src);
             return true;
         }
 
@@ -321,23 +292,22 @@ namespace queen
          * @param instance Pointer to the component instance
          * @return Bitmask of changed fields (0 = all match default)
          */
-        [[nodiscard]] uint64_t DiffWithDefault(TypeId type_id, const void* instance) const noexcept
-        {
-            const RegisteredComponent* comp = Find(type_id);
-            if (comp == nullptr || comp->default_value == nullptr || !comp->HasReflection())
+        [[nodiscard]] uint64_t DiffWithDefault(TypeId typeId, const void* instance) const noexcept {
+            const RegisteredComponent* comp = Find(typeId);
+            if (comp == nullptr || comp->m_defaultValue == nullptr || !comp->HasReflection())
             {
                 return ~uint64_t{0};
             }
 
             uint64_t mask = 0;
-            const auto& refl = comp->reflection;
-            for (size_t i = 0; i < refl.field_count && i < 64; ++i)
+            const auto& refl = comp->m_reflection;
+            for (size_t i = 0; i < refl.m_fieldCount && i < 64; ++i)
             {
-                const FieldInfo& field = refl.fields[i];
-                const auto* a = static_cast<const std::byte*>(instance) + field.offset;
-                const auto* b = static_cast<const std::byte*>(comp->default_value) + field.offset;
+                const FieldInfo& field = refl.m_fields[i];
+                const auto* a = static_cast<const std::byte*>(instance) + field.m_offset;
+                const auto* b = static_cast<const std::byte*>(comp->m_defaultValue) + field.m_offset;
 
-                if (std::memcmp(a, b, field.size) != 0)
+                if (std::memcmp(a, b, field.m_size) != 0)
                 {
                     mask |= (uint64_t{1} << i);
                 }
@@ -350,23 +320,20 @@ namespace queen
          *
          * @return Pointer to default-constructed instance, or nullptr
          */
-        [[nodiscard]] const void* GetDefault(TypeId type_id) const noexcept
-        {
-            const RegisteredComponent* comp = Find(type_id);
-            if (comp == nullptr) return nullptr;
-            return comp->default_value;
+        [[nodiscard]] const void* GetDefault(TypeId typeId) const noexcept {
+            const RegisteredComponent* comp = Find(typeId);
+            if (comp == nullptr)
+                return nullptr;
+            return comp->m_defaultValue;
         }
 
         /**
          * Clear all registered components
          */
-        void Clear() noexcept
-        {
-            count_ = 0;
-        }
+        void Clear() noexcept { m_count = 0; }
 
     private:
-        RegisteredComponent entries_[MaxComponents]{};
-        size_t count_ = 0;
+        RegisteredComponent m_entries[MaxComponents]{};
+        size_t m_count = 0;
     };
-}
+} // namespace queen

@@ -3,11 +3,11 @@
 namespace waggle
 {
 
-class ProjectManager;
+    class ProjectManager;
 
-struct ProjectContext
-{
-    ProjectManager* manager{};
-};
+    struct ProjectContext
+    {
+        ProjectManager* m_manager{};
+    };
 
 } // namespace waggle

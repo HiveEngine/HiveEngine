@@ -1,31 +1,32 @@
-#include <larvae/larvae.h>
-#include <nectar/pipeline/importer_registry.h>
-#include <nectar/pipeline/asset_importer.h>
 #include <comb/default_allocator.h>
 
-namespace {
+#include <nectar/pipeline/asset_importer.h>
+#include <nectar/pipeline/importer_registry.h>
 
-    auto& GetRegAlloc()
-    {
+#include <larvae/larvae.h>
+
+namespace
+{
+
+    auto& GetRegAlloc() {
         static comb::ModuleAllocator alloc{"TestRegistry", 4 * 1024 * 1024};
         return alloc.Get();
     }
 
-    struct DummyAsset {};
+    struct DummyAsset
+    {
+    };
 
     class PngImporter final : public nectar::AssetImporter<DummyAsset>
     {
     public:
-        wax::Span<const char* const> SourceExtensions() const override
-        {
+        wax::Span<const char* const> SourceExtensions() const override {
             static const char* const exts[] = {".png"};
             return {exts, 1};
         }
         uint32_t Version() const override { return 1; }
         wax::StringView TypeName() const override { return "Texture"; }
-        nectar::ImportResult Import(wax::ByteSpan, const nectar::HiveDocument&,
-                                     nectar::ImportContext&) override
-        {
+        nectar::ImportResult Import(wax::ByteSpan, const nectar::HiveDocument&, nectar::ImportContext&) override {
             return {};
         }
     };
@@ -33,16 +34,13 @@ namespace {
     class JpgImporter final : public nectar::AssetImporter<DummyAsset>
     {
     public:
-        wax::Span<const char* const> SourceExtensions() const override
-        {
+        wax::Span<const char* const> SourceExtensions() const override {
             static const char* const exts[] = {".jpg", ".jpeg"};
             return {exts, 2};
         }
         uint32_t Version() const override { return 2; }
         wax::StringView TypeName() const override { return "Texture"; }
-        nectar::ImportResult Import(wax::ByteSpan, const nectar::HiveDocument&,
-                                     nectar::ImportContext&) override
-        {
+        nectar::ImportResult Import(wax::ByteSpan, const nectar::HiveDocument&, nectar::ImportContext&) override {
             return {};
         }
     };
@@ -50,16 +48,13 @@ namespace {
     class MeshImporter final : public nectar::AssetImporter<DummyAsset>
     {
     public:
-        wax::Span<const char* const> SourceExtensions() const override
-        {
+        wax::Span<const char* const> SourceExtensions() const override {
             static const char* const exts[] = {".glb", ".gltf"};
             return {exts, 2};
         }
         uint32_t Version() const override { return 1; }
         wax::StringView TypeName() const override { return "Mesh"; }
-        nectar::ImportResult Import(wax::ByteSpan, const nectar::HiveDocument&,
-                                     nectar::ImportContext&) override
-        {
+        nectar::ImportResult Import(wax::ByteSpan, const nectar::HiveDocument&, nectar::ImportContext&) override {
             return {};
         }
     };
@@ -117,7 +112,7 @@ namespace {
         reg.Register(&png);
         larvae::AssertEqual(reg.Count(), size_t{1});
         reg.Register(&jpg);
-        larvae::AssertEqual(reg.Count(), size_t{3});  // .png + .jpg + .jpeg
+        larvae::AssertEqual(reg.Count(), size_t{3}); // .png + .jpg + .jpeg
     });
 
     auto t6 = larvae::RegisterTest("NectarRegistry", "EmptyPath", []() {
@@ -177,4 +172,4 @@ namespace {
         larvae::AssertTrue(reg.FindByPath("data.bin") == nullptr);
     });
 
-}
+} // namespace

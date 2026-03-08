@@ -1,12 +1,17 @@
-#include <larvae/larvae.h>
 #include <wax/pointers/ptr.h>
 
-namespace {
-    struct TestStruct {
+#include <larvae/larvae.h>
+
+namespace
+{
+    struct TestStruct
+    {
         int value;
         float data;
 
-        TestStruct(int v = 0, float d = 0.0f) : value{v}, data{d} {}
+        TestStruct(int v = 0, float d = 0.0f)
+            : value{v}
+            , data{d} {}
     };
 
     // =============================================================================
@@ -47,7 +52,7 @@ namespace {
 
     auto test5 = larvae::RegisterTest("WaxPtr", "DeductionGuide", []() {
         int x = 123;
-        wax::Ptr ptr{&x};  // Type deduced as Ptr<int>
+        wax::Ptr ptr{&x}; // Type deduced as Ptr<int>
 
         larvae::AssertEqual(*ptr, 123);
     });
@@ -135,9 +140,12 @@ namespace {
         int x = 42;
         wax::Ptr<int> ptr{&x};
 
-        if (ptr) {
+        if (ptr)
+        {
             larvae::AssertEqual(*ptr, 42);
-        } else {
+        }
+        else
+        {
             larvae::AssertTrue(false); // Ptr should be valid
         }
     });
@@ -145,9 +153,12 @@ namespace {
     auto test14 = larvae::RegisterTest("WaxPtr", "BoolConversionFalse", []() {
         wax::Ptr<int> ptr{nullptr};
 
-        if (ptr) {
+        if (ptr)
+        {
             larvae::AssertTrue(false); // Ptr should be null
-        } else {
+        }
+        else
+        {
             // Expected path
             larvae::AssertTrue(true);
         }
@@ -263,4 +274,4 @@ namespace {
 
         larvae::AssertTrue(ptr.IsNull());
     });
-}
+} // namespace

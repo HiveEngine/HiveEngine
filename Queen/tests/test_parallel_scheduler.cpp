@@ -1,15 +1,27 @@
-#include <larvae/larvae.h>
-#include <queen/world/world.h>
-#include <queen/scheduler/parallel_scheduler.h>
 #include <comb/linear_allocator.h>
+
+#include <queen/scheduler/parallel_scheduler.h>
+#include <queen/world/world.h>
+
+#include <larvae/larvae.h>
+
 #include <atomic>
 
 namespace
 {
     // Test components
-    struct Position { float x, y, z; };
-    struct Velocity { float dx, dy, dz; };
-    struct Health { int value; };
+    struct Position
+    {
+        float x, y, z;
+    };
+    struct Velocity
+    {
+        float dx, dy, dz;
+    };
+    struct Health
+    {
+        int value;
+    };
 
     // ============================================================================
     // ParallelScheduler Basic Tests
@@ -55,7 +67,7 @@ namespace
         queen::SystemStorage<comb::LinearAllocator> storage{alloc};
 
         scheduler.Build(storage);
-        scheduler.RunAll(world, storage);  // Should not crash
+        scheduler.RunAll(world, storage); // Should not crash
     });
 
     auto test5 = larvae::RegisterTest("QueenParallelScheduler", "SingleSystem", []() {
@@ -67,12 +79,8 @@ namespace
         std::atomic<int> counter{0};
 
         storage.Register(
-            "IncrementSystem",
-            [&counter](queen::World&) {
-                counter.fetch_add(1);
-            },
-            queen::AccessDescriptor<comb::LinearAllocator>{alloc}
-        );
+            "IncrementSystem", [&counter](queen::World&) { counter.fetch_add(1); },
+            queen::AccessDescriptor<comb::LinearAllocator>{alloc});
 
         scheduler.Build(storage);
         scheduler.RunAll(world, storage);
@@ -91,16 +99,16 @@ namespace
         // Register multiple independent systems (no component conflicts)
         for (int i = 0; i < 10; ++i)
         {
-            storage.Register(
-                ("System" + std::to_string(i)).c_str(),
-                [&counter](queen::World&) {
-                    counter.fetch_add(1);
-                    // Small delay to allow parallelism
-                    volatile int sum = 0;
-                    for (int j = 0; j < 100; ++j) sum += j;
-                    (void)sum;
-                },
-                queen::AccessDescriptor<comb::LinearAllocator>{alloc}  // No component access = no conflicts
+            storage.Register(("System" + std::to_string(i)).c_str(),
+                             [&counter](queen::World&) {
+                                 counter.fetch_add(1);
+                                 // Small delay to allow parallelism
+                                 volatile int sum = 0;
+                                 for (int j = 0; j < 100; ++j)
+                                     sum += j;
+                                 (void)sum;
+                             },
+                             queen::AccessDescriptor<comb::LinearAllocator>{alloc} // No component access = no conflicts
             );
         }
 
@@ -125,12 +133,8 @@ namespace
             queen::AccessDescriptor<comb::LinearAllocator> access1{alloc};
             access1.AddComponentWrite<Position>();
             storage.Register(
-                "WritePosition",
-                [&order, &system1_order](queen::World&) {
-                    system1_order.store(order.fetch_add(1));
-                },
-                std::move(access1)
-            );
+                "WritePosition", [&order, &system1_order](queen::World&) { system1_order.store(order.fetch_add(1)); },
+                std::move(access1));
         }
 
         // System 2: reads Position (depends on System 1)
@@ -138,12 +142,8 @@ namespace
             queen::AccessDescriptor<comb::LinearAllocator> access2{alloc};
             access2.AddComponentRead<Position>();
             storage.Register(
-                "ReadPosition",
-                [&order, &system2_order](queen::World&) {
-                    system2_order.store(order.fetch_add(1));
-                },
-                std::move(access2)
-            );
+                "ReadPosition", [&order, &system2_order](queen::World&) { system2_order.store(order.fetch_add(1)); },
+                std::move(access2));
         }
 
         scheduler.Build(storage);
@@ -162,12 +162,8 @@ namespace
         std::atomic<int> counter{0};
 
         storage.Register(
-            "CounterSystem",
-            [&counter](queen::World&) {
-                counter.fetch_add(1);
-            },
-            queen::AccessDescriptor<comb::LinearAllocator>{alloc}
-        );
+            "CounterSystem", [&counter](queen::World&) { counter.fetch_add(1); },
+            queen::AccessDescriptor<comb::LinearAllocator>{alloc});
 
         scheduler.Build(storage);
 
@@ -185,11 +181,7 @@ namespace
         queen::ParallelScheduler<comb::LinearAllocator> scheduler{alloc, 4};
         queen::SystemStorage<comb::LinearAllocator> storage{alloc};
 
-        storage.Register(
-            "System1",
-            [](queen::World&) {},
-            queen::AccessDescriptor<comb::LinearAllocator>{alloc}
-        );
+        storage.Register("System1", [](queen::World&) {}, queen::AccessDescriptor<comb::LinearAllocator>{alloc});
 
         scheduler.Build(storage);
         larvae::AssertFalse(scheduler.NeedsRebuild());
@@ -210,13 +202,9 @@ namespace
         // Register many independent systems
         for (int i = 0; i < kNumSystems; ++i)
         {
-            storage.Register(
-                ("System" + std::to_string(i)).c_str(),
-                [&counter](queen::World&) {
-                    counter.fetch_add(1);
-                },
-                queen::AccessDescriptor<comb::LinearAllocator>{alloc}
-            );
+            storage.Register(("System" + std::to_string(i)).c_str(),
+                             [&counter](queen::World&) { counter.fetch_add(1); },
+                             queen::AccessDescriptor<comb::LinearAllocator>{alloc});
         }
 
         scheduler.Build(storage);
@@ -242,12 +230,8 @@ namespace
             queen::AccessDescriptor<comb::LinearAllocator> root_access{alloc};
             root_access.AddComponentWrite<Position>();
             storage.Register(
-                "Root",
-                [&order, &root_order](queen::World&) {
-                    root_order.store(order.fetch_add(1));
-                },
-                std::move(root_access)
-            );
+                "Root", [&order, &root_order](queen::World&) { root_order.store(order.fetch_add(1)); },
+                std::move(root_access));
         }
 
         // Left system: reads Position, writes Velocity
@@ -256,12 +240,8 @@ namespace
             left_access.AddComponentRead<Position>();
             left_access.AddComponentWrite<Velocity>();
             storage.Register(
-                "Left",
-                [&order, &left_order](queen::World&) {
-                    left_order.store(order.fetch_add(1));
-                },
-                std::move(left_access)
-            );
+                "Left", [&order, &left_order](queen::World&) { left_order.store(order.fetch_add(1)); },
+                std::move(left_access));
         }
 
         // Right system: reads Position, writes Health
@@ -270,12 +250,8 @@ namespace
             right_access.AddComponentRead<Position>();
             right_access.AddComponentWrite<Health>();
             storage.Register(
-                "Right",
-                [&order, &right_order](queen::World&) {
-                    right_order.store(order.fetch_add(1));
-                },
-                std::move(right_access)
-            );
+                "Right", [&order, &right_order](queen::World&) { right_order.store(order.fetch_add(1)); },
+                std::move(right_access));
         }
 
         // Bottom system: reads Velocity and Health
@@ -284,12 +260,8 @@ namespace
             bottom_access.AddComponentRead<Velocity>();
             bottom_access.AddComponentRead<Health>();
             storage.Register(
-                "Bottom",
-                [&order, &bottom_order](queen::World&) {
-                    bottom_order.store(order.fetch_add(1));
-                },
-                std::move(bottom_access)
-            );
+                "Bottom", [&order, &bottom_order](queen::World&) { bottom_order.store(order.fetch_add(1)); },
+                std::move(bottom_access));
         }
 
         scheduler.Build(storage);
@@ -309,21 +281,13 @@ namespace
         queen::ParallelScheduler<comb::LinearAllocator> scheduler{alloc, 4};
         queen::SystemStorage<comb::LinearAllocator> storage{alloc};
 
-        storage.Register(
-            "System1",
-            [](queen::World&) {},
-            queen::AccessDescriptor<comb::LinearAllocator>{alloc}
-        );
+        storage.Register("System1", [](queen::World&) {}, queen::AccessDescriptor<comb::LinearAllocator>{alloc});
 
-        storage.Register(
-            "System2",
-            [](queen::World&) {},
-            queen::AccessDescriptor<comb::LinearAllocator>{alloc}
-        );
+        storage.Register("System2", [](queen::World&) {}, queen::AccessDescriptor<comb::LinearAllocator>{alloc});
 
         scheduler.Build(storage);
 
         const auto& graph = scheduler.Graph();
         larvae::AssertEqual(graph.NodeCount(), size_t{2});
     });
-}
+} // namespace

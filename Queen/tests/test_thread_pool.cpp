@@ -1,9 +1,12 @@
-#include <larvae/larvae.h>
-#include <queen/scheduler/thread_pool.h>
 #include <comb/linear_allocator.h>
+
+#include <queen/scheduler/thread_pool.h>
+
+#include <larvae/larvae.h>
+
 #include <atomic>
-#include <vector>
 #include <chrono>
+#include <vector>
 
 namespace
 {
@@ -18,10 +21,7 @@ namespace
 
     auto test2 = larvae::RegisterTest("QueenTask", "ExecuteValidTask", []() {
         int counter = 0;
-        queen::Task task{
-            [](void* data) { ++(*static_cast<int*>(data)); },
-            &counter
-        };
+        queen::Task task{[](void* data) { ++(*static_cast<int*>(data)); }, &counter};
 
         larvae::AssertTrue(task.IsValid());
         task.Execute();
@@ -85,7 +85,8 @@ namespace
         queen::ThreadPool<comb::LinearAllocator> pool{alloc};
 
         size_t expected = std::thread::hardware_concurrency();
-        if (expected == 0) expected = 4;
+        if (expected == 0)
+            expected = 4;
 
         larvae::AssertEqual(pool.WorkerCount(), expected);
     });
@@ -102,9 +103,7 @@ namespace
 
         pool.Start();
 
-        pool.Submit([](void* data) {
-            static_cast<std::atomic<int>*>(data)->fetch_add(1);
-        }, &counter);
+        pool.Submit([](void* data) { static_cast<std::atomic<int>*>(data)->fetch_add(1); }, &counter);
 
         pool.WaitAll();
         pool.Stop();
@@ -123,9 +122,7 @@ namespace
 
         for (int i = 0; i < kNumTasks; ++i)
         {
-            pool.Submit([](void* data) {
-                static_cast<std::atomic<int>*>(data)->fetch_add(1);
-            }, &counter);
+            pool.Submit([](void* data) { static_cast<std::atomic<int>*>(data)->fetch_add(1); }, &counter);
         }
 
         pool.WaitAll();
@@ -142,9 +139,7 @@ namespace
 
         pool.Start();
 
-        pool.SubmitTo(2, [](void* data) {
-            static_cast<std::atomic<int>*>(data)->fetch_add(1);
-        }, &counter);
+        pool.SubmitTo(2, [](void* data) { static_cast<std::atomic<int>*>(data)->fetch_add(1); }, &counter);
 
         pool.WaitAll();
         pool.Stop();
@@ -161,12 +156,15 @@ namespace
         pool.Start();
 
         // Submit a task that blocks until we release it
-        pool.Submit([](void* data) {
-            auto* block_ptr = static_cast<std::atomic<bool>*>(data);
-            while (block_ptr->load()) {
-                std::this_thread::yield();
-            }
-        }, &block);
+        pool.Submit(
+            [](void* data) {
+                auto* block_ptr = static_cast<std::atomic<bool>*>(data);
+                while (block_ptr->load())
+                {
+                    std::this_thread::yield();
+                }
+            },
+            &block);
 
         // Small delay to ensure task is picked up
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
@@ -198,13 +196,17 @@ namespace
         // Submit all tasks to worker 0
         for (int i = 0; i < kNumTasks; ++i)
         {
-            pool.SubmitTo(0, [](void* data) {
-                static_cast<std::atomic<int>*>(data)->fetch_add(1);
-                // Small work to make stealing worthwhile
-                volatile int sum = 0;
-                for (int j = 0; j < 100; ++j) sum += j;
-                (void)sum;
-            }, &counter);
+            pool.SubmitTo(
+                0,
+                [](void* data) {
+                    static_cast<std::atomic<int>*>(data)->fetch_add(1);
+                    // Small work to make stealing worthwhile
+                    volatile int sum = 0;
+                    for (int j = 0; j < 100; ++j)
+                        sum += j;
+                    (void)sum;
+                },
+                &counter);
         }
 
         pool.WaitAll();
@@ -224,9 +226,7 @@ namespace
 
         for (int i = 0; i < kNumTasks; ++i)
         {
-            pool.Submit([](void* data) {
-                static_cast<std::atomic<int>*>(data)->fetch_add(1);
-            }, &counter);
+            pool.Submit([](void* data) { static_cast<std::atomic<int>*>(data)->fetch_add(1); }, &counter);
         }
 
         pool.WaitAll();
@@ -250,9 +250,7 @@ namespace
 
         for (int i = 0; i < kNumTasks; ++i)
         {
-            pool.Submit([](void* data) {
-                static_cast<std::atomic<int>*>(data)->fetch_add(1);
-            }, &counter);
+            pool.Submit([](void* data) { static_cast<std::atomic<int>*>(data)->fetch_add(1); }, &counter);
         }
 
         pool.WaitAll();
@@ -278,9 +276,7 @@ namespace
             submitters.emplace_back([&pool, &counter]() {
                 for (int i = 0; i < kTasksPerSubmitter; ++i)
                 {
-                    pool.Submit([](void* data) {
-                        static_cast<std::atomic<int>*>(data)->fetch_add(1);
-                    }, &counter);
+                    pool.Submit([](void* data) { static_cast<std::atomic<int>*>(data)->fetch_add(1); }, &counter);
                 }
             });
         }
@@ -298,17 +294,15 @@ namespace
 
     auto test17 = larvae::RegisterTest("QueenThreadPool", "IdleStrategyYield", []() {
         comb::LinearAllocator alloc{4 * 1024 * 1024};
-        queen::ThreadPool<comb::LinearAllocator> pool{alloc, 2, queen::IdleStrategy::Yield};
+        queen::ThreadPool<comb::LinearAllocator> pool{alloc, 2, queen::IdleStrategy::YIELD};
 
-        larvae::AssertTrue(pool.GetIdleStrategy() == queen::IdleStrategy::Yield);
+        larvae::AssertTrue(pool.GetIdleStrategy() == queen::IdleStrategy::YIELD);
 
         std::atomic<int> counter{0};
 
         pool.Start();
 
-        pool.Submit([](void* data) {
-            static_cast<std::atomic<int>*>(data)->fetch_add(1);
-        }, &counter);
+        pool.Submit([](void* data) { static_cast<std::atomic<int>*>(data)->fetch_add(1); }, &counter);
 
         pool.WaitAll();
         pool.Stop();
@@ -318,17 +312,15 @@ namespace
 
     auto test18 = larvae::RegisterTest("QueenThreadPool", "IdleStrategySpin", []() {
         comb::LinearAllocator alloc{4 * 1024 * 1024};
-        queen::ThreadPool<comb::LinearAllocator> pool{alloc, 2, queen::IdleStrategy::Spin};
+        queen::ThreadPool<comb::LinearAllocator> pool{alloc, 2, queen::IdleStrategy::SPIN};
 
-        larvae::AssertTrue(pool.GetIdleStrategy() == queen::IdleStrategy::Spin);
+        larvae::AssertTrue(pool.GetIdleStrategy() == queen::IdleStrategy::SPIN);
 
         std::atomic<int> counter{0};
 
         pool.Start();
 
-        pool.Submit([](void* data) {
-            static_cast<std::atomic<int>*>(data)->fetch_add(1);
-        }, &counter);
+        pool.Submit([](void* data) { static_cast<std::atomic<int>*>(data)->fetch_add(1); }, &counter);
 
         pool.WaitAll();
         pool.Stop();
@@ -341,8 +333,8 @@ namespace
         queen::ThreadPool<comb::LinearAllocator> pool{alloc, 2};
 
         // Before start, workers should be Idle (default state)
-        larvae::AssertTrue(pool.GetWorkerState(0) == queen::WorkerState::Idle);
-        larvae::AssertTrue(pool.GetWorkerState(1) == queen::WorkerState::Idle);
+        larvae::AssertTrue(pool.GetWorkerState(0) == queen::WorkerState::IDLE);
+        larvae::AssertTrue(pool.GetWorkerState(1) == queen::WorkerState::IDLE);
 
         pool.Start();
 
@@ -352,20 +344,14 @@ namespace
         // Workers should be idle or stealing (no tasks)
         auto state0 = pool.GetWorkerState(0);
         auto state1 = pool.GetWorkerState(1);
-        larvae::AssertTrue(
-            state0 == queen::WorkerState::Idle ||
-            state0 == queen::WorkerState::Stealing
-        );
-        larvae::AssertTrue(
-            state1 == queen::WorkerState::Idle ||
-            state1 == queen::WorkerState::Stealing
-        );
+        larvae::AssertTrue(state0 == queen::WorkerState::IDLE || state0 == queen::WorkerState::STEALING);
+        larvae::AssertTrue(state1 == queen::WorkerState::IDLE || state1 == queen::WorkerState::STEALING);
 
         pool.Stop();
 
         // After stop, workers should be Stopped
-        larvae::AssertTrue(pool.GetWorkerState(0) == queen::WorkerState::Stopped);
-        larvae::AssertTrue(pool.GetWorkerState(1) == queen::WorkerState::Stopped);
+        larvae::AssertTrue(pool.GetWorkerState(0) == queen::WorkerState::STOPPED);
+        larvae::AssertTrue(pool.GetWorkerState(1) == queen::WorkerState::STOPPED);
     });
 
     auto test20 = larvae::RegisterTest("QueenThreadPool", "InvalidWorkerIndex", []() {
@@ -373,7 +359,7 @@ namespace
         queen::ThreadPool<comb::LinearAllocator> pool{alloc, 2};
 
         // Out of bounds index should return Stopped
-        larvae::AssertTrue(pool.GetWorkerState(100) == queen::WorkerState::Stopped);
+        larvae::AssertTrue(pool.GetWorkerState(100) == queen::WorkerState::STOPPED);
     });
 
     auto test21 = larvae::RegisterTest("QueenThreadPool", "TaskWithReturn", []() {
@@ -390,10 +376,12 @@ namespace
 
         pool.Start();
 
-        pool.Submit([](void* ptr) {
-            auto* d = static_cast<TaskData*>(ptr);
-            d->output.store(d->input * 2);
-        }, &data);
+        pool.Submit(
+            [](void* ptr) {
+                auto* d = static_cast<TaskData*>(ptr);
+                d->output.store(d->input * 2);
+            },
+            &data);
 
         pool.WaitAll();
         pool.Stop();
@@ -409,9 +397,9 @@ namespace
         constexpr size_t kAllocSize = 4 * 1024 * 1024;
         comb::LinearAllocator alloc{kAllocSize};
 
-        queen::ThreadPool<comb::LinearAllocator> pool{alloc, 2, queen::IdleStrategy::Park, 64};
+        queen::ThreadPool<comb::LinearAllocator> pool{alloc, 2, queen::IdleStrategy::PARK, 64};
 
-        larvae::AssertEqual(static_cast<int>(pool.GetIdleStrategy()), static_cast<int>(queen::IdleStrategy::Park));
+        larvae::AssertEqual(static_cast<int>(pool.GetIdleStrategy()), static_cast<int>(queen::IdleStrategy::PARK));
 
         pool.Start();
 
@@ -419,10 +407,12 @@ namespace
 
         for (int i = 0; i < 10; ++i)
         {
-            pool.Submit([](void* ptr) {
-                auto* c = static_cast<std::atomic<int>*>(ptr);
-                c->fetch_add(1, std::memory_order_relaxed);
-            }, &counter);
+            pool.Submit(
+                [](void* ptr) {
+                    auto* c = static_cast<std::atomic<int>*>(ptr);
+                    c->fetch_add(1, std::memory_order_relaxed);
+                },
+                &counter);
         }
 
         pool.WaitAll();
@@ -435,7 +425,7 @@ namespace
         constexpr size_t kAllocSize = 4 * 1024 * 1024;
         comb::LinearAllocator alloc{kAllocSize};
 
-        queen::ThreadPool<comb::LinearAllocator> pool{alloc, 2, queen::IdleStrategy::Park, 64};
+        queen::ThreadPool<comb::LinearAllocator> pool{alloc, 2, queen::IdleStrategy::PARK, 64};
 
         pool.Start();
 
@@ -447,10 +437,8 @@ namespace
         // Verify workers stopped
         for (size_t i = 0; i < pool.WorkerCount(); ++i)
         {
-            larvae::AssertEqual(
-                static_cast<int>(pool.GetWorkerState(i)),
-                static_cast<int>(queen::WorkerState::Stopped)
-            );
+            larvae::AssertEqual(static_cast<int>(pool.GetWorkerState(i)),
+                                static_cast<int>(queen::WorkerState::STOPPED));
         }
     });
-}
+} // namespace

@@ -1,11 +1,15 @@
-#include <larvae/larvae.h>
-#include <nectar/server/asset_server.h>
-#include <nectar/server/asset_event.h>
 #include <comb/default_allocator.h>
 #include <comb/new.h>
+
+#include <nectar/server/asset_event.h>
+#include <nectar/server/asset_server.h>
+
+#include <larvae/larvae.h>
+
 #include <cstring>
 
-namespace {
+namespace
+{
 
     struct GcAsset
     {
@@ -15,37 +19,36 @@ namespace {
     class GcLoader final : public nectar::AssetLoader<GcAsset>
     {
     public:
-        GcAsset* Load(wax::ByteSpan data, comb::DefaultAllocator& alloc) override
-        {
-            if (data.Size() < sizeof(int)) return nullptr;
+        GcAsset* Load(wax::ByteSpan data, comb::DefaultAllocator& alloc) override {
+            if (data.Size() < sizeof(int))
+                return nullptr;
             auto* a = comb::New<GcAsset>(alloc);
             a->value = data.Read<int>(0);
             return a;
         }
-        void Unload(GcAsset* asset, comb::DefaultAllocator& alloc) override
-        {
-            if (asset) comb::Delete(alloc, asset);
+        void Unload(GcAsset* asset, comb::DefaultAllocator& alloc) override {
+            if (asset)
+                comb::Delete(alloc, asset);
         }
         size_t SizeOf(const GcAsset*) const override { return 1024; }
     };
 
-    auto& GetGcAlloc()
-    {
+    auto& GetGcAlloc() {
         static comb::ModuleAllocator alloc{"TestGcBudget", 4 * 1024 * 1024};
         return alloc.Get();
     }
 
-    wax::ByteSpan IntData(uint8_t* buf, int v)
-    {
+    wax::ByteSpan IntData(uint8_t* buf, int v) {
         std::memcpy(buf, &v, sizeof(int));
         return wax::ByteSpan{buf, sizeof(int)};
     }
 
     // Drain all events for type
-    void DrainAllEvents(nectar::AssetServer& server)
-    {
+    void DrainAllEvents(nectar::AssetServer& server) {
         nectar::AssetEvent<GcAsset> evt{};
-        while (server.PollEvents<GcAsset>(evt)) {}
+        while (server.PollEvents<GcAsset>(evt))
+        {
+        }
     }
 
     // =========================================================================
@@ -203,7 +206,7 @@ namespace {
         GcLoader loader; // 1024 per asset
         nectar::AssetServer server{alloc};
         server.RegisterLoader<GcAsset>(&loader);
-        server.SetGcGraceFrames(100); // large grace → normally wouldn't GC soon
+        server.SetGcGraceFrames(100);    // large grace → normally wouldn't GC soon
         server.SetBudget<GcAsset>(2048); // budget = 2KB
 
         uint8_t buf1[sizeof(int)], buf2[sizeof(int)], buf3[sizeof(int)];

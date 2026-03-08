@@ -1,7 +1,9 @@
-#include <larvae/larvae.h>
 #include <hive/core/sort_key.h>
 
-namespace {
+#include <larvae/larvae.h>
+
+namespace
+{
 
     using namespace hive::sort_key;
 
@@ -9,13 +11,11 @@ namespace {
     // QuantizeDepth
     // =========================================================================
 
-    auto t_quantize_at_near = larvae::RegisterTest("SortKey", "QuantizeAtNear", []() {
-        larvae::AssertEqual(QuantizeDepth(0.1f, 0.1f, 100.f), 0u);
-    });
+    auto t_quantize_at_near = larvae::RegisterTest("SortKey", "QuantizeAtNear",
+                                                   []() { larvae::AssertEqual(QuantizeDepth(0.1f, 0.1f, 100.f), 0u); });
 
-    auto t_quantize_at_far = larvae::RegisterTest("SortKey", "QuantizeAtFar", []() {
-        larvae::AssertEqual(QuantizeDepth(100.f, 0.1f, 100.f), kDepthMax);
-    });
+    auto t_quantize_at_far = larvae::RegisterTest(
+        "SortKey", "QuantizeAtFar", []() { larvae::AssertEqual(QuantizeDepth(100.f, 0.1f, 100.f), kDepthMax); });
 
     auto t_quantize_midpoint = larvae::RegisterTest("SortKey", "QuantizeMidpoint", []() {
         uint32_t mid = QuantizeDepth(50.05f, 0.1f, 100.f);
@@ -23,13 +23,11 @@ namespace {
         larvae::AssertTrue(mid < kDepthMax / 2 + 1000);
     });
 
-    auto t_quantize_clamps_below = larvae::RegisterTest("SortKey", "QuantizeClampsBelow", []() {
-        larvae::AssertEqual(QuantizeDepth(-10.f, 0.1f, 100.f), 0u);
-    });
+    auto t_quantize_clamps_below = larvae::RegisterTest(
+        "SortKey", "QuantizeClampsBelow", []() { larvae::AssertEqual(QuantizeDepth(-10.f, 0.1f, 100.f), 0u); });
 
-    auto t_quantize_clamps_above = larvae::RegisterTest("SortKey", "QuantizeClampsAbove", []() {
-        larvae::AssertEqual(QuantizeDepth(500.f, 0.1f, 100.f), kDepthMax);
-    });
+    auto t_quantize_clamps_above = larvae::RegisterTest(
+        "SortKey", "QuantizeClampsAbove", []() { larvae::AssertEqual(QuantizeDepth(500.f, 0.1f, 100.f), kDepthMax); });
 
     // =========================================================================
     // Encode / Extract round-trip
@@ -61,13 +59,13 @@ namespace {
 
     auto t_opaque_front_to_back = larvae::RegisterTest("SortKey", "OpaqueFrontToBack", []() {
         uint64_t near_key = EncodeOpaque(0, 0, 0, 0, 100);
-        uint64_t far_key  = EncodeOpaque(0, 0, 0, 0, 5000);
+        uint64_t far_key = EncodeOpaque(0, 0, 0, 0, 5000);
         larvae::AssertTrue(near_key < far_key);
     });
 
     auto t_transparent_back_to_front = larvae::RegisterTest("SortKey", "TransparentBackToFront", []() {
         uint64_t near_key = EncodeTransparent(0, 0, 0, 0, 100);
-        uint64_t far_key  = EncodeTransparent(0, 0, 0, 0, 5000);
+        uint64_t far_key = EncodeTransparent(0, 0, 0, 0, 5000);
         larvae::AssertTrue(far_key < near_key);
     });
 

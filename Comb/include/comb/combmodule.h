@@ -1,11 +1,11 @@
 #pragma once
 
-#include <hive/core/module.h>
 #include <hive/core/log.h>
+#include <hive/core/module.h>
 
 namespace comb
 {
-    extern const hive::LogCategory LogCombRoot;
+    extern const hive::LogCategory LOG_COMB_ROOT;
 
     class CombModule : public hive::Module
     {
@@ -21,4 +21,4 @@ namespace comb
         void DoInitialize() override;
         void DoShutdown() override;
     };
-}
+} // namespace comb

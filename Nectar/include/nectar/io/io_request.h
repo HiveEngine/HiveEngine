@@ -1,8 +1,10 @@
 #pragma once
 
-#include <nectar/vfs/file_info.h>
 #include <wax/containers/string.h>
 #include <wax/serialization/byte_buffer.h>
+
+#include <nectar/vfs/file_info.h>
+
 #include <cstdint>
 
 namespace nectar
@@ -12,16 +14,16 @@ namespace nectar
 
     struct IORequest
     {
-        IORequestId id{kInvalidIORequestId};
-        wax::String path;
-        LoadPriority priority{LoadPriority::Normal};
-        bool cancelled{false};
+        IORequestId m_id{kInvalidIORequestId};
+        wax::String m_path;
+        LoadPriority m_priority{LoadPriority::NORMAL};
+        bool m_cancelled{false};
     };
 
     struct IOCompletion
     {
-        IORequestId request_id{kInvalidIORequestId};
-        wax::ByteBuffer data;
-        bool success{false};
+        IORequestId m_requestId{kInvalidIORequestId};
+        wax::ByteBuffer m_data;
+        bool m_success{false};
     };
-}
+} // namespace nectar

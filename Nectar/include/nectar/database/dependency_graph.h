@@ -1,18 +1,20 @@
 #pragma once
 
-#include <nectar/core/asset_id.h>
-#include <nectar/database/dep_kind.h>
+#include <comb/default_allocator.h>
+
 #include <wax/containers/hash_map.h>
 #include <wax/containers/vector.h>
-#include <comb/default_allocator.h>
+
+#include <nectar/core/asset_id.h>
+#include <nectar/database/dep_kind.h>
 
 namespace nectar
 {
     struct DependencyEdge
     {
-        AssetId from;
-        AssetId to;
-        DepKind kind;
+        AssetId m_from;
+        AssetId m_to;
+        DepKind m_kind;
     };
 
     /// Directed Acyclic Graph of asset dependencies.
@@ -36,20 +38,16 @@ namespace nectar
         // -- Direct queries --
 
         /// "What does `id` depend on?" (outgoing edges matching filter)
-        void GetDependencies(AssetId id, DepKind filter,
-                             wax::Vector<AssetId>& out) const;
+        void GetDependencies(AssetId id, DepKind filter, wax::Vector<AssetId>& out) const;
 
         /// "Who depends on `id`?" (incoming edges matching filter)
-        void GetDependents(AssetId id, DepKind filter,
-                           wax::Vector<AssetId>& out) const;
+        void GetDependents(AssetId id, DepKind filter, wax::Vector<AssetId>& out) const;
 
         // -- Transitive queries (DFS) --
 
-        void GetTransitiveDependencies(AssetId id, DepKind filter,
-                                       wax::Vector<AssetId>& out) const;
+        void GetTransitiveDependencies(AssetId id, DepKind filter, wax::Vector<AssetId>& out) const;
 
-        void GetTransitiveDependents(AssetId id, DepKind filter,
-                                     wax::Vector<AssetId>& out) const;
+        void GetTransitiveDependents(AssetId id, DepKind filter, wax::Vector<AssetId>& out) const;
 
         // -- Validation --
 
@@ -76,8 +74,8 @@ namespace nectar
         /// DFS reachability check: can we reach `target` starting from `start`?
         bool CanReach(AssetId start, AssetId target) const;
 
-        comb::DefaultAllocator* alloc_;
-        wax::HashMap<AssetId, wax::Vector<DependencyEdge>> forward_;
-        wax::HashMap<AssetId, wax::Vector<DependencyEdge>> reverse_;
+        comb::DefaultAllocator* m_alloc;
+        wax::HashMap<AssetId, wax::Vector<DependencyEdge>> m_forward;
+        wax::HashMap<AssetId, wax::Vector<DependencyEdge>> m_reverse;
     };
-}
+} // namespace nectar

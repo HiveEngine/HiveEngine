@@ -3,13 +3,13 @@
 // Wax precompiled header
 
 // C++ Standard Library (minimal usage)
-#include <cstddef>      // size_t, std::byte
-#include <cstdint>      // uint32_t, etc.
-#include <cstring>      // std::memset
-#include <utility>      // std::move, std::forward
-#include <type_traits>  // std::is_same, etc.
-#include <concepts>     // C++20 concepts
+#include <concepts> // C++20 concepts
+#include <cstddef>  // size_t, std::byte
+#include <cstdint>  // uint32_t, etc.
+#include <cstring>  // std::memset
 #include <initializer_list>
+#include <type_traits> // std::is_same, etc.
+#include <utility>     // std::move, std::forward
 
 // Hive core
 #include <hive/core/assert.h>

@@ -1,8 +1,11 @@
 #pragma once
 
-#include <queen/event/event.h>
 #include <comb/allocator_concepts.h>
+
 #include <wax/containers/vector.h>
+
+#include <queen/event/event.h>
+
 #include <cstddef>
 
 namespace queen
@@ -81,18 +84,15 @@ namespace queen
      *   queue.Swap();  // Frame 1 events now cleared
      * @endcode
      */
-    template<Event T, comb::Allocator Allocator>
-    class EventQueue
+    template <Event T, comb::Allocator Allocator> class EventQueue
     {
     public:
         using EventType = T;
         using Iterator = const T*;
 
         explicit EventQueue(Allocator& allocator)
-            : buffers_{wax::Vector<T>{allocator}, wax::Vector<T>{allocator}}
-            , current_{0}
-        {
-        }
+            : m_buffers{wax::Vector<T>{allocator}, wax::Vector<T>{allocator}}
+            , m_current{0} {}
 
         ~EventQueue() = default;
 
@@ -106,20 +106,14 @@ namespace queen
          *
          * @param event Event to add (copied into buffer)
          */
-        void Push(const T& event)
-        {
-            buffers_[current_].PushBack(event);
-        }
+        void Push(const T& event) { m_buffers[m_current].PushBack(event); }
 
         /**
          * Add an event to the current frame's buffer (move)
          *
          * @param event Event to add (moved into buffer)
          */
-        void Push(T&& event)
-        {
-            buffers_[current_].PushBack(std::move(event));
-        }
+        void Push(T&& event) { m_buffers[m_current].PushBack(std::move(event)); }
 
         /**
          * Construct an event in-place in the current frame's buffer
@@ -128,10 +122,8 @@ namespace queen
          * @param args Arguments forwarded to event constructor
          * @return Reference to the constructed event
          */
-        template<typename... Args>
-        T& Emplace(Args&&... args)
-        {
-            return buffers_[current_].EmplaceBack(std::forward<Args>(args)...);
+        template <typename... Args> T& Emplace(Args&&... args) {
+            return m_buffers[m_current].EmplaceBack(std::forward<Args>(args)...);
         }
 
         /**
@@ -141,62 +133,45 @@ namespace queen
          * - Current buffer becomes previous
          * - New current buffer is empty (just cleared)
          */
-        void Swap()
-        {
+        void Swap() {
             // Flip to the other buffer (which contains old events)
-            current_ = 1 - current_;
+            m_current = 1 - m_current;
             // Clear the new current buffer (was previous, now will be current)
-            buffers_[current_].Clear();
+            m_buffers[m_current].Clear();
         }
 
         /**
          * Clear all events from both buffers
          */
-        void Clear()
-        {
-            buffers_[0].Clear();
-            buffers_[1].Clear();
+        void Clear() {
+            m_buffers[0].Clear();
+            m_buffers[1].Clear();
         }
 
         /**
          * Get number of events in current frame's buffer
          */
-        [[nodiscard]] size_t CurrentCount() const noexcept
-        {
-            return buffers_[current_].Size();
-        }
+        [[nodiscard]] size_t CurrentCount() const noexcept { return m_buffers[m_current].Size(); }
 
         /**
          * Get number of events in previous frame's buffer
          */
-        [[nodiscard]] size_t PreviousCount() const noexcept
-        {
-            return buffers_[1 - current_].Size();
-        }
+        [[nodiscard]] size_t PreviousCount() const noexcept { return m_buffers[1 - m_current].Size(); }
 
         /**
          * Get total number of events across both buffers
          */
-        [[nodiscard]] size_t TotalCount() const noexcept
-        {
-            return buffers_[0].Size() + buffers_[1].Size();
-        }
+        [[nodiscard]] size_t TotalCount() const noexcept { return m_buffers[0].Size() + m_buffers[1].Size(); }
 
         /**
          * Check if there are no events in either buffer
          */
-        [[nodiscard]] bool IsEmpty() const noexcept
-        {
-            return buffers_[0].IsEmpty() && buffers_[1].IsEmpty();
-        }
+        [[nodiscard]] bool IsEmpty() const noexcept { return m_buffers[0].IsEmpty() && m_buffers[1].IsEmpty(); }
 
         /**
          * Check if current frame buffer is empty
          */
-        [[nodiscard]] bool IsCurrentEmpty() const noexcept
-        {
-            return buffers_[current_].IsEmpty();
-        }
+        [[nodiscard]] bool IsCurrentEmpty() const noexcept { return m_buffers[m_current].IsEmpty(); }
 
         // ─────────────────────────────────────────────────────────────
         // Iteration (reads both buffers: previous first, then current)
@@ -212,56 +187,37 @@ namespace queen
         {
         public:
             EventIterator(const EventQueue* queue, size_t index)
-                : queue_{queue}
-                , index_{index}
-            {
-            }
+                : m_queue{queue}
+                , m_index{index} {}
 
-            const T& operator*() const
-            {
-                size_t prev_size = queue_->PreviousCount();
-                if (index_ < prev_size)
+            const T& operator*() const {
+                size_t prevSize = m_queue->PreviousCount();
+                if (m_index < prevSize)
                 {
-                    return queue_->buffers_[1 - queue_->current_][index_];
+                    return m_queue->m_buffers[1 - m_queue->m_current][m_index];
                 }
-                return queue_->buffers_[queue_->current_][index_ - prev_size];
+                return m_queue->m_buffers[m_queue->m_current][m_index - prevSize];
             }
 
-            const T* operator->() const
-            {
-                return &(**this);
-            }
+            const T* operator->() const { return &(**this); }
 
-            EventIterator& operator++()
-            {
-                ++index_;
+            EventIterator& operator++() {
+                ++m_index;
                 return *this;
             }
 
-            bool operator==(const EventIterator& other) const
-            {
-                return index_ == other.index_;
-            }
+            bool operator==(const EventIterator& other) const { return m_index == other.m_index; }
 
-            bool operator!=(const EventIterator& other) const
-            {
-                return index_ != other.index_;
-            }
+            bool operator!=(const EventIterator& other) const { return m_index != other.m_index; }
 
         private:
-            const EventQueue* queue_;
-            size_t index_;
+            const EventQueue* m_queue;
+            size_t m_index;
         };
 
-        [[nodiscard]] EventIterator begin() const
-        {
-            return EventIterator{this, 0};
-        }
+        [[nodiscard]] EventIterator Begin() const { return EventIterator{this, 0}; }
 
-        [[nodiscard]] EventIterator end() const
-        {
-            return EventIterator{this, TotalCount()};
-        }
+        [[nodiscard]] EventIterator End() const { return EventIterator{this, TotalCount()}; }
 
         // ─────────────────────────────────────────────────────────────
         // Direct buffer access (for advanced use)
@@ -270,21 +226,15 @@ namespace queen
         /**
          * Get read-only access to current frame's events
          */
-        [[nodiscard]] const wax::Vector<T>& CurrentBuffer() const noexcept
-        {
-            return buffers_[current_];
-        }
+        [[nodiscard]] const wax::Vector<T>& CurrentBuffer() const noexcept { return m_buffers[m_current]; }
 
         /**
          * Get read-only access to previous frame's events
          */
-        [[nodiscard]] const wax::Vector<T>& PreviousBuffer() const noexcept
-        {
-            return buffers_[1 - current_];
-        }
+        [[nodiscard]] const wax::Vector<T>& PreviousBuffer() const noexcept { return m_buffers[1 - m_current]; }
 
     private:
-        wax::Vector<T> buffers_[2];
-        uint8_t current_;
+        wax::Vector<T> m_buffers[2];
+        uint8_t m_current;
     };
-}
+} // namespace queen

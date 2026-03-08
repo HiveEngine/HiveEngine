@@ -1,14 +1,17 @@
 #pragma once
 
+#include <hive/core/assert.h>
+
+#include <comb/memory_resource.h>
+
+#include <wax/containers/string_view.h>
+
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
 #include <functional>
 #include <type_traits>
 #include <utility>
-#include <comb/memory_resource.h>
-#include <hive/core/assert.h>
-#include <wax/containers/string_view.h>
 
 namespace wax
 {
@@ -20,339 +23,270 @@ namespace wax
         using ConstIterator = const char*;
 
         static constexpr size_t npos = static_cast<size_t>(-1);
-        static constexpr size_t SsoCapacity = 22;
+        static constexpr size_t ssoCapacity = 22;
 
         String() noexcept
-            : allocator_{comb::GetDefaultMemoryResource()}
-        {
+            : m_allocator{comb::GetDefaultMemoryResource()} {
             InitSso();
         }
 
         String(const char* str)
-            : allocator_{comb::GetDefaultMemoryResource()}
-        {
+            : m_allocator{comb::GetDefaultMemoryResource()} {
             AssignFromPointer(str, str ? std::strlen(str) : 0);
         }
 
         String(StringView sv)
-            : allocator_{comb::GetDefaultMemoryResource()}
-        {
+            : m_allocator{comb::GetDefaultMemoryResource()} {
             AssignFromPointer(sv.Data(), sv.Size());
         }
 
         explicit String(comb::MemoryResource allocator) noexcept
-            : allocator_{allocator}
-        {
+            : m_allocator{allocator} {
             InitSso();
         }
 
-        template<comb::Allocator Allocator>
+        template <comb::Allocator Allocator>
         explicit String(Allocator& allocator) noexcept
-            : String{comb::MemoryResource{allocator}}
-        {}
+            : String{comb::MemoryResource{allocator}} {}
 
         String(comb::MemoryResource allocator, const char* str)
-            : allocator_{allocator}
-        {
+            : m_allocator{allocator} {
             AssignFromPointer(str, str ? std::strlen(str) : 0);
         }
 
-        template<comb::Allocator Allocator>
+        template <comb::Allocator Allocator>
         String(Allocator& allocator, const char* str)
-            : String{comb::MemoryResource{allocator}, str}
-        {}
+            : String{comb::MemoryResource{allocator}, str} {}
 
         String(comb::MemoryResource allocator, StringView sv)
-            : allocator_{allocator}
-        {
+            : m_allocator{allocator} {
             AssignFromPointer(sv.Data(), sv.Size());
         }
 
-        template<comb::Allocator Allocator>
+        template <comb::Allocator Allocator>
         String(Allocator& allocator, StringView sv)
-            : String{comb::MemoryResource{allocator}, sv}
-        {}
+            : String{comb::MemoryResource{allocator}, sv} {}
 
         String(comb::MemoryResource allocator, const char* data, size_t size)
-            : allocator_{allocator}
-        {
+            : m_allocator{allocator} {
             AssignFromPointer(data, size);
         }
 
-        template<comb::Allocator Allocator>
+        template <comb::Allocator Allocator>
         String(Allocator& allocator, const char* data, size_t size)
-            : String{comb::MemoryResource{allocator}, data, size}
-        {}
+            : String{comb::MemoryResource{allocator}, data, size} {}
 
-        ~String() noexcept
-        {
+        ~String() noexcept {
             if (IsHeap())
             {
-                allocator_.Deallocate(heap_.data);
+                m_allocator.Deallocate(m_heap.m_data);
             }
         }
 
         String(const String& other)
-            : allocator_{other.allocator_}
-        {
+            : m_allocator{other.m_allocator} {
             if (other.IsHeap())
             {
-                const size_t size = other.heap_.size;
+                const size_t size = other.m_heap.m_size;
                 InitHeap(size);
-                std::memcpy(heap_.data, other.heap_.data, size);
-                heap_.data[size] = '\0';
+                std::memcpy(m_heap.m_data, other.m_heap.m_data, size);
+                m_heap.m_data[size] = '\0';
             }
             else
             {
-                sso_ = other.sso_;
+                m_sso = other.m_sso;
             }
         }
 
-        String& operator=(const String& other)
-        {
+        String& operator=(const String& other) {
             if (this != &other)
             {
                 if (IsHeap())
                 {
-                    allocator_.Deallocate(heap_.data);
+                    m_allocator.Deallocate(m_heap.m_data);
                 }
 
-                allocator_ = other.allocator_;
+                m_allocator = other.m_allocator;
 
                 if (other.IsHeap())
                 {
-                    const size_t size = other.heap_.size;
+                    const size_t size = other.m_heap.m_size;
                     InitHeap(size);
-                    std::memcpy(heap_.data, other.heap_.data, size);
-                    heap_.data[size] = '\0';
+                    std::memcpy(m_heap.m_data, other.m_heap.m_data, size);
+                    m_heap.m_data[size] = '\0';
                 }
                 else
                 {
-                    sso_ = other.sso_;
+                    m_sso = other.m_sso;
                 }
             }
             return *this;
         }
 
         String(String&& other) noexcept
-            : allocator_{other.allocator_}
-        {
+            : m_allocator{other.m_allocator} {
             if (other.IsHeap())
             {
-                heap_ = other.heap_;
+                m_heap = other.m_heap;
                 other.InitSso();
             }
             else
             {
-                sso_ = other.sso_;
+                m_sso = other.m_sso;
             }
         }
 
-        String& operator=(String&& other) noexcept
-        {
+        String& operator=(String&& other) noexcept {
             if (this != &other)
             {
                 if (IsHeap())
                 {
-                    allocator_.Deallocate(heap_.data);
+                    m_allocator.Deallocate(m_heap.m_data);
                 }
 
-                allocator_ = other.allocator_;
+                m_allocator = other.m_allocator;
 
                 if (other.IsHeap())
                 {
-                    heap_ = other.heap_;
+                    m_heap = other.m_heap;
                     other.InitSso();
                 }
                 else
                 {
-                    sso_ = other.sso_;
+                    m_sso = other.m_sso;
                 }
             }
             return *this;
         }
 
-        [[nodiscard]] char& operator[](size_t index) noexcept
-        {
+        [[nodiscard]] char& operator[](size_t index) noexcept {
             hive::Assert(index < Size(), "String index out of bounds");
             return Data()[index];
         }
 
-        [[nodiscard]] const char& operator[](size_t index) const noexcept
-        {
+        [[nodiscard]] const char& operator[](size_t index) const noexcept {
             hive::Assert(index < Size(), "String index out of bounds");
             return Data()[index];
         }
 
-        [[nodiscard]] char& At(size_t index)
-        {
+        [[nodiscard]] char& At(size_t index) {
             hive::Check(index < Size(), "String index out of bounds");
             return Data()[index];
         }
 
-        [[nodiscard]] const char& At(size_t index) const
-        {
+        [[nodiscard]] const char& At(size_t index) const {
             hive::Check(index < Size(), "String index out of bounds");
             return Data()[index];
         }
 
-        [[nodiscard]] char& Front() noexcept
-        {
+        [[nodiscard]] char& Front() noexcept {
             hive::Assert(Size() > 0, "String is empty");
             return Data()[0];
         }
 
-        [[nodiscard]] const char& Front() const noexcept
-        {
+        [[nodiscard]] const char& Front() const noexcept {
             hive::Assert(Size() > 0, "String is empty");
             return Data()[0];
         }
 
-        [[nodiscard]] char& Back() noexcept
-        {
+        [[nodiscard]] char& Back() noexcept {
             hive::Assert(Size() > 0, "String is empty");
             return Data()[Size() - 1];
         }
 
-        [[nodiscard]] const char& Back() const noexcept
-        {
+        [[nodiscard]] const char& Back() const noexcept {
             hive::Assert(Size() > 0, "String is empty");
             return Data()[Size() - 1];
         }
 
-        [[nodiscard]] char* Data() noexcept
-        {
-            return IsHeap() ? heap_.data : sso_.buffer;
-        }
+        [[nodiscard]] char* Data() noexcept { return IsHeap() ? m_heap.m_data : m_sso.m_buffer; }
 
-        [[nodiscard]] const char* Data() const noexcept
-        {
-            return IsHeap() ? heap_.data : sso_.buffer;
-        }
+        [[nodiscard]] const char* Data() const noexcept { return IsHeap() ? m_heap.m_data : m_sso.m_buffer; }
 
-        [[nodiscard]] const char* CStr() const noexcept
-        {
-            return Data();
-        }
+        [[nodiscard]] const char* CStr() const noexcept { return Data(); }
 
-        [[nodiscard]] size_t Size() const noexcept
-        {
-            return IsHeap() ? heap_.size : GetSsoSize();
-        }
+        [[nodiscard]] size_t Size() const noexcept { return IsHeap() ? m_heap.m_size : GetSsoSize(); }
 
-        [[nodiscard]] size_t Length() const noexcept
-        {
-            return Size();
-        }
+        [[nodiscard]] size_t Length() const noexcept { return Size(); }
 
-        [[nodiscard]] size_t Capacity() const noexcept
-        {
-            return IsHeap() ? GetHeapCapacity() : SsoCapacity;
-        }
+        [[nodiscard]] size_t Capacity() const noexcept { return IsHeap() ? GetHeapCapacity() : ssoCapacity; }
 
-        [[nodiscard]] bool IsEmpty() const noexcept
-        {
-            return Size() == 0;
-        }
+        [[nodiscard]] bool IsEmpty() const noexcept { return Size() == 0; }
 
-        [[nodiscard]] comb::MemoryResource GetAllocator() const noexcept
-        {
-            return allocator_;
-        }
+        [[nodiscard]] comb::MemoryResource GetAllocator() const noexcept { return m_allocator; }
 
-        [[nodiscard]] Iterator begin() noexcept
-        {
-            return Data();
-        }
+        [[nodiscard]] Iterator Begin() noexcept { return Data(); }
 
-        [[nodiscard]] ConstIterator begin() const noexcept
-        {
-            return Data();
-        }
+        [[nodiscard]] ConstIterator Begin() const noexcept { return Data(); }
 
-        [[nodiscard]] Iterator end() noexcept
-        {
-            return Data() + Size();
-        }
+        [[nodiscard]] Iterator End() noexcept { return Data() + Size(); }
 
-        [[nodiscard]] ConstIterator end() const noexcept
-        {
-            return Data() + Size();
-        }
+        [[nodiscard]] ConstIterator End() const noexcept { return Data() + Size(); }
 
-        [[nodiscard]] StringView View() const noexcept
-        {
-            return StringView{Data(), Size()};
-        }
+        [[nodiscard]] StringView View() const noexcept { return StringView{Data(), Size()}; }
 
-        [[nodiscard]] operator StringView() const noexcept
-        {
-            return View();
-        }
+        [[nodiscard]] operator StringView() const noexcept { return View(); }
 
-        void Reserve(size_t new_capacity)
-        {
-            if (new_capacity <= Capacity())
+        void Reserve(size_t newCapacity) {
+            if (newCapacity <= Capacity())
             {
                 return;
             }
 
-            const size_t current_size = Size();
-            char* new_data = static_cast<char*>(allocator_.Allocate(new_capacity + 1, 1));
-            hive::Check(new_data != nullptr, "String allocation failed");
+            const size_t currentSize = Size();
+            char* newData = static_cast<char*>(m_allocator.Allocate(newCapacity + 1, 1));
+            hive::Check(newData != nullptr, "String allocation failed");
 
-            if (current_size > 0)
+            if (currentSize > 0)
             {
-                std::memcpy(new_data, Data(), current_size);
+                std::memcpy(newData, Data(), currentSize);
             }
-            new_data[current_size] = '\0';
+            newData[currentSize] = '\0';
 
             if (IsHeap())
             {
-                allocator_.Deallocate(heap_.data);
+                m_allocator.Deallocate(m_heap.m_data);
             }
 
-            heap_.data = new_data;
-            heap_.size = current_size;
-            SetHeapCapacity(new_capacity);
+            m_heap.m_data = newData;
+            m_heap.m_size = currentSize;
+            SetHeapCapacity(newCapacity);
         }
 
-        void ShrinkToFit()
-        {
-            const size_t current_size = Size();
+        void ShrinkToFit() {
+            const size_t currentSize = Size();
 
-            if (current_size <= SsoCapacity && IsHeap())
+            if (currentSize <= ssoCapacity && IsHeap())
             {
-                char temp_buffer[SsoBufferSize]{};
-                std::memcpy(temp_buffer, heap_.data, current_size);
+                char tempBuffer[ssoBufferSize]{};
+                std::memcpy(tempBuffer, m_heap.m_data, currentSize);
 
-                allocator_.Deallocate(heap_.data);
+                m_allocator.Deallocate(m_heap.m_data);
 
                 InitSso();
-                std::memcpy(sso_.buffer, temp_buffer, current_size);
-                SetSsoSize(current_size);
+                std::memcpy(m_sso.m_buffer, tempBuffer, currentSize);
+                SetSsoSize(currentSize);
             }
-            else if (IsHeap() && current_size < GetHeapCapacity())
+            else if (IsHeap() && currentSize < GetHeapCapacity())
             {
-                char* new_data = static_cast<char*>(allocator_.Allocate(current_size + 1, 1));
-                hive::Check(new_data != nullptr, "String allocation failed");
+                char* newData = static_cast<char*>(m_allocator.Allocate(currentSize + 1, 1));
+                hive::Check(newData != nullptr, "String allocation failed");
 
-                std::memcpy(new_data, heap_.data, current_size);
-                new_data[current_size] = '\0';
+                std::memcpy(newData, m_heap.m_data, currentSize);
+                newData[currentSize] = '\0';
 
-                allocator_.Deallocate(heap_.data);
-                heap_.data = new_data;
-                heap_.size = current_size;
-                SetHeapCapacity(current_size);
+                m_allocator.Deallocate(m_heap.m_data);
+                m_heap.m_data = newData;
+                m_heap.m_size = currentSize;
+                SetHeapCapacity(currentSize);
             }
         }
 
-        void Clear() noexcept
-        {
+        void Clear() noexcept {
             if (IsHeap())
             {
-                heap_.size = 0;
-                heap_.data[0] = '\0';
+                m_heap.m_size = 0;
+                m_heap.m_data[0] = '\0';
             }
             else
             {
@@ -360,31 +294,29 @@ namespace wax
             }
         }
 
-        void Append(char ch)
-        {
-            const size_t current_size = Size();
-            const size_t new_size = current_size + 1;
+        void Append(char ch) {
+            const size_t currentSize = Size();
+            const size_t newSize = currentSize + 1;
 
-            if (new_size > Capacity())
+            if (newSize > Capacity())
             {
-                Reserve(new_size * 2);
+                Reserve(newSize * 2);
             }
 
-            Data()[current_size] = ch;
-            Data()[new_size] = '\0';
+            Data()[currentSize] = ch;
+            Data()[newSize] = '\0';
 
             if (IsHeap())
             {
-                heap_.size = new_size;
+                m_heap.m_size = newSize;
             }
             else
             {
-                SetSsoSize(new_size);
+                SetSsoSize(newSize);
             }
         }
 
-        void Append(const char* str)
-        {
+        void Append(const char* str) {
             if (str == nullptr)
             {
                 return;
@@ -393,200 +325,149 @@ namespace wax
             Append(str, std::strlen(str));
         }
 
-        void Append(const char* str, size_t count)
-        {
+        void Append(const char* str, size_t count) {
             if (str == nullptr || count == 0)
             {
                 return;
             }
 
-            const size_t current_size = Size();
-            const size_t new_size = current_size + count;
+            const size_t currentSize = Size();
+            const size_t newSize = currentSize + count;
 
-            if (new_size > Capacity())
+            if (newSize > Capacity())
             {
-                Reserve(new_size * 2);
+                Reserve(newSize * 2);
             }
 
-            std::memcpy(Data() + current_size, str, count);
-            Data()[new_size] = '\0';
+            std::memcpy(Data() + currentSize, str, count);
+            Data()[newSize] = '\0';
 
             if (IsHeap())
             {
-                heap_.size = new_size;
+                m_heap.m_size = newSize;
             }
             else
             {
-                SetSsoSize(new_size);
+                SetSsoSize(newSize);
             }
         }
 
-        void Append(StringView sv)
-        {
-            Append(sv.Data(), sv.Size());
-        }
+        void Append(StringView sv) { Append(sv.Data(), sv.Size()); }
 
-        void PopBack() noexcept
-        {
-            const size_t current_size = Size();
-            hive::Assert(current_size > 0, "String is empty");
+        void PopBack() noexcept {
+            const size_t currentSize = Size();
+            hive::Assert(currentSize > 0, "String is empty");
 
-            const size_t new_size = current_size - 1;
-            Data()[new_size] = '\0';
+            const size_t newSize = currentSize - 1;
+            Data()[newSize] = '\0';
 
             if (IsHeap())
             {
-                heap_.size = new_size;
+                m_heap.m_size = newSize;
             }
             else
             {
-                SetSsoSize(new_size);
+                SetSsoSize(newSize);
             }
         }
 
-        void Resize(size_t new_size, char ch = '\0')
-        {
-            const size_t current_size = Size();
+        void Resize(size_t newSize, char ch = '\0') {
+            const size_t currentSize = Size();
 
-            if (new_size > Capacity())
+            if (newSize > Capacity())
             {
-                Reserve(new_size);
+                Reserve(newSize);
             }
 
-            if (new_size > current_size)
+            if (newSize > currentSize)
             {
-                std::memset(Data() + current_size, ch, new_size - current_size);
+                std::memset(Data() + currentSize, ch, newSize - currentSize);
             }
 
-            Data()[new_size] = '\0';
+            Data()[newSize] = '\0';
 
             if (IsHeap())
             {
-                heap_.size = new_size;
+                m_heap.m_size = newSize;
             }
             else
             {
-                SetSsoSize(new_size);
+                SetSsoSize(newSize);
             }
         }
 
-        [[nodiscard]] size_t Find(char ch, size_t pos = 0) const noexcept
-        {
-            return View().Find(ch, pos);
-        }
+        [[nodiscard]] size_t Find(char ch, size_t pos = 0) const noexcept { return View().Find(ch, pos); }
 
-        [[nodiscard]] size_t Find(StringView sv, size_t pos = 0) const noexcept
-        {
-            return View().Find(sv, pos);
-        }
+        [[nodiscard]] size_t Find(StringView sv, size_t pos = 0) const noexcept { return View().Find(sv, pos); }
 
-        [[nodiscard]] size_t RFind(char ch, size_t pos = npos) const noexcept
-        {
-            return View().RFind(ch, pos);
-        }
+        [[nodiscard]] size_t RFind(char ch, size_t pos = npos) const noexcept { return View().RFind(ch, pos); }
 
-        [[nodiscard]] bool Contains(char ch) const noexcept
-        {
-            return View().Contains(ch);
-        }
+        [[nodiscard]] bool Contains(char ch) const noexcept { return View().Contains(ch); }
 
-        [[nodiscard]] bool Contains(StringView sv) const noexcept
-        {
-            return View().Contains(sv);
-        }
+        [[nodiscard]] bool Contains(StringView sv) const noexcept { return View().Contains(sv); }
 
-        [[nodiscard]] bool StartsWith(char ch) const noexcept
-        {
-            return View().StartsWith(ch);
-        }
+        [[nodiscard]] bool StartsWith(char ch) const noexcept { return View().StartsWith(ch); }
 
-        [[nodiscard]] bool StartsWith(StringView sv) const noexcept
-        {
-            return View().StartsWith(sv);
-        }
+        [[nodiscard]] bool StartsWith(StringView sv) const noexcept { return View().StartsWith(sv); }
 
-        [[nodiscard]] bool EndsWith(char ch) const noexcept
-        {
-            return View().EndsWith(ch);
-        }
+        [[nodiscard]] bool EndsWith(char ch) const noexcept { return View().EndsWith(ch); }
 
-        [[nodiscard]] bool EndsWith(StringView sv) const noexcept
-        {
-            return View().EndsWith(sv);
-        }
+        [[nodiscard]] bool EndsWith(StringView sv) const noexcept { return View().EndsWith(sv); }
 
-        [[nodiscard]] int Compare(const String& other) const noexcept
-        {
-            return View().Compare(other.View());
-        }
+        [[nodiscard]] int Compare(const String& other) const noexcept { return View().Compare(other.View()); }
 
-        [[nodiscard]] int Compare(StringView sv) const noexcept
-        {
-            return View().Compare(sv);
-        }
+        [[nodiscard]] int Compare(StringView sv) const noexcept { return View().Compare(sv); }
 
-        [[nodiscard]] bool Equals(const String& other) const noexcept
-        {
-            return View().Equals(other.View());
-        }
+        [[nodiscard]] bool Equals(const String& other) const noexcept { return View().Equals(other.View()); }
 
-        [[nodiscard]] bool Equals(StringView sv) const noexcept
-        {
-            return View().Equals(sv);
-        }
+        [[nodiscard]] bool Equals(StringView sv) const noexcept { return View().Equals(sv); }
 
     private:
-        static constexpr size_t SsoBufferSize = 23;
+        static constexpr size_t ssoBufferSize = 23;
 
         struct SsoLayout
         {
-            char buffer[SsoBufferSize];
-            uint8_t size_and_flag;
+            char m_buffer[ssoBufferSize];
+            uint8_t m_sizeAndFlag;
         };
 
         struct HeapLayout
         {
-            char* data;
-            size_t size;
-            size_t capacity;
+            char* m_data;
+            size_t m_size;
+            size_t m_capacity;
         };
 
         union
         {
-            SsoLayout sso_;
-            HeapLayout heap_;
+            SsoLayout m_sso;
+            HeapLayout m_heap;
         };
 
-        comb::MemoryResource allocator_;
+        comb::MemoryResource m_allocator;
 
-        [[nodiscard]] bool IsHeap() const noexcept
-        {
-            return (sso_.size_and_flag & 0x80) != 0;
+        [[nodiscard]] bool IsHeap() const noexcept { return (m_sso.m_sizeAndFlag & 0x80) != 0; }
+
+        void InitSso() noexcept {
+            m_sso.m_buffer[0] = '\0';
+            m_sso.m_sizeAndFlag = 0;
         }
 
-        void InitSso() noexcept
-        {
-            sso_.buffer[0] = '\0';
-            sso_.size_and_flag = 0;
-        }
-
-        void InitHeap(size_t size)
-        {
+        void InitHeap(size_t size) {
             const size_t capacity = size;
-            heap_.data = static_cast<char*>(allocator_.Allocate(capacity + 1, 1));
-            hive::Check(heap_.data != nullptr, "String allocation failed");
-            heap_.size = size;
+            m_heap.m_data = static_cast<char*>(m_allocator.Allocate(capacity + 1, 1));
+            hive::Check(m_heap.m_data != nullptr, "String allocation failed");
+            m_heap.m_size = size;
             SetHeapCapacity(capacity);
         }
 
-        void AssignFromPointer(const char* data, size_t size)
-        {
-            if (size <= SsoCapacity)
+        void AssignFromPointer(const char* data, size_t size) {
+            if (size <= ssoCapacity)
             {
                 InitSso();
                 if (size > 0 && data != nullptr)
                 {
-                    std::memcpy(sso_.buffer, data, size);
+                    std::memcpy(m_sso.m_buffer, data, size);
                 }
                 SetSsoSize(size);
             }
@@ -595,117 +476,91 @@ namespace wax
                 InitHeap(size);
                 if (data != nullptr)
                 {
-                    std::memcpy(heap_.data, data, size);
+                    std::memcpy(m_heap.m_data, data, size);
                 }
-                heap_.data[size] = '\0';
+                m_heap.m_data[size] = '\0';
             }
         }
 
-        [[nodiscard]] size_t GetSsoSize() const noexcept
-        {
-            return sso_.size_and_flag & 0x7F;
+        [[nodiscard]] size_t GetSsoSize() const noexcept { return m_sso.m_sizeAndFlag & 0x7F; }
+
+        void SetSsoSize(size_t size) noexcept {
+            hive::Assert(size <= ssoCapacity, "SSO size exceeds capacity");
+            m_sso.m_sizeAndFlag = static_cast<uint8_t>(size);
+            m_sso.m_buffer[size] = '\0';
         }
 
-        void SetSsoSize(size_t size) noexcept
-        {
-            hive::Assert(size <= SsoCapacity, "SSO size exceeds capacity");
-            sso_.size_and_flag = static_cast<uint8_t>(size);
-            sso_.buffer[size] = '\0';
-        }
+        [[nodiscard]] size_t GetHeapCapacity() const noexcept { return m_heap.m_capacity & ~(1ULL << 63); }
 
-        [[nodiscard]] size_t GetHeapCapacity() const noexcept
-        {
-            return heap_.capacity & ~(1ULL << 63);
-        }
-
-        void SetHeapCapacity(size_t capacity) noexcept
-        {
-            heap_.capacity = capacity | (1ULL << 63);
-        }
+        void SetHeapCapacity(size_t capacity) noexcept { m_heap.m_capacity = capacity | (1ULL << 63); }
     };
 
-    [[nodiscard]] inline bool operator==(const String& lhs, const String& rhs) noexcept
-    {
+    [[nodiscard]] inline bool operator==(const String& lhs, const String& rhs) noexcept {
         return lhs.Equals(rhs.View());
     }
 
-    [[nodiscard]] inline bool operator==(const String& lhs, StringView rhs) noexcept
-    {
+    [[nodiscard]] inline bool operator==(const String& lhs, StringView rhs) noexcept {
         return lhs.Equals(rhs);
     }
 
-    [[nodiscard]] inline bool operator==(StringView lhs, const String& rhs) noexcept
-    {
+    [[nodiscard]] inline bool operator==(StringView lhs, const String& rhs) noexcept {
         return rhs.Equals(lhs);
     }
 
-    [[nodiscard]] inline bool operator==(const String& lhs, const char* rhs) noexcept
-    {
+    [[nodiscard]] inline bool operator==(const String& lhs, const char* rhs) noexcept {
         return lhs.Equals(StringView{rhs ? rhs : "", rhs ? std::strlen(rhs) : 0});
     }
 
-    [[nodiscard]] inline bool operator==(const char* lhs, const String& rhs) noexcept
-    {
+    [[nodiscard]] inline bool operator==(const char* lhs, const String& rhs) noexcept {
         return rhs == lhs;
     }
 
-    [[nodiscard]] inline bool operator<(const String& lhs, const String& rhs) noexcept
-    {
+    [[nodiscard]] inline bool operator<(const String& lhs, const String& rhs) noexcept {
         return lhs.Compare(rhs.View()) < 0;
     }
 
-    [[nodiscard]] inline bool operator<(const String& lhs, StringView rhs) noexcept
-    {
+    [[nodiscard]] inline bool operator<(const String& lhs, StringView rhs) noexcept {
         return lhs.Compare(rhs) < 0;
     }
 
-    [[nodiscard]] inline bool operator<(StringView lhs, const String& rhs) noexcept
-    {
+    [[nodiscard]] inline bool operator<(StringView lhs, const String& rhs) noexcept {
         return rhs.Compare(lhs) > 0;
     }
 
-    [[nodiscard]] inline bool operator<=(const String& lhs, const String& rhs) noexcept
-    {
+    [[nodiscard]] inline bool operator<=(const String& lhs, const String& rhs) noexcept {
         return lhs.Compare(rhs.View()) <= 0;
     }
 
-    [[nodiscard]] inline bool operator>(const String& lhs, const String& rhs) noexcept
-    {
+    [[nodiscard]] inline bool operator>(const String& lhs, const String& rhs) noexcept {
         return lhs.Compare(rhs.View()) > 0;
     }
 
-    [[nodiscard]] inline bool operator>=(const String& lhs, const String& rhs) noexcept
-    {
+    [[nodiscard]] inline bool operator>=(const String& lhs, const String& rhs) noexcept {
         return lhs.Compare(rhs.View()) >= 0;
     }
 
-    [[nodiscard]] inline String operator+(const String& lhs, const String& rhs)
-    {
+    [[nodiscard]] inline String operator+(const String& lhs, const String& rhs) {
         String result = lhs;
         result.Append(rhs.View());
         return result;
     }
 
-    [[nodiscard]] inline String operator+(const String& lhs, StringView rhs)
-    {
+    [[nodiscard]] inline String operator+(const String& lhs, StringView rhs) {
         String result = lhs;
         result.Append(rhs);
         return result;
     }
 
-    [[nodiscard]] inline String operator+(const String& lhs, const char* rhs)
-    {
+    [[nodiscard]] inline String operator+(const String& lhs, const char* rhs) {
         String result = lhs;
         result.Append(rhs);
         return result;
     }
-}
+} // namespace wax
 
-template<>
-struct std::hash<wax::String>
+template <> struct std::hash<wax::String>
 {
-    size_t operator()(const wax::String& s) const noexcept
-    {
+    size_t operator()(const wax::String& s) const noexcept {
         size_t h = 14695981039346656037ull;
         for (size_t i = 0; i < s.Size(); ++i)
         {

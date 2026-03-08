@@ -1,7 +1,9 @@
-#include <larvae/larvae.h>
-#include <queen/world/world.h>
-#include <queen/system/resource_param.h>
 #include <comb/linear_allocator.h>
+
+#include <queen/system/resource_param.h>
+#include <queen/world/world.h>
+
+#include <larvae/larvae.h>
 
 namespace
 {
@@ -63,13 +65,11 @@ namespace
         larvae::AssertEqual(ref.delta, 0.016f);
     });
 
-    auto test5 = larvae::RegisterTest("QueenResourceParam", "ResIsImmutable", []() {
-        larvae::AssertFalse(queen::Res<Time>::is_mutable);
-    });
+    auto test5 = larvae::RegisterTest("QueenResourceParam", "ResIsImmutable",
+                                      []() { larvae::AssertFalse(queen::Res<Time>::isMutable); });
 
-    auto test6 = larvae::RegisterTest("QueenResourceParam", "ResTypeId", []() {
-        larvae::AssertEqual(queen::Res<Time>::type_id, queen::TypeIdOf<Time>());
-    });
+    auto test6 = larvae::RegisterTest("QueenResourceParam", "ResTypeId",
+                                      []() { larvae::AssertEqual(queen::Res<Time>::typeId, queen::TypeIdOf<Time>()); });
 
     auto test7 = larvae::RegisterTest("QueenResourceParam", "ResBoolConversion", []() {
         Time time{1.0f, 0.016f};
@@ -120,12 +120,11 @@ namespace
         larvae::AssertEqual(time.elapsed, 3.0f);
     });
 
-    auto test12 = larvae::RegisterTest("QueenResourceParam", "ResMutIsMutable", []() {
-        larvae::AssertTrue(queen::ResMut<Time>::is_mutable);
-    });
+    auto test12 = larvae::RegisterTest("QueenResourceParam", "ResMutIsMutable",
+                                       []() { larvae::AssertTrue(queen::ResMut<Time>::isMutable); });
 
     auto test13 = larvae::RegisterTest("QueenResourceParam", "ResMutTypeId", []() {
-        larvae::AssertEqual(queen::ResMut<Time>::type_id, queen::TypeIdOf<Time>());
+        larvae::AssertEqual(queen::ResMut<Time>::typeId, queen::TypeIdOf<Time>());
     });
 
     // ─────────────────────────────────────────────────────────────
@@ -133,24 +132,24 @@ namespace
     // ─────────────────────────────────────────────────────────────
 
     auto test14 = larvae::RegisterTest("QueenResourceParam", "IsResV", []() {
-        larvae::AssertTrue(queen::IsResV<queen::Res<Time>>);
-        larvae::AssertFalse(queen::IsResV<queen::ResMut<Time>>);
-        larvae::AssertFalse(queen::IsResV<Time>);
-        larvae::AssertFalse(queen::IsResV<int>);
+        larvae::AssertTrue(queen::isResV<queen::Res<Time>>);
+        larvae::AssertFalse(queen::isResV<queen::ResMut<Time>>);
+        larvae::AssertFalse(queen::isResV<Time>);
+        larvae::AssertFalse(queen::isResV<int>);
     });
 
     auto test15 = larvae::RegisterTest("QueenResourceParam", "IsResMutV", []() {
-        larvae::AssertTrue(queen::IsResMutV<queen::ResMut<Time>>);
-        larvae::AssertFalse(queen::IsResMutV<queen::Res<Time>>);
-        larvae::AssertFalse(queen::IsResMutV<Time>);
-        larvae::AssertFalse(queen::IsResMutV<int>);
+        larvae::AssertTrue(queen::isResMutV<queen::ResMut<Time>>);
+        larvae::AssertFalse(queen::isResMutV<queen::Res<Time>>);
+        larvae::AssertFalse(queen::isResMutV<Time>);
+        larvae::AssertFalse(queen::isResMutV<int>);
     });
 
     auto test16 = larvae::RegisterTest("QueenResourceParam", "IsResourceParam", []() {
-        larvae::AssertTrue(queen::IsResourceParam<queen::Res<Time>>);
-        larvae::AssertTrue(queen::IsResourceParam<queen::ResMut<Time>>);
-        larvae::AssertFalse(queen::IsResourceParam<Time>);
-        larvae::AssertFalse(queen::IsResourceParam<int>);
+        larvae::AssertTrue(queen::isResourceParam<queen::Res<Time>>);
+        larvae::AssertTrue(queen::isResourceParam<queen::ResMut<Time>>);
+        larvae::AssertFalse(queen::isResourceParam<Time>);
+        larvae::AssertFalse(queen::isResourceParam<int>);
     });
 
     // ─────────────────────────────────────────────────────────────
@@ -165,10 +164,9 @@ namespace
 
         float captured_elapsed = 0.0f;
 
-        world.System("ReadTime")
-            .RunWithRes<Time>([&captured_elapsed](queen::Res<Time> time) {
-                captured_elapsed = time->elapsed;
-            });
+        world.System("ReadTime").RunWithRes<Time>([&captured_elapsed](queen::Res<Time> time) {
+            captured_elapsed = time->elapsed;
+        });
 
         world.Update();
 
@@ -181,10 +179,7 @@ namespace
 
         world.InsertResource(Time{0.0f, 0.016f});
 
-        world.System("UpdateTime")
-            .RunWithResMut<Time>([](queen::ResMut<Time> time) {
-                time->elapsed += time->delta;
-            });
+        world.System("UpdateTime").RunWithResMut<Time>([](queen::ResMut<Time> time) { time->elapsed += time->delta; });
 
         world.Update();
 
@@ -203,10 +198,7 @@ namespace
 
         int call_count = 0;
 
-        world.System("Counter")
-            .RunWithRes<Time>([&call_count](queen::Res<Time>) {
-                call_count++;
-            });
+        world.System("Counter").RunWithRes<Time>([&call_count](queen::Res<Time>) { call_count++; });
 
         world.Update();
         world.Update();
@@ -232,9 +224,8 @@ namespace
         float sum = 0.0f;
 
         world.System<queen::Read<Position>>("SumPositions")
-            .EachWithRes<Time>([&sum](queen::Entity, const Position& pos, queen::Res<Time> time) {
-                sum += pos.x * time->delta;
-            });
+            .EachWithRes<Time>(
+                [&sum](queen::Entity, const Position& pos, queen::Res<Time> time) { sum += pos.x * time->delta; });
 
         world.Update();
 
@@ -251,11 +242,12 @@ namespace
         (void)world.Spawn(Position{0.0f, 0.0f, 0.0f}, Velocity{0.0f, 10.0f, 0.0f});
 
         world.System<queen::Read<Position>, queen::Write<Velocity>>("ApplyGravity")
-            .EachWithResMut<GameConfig>([](queen::Entity, const Position&, Velocity& vel, queen::ResMut<GameConfig> config) {
-                vel.dy -= config->gravity;
-                // Also modify config to prove we have mutable access
-                config->max_entities = 200;
-            });
+            .EachWithResMut<GameConfig>(
+                [](queen::Entity, const Position&, Velocity& vel, queen::ResMut<GameConfig> config) {
+                    vel.dy -= config->gravity;
+                    // Also modify config to prove we have mutable access
+                    config->max_entities = 200;
+                });
 
         world.Update();
 
@@ -272,9 +264,7 @@ namespace
         int call_count = 0;
 
         world.System<queen::Read<Position>>("NoEntities")
-            .EachWithRes<Time>([&call_count](queen::Entity, const Position&, queen::Res<Time>) {
-                call_count++;
-            });
+            .EachWithRes<Time>([&call_count](queen::Entity, const Position&, queen::Res<Time>) { call_count++; });
 
         world.Update();
 
@@ -292,8 +282,7 @@ namespace
 
         world.InsertResource(Time{0.0f, 0.016f});
 
-        queen::SystemId id = world.System("ReadTime")
-            .RunWithRes<Time>([](queen::Res<Time>) {});
+        queen::SystemId id = world.System("ReadTime").RunWithRes<Time>([](queen::Res<Time>) {});
 
         auto& storage = world.GetSystemStorage();
         auto* desc = storage.GetSystem(id);
@@ -320,8 +309,7 @@ namespace
 
         world.InsertResource(Time{0.0f, 0.016f});
 
-        queen::SystemId id = world.System("WriteTime")
-            .RunWithResMut<Time>([](queen::ResMut<Time>) {});
+        queen::SystemId id = world.System("WriteTime").RunWithResMut<Time>([](queen::ResMut<Time>) {});
 
         auto& storage = world.GetSystemStorage();
         auto* desc = storage.GetSystem(id);
@@ -349,7 +337,7 @@ namespace
         world.InsertResource(Time{0.0f, 0.016f});
 
         queen::SystemId id = world.System<queen::Read<Position>>("ReadTimeWithEntities")
-            .EachWithRes<Time>([](queen::Entity, const Position&, queen::Res<Time>) {});
+                                 .EachWithRes<Time>([](queen::Entity, const Position&, queen::Res<Time>) {});
 
         auto& storage = world.GetSystemStorage();
         auto* desc = storage.GetSystem(id);
@@ -397,15 +385,9 @@ namespace
         int sys1_order = 0;
         int sys2_order = 0;
 
-        world.System("System1")
-            .RunWithRes<Time>([&](queen::Res<Time>) {
-                sys1_order = ++order_tracker;
-            });
+        world.System("System1").RunWithRes<Time>([&](queen::Res<Time>) { sys1_order = ++order_tracker; });
 
-        world.System("System2")
-            .RunWithRes<Time>([&](queen::Res<Time>) {
-                sys2_order = ++order_tracker;
-            });
+        world.System("System2").RunWithRes<Time>([&](queen::Res<Time>) { sys2_order = ++order_tracker; });
 
         world.Update();
 
@@ -429,20 +411,15 @@ namespace
             });
 
         // System 2: Update elapsed time
-        world.System("UpdateTime")
-            .RunWithResMut<Time>([](queen::ResMut<Time> time) {
-                time->elapsed += time->delta;
-            });
+        world.System("UpdateTime").RunWithResMut<Time>([](queen::ResMut<Time> time) { time->elapsed += time->delta; });
 
         world.Update();
 
         // After one frame with delta=1.0, position.x should be 10.0
         auto query = world.Query<queen::Read<Position>>();
-        query.Each([](const Position& pos) {
-            larvae::AssertEqual(pos.x, 10.0f);
-        });
+        query.Each([](const Position& pos) { larvae::AssertEqual(pos.x, 10.0f); });
 
         Time* time = world.Resource<Time>();
         larvae::AssertEqual(time->elapsed, 1.0f);
     });
-}
+} // namespace

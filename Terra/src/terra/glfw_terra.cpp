@@ -1,68 +1,62 @@
-#include <terra/precomp.h>
 #include <terra/platform/glfw_terra.h>
+#include <terra/precomp.h>
 
 namespace terra
 {
-    bool InitSystem()
-    {
+    bool InitSystem() {
         return glfwInit();
     }
 
-    void ShutdownSystem()
-    {
+    void ShutdownSystem() {
         glfwTerminate();
     }
 
-    void GLFWKeyCallback(GLFWwindow *window, int key, int scancode, int action, int mods)
-    {
-        WindowContext *windowContext = static_cast<WindowContext *>(glfwGetWindowUserPointer(window));
+    void GLFWKeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
+        WindowContext* windowContext = static_cast<WindowContext*>(glfwGetWindowUserPointer(window));
         if (key >= 0 && key < 512)
         {
-            windowContext->currentInputState_.keys_[key] = (action == GLFW_PRESS);
+            windowContext->m_currentInputState.m_keys[key] = (action == GLFW_PRESS);
         }
     }
 
-    bool InitWindowContext(WindowContext *windowContext)
-    {
-        glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API); //Disable glfw to create the OpenGL context. We will manage that in swarm
+    bool InitWindowContext(WindowContext* windowContext) {
+        glfwWindowHint(GLFW_CLIENT_API,
+                       GLFW_NO_API); // Disable glfw to create the OpenGL context. We will manage that in swarm
 
-        if (windowContext->width_ <= 0) windowContext->width_ = 1280;
-        if (windowContext->height_ <= 0) windowContext->height_ = 720;
-        if (!windowContext->title_) windowContext->title_ = "Hive Engine";
-        windowContext->window_ = glfwCreateWindow(windowContext->width_, windowContext->height_, windowContext->title_,
-                                                  nullptr, nullptr);
+        if (windowContext->m_width <= 0)
+            windowContext->m_width = 1280;
+        if (windowContext->m_height <= 0)
+            windowContext->m_height = 720;
+        if (!windowContext->m_title)
+            windowContext->m_title = "Hive Engine";
+        windowContext->m_window =
+            glfwCreateWindow(windowContext->m_width, windowContext->m_height, windowContext->m_title, nullptr, nullptr);
 
-        if (!windowContext->window_)
+        if (!windowContext->m_window)
         {
             return false;
         }
 
-        glfwSetWindowUserPointer(windowContext->window_, windowContext);
-        glfwSetKeyCallback(windowContext->window_, &GLFWKeyCallback);
+        glfwSetWindowUserPointer(windowContext->m_window, windowContext);
+        glfwSetKeyCallback(windowContext->m_window, &GLFWKeyCallback);
 
-
-        glfwMakeContextCurrent(windowContext->window_);
+        glfwMakeContextCurrent(windowContext->m_window);
         return true;
     }
 
-    void ShutdownWindowContext(WindowContext *windowContext)
-    {
-        glfwDestroyWindow(windowContext->window_);
+    void ShutdownWindowContext(WindowContext* windowContext) {
+        glfwDestroyWindow(windowContext->m_window);
     }
 
-    bool ShouldWindowClose(WindowContext *windowContext)
-    {
-        return glfwWindowShouldClose(windowContext->window_);
+    bool ShouldWindowClose(WindowContext* windowContext) {
+        return glfwWindowShouldClose(windowContext->m_window);
     }
 
-    void PollEvents()
-    {
+    void PollEvents() {
         glfwPollEvents();
     }
 
-
-    InputState *GetWindowInputState(WindowContext *windowContext)
-    {
-        return &windowContext->currentInputState_;
+    InputState* GetWindowInputState(WindowContext* windowContext) {
+        return &windowContext->m_currentInputState;
     }
-}
+} // namespace terra

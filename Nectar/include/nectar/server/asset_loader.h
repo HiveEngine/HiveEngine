@@ -1,14 +1,14 @@
 #pragma once
 
-#include <wax/serialization/byte_span.h>
 #include <comb/default_allocator.h>
+
+#include <wax/serialization/byte_span.h>
 
 namespace nectar
 {
     /// Per-type loading/unloading trait.
     /// Implementations must be thread-safe (for future async loading).
-    template<typename T>
-    class AssetLoader
+    template <typename T> class AssetLoader
     {
     public:
         virtual ~AssetLoader() = default;
@@ -22,4 +22,4 @@ namespace nectar
         /// Approximate memory footprint of a loaded asset. Default: 0 (untracked).
         virtual size_t SizeOf([[maybe_unused]] const T* asset) const { return 0; }
     };
-}
+} // namespace nectar

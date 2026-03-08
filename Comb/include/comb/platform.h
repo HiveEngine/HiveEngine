@@ -23,4 +23,4 @@ namespace comb
      * @param size Size that was originally allocated
      */
     void FreePages(void* ptr, size_t size);
-}
+} // namespace comb

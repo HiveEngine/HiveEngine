@@ -1,6 +1,7 @@
 #pragma once
 
 #include <queen/core/type_id.h>
+
 #include <type_traits>
 
 namespace queen
@@ -72,12 +73,11 @@ namespace queen
      *
      * @tparam T The component type being observed
      */
-    template<typename T>
-    struct OnAdd
+    template <typename T> struct OnAdd
     {
         using ComponentType = T;
-        static constexpr TypeId trigger_id = TypeIdOf<OnAdd<T>>();
-        static constexpr TypeId component_id = TypeIdOf<T>();
+        static constexpr TypeId triggerId = TypeIdOf<OnAdd<T>>();
+        static constexpr TypeId componentId = TypeIdOf<T>();
     };
 
     /**
@@ -91,12 +91,11 @@ namespace queen
      *
      * @tparam T The component type being observed
      */
-    template<typename T>
-    struct OnRemove
+    template <typename T> struct OnRemove
     {
         using ComponentType = T;
-        static constexpr TypeId trigger_id = TypeIdOf<OnRemove<T>>();
-        static constexpr TypeId component_id = TypeIdOf<T>();
+        static constexpr TypeId triggerId = TypeIdOf<OnRemove<T>>();
+        static constexpr TypeId componentId = TypeIdOf<T>();
     };
 
     /**
@@ -109,12 +108,11 @@ namespace queen
      *
      * @tparam T The component type being observed
      */
-    template<typename T>
-    struct OnSet
+    template <typename T> struct OnSet
     {
         using ComponentType = T;
-        static constexpr TypeId trigger_id = TypeIdOf<OnSet<T>>();
-        static constexpr TypeId component_id = TypeIdOf<T>();
+        static constexpr TypeId triggerId = TypeIdOf<OnSet<T>>();
+        static constexpr TypeId componentId = TypeIdOf<T>();
     };
 
     // ─────────────────────────────────────────────────────────────────
@@ -123,47 +121,53 @@ namespace queen
 
     namespace detail
     {
-        template<typename T>
-        struct IsOnAdd : std::false_type {};
+        template <typename T> struct IsOnAdd : std::false_type
+        {
+        };
 
-        template<typename T>
-        struct IsOnAdd<OnAdd<T>> : std::true_type {};
+        template <typename T> struct IsOnAdd<OnAdd<T>> : std::true_type
+        {
+        };
 
-        template<typename T>
-        struct IsOnRemove : std::false_type {};
+        template <typename T> struct IsOnRemove : std::false_type
+        {
+        };
 
-        template<typename T>
-        struct IsOnRemove<OnRemove<T>> : std::true_type {};
+        template <typename T> struct IsOnRemove<OnRemove<T>> : std::true_type
+        {
+        };
 
-        template<typename T>
-        struct IsOnSet : std::false_type {};
+        template <typename T> struct IsOnSet : std::false_type
+        {
+        };
 
-        template<typename T>
-        struct IsOnSet<OnSet<T>> : std::true_type {};
-    }
+        template <typename T> struct IsOnSet<OnSet<T>> : std::true_type
+        {
+        };
+    } // namespace detail
 
     /**
      * Concept for OnAdd trigger types
      */
-    template<typename T>
+    template <typename T>
     concept IsOnAddTrigger = detail::IsOnAdd<T>::value;
 
     /**
      * Concept for OnRemove trigger types
      */
-    template<typename T>
+    template <typename T>
     concept IsOnRemoveTrigger = detail::IsOnRemove<T>::value;
 
     /**
      * Concept for OnSet trigger types
      */
-    template<typename T>
+    template <typename T>
     concept IsOnSetTrigger = detail::IsOnSet<T>::value;
 
     /**
      * Concept for any valid observer trigger type
      */
-    template<typename T>
+    template <typename T>
     concept ObserverTrigger = IsOnAddTrigger<T> || IsOnRemoveTrigger<T> || IsOnSetTrigger<T>;
 
     // ─────────────────────────────────────────────────────────────────
@@ -177,38 +181,34 @@ namespace queen
      */
     enum class TriggerType : uint8_t
     {
-        Add,
-        Remove,
-        Set
+        ADD,
+        REMOVE,
+        SET
     };
 
     /**
      * Get runtime trigger type from compile-time trigger
      */
-    template<ObserverTrigger T>
-    [[nodiscard]] constexpr TriggerType GetTriggerType() noexcept
-    {
+    template <ObserverTrigger T> [[nodiscard]] constexpr TriggerType GetTriggerType() noexcept {
         if constexpr (IsOnAddTrigger<T>)
         {
-            return TriggerType::Add;
+            return TriggerType::ADD;
         }
         else if constexpr (IsOnRemoveTrigger<T>)
         {
-            return TriggerType::Remove;
+            return TriggerType::REMOVE;
         }
         else
         {
-            return TriggerType::Set;
+            return TriggerType::SET;
         }
     }
 
     /**
      * Extract component TypeId from a trigger type
      */
-    template<ObserverTrigger T>
-    [[nodiscard]] constexpr TypeId GetTriggerComponentId() noexcept
-    {
-        return T::component_id;
+    template <ObserverTrigger T> [[nodiscard]] constexpr TypeId GetTriggerComponentId() noexcept {
+        return T::componentId;
     }
 
     // ─────────────────────────────────────────────────────────────────
@@ -229,29 +229,25 @@ namespace queen
      */
     struct ObserverKey
     {
-        TriggerType trigger;
-        TypeId component_id;
+        TriggerType m_trigger;
+        TypeId m_componentId;
 
-        [[nodiscard]] constexpr bool operator==(const ObserverKey& other) const noexcept
-        {
-            return trigger == other.trigger && component_id == other.component_id;
+        [[nodiscard]] constexpr bool operator==(const ObserverKey& other) const noexcept {
+            return m_trigger == other.m_trigger && m_componentId == other.m_componentId;
         }
 
         /**
          * Create key from compile-time trigger type
          */
-        template<ObserverTrigger T>
-        [[nodiscard]] static constexpr ObserverKey Of() noexcept
-        {
+        template <ObserverTrigger T> [[nodiscard]] static constexpr ObserverKey Of() noexcept {
             return ObserverKey{GetTriggerType<T>(), GetTriggerComponentId<T>()};
         }
 
         /**
          * Create key from runtime values
          */
-        [[nodiscard]] static constexpr ObserverKey From(TriggerType trigger, TypeId component_id) noexcept
-        {
-            return ObserverKey{trigger, component_id};
+        [[nodiscard]] static constexpr ObserverKey From(TriggerType trigger, TypeId componentId) noexcept {
+            return ObserverKey{trigger, componentId};
         }
     };
 
@@ -262,13 +258,12 @@ namespace queen
      */
     struct ObserverKeyHash
     {
-        [[nodiscard]] constexpr uint64_t operator()(const ObserverKey& key) const noexcept
-        {
+        [[nodiscard]] constexpr uint64_t operator()(const ObserverKey& key) const noexcept {
             // Combine trigger type and component_id using FNV-1a style mixing
-            uint64_t hash = static_cast<uint64_t>(key.trigger);
-            hash ^= key.component_id;
+            uint64_t hash = static_cast<uint64_t>(key.m_trigger);
+            hash ^= key.m_componentId;
             hash *= 0x100000001b3ULL; // FNV prime
             return hash;
         }
     };
-}
+} // namespace queen

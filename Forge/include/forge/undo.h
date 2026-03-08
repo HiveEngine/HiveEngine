@@ -6,17 +6,20 @@
 #include <cstddef>
 #include <cstdint>
 
-namespace queen { class World; }
+namespace queen
+{
+    class World;
+}
 
 namespace forge
 {
     struct UndoCommand
     {
-        queen::Entity entity{};
-        queen::TypeId type_id{0};
-        uint16_t field_offset{0};
-        uint16_t field_size{0};
-        uint32_t data_offset{0};     // offset into data buffer (before then after)
+        queen::Entity m_entity{};
+        queen::TypeId m_typeId{0};
+        uint16_t m_fieldOffset{0};
+        uint16_t m_fieldSize{0};
+        uint32_t m_dataOffset{0}; // offset into data buffer (before then after)
     };
 
     // Simple undo/redo stack with fixed-size ring buffer.
@@ -26,24 +29,23 @@ namespace forge
         static constexpr size_t kMaxCommands = 1024;
         static constexpr size_t kMaxDataBytes = 4 * 1024 * 1024; // 4MB
 
-        void PushSetField(queen::Entity entity, queen::TypeId type_id,
-                          uint16_t offset, uint16_t size,
+        void PushSetField(queen::Entity entity, queen::TypeId typeId, uint16_t offset, uint16_t size,
                           const void* before, const void* after);
 
         queen::Entity Undo(queen::World& world);
         queen::Entity Redo(queen::World& world);
 
-        [[nodiscard]] bool CanUndo() const noexcept { return count_ > 0; }
-        [[nodiscard]] bool CanRedo() const noexcept { return redo_count_ > 0; }
-        [[nodiscard]] size_t Count() const noexcept { return count_; }
+        [[nodiscard]] bool CanUndo() const noexcept { return m_count > 0; }
+        [[nodiscard]] bool CanRedo() const noexcept { return m_redoCount > 0; }
+        [[nodiscard]] size_t Count() const noexcept { return m_count; }
 
     private:
-        UndoCommand commands_[kMaxCommands]{};
-        std::byte data_[kMaxDataBytes]{};
+        UndoCommand m_commands[kMaxCommands]{};
+        std::byte m_data[kMaxDataBytes]{};
 
-        size_t head_{0};
-        size_t count_{0};
-        size_t redo_count_{0};
-        size_t data_head_{0};
+        size_t m_head{0};
+        size_t m_count{0};
+        size_t m_redoCount{0};
+        size_t m_dataHead{0};
     };
-}
+} // namespace forge

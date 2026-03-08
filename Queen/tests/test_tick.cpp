@@ -1,5 +1,6 @@
-#include <larvae/larvae.h>
 #include <queen/core/tick.h>
+
+#include <larvae/larvae.h>
 
 namespace
 {
@@ -9,12 +10,12 @@ namespace
 
     auto test1 = larvae::RegisterTest("QueenTick", "DefaultConstruction", []() {
         queen::Tick tick;
-        larvae::AssertEqual(tick.value, uint32_t{0});
+        larvae::AssertEqual(tick.m_value, uint32_t{0});
     });
 
     auto test2 = larvae::RegisterTest("QueenTick", "ExplicitConstruction", []() {
         queen::Tick tick{42};
-        larvae::AssertEqual(tick.value, uint32_t{42});
+        larvae::AssertEqual(tick.m_value, uint32_t{42});
     });
 
     auto test3 = larvae::RegisterTest("QueenTick", "Equality", []() {
@@ -32,16 +33,16 @@ namespace
         queen::Tick tick{5};
 
         queen::Tick& result = ++tick;
-        larvae::AssertEqual(tick.value, uint32_t{6});
-        larvae::AssertEqual(result.value, uint32_t{6});
+        larvae::AssertEqual(tick.m_value, uint32_t{6});
+        larvae::AssertEqual(result.m_value, uint32_t{6});
     });
 
     auto test5 = larvae::RegisterTest("QueenTick", "PostfixIncrement", []() {
         queen::Tick tick{5};
 
         queen::Tick old = tick++;
-        larvae::AssertEqual(old.value, uint32_t{5});
-        larvae::AssertEqual(tick.value, uint32_t{6});
+        larvae::AssertEqual(old.m_value, uint32_t{5});
+        larvae::AssertEqual(tick.m_value, uint32_t{6});
     });
 
     // ============================================================================
@@ -106,17 +107,17 @@ namespace
     auto test12 = larvae::RegisterTest("QueenTick", "IncrementWrapsAround", []() {
         queen::Tick tick{UINT32_MAX};
         ++tick;
-        larvae::AssertEqual(tick.value, uint32_t{0});
+        larvae::AssertEqual(tick.m_value, uint32_t{0});
     });
 
     auto test13 = larvae::RegisterTest("QueenTick", "ConsecutiveIncrements", []() {
         queen::Tick tick{0};
         for (uint32_t i = 0; i < 100; ++i)
         {
-            larvae::AssertEqual(tick.value, i);
+            larvae::AssertEqual(tick.m_value, i);
             ++tick;
         }
-        larvae::AssertEqual(tick.value, uint32_t{100});
+        larvae::AssertEqual(tick.m_value, uint32_t{100});
     });
 
     // ============================================================================
@@ -125,20 +126,20 @@ namespace
 
     auto test14 = larvae::RegisterTest("QueenComponentTicks", "DefaultConstruction", []() {
         queen::ComponentTicks ticks;
-        larvae::AssertEqual(ticks.added.value, uint32_t{0});
-        larvae::AssertEqual(ticks.changed.value, uint32_t{0});
+        larvae::AssertEqual(ticks.m_added.m_value, uint32_t{0});
+        larvae::AssertEqual(ticks.m_changed.m_value, uint32_t{0});
     });
 
     auto test15 = larvae::RegisterTest("QueenComponentTicks", "SingleTickConstruction", []() {
         queen::ComponentTicks ticks{queen::Tick{10}};
-        larvae::AssertEqual(ticks.added.value, uint32_t{10});
-        larvae::AssertEqual(ticks.changed.value, uint32_t{10});
+        larvae::AssertEqual(ticks.m_added.m_value, uint32_t{10});
+        larvae::AssertEqual(ticks.m_changed.m_value, uint32_t{10});
     });
 
     auto test16 = larvae::RegisterTest("QueenComponentTicks", "TwoTickConstruction", []() {
         queen::ComponentTicks ticks{queen::Tick{5}, queen::Tick{10}};
-        larvae::AssertEqual(ticks.added.value, uint32_t{5});
-        larvae::AssertEqual(ticks.changed.value, uint32_t{10});
+        larvae::AssertEqual(ticks.m_added.m_value, uint32_t{5});
+        larvae::AssertEqual(ticks.m_changed.m_value, uint32_t{10});
     });
 
     auto test17 = larvae::RegisterTest("QueenComponentTicks", "WasAdded", []() {
@@ -179,20 +180,20 @@ namespace
 
     auto test20 = larvae::RegisterTest("QueenComponentTicks", "MarkChanged", []() {
         queen::ComponentTicks ticks{queen::Tick{5}};
-        larvae::AssertEqual(ticks.changed.value, uint32_t{5});
+        larvae::AssertEqual(ticks.m_changed.m_value, uint32_t{5});
 
         ticks.MarkChanged(queen::Tick{20});
-        larvae::AssertEqual(ticks.changed.value, uint32_t{20});
+        larvae::AssertEqual(ticks.m_changed.m_value, uint32_t{20});
         // added should NOT change
-        larvae::AssertEqual(ticks.added.value, uint32_t{5});
+        larvae::AssertEqual(ticks.m_added.m_value, uint32_t{5});
     });
 
     auto test21 = larvae::RegisterTest("QueenComponentTicks", "SetAdded", []() {
         queen::ComponentTicks ticks{queen::Tick{5}};
 
         ticks.SetAdded(queen::Tick{20});
-        larvae::AssertEqual(ticks.added.value, uint32_t{20});
-        larvae::AssertEqual(ticks.changed.value, uint32_t{20});
+        larvae::AssertEqual(ticks.m_added.m_value, uint32_t{20});
+        larvae::AssertEqual(ticks.m_changed.m_value, uint32_t{20});
     });
 
     auto test22 = larvae::RegisterTest("QueenComponentTicks", "ChangeDetectionWorkflow", []() {
@@ -237,4 +238,4 @@ namespace
         constexpr bool neq = a != b;
         larvae::AssertTrue(neq);
     });
-}
+} // namespace

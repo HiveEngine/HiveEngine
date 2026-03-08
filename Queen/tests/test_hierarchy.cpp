@@ -1,7 +1,8 @@
 
-#include <larvae/larvae.h>
 #include <queen/hierarchy/hierarchy.h>
 #include <queen/world/world.h>
+
+#include <larvae/larvae.h>
 
 namespace
 {
@@ -18,12 +19,12 @@ namespace
     auto test_hierarchy_1 = larvae::RegisterTest("QueenHierarchy", "ParentComponentConstruction", []() {
         queen::Parent p1;
         larvae::AssertFalse(p1.IsValid());
-        larvae::AssertTrue(p1.entity.IsNull());
+        larvae::AssertTrue(p1.m_entity.IsNull());
 
         queen::Entity e{42, 1};
         queen::Parent p2{e};
         larvae::AssertTrue(p2.IsValid());
-        larvae::AssertEqual(p2.entity.Index(), 42u);
+        larvae::AssertEqual(p2.m_entity.Index(), 42u);
     });
 
     auto test_hierarchy_2 = larvae::RegisterTest("QueenHierarchy", "ParentComponentEquality", []() {
@@ -88,9 +89,9 @@ namespace
         children.Add(e3);
 
         size_t count = 0;
-        for (queen::Entity e : children)
+        for (auto it = children.Begin(); it != children.End(); ++it)
         {
-            (void)e;
+            (void)*it;
             ++count;
         }
 
@@ -197,9 +198,7 @@ namespace
         world.SetParent(child3, parent);
 
         size_t count = 0;
-        world.ForEachChild(parent, [&count](queen::Entity) {
-            ++count;
-        });
+        world.ForEachChild(parent, [&count](queen::Entity) { ++count; });
 
         larvae::AssertEqual(count, size_t{3});
     });
@@ -210,9 +209,7 @@ namespace
         queen::Entity entity = world.Spawn(Position{0.0f, 0.0f, 0.0f});
 
         size_t count = 0;
-        world.ForEachChild(entity, [&count](queen::Entity) {
-            ++count;
-        });
+        world.ForEachChild(entity, [&count](queen::Entity) { ++count; });
 
         larvae::AssertEqual(count, size_t{0});
     });
@@ -241,9 +238,7 @@ namespace
         world.SetParent(grandchild, child1);
 
         size_t count = 0;
-        world.ForEachDescendant(root, [&count](queen::Entity) {
-            ++count;
-        });
+        world.ForEachDescendant(root, [&count](queen::Entity) { ++count; });
 
         larvae::AssertEqual(count, size_t{3}); // child1, child2, grandchild
     });
@@ -401,9 +396,7 @@ namespace
 
         // Check descendant count
         size_t count = 0;
-        world.ForEachDescendant(entities[0], [&count](queen::Entity) {
-            ++count;
-        });
+        world.ForEachDescendant(entities[0], [&count](queen::Entity) { ++count; });
         larvae::AssertEqual(count, depth - 1);
     });
 
@@ -423,9 +416,7 @@ namespace
 
         // Iterate all children
         size_t count = 0;
-        world.ForEachChild(parent, [&count](queen::Entity) {
-            ++count;
-        });
+        world.ForEachChild(parent, [&count](queen::Entity) { ++count; });
         larvae::AssertEqual(count, child_count);
     });
 
@@ -454,8 +445,8 @@ namespace
 
         // Query entities that have parents
         size_t count = 0;
-        world.Query<queen::Read<queen::Parent>, queen::Read<Position>>()
-            .Each([&count](const queen::Parent& p, const Position&) {
+        world.Query<queen::Read<queen::Parent>, queen::Read<Position>>().Each(
+            [&count](const queen::Parent& p, const Position&) {
                 (void)p;
                 ++count;
             });
@@ -478,4 +469,4 @@ namespace
         larvae::AssertFalse(world.IsAlive(child));
         larvae::AssertEqual(world.ChildCount(parent), size_t{0});
     });
-}
+} // namespace

@@ -1,8 +1,11 @@
-#include <larvae/larvae.h>
 #include <hive/core/clock.h>
+
+#include <larvae/larvae.h>
+
 #include <thread>
 
-namespace {
+namespace
+{
 
     using hive::Clock;
     using hive::FrameClock;
@@ -37,9 +40,8 @@ namespace {
         larvae::AssertTrue(std::abs(s - 0.016666667f) < 1e-6f);
     });
 
-    auto t_seconds_f_zero = larvae::RegisterTest("Clock", "SecondsF_zero", []() {
-        larvae::AssertTrue(Clock::SecondsF(0) == 0.f);
-    });
+    auto t_seconds_f_zero =
+        larvae::RegisterTest("Clock", "SecondsF_zero", []() { larvae::AssertTrue(Clock::SecondsF(0) == 0.f); });
 
     // =========================================================================
     // FrameClock
@@ -47,43 +49,43 @@ namespace {
 
     auto t_frame_initial = larvae::RegisterTest("Clock", "FrameClock_initial_state", []() {
         FrameClock fc;
-        larvae::AssertTrue(fc.delta_ns == 0);
-        larvae::AssertTrue(fc.elapsed_ns == 0);
-        larvae::AssertTrue(fc.frame_count == 0);
+        larvae::AssertTrue(fc.m_deltaNs == 0);
+        larvae::AssertTrue(fc.m_elapsedNs == 0);
+        larvae::AssertTrue(fc.m_frameCount == 0);
     });
 
     auto t_frame_tick = larvae::RegisterTest("Clock", "FrameClock_tick_advances", []() {
         FrameClock fc;
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
         fc.Tick();
-        larvae::AssertTrue(fc.frame_count == 1);
-        larvae::AssertTrue(fc.delta_ns > 0);
-        larvae::AssertTrue(fc.elapsed_ns > 0);
-        larvae::AssertTrue(fc.elapsed_ns == fc.delta_ns);
+        larvae::AssertTrue(fc.m_frameCount == 1);
+        larvae::AssertTrue(fc.m_deltaNs > 0);
+        larvae::AssertTrue(fc.m_elapsedNs > 0);
+        larvae::AssertTrue(fc.m_elapsedNs == fc.m_deltaNs);
     });
 
     auto t_frame_multi_tick = larvae::RegisterTest("Clock", "FrameClock_multiple_ticks", []() {
         FrameClock fc;
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
         fc.Tick();
-        int64_t first_elapsed = fc.elapsed_ns;
+        int64_t firstElapsed = fc.m_elapsedNs;
 
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
         fc.Tick();
-        larvae::AssertTrue(fc.frame_count == 2);
-        larvae::AssertTrue(fc.elapsed_ns >= first_elapsed + fc.delta_ns);
+        larvae::AssertTrue(fc.m_frameCount == 2);
+        larvae::AssertTrue(fc.m_elapsedNs >= firstElapsed + fc.m_deltaNs);
     });
 
     auto t_frame_reset = larvae::RegisterTest("Clock", "FrameClock_reset", []() {
         FrameClock fc;
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
         fc.Tick();
-        larvae::AssertTrue(fc.frame_count > 0);
+        larvae::AssertTrue(fc.m_frameCount > 0);
 
         fc.Reset();
-        larvae::AssertTrue(fc.delta_ns == 0);
-        larvae::AssertTrue(fc.elapsed_ns == 0);
-        larvae::AssertTrue(fc.frame_count == 0);
+        larvae::AssertTrue(fc.m_deltaNs == 0);
+        larvae::AssertTrue(fc.m_elapsedNs == 0);
+        larvae::AssertTrue(fc.m_frameCount == 0);
     });
 
     auto t_frame_delta_seconds = larvae::RegisterTest("Clock", "FrameClock_DeltaSeconds", []() {
@@ -96,4 +98,4 @@ namespace {
         larvae::AssertTrue(dt < 0.5f);
     });
 
-}
+} // namespace

@@ -1,54 +1,88 @@
-# HiveEngine — Code Guidelines
+# HiveEngine Code Guidelines
 
-Ground rules for working in this codebase. Not a style bible, just what you need to know so things stay consistent.
+Ground rules for working in this codebase. The source of truth for machine-enforced style is:
+
+- [`/C:/Dev/HE/.clang-format`](/C:/Dev/HE/.clang-format)
+- [`/C:/Dev/HE/.clang-tidy`](/C:/Dev/HE/.clang-tidy)
+
+If the prose below and the tooling disagree, update the prose or the config so they match.
 
 ---
 
-## Language & Compiler
+## Language And Compiler
 
-C++20, compiled with Clang targeting MSVC on Windows. No RTTI (`-fno-rtti`), no exceptions (`-fno-exceptions`). If you need to handle an error, don't throw — return a value, use an assert, or redesign.
+C++20, compiled with Clang targeting MSVC on Windows.
 
-Strict warnings are on (`-Wall -Wextra -Wpedantic -Wconversion` and friends). Treat warnings seriously even if `-Werror` isn't always enabled.
+- No RTTI: `-fno-rtti`
+- No exceptions: `-fno-exceptions`
+- Warnings are strict. Treat warnings as real issues even when `-Werror` is not enabled.
+
+If an operation can fail, return a value, assert, or redesign. Do not throw.
 
 ---
 
 ## Module Layout
 
-Each module follows the same structure:
+Each module follows the same layout:
 
-```
+```text
 ModuleName/
-├── include/modulename/    Public headers
-│   ├── core/              Core types
-│   ├── storage/           Data structures (if any)
-│   └── detail/            Internal stuff, not part of public API
-├── src/modulename/        Implementation files
-├── tests/                 test_*.cpp files (auto-discovered by CMake)
-└── CMakeLists.txt
+|- include/modulename/    Public headers
+|  |- core/               Core types
+|  |- storage/            Data structures
+|  `- detail/             Internal details, not public API
+|- src/modulename/        Implementation files
+|- tests/                 test_*.cpp files
+`- CMakeLists.txt
 ```
 
-Modules are bee-themed: **Queen** (ECS), **Comb** (allocators), **Wax** (containers, pointers, serialization), **Larvae** (test framework), **Hive** (core utilities), **Nectar** (assets), **Terra** (graphics), **Brood** (build target).
+Bee-themed modules:
 
-Each module has its own namespace in `snake_case`: `queen::`, `comb::`, `wax::`, etc. Internal helpers go in a `detail` sub-namespace.
+- `Queen`: ECS
+- `Comb`: allocators
+- `Wax`: containers, pointers, serialization
+- `Larvae`: test framework
+- `Hive`: core utilities
+- `Nectar`: assets
+- `Terra`: graphics and platform
+- `Swarm`: rendering
+- `Waggle`: runtime
+- `Brood`: app targets
+- `Forge`: editor UI
+
+Namespaces follow `camelBack`. Single-word namespaces such as `queen`, `comb`, and `hive` are valid under this rule.
 
 ---
 
 ## Naming
 
+The naming rules below are aligned to `.clang-tidy`.
+
 | What | Style | Examples |
 |---|---|---|
-| Classes, structs | `PascalCase` | `Entity`, `LinearAllocator`, `SparseSet` |
+| Classes, structs, enums, aliases | `PascalCase` | `Entity`, `LinearAllocator`, `ProjectConfig` |
 | Functions, methods | `PascalCase` | `Allocate()`, `IsAlive()`, `PushBack()` |
-| Member variables | `trailing_underscore_` | `data_`, `size_`, `allocator_` |
-| Local variables | `snake_case` | `entity_count`, `old_capacity` |
-| Namespaces | `snake_case` | `queen`, `comb::detail` |
-| Template params | `PascalCase` | `T`, `Allocator`, `ComponentT` |
-| Compile-time constants | `kPascalCase` | `kMaxIndex`, `kAlive`, `kSsoCapacity` |
-| Macros, feature flags | `UPPER_SNAKE` | `HIVE_FEATURE_ASSERTS`, `HIVE_PLATFORM_WINDOWS` |
+| Template parameters | `PascalCase` | `T`, `Allocator`, `ComponentT` |
+| Namespaces | `camelBack` | `queen`, `comb`, `projectTools` |
+| Enum constants | `UPPER_SNAKE` | `ALLOCATE`, `INVALID`, `PLAYING` |
+| Macros, feature flags | `UPPER_SNAKE` | `HIVE_FEATURE_ASSERTS`, `COMB_MEM_DEBUG` |
+| Global constants | `UPPER_SNAKE` | `MAX_ENTITIES`, `DEFAULT_TIMEOUT_MS` |
+| Static constants | `UPPER_SNAKE` | `MAX_LEVELS`, `MIN_BLOCK_SIZE` |
+| Global variables | `camelBack` with `g_` | `g_moduleRegistry`, `g_jobSystem` |
+| Static variables | `camelBack` with `s_` | `s_cachedState`, `s_instanceCount` |
+| Member variables | `camelBack` with `m_` | `m_size`, `m_capacity`, `m_allocator` |
+| Parameters | `camelBack` | `entityCount`, `allocator`, `projectPath` |
+| Local variables | `camelBack` | `entityCount`, `oldCapacity`, `renderContext` |
+| Local constants | `camelBack` | `windowFlags`, `branchLimit`, `maxDepth` |
+| `constexpr` variables | `camelBack` unless they are static/global constants | `chunkSize`, `headerMask` |
 | Files | `snake_case` | `entity_allocator.h`, `linear_allocator.cpp` |
 | Test files | `test_*.cpp` | `test_entity.cpp`, `test_vector.cpp` |
 
-Predicates: `Is*`, `Has*`, `Contains*`. Not `Check*` or `ShouldBe*`.
+Additional naming rules:
+
+- Predicates should read like predicates: `Is*`, `Has*`, `Can*`, `Contains*`.
+- Prefer nouns for types and verbs for functions.
+- Keep abbreviations consistent inside a module.
 
 ---
 
@@ -56,7 +90,11 @@ Predicates: `Is*`, `Has*`, `Contains*`. Not `Check*` or `ShouldBe*`.
 
 - 4-space indentation, no tabs.
 - `#pragma once`, always.
-- Allman braces for classes/structs/namespaces, same-line braces for functions/methods:
+- Classes, structs, enums, and namespaces use Allman braces.
+- Functions and methods keep the opening brace on the same line.
+- Control statements always use braces. Do not rely on single-line implicit blocks.
+
+Example:
 
 ```cpp
 namespace queen
@@ -65,22 +103,22 @@ namespace queen
     {
     public:
         [[nodiscard]] constexpr bool IsAlive() const noexcept {
-            return HasFlag(Flags::kAlive);
+            return HasFlag(Flags::ALIVE);
         }
 
-        constexpr void SetFlag(FlagsType flag) noexcept {
-            flags_ |= flag;
+        constexpr void SetFlag(Flags flag) noexcept {
+            m_flags |= flag;
         }
 
     private:
-        IndexType index_;
-        GenerationType generation_;
-        FlagsType flags_;
+        IndexType m_index{};
+        GenerationType m_generation{};
+        FlagsType m_flags{};
     };
 }
 ```
 
-Short one-liners can stay on one line. Multi-line bodies get braces on their own lines for `if`/`for`/`while`:
+Control flow:
 
 ```cpp
 if (ptr == nullptr)
@@ -91,65 +129,95 @@ if (ptr == nullptr)
 
 ---
 
-## Initialization
-
-Prefer brace initialization `T{args...}` over parentheses `T(args...)` wherever possible:
-
-```cpp
-Entity e{42, 7, Flags::kAlive};          // good
-auto vec = Vector<int, LinearAllocator>{alloc};  // good
-return Entity{};                           // good
-```
-
-Member initializer lists: one member per line, comma-leading:
-
-```cpp
-Vector(Allocator& allocator) noexcept
-    : data_{nullptr}
-    , size_{0}
-    , capacity_{0}
-    , allocator_{&allocator}
-{}
-```
-
----
-
 ## Include Order
 
-For `.cpp` files, the corresponding header comes first. Then engine modules (hive first, then others), then standard library:
+Use grouped include blocks with one blank line between blocks.
 
-```cpp
-#include <modulename/my_class.h>  // 1. Own header (in .cpp files)
+For `.cpp` files:
 
-#include <hive/core/assert.h>     // 2. Engine modules (hive first, then others)
-#include <comb/allocator_concepts.h>
-#include <comb/default_allocator.h>
-#include <wax/containers/vector.h>
+1. Own header first
+2. Engine headers grouped by module block
+3. Third-party headers
+4. Standard library headers
 
-#include <cstdint>                // 3. Standard library
-#include <utility>
-```
+Module block order is enforced by `.clang-format`:
 
-For headers, same order without the "own header" step.
-
-No blank lines between groups — the order itself makes it clear.
+1. `hive`
+2. `comb`
+3. `wax`
+4. `queen`
+5. `nectar`
+6. `waggle`
+7. `swarm`
+8. `terra`
+9. `forge`
+10. `antennae`
+11. `larvae`
+12. Third-party
+13. Standard library
 
 ---
 
-## Attributes & Qualifiers
+## Function Size And Complexity
 
-Use them. They're not optional decorations.
+The default thresholds enforced by `.clang-tidy` are:
 
-- **`[[nodiscard]]`** on anything that returns a value you shouldn't ignore: getters, allocations, queries, predicates.
-- **`constexpr`** on anything that can run at compile time. Use `consteval` when it *must* run at compile time (type IDs, hashes).
-- **`noexcept`** on trivial operations, move constructors, destructors, getters.
-- **`const`** on methods that don't mutate state. Always. No excuses.
+- Cognitive complexity: 25
+- Line count: 80
+- Statement count: 50
+- Branch count: 10
+- Parameter count: 6
+- Nesting depth: 4
+- Local variable count: 20
+
+These are warning thresholds, not excuses to write to the limit. Split functions when the logic stops being obvious.
+
+---
+
+## Initialization And Modernization
+
+Prefer brace initialization:
+
+```cpp
+Entity entity{42, 7, Flags::ALIVE};
+auto values = wax::Vector<int>{allocator};
+return Entity{};
+```
+
+Prefer default member initialization:
+
+```cpp
+class Buffer
+{
+private:
+    void* m_data{nullptr};
+    size_t m_size{0};
+};
+```
+
+Other modernization rules:
+
+- Prefer `nullptr` over `NULL`.
+- Prefer `emplace` where it is clearer than `push_back`.
+- Do not force trailing return types unless they improve readability.
+- Prefer range-based loops when they are clearer and safe.
+
+---
+
+## Const Correctness
+
+Const correctness is part of the style, not an optional cleanup pass.
+
+- Mark methods `const` when they do not mutate state.
+- Use `constexpr` where it materially improves correctness or compile-time evaluation.
+- Use `[[nodiscard]]` on return values that should not be ignored.
+- Apply `const` to references and pointers when ownership and mutability permit it.
 
 Typical signature:
 
 ```cpp
 [[nodiscard]] constexpr bool IsEmpty() const noexcept {
-    return size_ == 0;
+    return m_size == 0;
 }
 ```
 
@@ -157,88 +225,68 @@ Typical signature:
 
 ## Memory
 
-No raw `new`/`delete`. Ever. All allocations go through `comb` allocators.
+No raw `new` or `delete` in engine code. Allocate through `comb`.
 
 ```cpp
-// Allocating objects
-auto* obj = comb::New<MyClass>(allocator, arg1, arg2);
-comb::Delete(allocator, obj);
+auto* object = comb::New<MyClass>(allocator, arg1, arg2);
+comb::Delete(allocator, object);
 
-// Arrays
-auto* arr = comb::NewArray<int>(allocator, 64);
-comb::DeleteArray(allocator, arr, 64);
+auto* array = comb::NewArray<int>(allocator, 64);
+comb::DeleteArray(allocator, array, 64);
 ```
 
-Containers take an allocator as template param + constructor arg:
+Containers and owning utilities should use the project allocator model.
 
-```cpp
-wax::Vector<int> vec{alloc};
-wax::String str{alloc, "hello"};
-```
+The allocator must outlive everything allocated from it.
 
-Smart pointers: `wax::Box<T>` (unique), `wax::Rc<T>` (refcounted). Create with `MakeBox`/`MakeRc`.
-
-The allocator is passed by reference and stored as a pointer internally. **The allocator must outlive everything it allocated.** This is your responsibility — no safety net.
-
-Allocator types and when to use them:
+Typical allocator usage:
 
 | Allocator | Lifetime | Use case |
 |---|---|---|
-| `LinearAllocator` | Frame/scope | Temp data, query results, scratch buffers |
-| `BuddyAllocator` | Persistent | Long-lived data, archetypes, systems |
-| `PoolAllocator` | Persistent | Fixed-size objects, high churn |
-| `DefaultAllocator` | Global | When allocator ownership is truly implicit |
+| `LinearAllocator` | Frame or scope | Scratch data, temp buffers |
+| `BuddyAllocator` | Persistent | Long-lived allocations |
+| `PoolAllocator` | Persistent | Fixed-size high churn objects |
+| `DefaultAllocator` | Global fallback | Only when ownership is truly implicit |
 
 ---
 
 ## Error Handling
 
-No exceptions. The project compiles with `-fno-exceptions`.
+No exceptions.
 
 Use the assert hierarchy from `<hive/core/assert.h>`:
 
-| Function | Evaluates expr in release? | Checks in release? | Use for |
+| Function | Evaluates in release | Checks in release | Use for |
 |---|---|---|---|
-| `hive::Assert(expr, msg)` | No | No | Invariants, dev-time sanity checks |
-| `hive::Verify(expr, msg)` | Yes | No | Side-effectful checks needed in release |
-| `hive::Check(expr, msg)` | Yes | Yes | Critical invariants, use sparingly |
-| `hive::Unreachable()` | — | — | Impossible code paths (switch defaults) |
-| `hive::NotImplemented()` | — | — | Placeholder for unfinished work |
+| `hive::Assert(expr, msg)` | No | No | Invariants, dev-time assumptions |
+| `hive::Verify(expr, msg)` | Yes | No | Side-effectful checks |
+| `hive::Check(expr, msg)` | Yes | Yes | Critical runtime invariants |
+| `hive::Unreachable()` | N/A | N/A | Impossible paths |
+| `hive::NotImplemented()` | N/A | N/A | Explicit placeholders |
 
-For recoverable failures, return values: `nullptr` on allocation failure, `bool` for operations that can fail, etc.
+For recoverable failures, return values such as `bool`, `nullptr`, or result structs.
 
 ---
 
-## Templates & Concepts
+## Templates And Concepts
 
-Use concepts to constrain allocator types:
+Use concepts or equivalent constraints to keep template diagnostics sane.
 
 ```cpp
 template<typename T, comb::Allocator Allocator = comb::DefaultAllocator>
-class Vector { ... };
+class Vector
+{
+    // ...
+};
 ```
 
-Use `if constexpr` for compile-time branching (trivially copyable optimizations, etc.):
-
-```cpp
-if constexpr (std::is_trivially_destructible_v<T>)
-{
-    // skip destructor calls
-}
-else
-{
-    for (size_t i = count; i > 0; --i)
-        ptr[i - 1].~T();
-}
-```
-
-Type erasure when needed: store `void*` + function pointers for destruction/move in a metadata struct. See `ComponentMeta` in Queen.
+Use `if constexpr` for compile-time branching where it materially simplifies specialization paths.
 
 ---
 
 ## Common Patterns
 
-**Builder pattern** — chainable methods returning `*this`:
+Builder pattern:
 
 ```cpp
 auto entity = world.Spawn()
@@ -247,23 +295,17 @@ auto entity = world.Spawn()
     .Build();
 ```
 
-**Size vs Capacity** — all containers distinguish between `Size()` (element count) and `Capacity()` (allocated slots). Growth factor is 2x.
-
-**Predicates** — `IsEmpty()`, `IsFull()`, `IsAlive()`, `IsValid()`, `Contains()`.
-
-**Cleanup** — `Reset()` releases resources, `Clear()` removes elements but keeps memory.
-
-**Deleted copies** — types with ownership semantics (`Box`, allocators) delete copy operations:
+Deleted copy for ownership types:
 
 ```cpp
 Box(const Box&) = delete;
 Box& operator=(const Box&) = delete;
 ```
 
-**`static_assert` for invariants** — put them right after the class definition:
+Static assertions should sit close to the type or invariant they protect:
 
 ```cpp
-static_assert(sizeof(Entity) == 8, "Entity must be 8 bytes");
+static_assert(sizeof(Entity) == 8, "Entity must stay compact");
 static_assert(std::is_trivially_copyable_v<Entity>);
 ```
 
@@ -271,7 +313,9 @@ static_assert(std::is_trivially_copyable_v<Entity>);
 
 ## Tests
 
-Framework is Larvae. Tests are auto-registered lambdas in anonymous namespaces:
+Framework: Larvae.
+
+Tests are auto-registered lambdas in anonymous namespaces:
 
 ```cpp
 #include <larvae/larvae.h>
@@ -280,56 +324,62 @@ Framework is Larvae. Tests are auto-registered lambdas in anonymous namespaces:
 
 namespace
 {
-    auto test1 = larvae::RegisterTest("QueenEntity", "DefaultIsNull", []() {
-        queen::Entity e;
-        larvae::AssertTrue(e.IsNull());
-        larvae::AssertFalse(e.IsAlive());
-    });
-
-    auto test2 = larvae::RegisterTest("QueenEntity", "ConstructorStoresValues", []() {
-        queen::Entity e{42, 7, queen::Entity::Flags::kAlive};
-
-        larvae::AssertEqual(e.Index(), 42u);
-        larvae::AssertEqual(e.Generation(), static_cast<uint16_t>(7));
-        larvae::AssertTrue(e.IsAlive());
+    auto defaultIsNull = larvae::RegisterTest("QueenEntity", "DefaultIsNull", []() {
+        queen::Entity entity;
+        larvae::AssertTrue(entity.IsNull());
+        larvae::AssertFalse(entity.IsAlive());
     });
 }
 ```
 
-Suite name = module + class being tested. Test name = what's being verified, in PascalCase.
+Rules:
 
-Always use a dedicated allocator in tests, don't rely on globals. After adding a new `test_*.cpp` file, reconfigure CMake (the glob needs to pick it up).
+- Use a dedicated allocator in tests.
+- Do not rely on globals unless the test is explicitly about globals.
+- Suite names should be stable and descriptive.
+- Test names should describe the behavior being verified.
 
-Available assertions: `AssertEqual`, `AssertNotEqual`, `AssertTrue`, `AssertFalse`, `AssertNull`, `AssertNotNull`, `AssertLessThan`, `AssertGreaterThan`, `AssertNear`, `AssertFloatEqual`.
+---
+
+## Tooling
+
+Formatting:
+
+```bash
+clang-format -i <files>
+```
+
+Linting:
+
+```bash
+clang-tidy -p out/build/... <file.cpp>
+```
+
+The expected enforcement profile is:
+
+- `bugprone-*`
+- `cppcoreguidelines-*`
+- `modernize-*`
+- `performance-*`
+- `readability-*`
+- `misc-*`
+- `clang-analyzer-*`
+
+with the explicit exclusions documented in `.clang-tidy`.
 
 ---
 
 ## Build
 
 ```bash
-# Configure
 cmake --preset llvm-windows-debug
-
-# Build tests
 cmake --build out/build/llvm-debug --target larvae_runner
-
-# Run tests
 out/build/llvm-debug/bin/Debug/larvae_runner.exe
-
-# Sanitizers
-cmake --preset llvm-windows-ubsan    # UBSan
-cmake --preset llvm-windows-memdebug # ASan
 ```
 
----
+Sanitizer presets, if available:
 
-## Things to Avoid
-
-- `new`/`delete` — use `comb::New`/`comb::Delete`
-- `std::vector`, `std::string` — use `wax::Vector`, `wax::String`
-- Exceptions, `try`/`catch`
-- RTTI, `dynamic_cast`, `typeid`
-- `auto` when the type isn't immediately obvious
-- Tab characters
-- Trailing whitespace
-- `#include` guards (use `#pragma once`)
+```bash
+cmake --preset llvm-windows-ubsan
+cmake --preset llvm-windows-asan
+```

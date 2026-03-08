@@ -16,8 +16,6 @@ namespace nectar
         uint32_t Version() const override;
         wax::StringView TypeName() const override;
 
-        ImportResult Import(wax::ByteSpan source_data,
-                            const HiveDocument& settings,
-                            ImportContext& context) override;
+        ImportResult Import(wax::ByteSpan sourceData, const HiveDocument& settings, ImportContext& context) override;
     };
-}
+} // namespace nectar

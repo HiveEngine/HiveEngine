@@ -1,37 +1,28 @@
 #pragma once
 namespace hive
 {
-    template<typename T>
-    class Singleton
+    template <typename T> class Singleton
     {
     public:
-        Singleton()
-        {
-            if (m_Instance == nullptr)
+        Singleton() {
+            if (g_mInstance == nullptr)
             {
-                m_Instance = static_cast<T*>(this);
+                g_mInstance = static_cast<T*>(this);
             }
         }
 
-        ~Singleton()
-        {
-            if (m_Instance == this)
+        ~Singleton() {
+            if (g_mInstance == this)
             {
-                m_Instance = nullptr;
+                g_mInstance = nullptr;
             }
         }
 
-        static T& GetInstance()
-        {
-            return *m_Instance;
-        }
+        static T& GetInstance() { return *g_mInstance; }
 
-        [[nodiscard]] static inline bool IsInitialized()
-        {
-            return m_Instance != nullptr;
-        }
+        [[nodiscard]] static inline bool IsInitialized() { return g_mInstance != nullptr; }
 
     protected:
-        static inline T* m_Instance = nullptr;
+        static inline T* g_mInstance = nullptr;
     };
-}
+} // namespace hive

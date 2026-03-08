@@ -1,8 +1,10 @@
-#include <larvae/larvae.h>
 #include <antennae/keyboard.h>
 #include <antennae/mouse.h>
 
-namespace {
+#include <larvae/larvae.h>
+
+namespace
+{
 
     // =========================================================================
     // Keyboard
@@ -11,8 +13,8 @@ namespace {
     auto t_kb_default = larvae::RegisterTest("Antennae.Keyboard", "default_all_released", []() {
         antennae::Keyboard kb{};
         larvae::AssertTrue(!kb.IsDown(terra::Key::A));
-        larvae::AssertTrue(!kb.IsDown(terra::Key::Space));
-        larvae::AssertTrue(!kb.IsDown(terra::Key::Escape));
+        larvae::AssertTrue(!kb.IsDown(terra::Key::SPACE));
+        larvae::AssertTrue(!kb.IsDown(terra::Key::ESCAPE));
     });
 
     auto t_kb_isdown = larvae::RegisterTest("Antennae.Keyboard", "IsDown", []() {
@@ -59,30 +61,30 @@ namespace {
         larvae::AssertFloatEqual(m.dy, 0.f);
         larvae::AssertFloatEqual(m.scroll_x, 0.f);
         larvae::AssertFloatEqual(m.scroll_y, 0.f);
-        larvae::AssertTrue(!m.IsDown(terra::MouseButton::Left));
+        larvae::AssertTrue(!m.IsDown(terra::MouseButton::LEFT));
     });
 
     auto t_mouse_isdown = larvae::RegisterTest("Antennae.Mouse", "button_IsDown", []() {
         antennae::Mouse m{};
-        m.buttons[static_cast<int>(terra::MouseButton::Left)] = true;
-        larvae::AssertTrue(m.IsDown(terra::MouseButton::Left));
-        larvae::AssertTrue(!m.IsDown(terra::MouseButton::Right));
+        m.buttons[static_cast<int>(terra::MouseButton::LEFT)] = true;
+        larvae::AssertTrue(m.IsDown(terra::MouseButton::LEFT));
+        larvae::AssertTrue(!m.IsDown(terra::MouseButton::RIGHT));
     });
 
     auto t_mouse_just_pressed = larvae::RegisterTest("Antennae.Mouse", "button_JustPressed", []() {
         antennae::Mouse m{};
-        m.prev_buttons[static_cast<int>(terra::MouseButton::Right)] = false;
-        m.buttons[static_cast<int>(terra::MouseButton::Right)] = true;
-        larvae::AssertTrue(m.JustPressed(terra::MouseButton::Right));
-        larvae::AssertTrue(!m.JustReleased(terra::MouseButton::Right));
+        m.prev_buttons[static_cast<int>(terra::MouseButton::RIGHT)] = false;
+        m.buttons[static_cast<int>(terra::MouseButton::RIGHT)] = true;
+        larvae::AssertTrue(m.JustPressed(terra::MouseButton::RIGHT));
+        larvae::AssertTrue(!m.JustReleased(terra::MouseButton::RIGHT));
     });
 
     auto t_mouse_just_released = larvae::RegisterTest("Antennae.Mouse", "button_JustReleased", []() {
         antennae::Mouse m{};
-        m.prev_buttons[static_cast<int>(terra::MouseButton::Left)] = true;
-        m.buttons[static_cast<int>(terra::MouseButton::Left)] = false;
-        larvae::AssertTrue(!m.JustPressed(terra::MouseButton::Left));
-        larvae::AssertTrue(m.JustReleased(terra::MouseButton::Left));
+        m.prev_buttons[static_cast<int>(terra::MouseButton::LEFT)] = true;
+        m.buttons[static_cast<int>(terra::MouseButton::LEFT)] = false;
+        larvae::AssertTrue(!m.JustPressed(terra::MouseButton::LEFT));
+        larvae::AssertTrue(m.JustReleased(terra::MouseButton::LEFT));
     });
 
     auto t_mouse_first_update = larvae::RegisterTest("Antennae.Mouse", "first_update_flag", []() {
