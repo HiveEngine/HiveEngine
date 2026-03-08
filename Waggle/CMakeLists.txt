@@ -14,6 +14,7 @@ target_sources(Waggle
         src/waggle/project/project_manager.cpp
         src/waggle/project/gameplay_module.cpp
         src/waggle/project/cmake_generator.cpp
+        src/waggle/project/project_scaffolder.cpp
 )
 
 target_include_directories(Waggle

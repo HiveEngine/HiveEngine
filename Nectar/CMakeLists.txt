@@ -26,7 +26,7 @@ target_include_directories(Nectar
         extern/lz4
         extern/stb
         extern/zstd
-        ${CMAKE_SOURCE_DIR}/Hive/extern/tinyobj
+        ${CMAKE_CURRENT_SOURCE_DIR}/../Hive/extern/tinyobj
 )
 
 target_link_libraries(Nectar
