@@ -22,5 +22,3 @@ target_link_libraries(Antennae
         Queen
         Hive
 )
-
-target_compile_features(Antennae PUBLIC cxx_std_20)

@@ -39,8 +39,3 @@ endif()
 if(HIVE_ENGINE_MODE STREQUAL "Editor" AND HIVE_FEATURE_IMGUI AND HIVE_HAS_INTERACTIVE_GRAPHICS)
     target_link_libraries(Waggle PRIVATE Forge)
 endif()
-
-target_compile_features(Waggle
-    PUBLIC
-        cxx_std_20
-)

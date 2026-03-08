@@ -44,10 +44,11 @@ function(swarm_fix_diligent_targets DIR)
             continue()
         endif()
         if(MSVC)
-            target_compile_options(${TGT} PRIVATE /EHsc /GR /w)
+            target_compile_options(${TGT} PRIVATE /EHsc /GR)
         else()
-            target_compile_options(${TGT} PRIVATE -fexceptions -frtti -w)
+            target_compile_options(${TGT} PRIVATE -fexceptions -frtti)
         endif()
+        hive_silence_target_warnings(${TGT})
     endforeach()
     get_property(SUBDIRS DIRECTORY "${DIR}" PROPERTY SUBDIRECTORIES)
     foreach(SUBDIR ${SUBDIRS})
@@ -96,9 +97,4 @@ target_link_libraries(Swarm
 		Diligent-GraphicsEngineVk-static
 		Diligent-GraphicsEngine
 		Diligent-BuildSettings
-)
-
-target_compile_features(Swarm
-        PUBLIC
-        cxx_std_20
 )

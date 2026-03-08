@@ -11,7 +11,7 @@ endif()
 hive_configure_target(Testbed)
 
 target_include_directories(Testbed
-    PUBLIC
+    PRIVATE
         include
 )
 
@@ -23,7 +23,6 @@ target_precompile_headers(Testbed
 # ============================================================================
 # Dependencies
 # ============================================================================
-
 
 target_link_libraries(Testbed
     PRIVATE

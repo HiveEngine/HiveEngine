@@ -22,8 +22,3 @@ target_link_libraries(Queen
         Comb
         Wax
 )
-
-target_compile_features(Queen
-    PUBLIC
-        cxx_std_20
-)

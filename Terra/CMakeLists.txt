@@ -20,11 +20,7 @@ target_precompile_headers(Terra
 
 add_subdirectory(extern/glfw SYSTEM)
 
-if(MSVC)
-    target_compile_options(glfw PRIVATE /w)
-else()
-    target_compile_options(glfw PRIVATE -w)
-endif()
+hive_silence_target_warnings(glfw)
 
 target_link_libraries(Terra
     PUBLIC

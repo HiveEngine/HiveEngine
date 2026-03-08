@@ -19,8 +19,3 @@ target_link_libraries(Wax
         Hive
         Comb
 )
-
-target_compile_features(Wax
-    INTERFACE
-        cxx_std_20
-)

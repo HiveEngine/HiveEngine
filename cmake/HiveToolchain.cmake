@@ -23,6 +23,12 @@ if(MSVC AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     set(HIVE_COMPILER_IS_CLANG_CL ON)
 endif()
 
+if(MSVC AND NOT HIVE_COMPILER_IS_CLANG_CL)
+    set(HIVE_VENDOR_WARNING_COMPILE_OPTIONS /w)
+else()
+    set(HIVE_VENDOR_WARNING_COMPILE_OPTIONS -w)
+endif()
+
 if(MSVC)
     target_compile_options(HiveToolchain_Base INTERFACE /permissive- /Zc:__cplusplus /Zc:inline /utf-8)
     if(NOT HIVE_COMPILER_IS_CLANG_CL)
@@ -199,6 +205,18 @@ function(hive_get_target_scope out_var target)
     else()
         set(${out_var} PRIVATE PARENT_SCOPE)
     endif()
+endfunction()
+
+function(hive_get_vendor_warning_compile_options out_var)
+    set(${out_var} ${HIVE_VENDOR_WARNING_COMPILE_OPTIONS} PARENT_SCOPE)
+endfunction()
+
+function(hive_silence_target_warnings target)
+    if(NOT TARGET ${target})
+        message(FATAL_ERROR "Unknown target '${target}'")
+    endif()
+
+    target_compile_options(${target} PRIVATE ${HIVE_VENDOR_WARNING_COMPILE_OPTIONS})
 endfunction()
 
 function(hive_configure_target target)
