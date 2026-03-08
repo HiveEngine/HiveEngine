@@ -28,7 +28,7 @@ function(brood_collect_sources out_var entrypoint pattern)
     set(${out_var} ${_sources} PARENT_SCOPE)
 endfunction()
 
-function(brood_link_test_executable target)
+function(brood_link_test_target target)
     target_link_libraries(${target}
         PRIVATE
             Larvae
@@ -56,13 +56,22 @@ endfunction()
 # Test Executable
 # ============================================================================
 
-brood_collect_sources(BROOD_RUNNER_SOURCES src/larvae_runner_main.cpp test_*.cpp)
+brood_collect_sources(BROOD_TEST_SOURCES "" test_*.cpp)
 
-add_executable(larvae_runner ${BROOD_RUNNER_SOURCES})
+add_library(brood_tests OBJECT ${BROOD_TEST_SOURCES})
+
+hive_configure_target(brood_tests)
+
+brood_link_test_target(brood_tests)
+
+add_executable(larvae_runner
+    src/larvae_runner_main.cpp
+    $<TARGET_OBJECTS:brood_tests>
+)
 
 hive_configure_target(larvae_runner)
 
-brood_link_test_executable(larvae_runner)
+brood_link_test_target(larvae_runner)
 
 # ============================================================================
 # CTest Integration
@@ -85,7 +94,7 @@ add_executable(larvae_benchmark ${BROOD_BENCHMARK_SOURCES})
 
 hive_configure_target(larvae_benchmark)
 
-brood_link_test_executable(larvae_benchmark)
+brood_link_test_target(larvae_benchmark)
 
 # ============================================================================
 # Engine Launcher
@@ -170,13 +179,14 @@ if(HIVE_BUILD_GUI_TESTS AND HIVE_FEATURE_GLFW)
 
     hive_silence_target_warnings(imgui)
 
-    brood_collect_sources(BROOD_GUI_SOURCES src/larvae_runner_gui_main.cpp test_*.cpp)
-
-    add_executable(larvae_runner_gui ${BROOD_GUI_SOURCES})
+    add_executable(larvae_runner_gui
+        src/larvae_runner_gui_main.cpp
+        $<TARGET_OBJECTS:brood_tests>
+    )
 
     hive_configure_target(larvae_runner_gui)
 
-    brood_link_test_executable(larvae_runner_gui)
+    brood_link_test_target(larvae_runner_gui)
 
     target_link_libraries(larvae_runner_gui
         PRIVATE
