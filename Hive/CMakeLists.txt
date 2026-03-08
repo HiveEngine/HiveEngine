@@ -50,6 +50,8 @@ endif()
 
 add_library(Hive STATIC)
 
+hive_configure_target(Hive)
+
 target_include_directories(Hive
     PUBLIC
         include

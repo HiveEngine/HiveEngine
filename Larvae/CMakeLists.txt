@@ -8,6 +8,8 @@
 
 add_library(Larvae STATIC)
 
+hive_configure_target(Larvae)
+
 target_include_directories(Larvae
     PUBLIC
         include

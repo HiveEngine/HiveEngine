@@ -32,6 +32,8 @@ endforeach ()
 
 add_executable(larvae_runner ${LARVAE_TEST_SOURCES})
 
+hive_configure_target(larvae_runner)
+
 target_link_libraries(larvae_runner
         PRIVATE
         Larvae
@@ -87,6 +89,8 @@ endforeach ()
 
 add_executable(larvae_benchmark ${LARVAE_BENCHMARK_SOURCES})
 
+hive_configure_target(larvae_benchmark)
+
 target_link_libraries(larvae_benchmark
         PRIVATE
         Larvae
@@ -122,6 +126,8 @@ set_target_properties(larvae_benchmark
 # ============================================================================
 
 add_executable(hive_launcher src/hive_launcher.cpp)
+
+hive_configure_target(hive_launcher)
 
 target_link_libraries(hive_launcher
         PRIVATE
@@ -216,6 +222,8 @@ if (HIVE_BUILD_GUI_TESTS)
 
     # GUI Executable
     add_executable(larvae_runner_gui ${LARVAE_GUI_SOURCES})
+
+    hive_configure_target(larvae_runner_gui)
 
     target_link_libraries(larvae_runner_gui
             PRIVATE

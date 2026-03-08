@@ -174,8 +174,8 @@ namespace
         comb::LinearAllocator alloc{262144};
         queen::World world{};
 
-        world.Spawn(Position{1.0f, 2.0f, 3.0f});
-        world.Spawn(Position{4.0f, 5.0f, 6.0f});
+        static_cast<void>(world.Spawn(Position{1.0f, 2.0f, 3.0f}));
+        static_cast<void>(world.Spawn(Position{4.0f, 5.0f, 6.0f}));
 
         int call_count = 0;
 
@@ -260,7 +260,7 @@ namespace
         comb::LinearAllocator alloc{262144};
         queen::World world{};
 
-        world.Spawn(Position{1.0f, 0.0f, 0.0f});
+        static_cast<void>(world.Spawn(Position{1.0f, 0.0f, 0.0f}));
 
         int call_count = 0;
 
@@ -277,7 +277,7 @@ namespace
         comb::LinearAllocator alloc{262144};
         queen::World world{};
 
-        world.Spawn(Position{1.0f, 0.0f, 0.0f});
+        static_cast<void>(world.Spawn(Position{1.0f, 0.0f, 0.0f}));
 
         int call_count = 0;
 
@@ -363,7 +363,7 @@ namespace
         comb::LinearAllocator alloc{262144};
         queen::World world{};
 
-        world.Spawn(Velocity{1.0f, 0.0f, 0.0f});
+        static_cast<void>(world.Spawn(Velocity{1.0f, 0.0f, 0.0f}));
 
         int call_count = 0;
 
@@ -379,9 +379,9 @@ namespace
         comb::LinearAllocator alloc{262144};
         queen::World world{};
 
-        world.Spawn(Position{1.0f, 0.0f, 0.0f});
-        world.Spawn(Position{2.0f, 0.0f, 0.0f}, Velocity{0.0f, 0.0f, 0.0f});
-        world.Spawn(Position{3.0f, 0.0f, 0.0f}, Health{100, 100});
+        static_cast<void>(world.Spawn(Position{1.0f, 0.0f, 0.0f}));
+        static_cast<void>(world.Spawn(Position{2.0f, 0.0f, 0.0f}, Velocity{0.0f, 0.0f, 0.0f}));
+        static_cast<void>(world.Spawn(Position{3.0f, 0.0f, 0.0f}, Health{100, 100}));
 
         float sum = 0.0f;
 

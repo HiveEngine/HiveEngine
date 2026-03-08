@@ -4,6 +4,8 @@
 
 add_library(Nectar STATIC)
 
+hive_configure_target(Nectar)
+
 file(GLOB_RECURSE NECTAR_SOURCES src/nectar/*.cpp)
 
 target_sources(Nectar
@@ -37,10 +39,19 @@ target_compile_features(Nectar
         cxx_std_20
 )
 
+if(MSVC)
+    target_compile_definitions(Nectar PRIVATE _CRT_SECURE_NO_WARNINGS)
+endif()
+
 # External libraries (LZ4, Zstd) — compiled as C++ since no C compiler in preset
 set(NECTAR_EXTERN_SOURCES
     extern/lz4/lz4.c
     extern/zstd/zstd.c
 )
 set_source_files_properties(${NECTAR_EXTERN_SOURCES} PROPERTIES LANGUAGE CXX)
+if(MSVC)
+    set_source_files_properties(${NECTAR_EXTERN_SOURCES} PROPERTIES COMPILE_OPTIONS "/w")
+else()
+    set_source_files_properties(${NECTAR_EXTERN_SOURCES} PROPERTIES COMPILE_OPTIONS "-w")
+endif()
 target_sources(Nectar PRIVATE ${NECTAR_EXTERN_SOURCES})

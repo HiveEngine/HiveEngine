@@ -201,9 +201,9 @@ namespace
         comb::LinearAllocator alloc{262144};
         queen::World world{};
 
-        world.Spawn(Position{1.0f, 0.0f, 0.0f}, Health{0, 100});
-        world.Spawn(Position{2.0f, 0.0f, 0.0f}, Health{50, 100});
-        world.Spawn(Position{3.0f, 0.0f, 0.0f}, Health{0, 100});
+        static_cast<void>(world.Spawn(Position{1.0f, 0.0f, 0.0f}, Health{0, 100}));
+        static_cast<void>(world.Spawn(Position{2.0f, 0.0f, 0.0f}, Health{50, 100}));
+        static_cast<void>(world.Spawn(Position{3.0f, 0.0f, 0.0f}, Health{0, 100}));
 
         larvae::AssertEqual(world.EntityCount(), size_t{3});
 
@@ -225,8 +225,8 @@ namespace
         comb::LinearAllocator alloc{262144};
         queen::World world{};
 
-        world.Spawn(Position{1.0f, 0.0f, 0.0f});
-        world.Spawn(Position{2.0f, 0.0f, 0.0f});
+        static_cast<void>(world.Spawn(Position{1.0f, 0.0f, 0.0f}));
+        static_cast<void>(world.Spawn(Position{2.0f, 0.0f, 0.0f}));
 
         larvae::AssertEqual(world.EntityCount(), size_t{2});
 
@@ -268,9 +268,9 @@ namespace
         queen::World world{};
 
         // Start with 3 entities each with Health=100
-        world.Spawn(Position{1.0f, 0.0f, 0.0f}, Health{100, 100});
-        world.Spawn(Position{2.0f, 0.0f, 0.0f}, Health{100, 100});
-        world.Spawn(Position{3.0f, 0.0f, 0.0f}, Health{100, 100});
+        static_cast<void>(world.Spawn(Position{1.0f, 0.0f, 0.0f}, Health{100, 100}));
+        static_cast<void>(world.Spawn(Position{2.0f, 0.0f, 0.0f}, Health{100, 100}));
+        static_cast<void>(world.Spawn(Position{3.0f, 0.0f, 0.0f}, Health{100, 100}));
 
         // System that reduces health each frame
         world.System<queen::Write<Health>>("DamageSystem").Each([](Health& hp) { hp.current -= 40; });

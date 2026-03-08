@@ -12,6 +12,8 @@ elseif(UNIX)
     add_executable(Testbed src/linux_main.cpp)
 endif()
 
+hive_configure_target(Testbed)
+
 target_include_directories(Testbed
     PUBLIC
         include

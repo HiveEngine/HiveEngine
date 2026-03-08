@@ -341,7 +341,7 @@ namespace hive::math
                 return;
             }
 
-            RefitNode(m_root);
+            static_cast<void>(RefitNode(m_root));
         }
 
         void Clear() {

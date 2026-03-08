@@ -1,5 +1,3 @@
-#define _CRT_SECURE_NO_WARNINGS
-
 #include <hive/profiling/profiler.h>
 
 #include <nectar/watcher/file_watcher.h>

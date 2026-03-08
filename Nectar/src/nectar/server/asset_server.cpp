@@ -1,5 +1,3 @@
-#define _CRT_SECURE_NO_WARNINGS
-
 #include <nectar/io/io_scheduler.h>
 #include <nectar/server/asset_server.h>
 
@@ -19,7 +17,6 @@ namespace nectar
         , m_storages{alloc, 16}
         , m_pathCache{alloc, 64}
         , m_basePath{alloc}
-        , m_vfs{&vfs}
         , m_io{&io}
         , m_pendingLoads{alloc, 64} {}
 

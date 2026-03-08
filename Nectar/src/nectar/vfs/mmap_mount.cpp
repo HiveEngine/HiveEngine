@@ -1,4 +1,3 @@
-#define _CRT_SECURE_NO_WARNINGS
 #include <nectar/io/mapped_file.h>
 #include <nectar/vfs/mmap_mount.h>
 

@@ -4,6 +4,8 @@
 
 add_library(Swarm STATIC)
 
+hive_configure_target(Swarm RTTI ON EXCEPTIONS ON)
+
 # DiligentCore needs exceptions enabled and relaxed warnings.
 # Only build the backends we actually use
 # Auto-detect Windows SDK version for DiligentCore (works for any machine)
@@ -26,13 +28,10 @@ set(DILIGENT_INSTALL_CORE OFF CACHE BOOL "" FORCE)
 add_subdirectory(extern/diligentcore SYSTEM)
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND TARGET Diligent-BuildSettings)
-    get_target_property(DILIGENT_BUILD_SETTINGS_OPTIONS Diligent-BuildSettings INTERFACE_COMPILE_OPTIONS)
-    if(DILIGENT_BUILD_SETTINGS_OPTIONS)
-        list(FILTER DILIGENT_BUILD_SETTINGS_OPTIONS EXCLUDE REGEX "^/MP[0-9]*$")
-        set_target_properties(Diligent-BuildSettings PROPERTIES
-            INTERFACE_COMPILE_OPTIONS "${DILIGENT_BUILD_SETTINGS_OPTIONS}"
-        )
-    endif()
+    # Diligent exports its own warning/optimization policy through an interface
+    # target. Keep its compile definitions/includes, but let the engine own the
+    # warning profile of first-party TUs.
+    set_target_properties(Diligent-BuildSettings PROPERTIES INTERFACE_COMPILE_OPTIONS "")
 endif()
 
 # Re-enable exceptions and suppress warnings for all Diligent targets
@@ -44,8 +43,11 @@ function(swarm_fix_diligent_targets DIR)
         if(TGT_TYPE STREQUAL "INTERFACE_LIBRARY" OR TGT_TYPE STREQUAL "UTILITY" OR TGT_IMPORTED)
             continue()
         endif()
-        # Re-enable exceptions (override global /EHs-c- with /EHsc) and suppress warnings
-        target_compile_options(${TGT} PRIVATE /EHsc /GR /w)
+        if(MSVC)
+            target_compile_options(${TGT} PRIVATE /EHsc /GR /w)
+        else()
+            target_compile_options(${TGT} PRIVATE -fexceptions -frtti -w)
+        endif()
     endforeach()
     get_property(SUBDIRS DIRECTORY "${DIR}" PROPERTY SUBDIRECTORIES)
     foreach(SUBDIR ${SUBDIRS})
@@ -97,9 +99,6 @@ target_link_libraries(Swarm
 		Diligent-GraphicsEngine
 		Diligent-BuildSettings
 )
-
-# Swarm needs exceptions enabled because DiligentCore headers use throw/try
-target_compile_options(Swarm PRIVATE /EHsc /GR)
 
 target_compile_features(Swarm
         PUBLIC

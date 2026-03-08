@@ -63,7 +63,6 @@ namespace queen
 
             world.ForEachArchetype([&](Archetype<ComponentAllocator>& archetype) {
                 const auto& types = archetype.GetComponentTypes();
-                const auto& metas = archetype.GetComponentMetas();
 
                 for (uint32_t row = 0; row < archetype.EntityCount(); ++row)
                 {
