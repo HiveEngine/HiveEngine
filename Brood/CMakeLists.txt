@@ -10,6 +10,7 @@ set(LARVAE_TEST_DIRS
         ${CMAKE_CURRENT_SOURCE_DIR}/tests
         ${CMAKE_CURRENT_SOURCE_DIR}/../Hive/tests
         ${CMAKE_CURRENT_SOURCE_DIR}/../Comb/tests
+        ${CMAKE_CURRENT_SOURCE_DIR}/../Terra/tests
         ${CMAKE_CURRENT_SOURCE_DIR}/../Wax/tests
         ${CMAKE_CURRENT_SOURCE_DIR}/../Queen/tests
         ${CMAKE_CURRENT_SOURCE_DIR}/../Nectar/tests
@@ -36,6 +37,7 @@ target_link_libraries(larvae_runner
         Larvae
         Hive
         Comb
+        Terra
         Wax
         Queen
         Waggle
@@ -90,6 +92,7 @@ target_link_libraries(larvae_benchmark
         Larvae
         Hive
         Comb
+        Terra
         Wax
         Queen
         Waggle
@@ -188,7 +191,7 @@ if (HIVE_BUILD_GUI_TESTS)
             ${imgui_SOURCE_DIR}/backends/imgui_impl_opengl3.cpp
     )
 
-    target_include_directories(imgui PUBLIC
+    target_include_directories(imgui SYSTEM PUBLIC
             ${imgui_SOURCE_DIR}
             ${imgui_SOURCE_DIR}/backends
     )
@@ -196,6 +199,12 @@ if (HIVE_BUILD_GUI_TESTS)
     target_link_libraries(imgui PUBLIC
             glfw
             OpenGL::GL
+    )
+
+    target_compile_options(imgui PRIVATE
+            $<$<CXX_COMPILER_ID:Clang>:-w>
+            $<$<CXX_COMPILER_ID:GNU>:-w>
+            $<$<CXX_COMPILER_ID:MSVC>:/w>
     )
 
     # GUI Test sources (include all test files like console runner)
@@ -213,6 +222,7 @@ if (HIVE_BUILD_GUI_TESTS)
             Larvae
             Hive
             Comb
+            Terra
             Wax
             Queen
             Waggle

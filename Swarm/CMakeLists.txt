@@ -23,7 +23,17 @@ set(DILIGENT_NO_OPENGL ON CACHE BOOL "" FORCE)
 set(DILIGENT_NO_METAL ON CACHE BOOL "" FORCE)
 set(DILIGENT_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(DILIGENT_INSTALL_CORE OFF CACHE BOOL "" FORCE)
-add_subdirectory(extern/diligentcore)
+add_subdirectory(extern/diligentcore SYSTEM)
+
+if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND TARGET Diligent-BuildSettings)
+    get_target_property(DILIGENT_BUILD_SETTINGS_OPTIONS Diligent-BuildSettings INTERFACE_COMPILE_OPTIONS)
+    if(DILIGENT_BUILD_SETTINGS_OPTIONS)
+        list(FILTER DILIGENT_BUILD_SETTINGS_OPTIONS EXCLUDE REGEX "^/MP[0-9]*$")
+        set_target_properties(Diligent-BuildSettings PROPERTIES
+            INTERFACE_COMPILE_OPTIONS "${DILIGENT_BUILD_SETTINGS_OPTIONS}"
+        )
+    endif()
+endif()
 
 # Re-enable exceptions and suppress warnings for all Diligent targets
 function(swarm_fix_diligent_targets DIR)
@@ -63,6 +73,17 @@ endif ()
 target_include_directories(Swarm
         PUBLIC
         include
+)
+
+target_include_directories(Swarm
+        SYSTEM PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/extern/diligentcore/Graphics/GraphicsEngine/interface
+)
+
+target_include_directories(Swarm
+        SYSTEM PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/extern/diligentcore/Common/interface
+        ${CMAKE_CURRENT_SOURCE_DIR}/extern/diligentcore/Graphics/GraphicsEngineVulkan/interface
 )
 
 target_link_libraries(Swarm

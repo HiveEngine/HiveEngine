@@ -1,6 +1,9 @@
 #include <terra/platform/glfw_terra.h>
 #include <terra/terra.h>
 
+#include <antennae/actions.h>
+#include <antennae/input.h>
+
 #include <testbed/precomp.h>
 
 #define TERRA_NATIVE_LINUX
@@ -18,14 +21,16 @@ struct PlatformContext
 {
     swarm::RenderContext* renderContext_;
     terra::WindowContext* windowContext_;
+    antennae::Keyboard* keyboard_;
+    antennae::Mouse* mouse_;
+    antennae::InputActions* actions_;
+    antennae::InputActionMap* actionMap_;
 };
 
-void GameLogic(PlatformContext& context) {
-    terra::InputState* currentInput = terra::GetWindowInputState(context.windowContext_);
-
-    if (currentInput->keys_[GLFW_KEY_A]) // TODO don't use direct GLFW ID
+static void GameLogic(PlatformContext& context) {
+    if (context.actions_->IsDown(antennae::InputAction::MOVE_LEFT))
     {
-        std::cout << "A" << std::endl;
+        std::cout << "MoveLeft" << std::endl;
     }
 
     swarm::Render(context.renderContext_);
@@ -50,6 +55,10 @@ private:
 
     terra::WindowContext windowContext_;
     swarm::RenderContext renderContext_;
+    antennae::Keyboard keyboard_;
+    antennae::Mouse mouse_;
+    antennae::InputActions actions_;
+    antennae::InputActionMap actionMap_;
 };
 
 Engine::Engine()
@@ -67,6 +76,9 @@ void Engine::Run() {
 }
 
 bool Engine::Init() {
+    terra::SetWindowTitle(&windowContext_, "Hive Engine");
+    terra::SetWindowSize(&windowContext_, 1280, 720);
+
     if (!terra::InitSystem() || !terra::InitWindowContext(&windowContext_))
     {
         return false;
@@ -109,14 +121,19 @@ void Engine::Shutdown() {
 }
 
 void Engine::Loop() {
-    PlatformContext platformContext{&renderContext_, &windowContext_};
+    PlatformContext platformContext{&renderContext_, &windowContext_, &keyboard_, &mouse_, &actions_, &actionMap_};
     while (!terra::ShouldWindowClose(platformContext.windowContext_))
     {
-        terra::PollEvents();
+        terra::PollEvents(platformContext.windowContext_);
+        const terra::InputState* input = terra::GetWindowInputState(platformContext.windowContext_);
+        antennae::UpdateKeyboard(*platformContext.keyboard_, input);
+        antennae::UpdateMouse(*platformContext.mouse_, input);
+        antennae::UpdateInputActions(*platformContext.actions_, *platformContext.actionMap_, *platformContext.keyboard_,
+                                     *platformContext.mouse_);
         GameLogic(platformContext);
 
         // TODO remove this
-        glfwSwapBuffers(platformContext.windowContext_->window_);
+        glfwSwapBuffers(terra::GetGlfwWindow(platformContext.windowContext_));
     }
 }
 

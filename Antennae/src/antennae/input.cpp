@@ -2,6 +2,7 @@
 
 #include <terra/terra.h>
 
+#include <antennae/actions.h>
 #include <antennae/input.h>
 #include <antennae/keyboard.h>
 #include <antennae/mouse.h>
@@ -107,51 +108,62 @@ namespace antennae
         terra::MouseButton::MIDDLE,
     };
 
+    void UpdateKeyboard(Keyboard& keyboard, const terra::InputState* input) {
+        std::memcpy(keyboard.previous, keyboard.current, sizeof(keyboard.current));
+        for (terra::Key key : kPolledKeys)
+        {
+            keyboard.current[static_cast<int>(key)] = terra::IsKeyDown(input, key);
+        }
+    }
+
+    void UpdateMouse(Mouse& mouse, const terra::InputState* input) {
+        std::memcpy(mouse.prev_buttons, mouse.buttons, sizeof(mouse.buttons));
+
+        const float newX = terra::GetMouseX(input);
+        const float newY = terra::GetMouseY(input);
+
+        if (mouse.first_update)
+        {
+            mouse.dx = 0.0f;
+            mouse.dy = 0.0f;
+            mouse.first_update = false;
+        }
+        else
+        {
+            mouse.dx = terra::GetMouseDeltaX(input);
+            mouse.dy = terra::GetMouseDeltaY(input);
+        }
+        mouse.x = newX;
+        mouse.y = newY;
+
+        for (terra::MouseButton btn : kPolledButtons)
+        {
+            mouse.buttons[static_cast<int>(btn)] = terra::IsMouseButtonDown(input, btn);
+        }
+
+        mouse.scroll_x = 0.0f;
+        mouse.scroll_y = 0.0f;
+    }
+
     void UpdateInput(queen::World& world, terra::WindowContext* window) {
-        // Insert resources on first call
         if (!world.HasResource<Keyboard>())
             world.InsertResource(Keyboard{});
         if (!world.HasResource<Mouse>())
             world.InsertResource(Mouse{});
+        if (!world.HasResource<InputActionMap>())
+            world.InsertResource(InputActionMap{});
+        if (!world.HasResource<InputActions>())
+            world.InsertResource(InputActions{});
 
-        auto* kb = world.Resource<Keyboard>();
+        auto* keyboard = world.Resource<Keyboard>();
         auto* mouse = world.Resource<Mouse>();
+        auto* actionMap = world.Resource<InputActionMap>();
+        auto* actions = world.Resource<InputActions>();
 
-        terra::InputState* input = terra::GetWindowInputState(window);
+        const terra::InputState* input = terra::GetWindowInputState(window);
 
-        // Keyboard: previous <- current, then poll
-        std::memcpy(kb->previous, kb->current, sizeof(kb->current));
-        for (terra::Key key : kPolledKeys)
-            kb->current[static_cast<int>(key)] = input->m_keys[static_cast<int>(key)];
-
-        // Mouse: previous buttons <- current
-        std::memcpy(mouse->prev_buttons, mouse->buttons, sizeof(mouse->buttons));
-
-        // Position + delta (use InputState mouse position and delta)
-        float new_x = input->m_mouseX;
-        float new_y = input->m_mouseY;
-
-        if (mouse->first_update)
-        {
-            mouse->dx = 0.f;
-            mouse->dy = 0.f;
-            mouse->first_update = false;
-        }
-        else
-        {
-            mouse->dx = new_x - mouse->x;
-            mouse->dy = new_y - mouse->y;
-        }
-        mouse->x = new_x;
-        mouse->y = new_y;
-
-        // Buttons
-        for (terra::MouseButton btn : kPolledButtons)
-            mouse->buttons[static_cast<int>(btn)] = input->m_mouseButton[static_cast<int>(btn)];
-
-        // TODO: Terra InputState does not expose scroll delta yet.
-        // Restore scroll support once terra::InputState adds scroll fields.
-        mouse->scroll_x = 0.f;
-        mouse->scroll_y = 0.f;
+        UpdateKeyboard(*keyboard, input);
+        UpdateMouse(*mouse, input);
+        UpdateInputActions(*actions, *actionMap, *keyboard, *mouse);
     }
 } // namespace antennae

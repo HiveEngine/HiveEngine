@@ -8,7 +8,7 @@ namespace terra
 {
     struct WindowContext
     {
-        // GLFW stuff here
+        // Backend state. Prefer the accessors in <terra/terra.h> from calling code.
         GLFWwindow* m_window{nullptr};
         const char* m_title{nullptr};
         int m_width{0};
@@ -17,4 +17,8 @@ namespace terra
         InputState m_currentInputState{};
         InputState m_lastInputState{};
     };
+
+    [[nodiscard]] GLFWwindow* GetGlfwWindow(WindowContext* windowContext);
+
+    [[nodiscard]] const GLFWwindow* GetGlfwWindow(const WindowContext* windowContext);
 } // namespace terra

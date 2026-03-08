@@ -33,4 +33,5 @@ target_link_libraries(Testbed
         Comb
         Swarm
         Terra
+        Antennae
 )

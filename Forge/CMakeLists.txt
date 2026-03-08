@@ -86,6 +86,10 @@ target_sources(Forge
 target_include_directories(Forge
     PUBLIC
         include
+)
+
+target_include_directories(Forge
+    SYSTEM PUBLIC
         ${imgui_SOURCE_DIR}
         ${imgui_SOURCE_DIR}/backends
         ${imguizmo_SOURCE_DIR}
