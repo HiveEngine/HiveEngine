@@ -20,10 +20,10 @@ struct PlatformContext
     terra::WindowContext* windowContext_;
 };
 
-void GameLogic(PlatformContext& context) {
-    terra::InputState* currentInput = terra::GetWindowInputState(context.windowContext_);
+static void GameLogic(PlatformContext& context) {
+    const terra::InputState* currentInput = terra::GetWindowInputState(context.windowContext_);
 
-    if (currentInput->keys_[GLFW_KEY_A]) // TODO don't use direct GLFW ID
+    if (terra::IsKeyDown(currentInput, terra::Key::A))
     {
         std::cout << "A" << std::endl;
     }
@@ -67,6 +67,9 @@ void Engine::Run() {
 }
 
 bool Engine::Init() {
+    terra::SetWindowTitle(&windowContext_, "Hive Engine");
+    terra::SetWindowSize(&windowContext_, 1280, 720);
+
     if (!terra::InitSystem() || !terra::InitWindowContext(&windowContext_))
     {
         return false;
@@ -112,11 +115,11 @@ void Engine::Loop() {
     PlatformContext platformContext{&renderContext_, &windowContext_};
     while (!terra::ShouldWindowClose(platformContext.windowContext_))
     {
-        terra::PollEvents();
+        terra::PollEvents(platformContext.windowContext_);
         GameLogic(platformContext);
 
         // TODO remove this
-        glfwSwapBuffers(platformContext.windowContext_->window_);
+        glfwSwapBuffers(terra::GetGlfwWindow(platformContext.windowContext_));
     }
 }
 

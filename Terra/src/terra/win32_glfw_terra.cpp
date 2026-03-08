@@ -7,14 +7,14 @@
 #define GLFW_EXPOSE_NATIVE_WIN32
 #include <GLFW/glfw3native.h>
 
-#include "terra/platform/glfw_terra.h"
+#include <terra/platform/glfw_terra.h>
 
 namespace terra
 {
     NativeWindow GetNativeWindow(WindowContext* windowContext) {
         NativeWindow nativeWindow;
 
-        nativeWindow.m_window = glfwGetWin32Window(windowContext->m_window);
+        nativeWindow.m_window = glfwGetWin32Window(GetGlfwWindow(windowContext));
         nativeWindow.m_instance = nullptr;
 
         return nativeWindow;

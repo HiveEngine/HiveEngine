@@ -213,7 +213,10 @@ namespace
 #if HIVE_MODE_EDITOR
                 if (ctx.m_renderContext && ctx.m_window)
                 {
-                    forge::ForgeImGuiInit(ctx.m_renderContext, ctx.m_window->m_window);
+                    if (!forge::ForgeImGuiInit(ctx.m_renderContext, terra::GetGlfwWindow(ctx.m_window)))
+                    {
+                        hive::LogWarning(LOG_LAUNCHER, "Forge ImGui init failed");
+                    }
                     s.m_viewportRt = swarm::CreateViewportRT(ctx.m_renderContext, 1280, 720);
                     s.m_viewportTexture = forge::ForgeRegisterViewportRT(ctx.m_renderContext, s.m_viewportRt);
                 }

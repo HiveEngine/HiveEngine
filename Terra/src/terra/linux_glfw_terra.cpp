@@ -11,12 +11,13 @@ namespace terra
 {
     NativeWindow GetNativeWindow(WindowContext* windowContext) {
         NativeWindow nativeWindow{};
+        GLFWwindow* glfwWindow = GetGlfwWindow(windowContext);
 
         nativeWindow.wlDisplay_ = glfwGetWaylandDisplay();
-        nativeWindow.wlSurface_ = glfwGetWaylandWindow(windowContext->window_);
+        nativeWindow.wlSurface_ = glfwGetWaylandWindow(glfwWindow);
 
         nativeWindow.x11Display_ = glfwGetX11Display();
-        nativeWindow.x11Window_ = glfwGetX11Window(windowContext->window_);
+        nativeWindow.x11Window_ = glfwGetX11Window(glfwWindow);
 
         if (nativeWindow.wlDisplay_ && nativeWindow.wlSurface_)
         {

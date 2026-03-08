@@ -10,6 +10,7 @@ set(LARVAE_TEST_DIRS
         ${CMAKE_CURRENT_SOURCE_DIR}/tests
         ${CMAKE_CURRENT_SOURCE_DIR}/../Hive/tests
         ${CMAKE_CURRENT_SOURCE_DIR}/../Comb/tests
+        ${CMAKE_CURRENT_SOURCE_DIR}/../Terra/tests
         ${CMAKE_CURRENT_SOURCE_DIR}/../Wax/tests
         ${CMAKE_CURRENT_SOURCE_DIR}/../Queen/tests
         ${CMAKE_CURRENT_SOURCE_DIR}/../Nectar/tests
@@ -36,6 +37,7 @@ target_link_libraries(larvae_runner
         Larvae
         Hive
         Comb
+        Terra
         Wax
         Queen
         Waggle
@@ -90,6 +92,7 @@ target_link_libraries(larvae_benchmark
         Larvae
         Hive
         Comb
+        Terra
         Wax
         Queen
         Waggle
@@ -213,6 +216,7 @@ if (HIVE_BUILD_GUI_TESTS)
             Larvae
             Hive
             Comb
+            Terra
             Wax
             Queen
             Waggle

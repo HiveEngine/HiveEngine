@@ -43,9 +43,9 @@ namespace
             m_context.m_world = &m_app.GetWorld();
 
 #if HIVE_FEATURE_GLFW
-            m_windowContext.m_title = config.m_windowTitle;
-            m_windowContext.m_width = static_cast<int>(config.m_windowWidth);
-            m_windowContext.m_height = static_cast<int>(config.m_windowHeight);
+            terra::SetWindowTitle(&m_windowContext, config.m_windowTitle);
+            terra::SetWindowSize(&m_windowContext, static_cast<int>(config.m_windowWidth),
+                                 static_cast<int>(config.m_windowHeight));
 #endif
         }
 
@@ -151,20 +151,20 @@ namespace
 
 #ifdef _WIN32
             renderOk = swarm::InitRenderContextWin32(&m_renderContext, native.m_instance, native.m_window,
-                                                     static_cast<uint32_t>(m_windowContext.m_width),
-                                                     static_cast<uint32_t>(m_windowContext.m_height));
+                                                     static_cast<uint32_t>(terra::GetWindowWidth(&m_windowContext)),
+                                                     static_cast<uint32_t>(terra::GetWindowHeight(&m_windowContext)));
 #elif defined(__linux__)
             switch (native.type_)
             {
                 case terra::NativeWindowType::X11:
                     renderOk = swarm::InitRenderContextX11(m_renderContext, native.x11Display_, native.x11Window_,
-                                                           static_cast<uint32_t>(m_windowContext.m_width),
-                                                           static_cast<uint32_t>(m_windowContext.m_height));
+                                                           static_cast<uint32_t>(terra::GetWindowWidth(&m_windowContext)),
+                                                           static_cast<uint32_t>(terra::GetWindowHeight(&m_windowContext)));
                     break;
                 case terra::NativeWindowType::WAYLAND:
                     renderOk = swarm::InitRenderContextWayland(m_renderContext, native.wlDisplay_, native.wlSurface_,
-                                                               static_cast<uint32_t>(m_windowContext.m_width),
-                                                               static_cast<uint32_t>(m_windowContext.m_height));
+                                                               static_cast<uint32_t>(terra::GetWindowWidth(&m_windowContext)),
+                                                               static_cast<uint32_t>(terra::GetWindowHeight(&m_windowContext)));
                     break;
             }
 #endif
@@ -209,7 +209,7 @@ namespace
             while (!terra::ShouldWindowClose(&m_windowContext) && m_app.IsRunning())
             {
                 HIVE_PROFILE_SCOPE_N("Frame");
-                terra::PollEvents();
+                terra::PollEvents(&m_windowContext);
                 antennae::UpdateInput(m_app.GetWorld(), &m_windowContext);
 
                 if (m_config.m_autoTick)

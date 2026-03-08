@@ -117,19 +117,19 @@ namespace antennae
         auto* kb = world.Resource<Keyboard>();
         auto* mouse = world.Resource<Mouse>();
 
-        terra::InputState* input = terra::GetWindowInputState(window);
+        const terra::InputState* input = terra::GetWindowInputState(window);
 
         // Keyboard: previous <- current, then poll
         std::memcpy(kb->previous, kb->current, sizeof(kb->current));
         for (terra::Key key : kPolledKeys)
-            kb->current[static_cast<int>(key)] = input->m_keys[static_cast<int>(key)];
+            kb->current[static_cast<int>(key)] = terra::IsKeyDown(input, key);
 
         // Mouse: previous buttons <- current
         std::memcpy(mouse->prev_buttons, mouse->buttons, sizeof(mouse->buttons));
 
         // Position + delta (use InputState mouse position and delta)
-        float new_x = input->m_mouseX;
-        float new_y = input->m_mouseY;
+        float new_x = terra::GetMouseX(input);
+        float new_y = terra::GetMouseY(input);
 
         if (mouse->first_update)
         {
@@ -147,7 +147,7 @@ namespace antennae
 
         // Buttons
         for (terra::MouseButton btn : kPolledButtons)
-            mouse->buttons[static_cast<int>(btn)] = input->m_mouseButton[static_cast<int>(btn)];
+            mouse->buttons[static_cast<int>(btn)] = terra::IsMouseButtonDown(input, btn);
 
         // TODO: Terra InputState does not expose scroll delta yet.
         // Restore scroll support once terra::InputState adds scroll fields.
