@@ -4,6 +4,8 @@
 
 add_library(Forge STATIC)
 
+hive_configure_target(Forge RTTI ON EXCEPTIONS ON)
+
 # ============================================================================
 # ImGui core + backends
 # ============================================================================
@@ -115,8 +117,5 @@ if(HIVE_FEATURE_VULKAN)
         target_compile_definitions(Forge PRIVATE VK_USE_PLATFORM_XLIB_KHR VK_USE_PLATFORM_WAYLAND_KHR)
     endif()
 endif()
-
-# Forge includes Diligent headers (via swarm/platform/diligent_swarm.h) which need exceptions + RTTI
-target_compile_options(Forge PRIVATE /EHsc /GR)
 
 target_compile_features(Forge PUBLIC cxx_std_20)

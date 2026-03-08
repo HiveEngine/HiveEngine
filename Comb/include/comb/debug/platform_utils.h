@@ -29,7 +29,7 @@
 // Platform includes (use Hive's platform detection macros)
 #if HIVE_PLATFORM_WINDOWS
 #include <intrin.h> // For __rdtsc
-#include <windows.h>
+#include <Windows.h>
 #elif HIVE_PLATFORM_LINUX || HIVE_PLATFORM_MACOS
 #include <pthread.h>
 #include <sys/time.h>

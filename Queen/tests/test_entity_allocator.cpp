@@ -98,7 +98,7 @@ namespace
 
         queen::Entity e1 = allocator.Allocate();
         queen::Entity e2 = allocator.Allocate();
-        queen::Entity e3 = allocator.Allocate();
+        static_cast<void>(allocator.Allocate());
 
         allocator.Deallocate(e2);
         allocator.Deallocate(e1);
@@ -155,8 +155,8 @@ namespace
         comb::LinearAllocator alloc{4096};
         queen::EntityAllocator<comb::LinearAllocator> allocator{alloc, 100};
 
-        queen::Entity e1 = allocator.Allocate();
-        queen::Entity e2 = allocator.Allocate();
+        static_cast<void>(allocator.Allocate());
+        static_cast<void>(allocator.Allocate());
 
         allocator.Clear();
 

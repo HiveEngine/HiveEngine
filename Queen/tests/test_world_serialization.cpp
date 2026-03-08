@@ -125,8 +125,8 @@ namespace
         registry.Register<Vel>();
 
         queen::World world;
-        world.Spawn(Pos{1.f, 0.f, 0.f});
-        world.Spawn(Pos{2.f, 0.f, 0.f}, Vel{0.1f, 0.f, 0.f});
+        static_cast<void>(world.Spawn(Pos{1.f, 0.f, 0.f}));
+        static_cast<void>(world.Spawn(Pos{2.f, 0.f, 0.f}, Vel{0.1f, 0.f, 0.f}));
 
         queen::WorldSerializer<8192> serializer;
         auto result = serializer.Serialize(world, registry);
@@ -143,7 +143,7 @@ namespace
             // Vel is NOT registered
 
             queen::World world;
-            world.Spawn(Pos{1.f, 0.f, 0.f}, Vel{0.1f, 0.f, 0.f});
+            static_cast<void>(world.Spawn(Pos{1.f, 0.f, 0.f}, Vel{0.1f, 0.f, 0.f}));
 
             queen::WorldSerializer<4096> serializer;
             auto result = serializer.Serialize(world, registry);
@@ -196,10 +196,10 @@ namespace
         registry.Register<Pos>();
 
         queen::World src;
-        src.Spawn(Pos{1.5f, -2.5f, 3.0f});
+        static_cast<void>(src.Spawn(Pos{1.5f, -2.5f, 3.0f}));
 
         queen::WorldSerializer<4096> serializer;
-        serializer.Serialize(src, registry);
+        larvae::AssertTrue(serializer.Serialize(src, registry).m_success);
 
         queen::World dst;
         auto result = queen::WorldDeserializer::Deserialize(dst, registry, serializer.CStr());
@@ -214,12 +214,12 @@ namespace
         registry.Register<Pos>();
 
         queen::World src;
-        src.Spawn(Pos{1.f, 0.f, 0.f});
-        src.Spawn(Pos{2.f, 0.f, 0.f});
-        src.Spawn(Pos{3.f, 0.f, 0.f});
+        static_cast<void>(src.Spawn(Pos{1.f, 0.f, 0.f}));
+        static_cast<void>(src.Spawn(Pos{2.f, 0.f, 0.f}));
+        static_cast<void>(src.Spawn(Pos{3.f, 0.f, 0.f}));
 
         queen::WorldSerializer<8192> serializer;
-        serializer.Serialize(src, registry);
+        larvae::AssertTrue(serializer.Serialize(src, registry).m_success);
 
         queen::World dst;
         auto result = queen::WorldDeserializer::Deserialize(dst, registry, serializer.CStr());
@@ -238,11 +238,11 @@ namespace
             registry.Register<Vel>();
 
             queen::World src;
-            src.Spawn(Pos{1.f, 0.f, 0.f});                      // archetype: [Pos]
-            src.Spawn(Pos{2.f, 0.f, 0.f}, Vel{0.5f, 0.f, 0.f}); // archetype: [Pos, Vel]
+            static_cast<void>(src.Spawn(Pos{1.f, 0.f, 0.f}));                      // archetype: [Pos]
+            static_cast<void>(src.Spawn(Pos{2.f, 0.f, 0.f}, Vel{0.5f, 0.f, 0.f})); // archetype: [Pos, Vel]
 
             queen::WorldSerializer<8192> serializer;
-            serializer.Serialize(src, registry);
+            larvae::AssertTrue(serializer.Serialize(src, registry).m_success);
 
             queen::World dst;
             auto result = queen::WorldDeserializer::Deserialize(dst, registry, serializer.CStr());
@@ -269,10 +269,10 @@ namespace
             registry.Register<Health>();
 
             queen::World src;
-            src.Spawn(Pos{5.f, 10.f, 15.f}, Health{75, 100});
+            static_cast<void>(src.Spawn(Pos{5.f, 10.f, 15.f}, Health{75, 100}));
 
             queen::WorldSerializer<4096> serializer;
-            serializer.Serialize(src, registry);
+            larvae::AssertTrue(serializer.Serialize(src, registry).m_success);
 
             queen::World dst;
             queen::WorldDeserializer::Deserialize(dst, registry, serializer.CStr());
@@ -296,10 +296,10 @@ namespace
 
         queen::World src;
         queen::Entity target = src.Spawn(Pos{10.f, 20.f, 30.f});
-        src.Spawn(Pos{0.f, 0.f, 0.f}, Targeting{target, 5});
+        static_cast<void>(src.Spawn(Pos{0.f, 0.f, 0.f}, Targeting{target, 5}));
 
         queen::WorldSerializer<8192> serializer;
-        serializer.Serialize(src, registry);
+        larvae::AssertTrue(serializer.Serialize(src, registry).m_success);
 
         queen::World dst;
         auto result = queen::WorldDeserializer::Deserialize(dst, registry, serializer.CStr());
@@ -403,10 +403,10 @@ namespace
             full_registry.Register<Vel>();
 
             queen::World src;
-            src.Spawn(Pos{1.f, 2.f, 3.f}, Vel{0.1f, 0.2f, 0.3f});
+            static_cast<void>(src.Spawn(Pos{1.f, 2.f, 3.f}, Vel{0.1f, 0.2f, 0.3f}));
 
             queen::WorldSerializer<8192> serializer;
-            serializer.Serialize(src, full_registry);
+            larvae::AssertTrue(serializer.Serialize(src, full_registry).m_success);
 
             // Deserialize with partial registry (no Vel)
             queen::ComponentRegistry<32> partial_registry;
@@ -428,15 +428,15 @@ namespace
 
         // Pre-existing entity in destination
         queen::World dst;
-        dst.Spawn(Pos{99.f, 99.f, 99.f});
+        static_cast<void>(dst.Spawn(Pos{99.f, 99.f, 99.f}));
         larvae::AssertEqual(dst.EntityCount(), size_t{1});
 
         // Serialize source
         queen::World src;
-        src.Spawn(Pos{1.f, 2.f, 3.f});
+        static_cast<void>(src.Spawn(Pos{1.f, 2.f, 3.f}));
 
         queen::WorldSerializer<4096> serializer;
-        serializer.Serialize(src, registry);
+        larvae::AssertTrue(serializer.Serialize(src, registry).m_success);
 
         // Load additively
         auto result = queen::WorldDeserializer::Deserialize(dst, registry, serializer.CStr());
@@ -457,7 +457,7 @@ namespace
         // Register nothing — entity has no serializable components
 
         queen::World src;
-        src.Spawn(Pos{1.f, 0.f, 0.f}); // Pos is not registered
+        static_cast<void>(src.Spawn(Pos{1.f, 0.f, 0.f})); // Pos is not registered
 
         queen::WorldSerializer<4096> serializer;
         auto result = serializer.Serialize(src, registry);
@@ -474,11 +474,11 @@ namespace
             registry.Register<Health>();
 
             queen::World src;
-            src.Spawn(Pos{1.f, 0.f, 0.f}, Health{50, 100});
-            src.Spawn(Pos{2.f, 0.f, 0.f});
+            static_cast<void>(src.Spawn(Pos{1.f, 0.f, 0.f}, Health{50, 100}));
+            static_cast<void>(src.Spawn(Pos{2.f, 0.f, 0.f}));
 
             queen::WorldSerializer<8192> serializer;
-            serializer.Serialize(src, registry);
+            larvae::AssertTrue(serializer.Serialize(src, registry).m_success);
 
             queen::World dst;
             auto result = queen::WorldDeserializer::Deserialize(dst, registry, serializer.CStr());

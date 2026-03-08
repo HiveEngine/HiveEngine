@@ -14,6 +14,8 @@ option(terra_use_glfw OFF)
 
 add_library(Terra STATIC)
 
+hive_configure_target(Terra)
+
 target_include_directories(Terra
     PUBLIC
         include
@@ -32,6 +34,12 @@ target_precompile_headers(Terra
 
 if(terra_use_glfw STREQUAL "ON")
     add_subdirectory(extern/glfw SYSTEM)
+
+    if(MSVC)
+        target_compile_options(glfw PRIVATE /w)
+    else()
+        target_compile_options(glfw PRIVATE -w)
+    endif()
 
     target_link_libraries(Terra
         PUBLIC

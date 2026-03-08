@@ -238,7 +238,6 @@ namespace nectar
         wax::HashMap<PathKey, ErasedHandle, PathKeyHash> m_pathCache;
         wax::String m_basePath;
 
-        VirtualFilesystem* m_vfs{nullptr};
         IOScheduler* m_io{nullptr};
         uint32_t m_gcGraceFrames{0};
 

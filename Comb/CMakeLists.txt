@@ -8,6 +8,8 @@
 
 add_library(Comb STATIC)
 
+hive_configure_target(Comb)
+
 target_include_directories(Comb
     PUBLIC
         include

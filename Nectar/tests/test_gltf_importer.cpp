@@ -446,7 +446,6 @@ namespace
         auto result = importer.Import(GltfSpan(kTriangleGltf), settings, ctx);
         larvae::AssertTrue(result.m_success);
 
-        auto* header = reinterpret_cast<const nectar::NmshHeader*>(result.m_intermediateData.Data());
         auto* submeshes =
             reinterpret_cast<const nectar::SubMesh*>(result.m_intermediateData.Data() + sizeof(nectar::NmshHeader));
         larvae::AssertEqual(submeshes[0].m_materialIndex, int32_t{-1});

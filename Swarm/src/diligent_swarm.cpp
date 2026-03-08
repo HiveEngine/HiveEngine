@@ -12,8 +12,8 @@ namespace swarm
 {
     const hive::LogCategory LOG_DILIGENT{"Diligent", &LOG_SWARM};
 
-    void DiligentToHiveMessageCallback(Diligent::DEBUG_MESSAGE_SEVERITY severity, const Diligent::Char* message,
-                                       const Diligent::Char* function, const Diligent::Char* file, int line) {
+    static void DiligentToHiveMessageCallback(Diligent::DEBUG_MESSAGE_SEVERITY severity, const Diligent::Char* message,
+                                              const Diligent::Char* function, const Diligent::Char* file, int line) {
         switch (severity)
         {
             case Diligent::DEBUG_MESSAGE_SEVERITY_INFO:
@@ -25,6 +25,8 @@ namespace swarm
             case Diligent::DEBUG_MESSAGE_SEVERITY_ERROR:
             case Diligent::DEBUG_MESSAGE_SEVERITY_FATAL_ERROR:
                 hive::LogError(LOG_DILIGENT, message);
+                break;
+            default:
                 break;
         }
     }

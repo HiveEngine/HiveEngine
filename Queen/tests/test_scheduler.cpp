@@ -188,7 +188,7 @@ namespace
         comb::LinearAllocator alloc{262144};
         queen::World world{};
 
-        world.Spawn(Position{1.0f, 0.0f, 0.0f});
+        static_cast<void>(world.Spawn(Position{1.0f, 0.0f, 0.0f}));
 
         int count = 0;
 
@@ -260,7 +260,7 @@ namespace
         comb::LinearAllocator alloc{262144};
         queen::World world{};
 
-        world.Spawn(Position{1.0f, 0.0f, 0.0f});
+        static_cast<void>(world.Spawn(Position{1.0f, 0.0f, 0.0f}));
 
         int count = 0;
 
@@ -322,8 +322,8 @@ namespace
 
         world.System<queen::Read<Velocity>>("BranchB").Each([&](const Velocity&) { order_b = counter++; });
 
-        world.Spawn(Position{1.0f, 0.0f, 0.0f});
-        world.Spawn(Velocity{1.0f, 0.0f, 0.0f});
+        static_cast<void>(world.Spawn(Position{1.0f, 0.0f, 0.0f}));
+        static_cast<void>(world.Spawn(Velocity{1.0f, 0.0f, 0.0f}));
 
         world.Update();
 

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <string>
@@ -28,13 +29,25 @@ namespace larvae
         std::vector<std::string> m_selectedSuites;
 
         static std::filesystem::path GetConfigPath() {
-            const char* appdata = std::getenv("APPDATA");
-            if (appdata)
+    #if defined(_WIN32)
+            char* appdata = nullptr;
+            size_t appdataSize = 0;
+            if (_dupenv_s(&appdata, &appdataSize, "APPDATA") == 0 && appdata != nullptr)
+            {
+                auto path = std::filesystem::path{appdata} / "HiveEngine" / "larvae_runner_gui.cfg";
+                std::free(appdata);
+                std::filesystem::create_directories(path.parent_path());
+                return path;
+            }
+            std::free(appdata);
+    #else
+            if (const char* appdata = std::getenv("APPDATA"))
             {
                 auto path = std::filesystem::path{appdata} / "HiveEngine" / "larvae_runner_gui.cfg";
                 std::filesystem::create_directories(path.parent_path());
                 return path;
             }
+    #endif
             return "larvae_runner_gui.cfg";
         }
 
@@ -79,10 +92,7 @@ namespace larvae
             m_playlists.clear();
             m_selectedSuites.clear();
 
-            size_t suitesCount = 0;
-            size_t playlistsCount = 0;
             TestPlaylist currentPlaylist;
-            size_t patternsCount = 0;
             bool readingPlaylist = false;
 
             while (std::getline(file, line))
@@ -109,11 +119,11 @@ namespace larvae
                 else if (key == "window_height")
                     m_windowHeight = std::stof(value);
                 else if (key == "selected_suites_count")
-                    suitesCount = std::stoul(value);
+                    continue;
                 else if (key == "selected_suite")
                     m_selectedSuites.push_back(value);
                 else if (key == "playlists_count")
-                    playlistsCount = std::stoul(value);
+                    continue;
                 else if (key == "playlist_name")
                 {
                     if (readingPlaylist)
@@ -127,7 +137,7 @@ namespace larvae
                 else if (key == "playlist_enabled")
                     currentPlaylist.m_enabled = (value == "1");
                 else if (key == "playlist_patterns_count")
-                    patternsCount = std::stoul(value);
+                    continue;
                 else if (key == "playlist_pattern")
                     currentPlaylist.m_testPatterns.push_back(value);
             }

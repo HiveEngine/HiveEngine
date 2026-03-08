@@ -4,6 +4,8 @@
 
 add_library(Queen STATIC)
 
+hive_configure_target(Queen)
+
 target_sources(Queen
     PRIVATE
         src/queen/queen_module.cpp

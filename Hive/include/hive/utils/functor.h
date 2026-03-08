@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cstddef>
 #include <new>
+#include <tuple>
 
 namespace hive
 {
@@ -14,7 +15,7 @@ namespace hive
         static constexpr auto value = (std::max)({sizeof(Ts)...});
     };
 
-    template <class T> constexpr auto kMaxSizeof = MaxSizeof<T>::value;
+    template <class T> inline constexpr auto kMaxSizeof = MaxSizeof<T>::value;
 
     template <class> struct MaxAlignof;
 
@@ -23,7 +24,7 @@ namespace hive
         static constexpr auto value = (std::max)({alignof(Ts)...});
     };
 
-    template <class T> constexpr auto kMaxAlignof = MaxAlignof<T>::value;
+    template <class T> inline constexpr auto kMaxAlignof = MaxAlignof<T>::value;
 
     template <typename R, typename... Args> class Functor
     {

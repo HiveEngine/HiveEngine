@@ -11,6 +11,7 @@
 #include <brood/larvae_runner_config.h>
 #include <brood/process_runtime.h>
 #include <chrono>
+#include <ctime>
 #include <map>
 #include <mutex>
 #include <random>
@@ -181,15 +182,25 @@ namespace
         stats.m_avgDurationMs = stats.m_totalDurationMs / stats.m_totalRuns;
     }
 
+    std::string FormatLocalTime(const char* format) {
+        const auto now = std::chrono::system_clock::now();
+        const auto time = std::chrono::system_clock::to_time_t(now);
+        std::tm localTime{};
+
+#if defined(_WIN32)
+        localtime_s(&localTime, &time);
+#else
+        localtime_r(&time, &localTime);
+#endif
+
+        char buffer[64];
+        std::strftime(buffer, sizeof(buffer), format, &localTime);
+        return buffer;
+    }
+
     void AddRunToHistory() {
         RunHistoryEntry entry;
-
-        // Get current timestamp
-        auto now = std::chrono::system_clock::now();
-        auto time = std::chrono::system_clock::to_time_t(now);
-        char buffer[64];
-        std::strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", std::localtime(&time));
-        entry.m_timestamp = buffer;
+        entry.m_timestamp = FormatLocalTime("%Y-%m-%d %H:%M:%S");
 
         entry.m_totalTests = g_state.m_testsCompleted.load();
         entry.m_passed = g_state.m_testsPassed.load();
@@ -207,14 +218,6 @@ namespace
         {
             g_state.m_runHistory.erase(g_state.m_runHistory.begin());
         }
-    }
-
-    std::string GetCurrentTimestamp() {
-        auto now = std::chrono::system_clock::now();
-        auto time = std::chrono::system_clock::to_time_t(now);
-        char buffer[64];
-        std::strftime(buffer, sizeof(buffer), "%H:%M:%S", std::localtime(&time));
-        return buffer;
     }
 
     void RunSelectedTests() {
@@ -660,7 +663,6 @@ namespace
             else
             {
                 std::string label = suite + " (" + std::to_string(test_count) + ")";
-                bool prev_selected = suite_selected;
                 if (ImGui::Checkbox(label.c_str(), &suite_selected))
                 {
                     for (auto& [test_name, test_selected] : g_state.m_testSelection)

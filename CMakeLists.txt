@@ -25,6 +25,8 @@ endif()
 
 project(HiveEngine_Redo LANGUAGES CXX)
 
+include(CMakeParseArguments)
+
 # ============================================================================
 # Thread Configuration (must be before any subdirectory that uses Threads)
 # ============================================================================
@@ -125,226 +127,273 @@ set(swarm_use_vulkan ${HIVE_FEATURE_VULKAN} CACHE BOOL "Enable Vulkan GPU alloca
 set(terra_use_glfw ${HIVE_FEATURE_GLFW} CACHE BOOL "Enable GLFW windowing" FORCE)
 
 # ============================================================================
-# Compiler Flags - ALL PLATFORMS
+# Toolchain Policy
 # ============================================================================
 
-# Disable RTTI (Run-Time Type Information)
-# Saves 15-20% binary size, improves performance
-if(MSVC)
-    add_compile_options(/GR-)
-else()
-    add_compile_options(-fno-rtti)
+add_library(HiveToolchain_Base INTERFACE)
+add_library(HiveToolchain_Warnings INTERFACE)
+add_library(HiveToolchain_Config INTERFACE)
+add_library(HiveToolchain_FastMath INTERFACE)
+add_library(HiveToolchain_SIMD INTERFACE)
+add_library(HiveToolchain_Sanitizers INTERFACE)
+add_library(HiveToolchain_LTO INTERFACE)
+
+add_library(HiveFeature_Exception_On INTERFACE)
+add_library(HiveFeature_Exception_Off INTERFACE)
+add_library(HiveFeature_RTTI_On INTERFACE)
+add_library(HiveFeature_RTTI_Off INTERFACE)
+add_library(HiveFeature_WError INTERFACE)
+
+set(HIVE_COMPILER_IS_CLANG_CL OFF)
+if(MSVC AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    set(HIVE_COMPILER_IS_CLANG_CL ON)
 endif()
 
-# Disable C++ Exceptions
-# Saves 5-10% binary size, improves performance
-# WARNING: STL will call std::terminate on errors
 if(MSVC)
-    # Remove CMake's default /EHsc flag to avoid D9025 warning
-    string(REPLACE "/EHsc" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
-    add_compile_options(/EHs-c-)
-else()
-    add_compile_options(-fno-exceptions)
-endif()
-
-# ============================================================================
-# Compiler Flags
-# ============================================================================
-
-# MSVC and Clang-CL (both use MSVC-style command-line flags)
-if(MSVC)
-    set(HIVE_COMPILER_IS_CLANG_CL OFF)
-    if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-        set(HIVE_COMPILER_IS_CLANG_CL ON)
-    endif()
-
-    add_compile_options(
-            /permissive- /Zc:__cplusplus /Zc:inline /utf-8
-    )
-
+    target_compile_options(HiveToolchain_Base INTERFACE /permissive- /Zc:__cplusplus /Zc:inline /utf-8)
     if(NOT HIVE_COMPILER_IS_CLANG_CL)
-        add_compile_options(/MP /external:W0)
+        target_compile_options(HiveToolchain_Base INTERFACE /MP /external:W0)
     endif()
 
-    add_compile_options(
-            /W4                  # Warning level 4
-            /w14242              # Conversion, possible loss of data
-            /w14254              # Operator conversion, possible loss of data
-            /w14263              # Member function does not override
-            /w14265              # Class has virtual functions but no virtual destructor
-            /w14287              # Unsigned/negative constant mismatch
-            /w14296              # Expression is always constant
-            /w14640              # Thread-unsafe static member initialization
-            /wd4100              # Disable: unreferenced formal parameter (too noisy)
-            /wd4530              # Disable: C++ exception handler (from external headers with /EHs-c-)
+    target_compile_options(HiveToolchain_Warnings INTERFACE
+        /W4
+        /w14242
+        /w14254
+        /w14263
+        /w14265
+        /w14287
+        /w14296
+        /w14640
+        /wd4100
+        /wd4530
     )
 
     if(HIVE_COMPILER_IS_CLANG_CL)
-        add_compile_options(
-                -Wno-unsafe-buffer-usage
-                -Wno-unsafe-buffer-usage-in-libc-call
-                -Wno-c++98-compat
+        target_compile_options(HiveToolchain_Warnings INTERFACE
+            -Wno-unsafe-buffer-usage
+            -Wno-unsafe-buffer-usage-in-libc-call
+            -Wno-c++98-compat
         )
     endif()
 
-    if(HIVE_WARNINGS_AS_ERRORS)
-        add_compile_options(/WX)
-    endif()
+    target_compile_options(HiveToolchain_Config INTERFACE
+        "$<$<CONFIG:Debug>:/Od;/MDd;/Zi>"
+        "$<$<CONFIG:Release>:/O2;/Oi;/MD;/GS-;/Gy>"
+        "$<$<CONFIG:RelWithDebInfo>:/O2;/Zi;/MD>"
+        "$<$<CONFIG:Profile>:/O2;/Zi;/MD;/GS-;/Gy>"
+        "$<$<CONFIG:Retail>:/O2;/Oi;/MD;/GS-;/Gy>"
+    )
 
-    # Debug flags
-    if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-        add_compile_options(/Od /MDd /Zi)
-        add_compile_definitions(_DEBUG _ITERATOR_DEBUG_LEVEL=2)
-    endif()
+    target_compile_definitions(HiveToolchain_Config INTERFACE
+        "$<$<CONFIG:Debug>:_DEBUG;_ITERATOR_DEBUG_LEVEL=2>"
+        "$<$<CONFIG:Release>:NDEBUG;_ITERATOR_DEBUG_LEVEL=0>"
+        "$<$<CONFIG:RelWithDebInfo>:NDEBUG;_ITERATOR_DEBUG_LEVEL=1>"
+        "$<$<CONFIG:Profile>:NDEBUG;_ITERATOR_DEBUG_LEVEL=0>"
+        "$<$<CONFIG:Retail>:NDEBUG;_ITERATOR_DEBUG_LEVEL=0>"
+    )
 
-    # Release flags
-    if(CMAKE_BUILD_TYPE STREQUAL "Release")
-        add_compile_options(/O2 /Oi /MD /GS- /Gy)
-        add_compile_definitions(NDEBUG _ITERATOR_DEBUG_LEVEL=0)
+    target_compile_options(HiveFeature_Exception_Off INTERFACE /EHs-c-)
+    target_compile_options(HiveFeature_Exception_On INTERFACE /EHsc)
+    target_compile_options(HiveFeature_RTTI_Off INTERFACE /GR-)
+    target_compile_options(HiveFeature_RTTI_On INTERFACE /GR)
+    target_compile_options(HiveFeature_WError INTERFACE /WX)
 
-        if(HIVE_ENABLE_LTO)
-            add_compile_options(/GL)
-            add_link_options(/LTCG /OPT:REF /OPT:ICF)
-        endif()
-
-        if(HIVE_ENABLE_FAST_MATH)
-            add_compile_options(/fp:fast)
-        endif()
-    endif()
-
-    # RelWithDebInfo flags
-    if(CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
-        add_compile_options(/O2 /Zi /MD)
-        add_compile_definitions(NDEBUG _ITERATOR_DEBUG_LEVEL=1)
+    if(HIVE_ENABLE_FAST_MATH)
+        target_compile_options(HiveToolchain_FastMath INTERFACE /fp:fast)
     endif()
 
     if(HIVE_ENABLE_SIMD AND CMAKE_SIZEOF_VOID_P EQUAL 4)
-        add_compile_options(/arch:SSE2)
+        target_compile_options(HiveToolchain_SIMD INTERFACE /arch:SSE2)
     endif()
-
-endif()
-
-# GCC/Clang (not Clang-CL which uses MSVC flags above)
-if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang" AND NOT MSVC)
-    add_compile_options(
-            -Wall                    # Enable most warnings
-            -Wextra                  # Extra warnings
-            -Wpedantic               # Strict ISO C++
-            -Wshadow                 # Warn if variable shadows
-            -Wnon-virtual-dtor       # Virtual functions without virtual destructor
-            -Wold-style-cast         # C-style casts
-            -Wcast-align             # Unaligned pointer casts
-            -Wunused                 # Unused variables/functions
-            -Woverloaded-virtual     # Missing override
-            -Wconversion             # Implicit type conversions
-            -Wsign-conversion        # Sign conversions
-            -Wdouble-promotion       # float->double promotions
+else()
+    target_compile_options(HiveToolchain_Warnings INTERFACE
+        -Wall
+        -Wextra
+        -Wpedantic
+        -Wshadow
+        -Wnon-virtual-dtor
+        -Wold-style-cast
+        -Wcast-align
+        -Wunused
+        -Woverloaded-virtual
+        -Wconversion
+        -Wsign-conversion
+        -Wdouble-promotion
     )
 
-    if(HIVE_WARNINGS_AS_ERRORS)
-        add_compile_options(-Werror)
+    target_compile_options(HiveToolchain_Config INTERFACE
+        "$<$<CONFIG:Debug>:-O0;-g3>"
+        "$<$<CONFIG:Release>:-O3;-ffunction-sections;-fdata-sections>"
+        "$<$<CONFIG:RelWithDebInfo>:-O2;-g>"
+        "$<$<CONFIG:Profile>:-O2;-g;-fno-omit-frame-pointer>"
+        "$<$<CONFIG:Retail>:-O3;-ffunction-sections;-fdata-sections>"
+    )
+
+    target_compile_definitions(HiveToolchain_Config INTERFACE
+        "$<$<CONFIG:Debug>:_GLIBCXX_DEBUG>"
+    )
+
+    if(NOT WIN32)
+        target_link_options(HiveToolchain_Config INTERFACE
+            "$<$<OR:$<CONFIG:Release>,$<CONFIG:Retail>>:-Wl,--gc-sections>"
+        )
     endif()
 
-    # Debug flags
-    if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-        add_compile_options(-O0 -g3)
-        add_compile_definitions(_GLIBCXX_DEBUG)
+    target_compile_options(HiveFeature_Exception_Off INTERFACE -fno-exceptions)
+    target_compile_options(HiveFeature_Exception_On INTERFACE -fexceptions)
+    target_compile_options(HiveFeature_RTTI_Off INTERFACE -fno-rtti)
+    target_compile_options(HiveFeature_RTTI_On INTERFACE -frtti)
+    target_compile_options(HiveFeature_WError INTERFACE -Werror)
+
+    if(HIVE_ENABLE_FAST_MATH)
+        target_compile_options(HiveToolchain_FastMath INTERFACE -ffast-math)
     endif()
 
-    # Release flags
-    if(CMAKE_BUILD_TYPE STREQUAL "Release")
-        add_compile_options(-O3 -ffunction-sections -fdata-sections)
-
-        # Use --gc-sections only on Linux/macOS (not Windows where LLD doesn't support it)
-        if(NOT WIN32)
-            add_link_options(-Wl,--gc-sections)
-        endif()
-
-        if(HIVE_ENABLE_FAST_MATH)
-            add_compile_options(-ffast-math)
-        endif()
+    if(HIVE_ENABLE_SIMD)
+        target_compile_options(HiveToolchain_SIMD INTERFACE -msse2)
     endif()
 
-    # RelWithDebInfo flags
-    if(CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
-        add_compile_options(-O2 -g)
-    endif()
-
-    # Profile flags (Release with profiling)
-    if(CMAKE_BUILD_TYPE STREQUAL "Profile")
-        add_compile_options(-O2 -g -fno-omit-frame-pointer)
-    endif()
-
-    # Retail flags (Maximum optimization, no debug)
-    if(CMAKE_BUILD_TYPE STREQUAL "Retail")
-        add_compile_options(-O3 -ffunction-sections -fdata-sections)
-        if(NOT WIN32)
-            add_link_options(-Wl,--gc-sections)
-        endif()
-        if(HIVE_ENABLE_FAST_MATH)
-            add_compile_options(-ffast-math)
-        endif()
-    endif()
-
-    # Sanitizers (available in Debug)
-    if(CMAKE_BUILD_TYPE STREQUAL "Debug" AND HIVE_ENABLE_SANITIZERS)
-        add_compile_options(-fno-omit-frame-pointer -fno-optimize-sibling-calls)
+    if(HIVE_ENABLE_SANITIZERS)
+        target_compile_options(HiveToolchain_Sanitizers INTERFACE
+            "$<$<CONFIG:Debug>:-fno-omit-frame-pointer;-fno-optimize-sibling-calls>"
+        )
 
         if(HIVE_SANITIZER_TYPE STREQUAL "Address")
-            add_compile_options(-fsanitize=address)
-            add_link_options(-fsanitize=address)
-            message(STATUS "AddressSanitizer enabled")
+            target_compile_options(HiveToolchain_Sanitizers INTERFACE "$<$<CONFIG:Debug>:-fsanitize=address>")
+            target_link_options(HiveToolchain_Sanitizers INTERFACE "$<$<CONFIG:Debug>:-fsanitize=address>")
+            message(STATUS "AddressSanitizer enabled for Debug builds")
         elseif(HIVE_SANITIZER_TYPE STREQUAL "UndefinedBehavior")
             if(WIN32)
-                add_compile_options(-fsanitize=undefined -fno-sanitize=alignment,function,vptr)
-                add_link_options(-fsanitize=undefined -fno-sanitize=alignment,function,vptr)
+                target_compile_options(HiveToolchain_Sanitizers INTERFACE
+                    "$<$<CONFIG:Debug>:-fsanitize=undefined;-fno-sanitize=alignment,function,vptr>"
+                )
+                target_link_options(HiveToolchain_Sanitizers INTERFACE
+                    "$<$<CONFIG:Debug>:-fsanitize=undefined;-fno-sanitize=alignment,function,vptr>"
+                )
             else()
-                add_compile_options(-fsanitize=undefined)
-                add_link_options(-fsanitize=undefined)
+                target_compile_options(HiveToolchain_Sanitizers INTERFACE "$<$<CONFIG:Debug>:-fsanitize=undefined>")
+                target_link_options(HiveToolchain_Sanitizers INTERFACE "$<$<CONFIG:Debug>:-fsanitize=undefined>")
             endif()
-            message(STATUS "UndefinedBehaviorSanitizer enabled")
+            message(STATUS "UndefinedBehaviorSanitizer enabled for Debug builds")
         elseif(HIVE_SANITIZER_TYPE STREQUAL "Thread")
-            add_compile_options(-fsanitize=thread)
-            add_link_options(-fsanitize=thread)
-            message(STATUS "ThreadSanitizer enabled")
+            target_compile_options(HiveToolchain_Sanitizers INTERFACE "$<$<CONFIG:Debug>:-fsanitize=thread>")
+            target_link_options(HiveToolchain_Sanitizers INTERFACE "$<$<CONFIG:Debug>:-fsanitize=thread>")
+            message(STATUS "ThreadSanitizer enabled for Debug builds")
         elseif(HIVE_SANITIZER_TYPE STREQUAL "Memory")
             if(CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND NOT WIN32)
-                add_compile_options(-fsanitize=memory -fsanitize-memory-track-origins)
-                add_link_options(-fsanitize=memory)
-                message(STATUS "MemorySanitizer enabled")
+                target_compile_options(HiveToolchain_Sanitizers INTERFACE
+                    "$<$<CONFIG:Debug>:-fsanitize=memory;-fsanitize-memory-track-origins>"
+                )
+                target_link_options(HiveToolchain_Sanitizers INTERFACE "$<$<CONFIG:Debug>:-fsanitize=memory>")
+                message(STATUS "MemorySanitizer enabled for Debug builds")
             else()
                 message(WARNING "MemorySanitizer only available with Clang on Linux/macOS")
             endif()
         endif()
     endif()
-
-    if(HIVE_ENABLE_SIMD)
-        add_compile_options(-msse2)
-    endif()
 endif()
 
-if(HIVE_ENABLE_LTO AND NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
-    # For Clang on Windows, manually enable LTO via compile flags
-    # check_ipo_supported() has issues with custom Clang builds
+set(HIVE_IPO_SUPPORTED OFF)
+if(HIVE_ENABLE_LTO)
     if(CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND WIN32)
-        add_compile_options($<$<CONFIG:Release>:-flto=thin>)
-        add_compile_options($<$<CONFIG:RelWithDebInfo>:-flto=thin>)
-        add_link_options($<$<CONFIG:Release>:-flto=thin>)
-        add_link_options($<$<CONFIG:RelWithDebInfo>:-flto=thin>)
-        message(STATUS "LTO enabled for Release builds (Clang thin LTO)")
+        target_compile_options(HiveToolchain_LTO INTERFACE
+            "$<$<OR:$<CONFIG:Release>,$<CONFIG:RelWithDebInfo>,$<CONFIG:Profile>,$<CONFIG:Retail>>:-flto=thin>"
+        )
+        target_link_options(HiveToolchain_LTO INTERFACE
+            "$<$<OR:$<CONFIG:Release>,$<CONFIG:RelWithDebInfo>,$<CONFIG:Profile>,$<CONFIG:Retail>>:-flto=thin>"
+        )
+        message(STATUS "LTO enabled for optimized builds (Clang thin LTO)")
     else()
         include(CheckIPOSupported)
-        check_ipo_supported(RESULT ipo_supported OUTPUT ipo_output)
-
-        if(ipo_supported)
-            set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_RELEASE ON)
-            set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_RELWITHDEBINFO ON)
-            message(STATUS "LTO/IPO enabled for Release builds")
+        check_ipo_supported(RESULT HIVE_IPO_SUPPORTED OUTPUT HIVE_IPO_OUTPUT)
+        if(HIVE_IPO_SUPPORTED)
+            message(STATUS "LTO/IPO enabled for optimized builds")
         else()
-            message(WARNING "LTO/IPO not supported: ${ipo_output}")
+            message(WARNING "LTO/IPO not supported: ${HIVE_IPO_OUTPUT}")
         endif()
     endif()
 endif()
+
+function(hive_get_target_scope out_var target)
+    if(NOT TARGET ${target})
+        message(FATAL_ERROR "Unknown target '${target}'")
+    endif()
+
+    get_target_property(_type ${target} TYPE)
+    if(_type STREQUAL "INTERFACE_LIBRARY")
+        set(${out_var} INTERFACE PARENT_SCOPE)
+    else()
+        set(${out_var} PRIVATE PARENT_SCOPE)
+    endif()
+endfunction()
+
+function(hive_configure_target target)
+    set(options NO_WARNINGS)
+    set(oneValueArgs RTTI EXCEPTIONS)
+    cmake_parse_arguments(HIVE_CFG "${options}" "${oneValueArgs}" "" ${ARGN})
+
+    if(NOT HIVE_CFG_RTTI)
+        set(HIVE_CFG_RTTI OFF)
+    endif()
+
+    if(NOT HIVE_CFG_EXCEPTIONS)
+        set(HIVE_CFG_EXCEPTIONS OFF)
+    endif()
+
+    hive_get_target_scope(_scope ${target})
+
+    target_link_libraries(${target} ${_scope}
+        HiveToolchain_Base
+        HiveToolchain_Config
+    )
+
+    if(NOT HIVE_CFG_NO_WARNINGS)
+        target_link_libraries(${target} ${_scope} HiveToolchain_Warnings)
+        if(HIVE_WARNINGS_AS_ERRORS)
+            target_link_libraries(${target} ${_scope} HiveFeature_WError)
+        endif()
+    endif()
+
+    if(HIVE_ENABLE_FAST_MATH)
+        target_link_libraries(${target} ${_scope} HiveToolchain_FastMath)
+    endif()
+
+    if(HIVE_ENABLE_SIMD)
+        target_link_libraries(${target} ${_scope} HiveToolchain_SIMD)
+    endif()
+
+    if(HIVE_ENABLE_SANITIZERS)
+        target_link_libraries(${target} ${_scope} HiveToolchain_Sanitizers)
+    endif()
+
+    if(HIVE_ENABLE_LTO AND CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND WIN32)
+        target_link_libraries(${target} ${_scope} HiveToolchain_LTO)
+    endif()
+
+    if(HIVE_CFG_EXCEPTIONS STREQUAL "ON")
+        target_link_libraries(${target} ${_scope} HiveFeature_Exception_On)
+    elseif(HIVE_CFG_EXCEPTIONS STREQUAL "OFF")
+        target_link_libraries(${target} ${_scope} HiveFeature_Exception_Off)
+    else()
+        message(FATAL_ERROR "hive_configure_target(${target}): EXCEPTIONS must be ON or OFF")
+    endif()
+
+    if(HIVE_CFG_RTTI STREQUAL "ON")
+        target_link_libraries(${target} ${_scope} HiveFeature_RTTI_On)
+    elseif(HIVE_CFG_RTTI STREQUAL "OFF")
+        target_link_libraries(${target} ${_scope} HiveFeature_RTTI_Off)
+    else()
+        message(FATAL_ERROR "hive_configure_target(${target}): RTTI must be ON or OFF")
+    endif()
+
+    get_target_property(_type ${target} TYPE)
+    if(HIVE_ENABLE_LTO AND HIVE_IPO_SUPPORTED AND NOT _type STREQUAL "INTERFACE_LIBRARY")
+        set_property(TARGET ${target} PROPERTY INTERPROCEDURAL_OPTIMIZATION_RELEASE ON)
+        set_property(TARGET ${target} PROPERTY INTERPROCEDURAL_OPTIMIZATION_RELWITHDEBINFO ON)
+        set_property(TARGET ${target} PROPERTY INTERPROCEDURAL_OPTIMIZATION_PROFILE ON)
+        set_property(TARGET ${target} PROPERTY INTERPROCEDURAL_OPTIMIZATION_RETAIL ON)
+    endif()
+endfunction()
 
 # Platform detection
 if(WIN32)
@@ -360,18 +409,13 @@ endif()
 # ============================================================================
 
 # Build configuration
-if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-    add_compile_definitions(HIVE_CONFIG_DEBUG=1)
-elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
-    add_compile_definitions(HIVE_CONFIG_RELEASE=1)
-elseif(CMAKE_BUILD_TYPE STREQUAL "Profile")
-    add_compile_definitions(HIVE_CONFIG_PROFILE=1)
-elseif(CMAKE_BUILD_TYPE STREQUAL "Retail")
-    add_compile_definitions(HIVE_CONFIG_RETAIL=1)
-else()
-    # Default/RelWithDebInfo -> Release
-    add_compile_definitions(HIVE_CONFIG_RELEASE=1)
-endif()
+add_compile_definitions(
+    $<$<CONFIG:Debug>:HIVE_CONFIG_DEBUG=1>
+    $<$<CONFIG:Release>:HIVE_CONFIG_RELEASE=1>
+    $<$<CONFIG:RelWithDebInfo>:HIVE_CONFIG_RELEASE=1>
+    $<$<CONFIG:Profile>:HIVE_CONFIG_PROFILE=1>
+    $<$<CONFIG:Retail>:HIVE_CONFIG_RETAIL=1>
+)
 
 # Engine mode
 if(HIVE_ENGINE_MODE STREQUAL "Editor")

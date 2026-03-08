@@ -4,6 +4,8 @@
 
 add_library(Waggle STATIC)
 
+hive_configure_target(Waggle)
+
 target_sources(Waggle
     PRIVATE
         src/waggle/app.cpp
