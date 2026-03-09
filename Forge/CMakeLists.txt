@@ -112,6 +112,12 @@ target_link_libraries(Forge
         glfw
 )
 
+# Fontconfig for system font resolution on Linux
+if(UNIX AND NOT APPLE)
+    find_package(Fontconfig REQUIRED)
+    target_link_libraries(Forge PRIVATE Fontconfig::Fontconfig)
+endif()
+
 # Vulkan: volk + Vulkan-Headers for imgui_impl_vulkan and imgui_integration
 if(HIVE_FEATURE_VULKAN)
     target_link_libraries(Forge PRIVATE volk::volk Vulkan::Headers)

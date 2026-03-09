@@ -43,6 +43,7 @@
 #define NOMINMAX
 #endif
 #include <Windows.h>
+#include <shobjidl.h>
 #endif
 
 #include <algorithm>
@@ -66,10 +67,25 @@ namespace
     constexpr size_t kPathBufferSize = 1024;
     constexpr size_t kNameBufferSize = 128;
     constexpr size_t kVersionBufferSize = 32;
+
     enum class LauncherHubPage
     {
         HUB_OPEN_EXISTING,
         HUB_CREATE_NEW,
+    };
+
+    enum class NativePathPickerMode
+    {
+        PROJECT_FILE,
+        DIRECTORY,
+    };
+
+    enum class NativePathPickerResult
+    {
+        SUCCESS,
+        CANCELLED,
+        UNAVAILABLE,
+        FAILED,
     };
 
 #if HIVE_PLATFORM_WINDOWS
@@ -554,6 +570,273 @@ namespace
 
         return std::filesystem::path{createDirectory} / projectName;
     }
+
+    std::filesystem::path GetPickerSeedDirectory(const char* rawPath)
+    {
+        const std::string value = TrimmedCopy(rawPath);
+        if (value.empty())
+        {
+            return {};
+        }
+
+        std::error_code ec;
+        const std::filesystem::path candidate{value};
+        if (std::filesystem::exists(candidate, ec) && !ec)
+        {
+            if (std::filesystem::is_directory(candidate, ec) && !ec)
+            {
+                return candidate;
+            }
+            return candidate.parent_path();
+        }
+
+        return candidate.parent_path();
+    }
+
+#if HIVE_PLATFORM_WINDOWS
+    class ScopedComApartment
+    {
+    public:
+        ScopedComApartment() : m_result(CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE))
+        {
+        }
+
+        ~ScopedComApartment()
+        {
+            if (SUCCEEDED(m_result))
+            {
+                CoUninitialize();
+            }
+        }
+
+        bool IsReady() const
+        {
+            return SUCCEEDED(m_result) || m_result == RPC_E_CHANGED_MODE;
+        }
+
+    private:
+        HRESULT m_result;
+    };
+
+    template <typename T>
+    class ScopedComPtr
+    {
+    public:
+        ScopedComPtr() = default;
+
+        ~ScopedComPtr()
+        {
+            Reset();
+        }
+
+        T* Get() const
+        {
+            return m_ptr;
+        }
+
+        T** Put()
+        {
+            Reset();
+            return &m_ptr;
+        }
+
+        T* operator->() const
+        {
+            return m_ptr;
+        }
+
+        void Reset()
+        {
+            if (m_ptr != nullptr)
+            {
+                m_ptr->Release();
+                m_ptr = nullptr;
+            }
+        }
+
+    private:
+        T* m_ptr{nullptr};
+    };
+
+    void SetNativeDialogInitialDirectory(IFileDialog* dialog, const std::filesystem::path& seedDirectory)
+    {
+        if (seedDirectory.empty())
+        {
+            return;
+        }
+
+        const std::wstring folder = seedDirectory.wstring();
+        ScopedComPtr<IShellItem> shellFolder{};
+        if (SUCCEEDED(SHCreateItemFromParsingName(folder.c_str(), nullptr, IID_PPV_ARGS(shellFolder.Put()))))
+        {
+            dialog->SetDefaultFolder(shellFolder.Get());
+            dialog->SetFolder(shellFolder.Get());
+        }
+    }
+#endif
+
+#if !HIVE_PLATFORM_WINDOWS
+    std::string QuoteShellArgument(const std::string& value)
+    {
+        std::string escaped{"'"};
+        for (const char ch : value)
+        {
+            if (ch == '\'')
+            {
+                escaped += "'\"'\"'";
+            }
+            else
+            {
+                escaped.push_back(ch);
+            }
+        }
+        escaped.push_back('\'');
+        return escaped;
+    }
+
+    bool RunShellDialogCommand(const std::string& command, std::string* output)
+    {
+        FILE* pipe = popen(command.c_str(), "r");
+        if (pipe == nullptr)
+        {
+            return false;
+        }
+
+        std::string result;
+        char buffer[512];
+        while (std::fgets(buffer, static_cast<int>(sizeof(buffer)), pipe) != nullptr)
+        {
+            result += buffer;
+        }
+
+        const int status = pclose(pipe);
+        while (!result.empty() && (result.back() == '\n' || result.back() == '\r'))
+        {
+            result.pop_back();
+        }
+
+        if (status != 0 || result.empty())
+        {
+            return false;
+        }
+
+        *output = result;
+        return true;
+    }
+#endif
+
+    NativePathPickerResult ShowNativePathPicker(NativePathPickerMode mode, const std::filesystem::path& seedDirectory,
+                                                std::filesystem::path* selectedPath)
+    {
+#if HIVE_PLATFORM_WINDOWS
+        ScopedComApartment apartment{};
+        if (!apartment.IsReady())
+        {
+            return NativePathPickerResult::UNAVAILABLE;
+        }
+
+        ScopedComPtr<IFileOpenDialog> dialog{};
+        HRESULT hr = CoCreateInstance(CLSID_FileOpenDialog, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(dialog.Put()));
+        if (FAILED(hr))
+        {
+            return NativePathPickerResult::FAILED;
+        }
+
+        DWORD options = 0;
+        if (FAILED(dialog->GetOptions(&options)))
+        {
+            return NativePathPickerResult::FAILED;
+        }
+
+        options |= FOS_FORCEFILESYSTEM | FOS_PATHMUSTEXIST | FOS_NOCHANGEDIR;
+        if (mode == NativePathPickerMode::DIRECTORY)
+        {
+            options |= FOS_PICKFOLDERS;
+            dialog->SetTitle(L"Select Project Directory");
+        }
+        else
+        {
+            dialog->SetTitle(L"Select Hive Project");
+            const COMDLG_FILTERSPEC filters[] = {
+                {L"Hive Project", L"project.hive"},
+                {L"Hive Project Files", L"*.hive"},
+                {L"All Files", L"*.*"},
+            };
+            dialog->SetFileTypes(static_cast<UINT>(std::size(filters)), filters);
+            dialog->SetFileTypeIndex(1);
+        }
+
+        if (FAILED(dialog->SetOptions(options)))
+        {
+            return NativePathPickerResult::FAILED;
+        }
+
+        SetNativeDialogInitialDirectory(dialog.Get(), seedDirectory);
+
+        hr = dialog->Show(nullptr);
+        if (hr == HRESULT_FROM_WIN32(ERROR_CANCELLED))
+        {
+            return NativePathPickerResult::CANCELLED;
+        }
+
+        if (FAILED(hr))
+        {
+            return NativePathPickerResult::FAILED;
+        }
+
+        ScopedComPtr<IShellItem> result{};
+        if (FAILED(dialog->GetResult(result.Put())))
+        {
+            return NativePathPickerResult::FAILED;
+        }
+
+        PWSTR rawPath = nullptr;
+        hr = result->GetDisplayName(SIGDN_FILESYSPATH, &rawPath);
+        if (FAILED(hr) || rawPath == nullptr)
+        {
+            return NativePathPickerResult::FAILED;
+        }
+
+        *selectedPath = std::filesystem::path{rawPath};
+        CoTaskMemFree(rawPath);
+        return NativePathPickerResult::SUCCESS;
+#else
+        const std::string title =
+            mode == NativePathPickerMode::DIRECTORY ? "Select Project Directory" : "Select Hive Project";
+        const std::string seed =
+            (seedDirectory.empty() ? GetHomeDirectory() : seedDirectory).generic_string();
+
+        std::string selected{};
+        std::string zenityCommand = "zenity --file-selection ";
+        if (mode == NativePathPickerMode::DIRECTORY)
+        {
+            zenityCommand += "--directory ";
+        }
+        zenityCommand += "--title=" + QuoteShellArgument(title) + " ";
+        if (!seed.empty())
+        {
+            zenityCommand += "--filename=" + QuoteShellArgument(seed) + " ";
+        }
+
+        if (RunShellDialogCommand(zenityCommand, &selected))
+        {
+            *selectedPath = std::filesystem::path{selected};
+            return NativePathPickerResult::SUCCESS;
+        }
+
+        std::string kdialogCommand = mode == NativePathPickerMode::DIRECTORY
+                                         ? "kdialog --getexistingdirectory " + QuoteShellArgument(seed)
+                                         : "kdialog --getopenfilename " + QuoteShellArgument(seed) + " " +
+                                               QuoteShellArgument("*.hive|Hive Project");
+        if (RunShellDialogCommand(kdialogCommand, &selected))
+        {
+            *selectedPath = std::filesystem::path{selected};
+            return NativePathPickerResult::SUCCESS;
+        }
+
+        return NativePathPickerResult::UNAVAILABLE;
+#endif
+    }
 #endif
 
     void EnsureEditorProjectViewport(waggle::EngineContext& ctx, LauncherState& state)
@@ -964,14 +1247,25 @@ namespace
         return ImVec2{lhs.x + rhs.x, lhs.y + rhs.y};
     }
 
+    std::string CompactPathForUi(const std::string& value, size_t maxChars)
+    {
+        if (value.size() <= maxChars || maxChars < 8)
+        {
+            return value;
+        }
+
+        const size_t tailChars = maxChars - 3;
+        return "..." + value.substr(value.size() - tailChars);
+    }
+
     ImFont* GetHubHeadingFont()
     {
         ImGuiIO& io = ImGui::GetIO();
         return io.Fonts->Fonts.Size > 1 ? io.Fonts->Fonts[1] : ImGui::GetFont();
     }
 
-    bool DrawHubCard(const char* id, const ImVec2& size, const ImVec4& accent, bool selected, const char* eyebrow,
-                     const char* title, const char* body)
+    bool DrawHubSidebarItem(const char* id, const ImVec2& size, const ImVec4& accent, bool selected,
+                            const char* eyebrow, const char* title, const char* body)
     {
         ImGui::PushID(id);
         const ImVec2 pos = ImGui::GetCursorScreenPos();
@@ -980,25 +1274,28 @@ namespace
         const bool hovered = ImGui::IsItemHovered();
         const bool clicked = ImGui::IsItemClicked();
         ImDrawList* drawList = ImGui::GetWindowDrawList();
-        const float rounding = 26.0f;
+        const float rounding = 14.0f;
 
-        const ImU32 background = selected ? ToU32(0.10f, 0.16f, 0.24f, 0.94f) : ToU32(0.05f, 0.08f, 0.14f, 0.88f);
-        const ImU32 border = hovered || selected ? ImGui::ColorConvertFloat4ToU32(accent)
-                                                 : ToU32(0.21f, 0.30f, 0.42f, 0.75f);
-
+        const ImU32 background = selected ? ToU32(0.050f, 0.053f, 0.058f, 0.995f)
+                                          : ToU32(0.036f, 0.038f, 0.042f, hovered ? 0.99f : 0.975f);
+        const ImU32 border = selected ? ImGui::ColorConvertFloat4ToU32(ImVec4{accent.x, accent.y, accent.z, 0.72f})
+                                      : hovered ? ToU32(0.13f, 0.14f, 0.17f, 0.98f)
+                                                : ToU32(0.08f, 0.09f, 0.11f, 0.98f);
+        const ImU32 accentFill =
+            ImGui::ColorConvertFloat4ToU32(ImVec4{accent.x, accent.y, accent.z, selected ? 0.82f : 0.54f});
         drawList->AddRectFilled(pos, AddVec2(pos, size), background, rounding);
         drawList->AddRect(pos, AddVec2(pos, size), border, rounding, 0, selected ? 2.0f : 1.0f);
-        drawList->AddRectFilled(AddVec2(pos, ImVec2{18.0f, 18.0f}), AddVec2(pos, ImVec2{76.0f, 24.0f}),
-                                ImGui::ColorConvertFloat4ToU32(ImVec4{accent.x, accent.y, accent.z, 0.85f}), 3.0f);
+        drawList->AddRectFilled(AddVec2(pos, ImVec2{14.0f, 14.0f}), AddVec2(pos, ImVec2{18.0f, size.y - 14.0f}),
+                                accentFill, 3.0f);
 
         ImFont* headingFont = GetHubHeadingFont();
-        drawList->AddText(ImGui::GetFont(), 14.0f, AddVec2(pos, ImVec2{18.0f, 34.0f}),
-                          ToU32(0.59f, 0.71f, 0.86f, 0.92f),
+        drawList->AddText(ImGui::GetFont(), 10.5f, AddVec2(pos, ImVec2{32.0f, 18.0f}),
+                          ToU32(0.34f, 0.36f, 0.41f, 1.0f),
                           eyebrow);
-        drawList->AddText(headingFont, 22.0f, AddVec2(pos, ImVec2{18.0f, 58.0f}), ToU32(0.96f, 0.98f, 1.00f),
+        drawList->AddText(headingFont, 15.0f, AddVec2(pos, ImVec2{32.0f, 34.0f}), ToU32(0.86f, 0.88f, 0.91f),
                           title);
-        drawList->AddText(ImGui::GetFont(), 15.0f, AddVec2(pos, ImVec2{18.0f, 92.0f}),
-                          ToU32(0.66f, 0.73f, 0.84f, 0.92f),
+        drawList->AddText(ImGui::GetFont(), 12.0f, AddVec2(pos, ImVec2{32.0f, 56.0f}),
+                          ToU32(0.44f, 0.47f, 0.52f, 1.0f),
                           body);
 
         ImGui::PopID();
@@ -1009,20 +1306,21 @@ namespace
     {
         ImGui::PushID(id);
         const ImVec2 textSize = ImGui::CalcTextSize(label);
-        const ImVec2 size{textSize.x + 28.0f, 34.0f};
+        const ImVec2 size{textSize.x + 34.0f, 36.0f};
         const ImVec2 pos = ImGui::GetCursorScreenPos();
         ImGui::InvisibleButton("chip", size);
         const bool hovered = ImGui::IsItemHovered();
         const bool clicked = ImGui::IsItemClicked();
         ImDrawList* drawList = ImGui::GetWindowDrawList();
-        const ImU32 fill = active ? ImGui::ColorConvertFloat4ToU32(ImVec4{accent.x, accent.y, accent.z, 0.22f})
-                                  : ToU32(0.08f, 0.10f, 0.16f, hovered ? 0.95f : 0.82f);
-        const ImU32 border = active ? ImGui::ColorConvertFloat4ToU32(ImVec4{accent.x, accent.y, accent.z, 0.95f})
-                                    : ToU32(0.24f, 0.29f, 0.38f, 0.78f);
-        const ImU32 text = active ? ToU32(0.93f, 0.97f, 1.0f) : ToU32(0.71f, 0.78f, 0.88f);
-        drawList->AddRectFilled(pos, AddVec2(pos, size), fill, 17.0f);
-        drawList->AddRect(pos, AddVec2(pos, size), border, 17.0f, 0, active ? 2.0f : 1.0f);
-        drawList->AddText(AddVec2(pos, ImVec2{14.0f, 9.0f}), text, label);
+        const ImU32 fill = active ? ImGui::ColorConvertFloat4ToU32(ImVec4{accent.x, accent.y, accent.z, 0.12f})
+                                  : ToU32(0.027f, 0.029f, 0.033f, hovered ? 0.995f : 0.985f);
+        const ImU32 border = active ? ImGui::ColorConvertFloat4ToU32(ImVec4{accent.x, accent.y, accent.z, 0.76f})
+                                    : hovered ? ToU32(0.11f, 0.12f, 0.15f, 0.98f)
+                                              : ToU32(0.07f, 0.08f, 0.10f, 0.98f);
+        const ImU32 text = active ? ToU32(0.86f, 0.88f, 0.91f) : ToU32(0.47f, 0.50f, 0.55f);
+        drawList->AddRectFilled(pos, AddVec2(pos, size), fill, 18.0f);
+        drawList->AddRect(pos, AddVec2(pos, size), border, 18.0f, 0, active ? 2.0f : 1.0f);
+        drawList->AddText(AddVec2(pos, ImVec2{17.0f, 10.0f}), text, label);
         ImGui::PopID();
         return clicked;
     }
@@ -1030,20 +1328,22 @@ namespace
     bool DrawHubActionButton(const char* id, const char* label, float width, bool primary)
     {
         ImGui::PushID(id);
-        const ImVec2 size{width, 46.0f};
+        const ImVec2 size{width, 44.0f};
         const ImVec2 pos = ImGui::GetCursorScreenPos();
         ImGui::InvisibleButton("action", size);
         const bool hovered = ImGui::IsItemHovered();
         const bool clicked = ImGui::IsItemClicked();
         ImDrawList* drawList = ImGui::GetWindowDrawList();
-        const ImU32 fill =
-            primary ? ToU32(0.16f, 0.47f, 0.90f, hovered ? 1.0f : 0.92f) : ToU32(0.06f, 0.09f, 0.14f, hovered ? 0.96f : 0.86f);
-        const ImU32 border = primary ? ToU32(0.49f, 0.73f, 1.0f, 0.95f) : ToU32(0.24f, 0.29f, 0.38f, 0.78f);
-        drawList->AddRectFilled(pos, AddVec2(pos, size), fill, 18.0f);
-        drawList->AddRect(pos, AddVec2(pos, size), border, 18.0f, 0, 1.4f);
+        const ImU32 fill = primary ? ToU32(0.11f, 0.14f, 0.18f, hovered ? 0.995f : 0.975f)
+                                   : ToU32(0.027f, 0.029f, 0.033f, hovered ? 0.995f : 0.985f);
+        const ImU32 border = primary ? ToU32(0.29f, 0.34f, 0.40f, 0.98f)
+                                     : hovered ? ToU32(0.11f, 0.12f, 0.15f, 0.98f)
+                                               : ToU32(0.07f, 0.08f, 0.10f, 0.98f);
+        drawList->AddRectFilled(pos, AddVec2(pos, size), fill, 16.0f);
+        drawList->AddRect(pos, AddVec2(pos, size), border, 16.0f, 0, primary ? 1.8f : 1.0f);
         const ImVec2 textSize = ImGui::CalcTextSize(label);
         drawList->AddText(AddVec2(pos, ImVec2{(size.x - textSize.x) * 0.5f, (size.y - textSize.y) * 0.5f}),
-                          primary ? ToU32(0.98f, 0.99f, 1.0f) : ToU32(0.79f, 0.86f, 0.95f), label);
+                          primary ? ToU32(0.87f, 0.89f, 0.92f) : ToU32(0.50f, 0.53f, 0.58f), label);
         ImGui::PopID();
         return clicked;
     }
@@ -1051,24 +1351,38 @@ namespace
     bool DrawDiscoveredProjectCard(const LauncherDiscoveredProject& project, float width)
     {
         ImGui::PushID(project.m_path.c_str());
-        const ImVec2 size{width, 86.0f};
+        const ImVec2 size{width, 62.0f};
         const ImVec2 pos = ImGui::GetCursorScreenPos();
+        const std::string projectDirectory = std::filesystem::path{project.m_path}.parent_path().generic_string();
+        const std::string compactDirectory = CompactPathForUi(projectDirectory, 48);
         ImGui::InvisibleButton("project", size);
         const bool hovered = ImGui::IsItemHovered();
         const bool clicked = ImGui::IsItemClicked();
         ImDrawList* drawList = ImGui::GetWindowDrawList();
-        drawList->AddRectFilled(pos, AddVec2(pos, size), ToU32(0.05f, 0.08f, 0.13f, hovered ? 0.94f : 0.82f),
-                                22.0f);
-        drawList->AddRect(pos, AddVec2(pos, size), ToU32(0.24f, 0.29f, 0.38f, hovered ? 0.94f : 0.74f), 22.0f);
+        drawList->AddRectFilled(pos, AddVec2(pos, size), ToU32(0.028f, 0.030f, 0.034f, hovered ? 0.995f : 0.985f), 10.0f);
+        drawList->AddRect(pos, AddVec2(pos, size),
+                          hovered ? ToU32(0.12f, 0.14f, 0.17f, 0.98f) : ToU32(0.07f, 0.08f, 0.10f, 0.98f), 10.0f);
+        drawList->AddRectFilled(AddVec2(pos, ImVec2{16.0f, 12.0f}), AddVec2(pos, ImVec2{19.0f, size.y - 12.0f}),
+                                ToU32(0.39f, 0.49f, 0.61f, hovered ? 0.88f : 0.74f), 2.0f);
+
+        const float textX = 30.0f;
+        const float titleY = 12.0f;
+        const float pathY = 34.0f;
+        const ImVec2 versionSize = ImGui::CalcTextSize(project.m_version.c_str());
+        const float versionX = size.x - versionSize.x - 16.0f;
+
         if (project.m_isCurrentDirectory)
         {
-            drawList->AddRectFilled(AddVec2(pos, ImVec2{18.0f, 16.0f}), AddVec2(pos, ImVec2{138.0f, 40.0f}),
-                                    ToU32(0.20f, 0.54f, 0.35f, 0.24f), 12.0f);
-            drawList->AddText(AddVec2(pos, ImVec2{30.0f, 22.0f}), ToU32(0.78f, 0.96f, 0.83f), "CURRENT FOLDER");
+            const ImVec2 badgeMin = AddVec2(pos, ImVec2{size.x - 132.0f, 8.0f});
+            const ImVec2 badgeMax = AddVec2(pos, ImVec2{size.x - 14.0f, 27.0f});
+            drawList->AddRectFilled(badgeMin, badgeMax, ToU32(0.052f, 0.055f, 0.061f, 0.995f), 9.0f);
+            drawList->AddText(AddVec2(pos, ImVec2{size.x - 118.0f, 12.0f}), ToU32(0.53f, 0.58f, 0.64f), "CURRENT FOLDER");
         }
-        drawList->AddText(GetHubHeadingFont(), 20.0f, AddVec2(pos, ImVec2{18.0f, 42.0f}), ToU32(0.95f, 0.98f, 1.0f),
+
+        drawList->AddText(GetHubHeadingFont(), 16.0f, AddVec2(pos, ImVec2{textX, titleY}), ToU32(0.88f, 0.90f, 0.93f),
                           project.m_name.c_str());
-        drawList->AddText(AddVec2(pos, ImVec2{18.0f, 64.0f}), ToU32(0.65f, 0.72f, 0.82f), project.m_version.c_str());
+        drawList->AddText(AddVec2(pos, ImVec2{versionX, titleY + 2.0f}), ToU32(0.50f, 0.53f, 0.58f), project.m_version.c_str());
+        drawList->AddText(AddVec2(pos, ImVec2{textX, pathY}), ToU32(0.42f, 0.45f, 0.50f), compactDirectory.c_str());
         ImGui::PopID();
         return clicked;
     }
@@ -1079,14 +1393,12 @@ namespace
         const ImVec2 topLeft = viewport->Pos;
         const ImVec2 bottomRight = AddVec2(viewport->Pos, viewport->Size);
 
-        drawList->AddRectFilledMultiColor(topLeft, bottomRight, ToU32(0.02f, 0.04f, 0.09f), ToU32(0.03f, 0.09f, 0.18f),
-                                          ToU32(0.03f, 0.06f, 0.11f), ToU32(0.01f, 0.02f, 0.05f));
-        drawList->AddCircleFilled(AddVec2(topLeft, ImVec2{viewport->Size.x * 0.16f, viewport->Size.y * 0.24f}),
-                                  viewport->Size.y * 0.28f, ToU32(0.14f, 0.39f, 0.78f, 0.11f), 96);
-        drawList->AddCircleFilled(AddVec2(topLeft, ImVec2{viewport->Size.x * 0.88f, viewport->Size.y * 0.16f}),
-                                  viewport->Size.y * 0.22f, ToU32(0.10f, 0.62f, 0.88f, 0.08f), 96);
-        drawList->AddCircleFilled(AddVec2(topLeft, ImVec2{viewport->Size.x * 0.76f, viewport->Size.y * 0.82f}),
-                                  viewport->Size.y * 0.26f, ToU32(0.11f, 0.29f, 0.58f, 0.10f), 96);
+        drawList->AddRectFilledMultiColor(topLeft, bottomRight, ToU32(0.012f, 0.013f, 0.015f),
+                                          ToU32(0.014f, 0.015f, 0.017f), ToU32(0.010f, 0.011f, 0.013f),
+                                          ToU32(0.009f, 0.010f, 0.012f));
+        drawList->AddRectFilled(topLeft, AddVec2(topLeft, ImVec2{viewport->Size.x, 56.0f}), ToU32(0.018f, 0.019f, 0.022f, 0.94f));
+        drawList->AddLine(AddVec2(topLeft, ImVec2{0.0f, 56.0f}), AddVec2(topLeft, ImVec2{viewport->Size.x, 56.0f}),
+                          ToU32(0.07f, 0.08f, 0.10f, 0.90f), 1.0f);
     }
 
     void DrawStatusBanner(const ProjectHubState& hub, float width)
@@ -1099,19 +1411,65 @@ namespace
         const ImVec2 size{width, 54.0f};
         const ImVec2 pos = ImGui::GetCursorScreenPos();
         ImDrawList* drawList = ImGui::GetWindowDrawList();
-        const ImVec4 accent = hub.m_statusIsError ? ImVec4{0.93f, 0.32f, 0.35f, 1.0f} : ImVec4{0.18f, 0.71f, 0.48f, 1.0f};
-        drawList->AddRectFilled(pos, AddVec2(pos, size), ToU32(0.05f, 0.08f, 0.13f, 0.90f), 18.0f);
+        const ImVec4 accent = hub.m_statusIsError ? ImVec4{0.76f, 0.33f, 0.35f, 1.0f} : ImVec4{0.44f, 0.60f, 0.72f, 1.0f};
+        drawList->AddRectFilled(pos, AddVec2(pos, size), ToU32(0.030f, 0.032f, 0.036f, 0.995f), 12.0f);
         drawList->AddRect(pos, AddVec2(pos, size), ImGui::ColorConvertFloat4ToU32(accent), 18.0f);
-        drawList->AddRectFilled(AddVec2(pos, ImVec2{16.0f, 16.0f}), AddVec2(pos, ImVec2{24.0f, 38.0f}),
+        drawList->AddRectFilled(AddVec2(pos, ImVec2{16.0f, 14.0f}), AddVec2(pos, ImVec2{20.0f, 40.0f}),
                                 ImGui::ColorConvertFloat4ToU32(accent), 4.0f);
-        drawList->AddText(AddVec2(pos, ImVec2{38.0f, 18.0f}), ToU32(0.90f, 0.95f, 1.0f), hub.m_statusMessage.c_str());
+        drawList->AddText(AddVec2(pos, ImVec2{34.0f, 18.0f}), ToU32(0.82f, 0.85f, 0.89f), hub.m_statusMessage.c_str());
         ImGui::Dummy(size);
+    }
+
+    bool PickPathIntoBuffer(ProjectHubState& hub, NativePathPickerMode mode, const std::filesystem::path& seedDirectory,
+                            char* buffer, size_t bufferSize)
+    {
+        std::filesystem::path selectedPath{};
+        const NativePathPickerResult result = ShowNativePathPicker(mode, seedDirectory, &selectedPath);
+        switch (result)
+        {
+        case NativePathPickerResult::SUCCESS:
+            CopyStringToBuffer(selectedPath.generic_string(), buffer, bufferSize);
+            return true;
+
+        case NativePathPickerResult::FAILED:
+            SetHubStatus(hub, true, "The native path picker failed to open.");
+            return false;
+
+        case NativePathPickerResult::UNAVAILABLE:
+            SetHubStatus(hub, true, "The native path picker is not available on this platform.");
+            return false;
+
+        case NativePathPickerResult::CANCELLED:
+        default:
+            return false;
+        }
+    }
+
+    void PushHubFieldStyle()
+    {
+        ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 16.0f);
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2{22.0f, 18.0f});
+        ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 14.0f);
+        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2{16.0f, 14.0f});
+        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2{12.0f, 14.0f});
+        ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4{0.028f, 0.030f, 0.034f, 0.995f});
+        ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, ImVec4{0.040f, 0.042f, 0.047f, 1.0f});
+        ImGui::PushStyleColor(ImGuiCol_FrameBgActive, ImVec4{0.047f, 0.050f, 0.056f, 1.0f});
+        ImGui::PushStyleColor(ImGuiCol_Border, ImVec4{0.10f, 0.11f, 0.13f, 0.98f});
+    }
+
+    void PopHubFieldStyle()
+    {
+        ImGui::PopStyleColor(4);
+        ImGui::PopStyleVar(5);
     }
 
     void DrawProjectHub(waggle::EngineContext& ctx, LauncherState& state)
     {
         ProjectHubState& hub = state.m_hub;
         ImGuiViewport* viewport = ImGui::GetMainViewport();
+        constexpr ImVec4 kOpenAccent{0.43f, 0.55f, 0.67f, 1.0f};
+        constexpr ImVec4 kCreateAccent{0.62f, 0.52f, 0.38f, 1.0f};
 
         ImGui::SetNextWindowPos(viewport->Pos);
         ImGui::SetNextWindowSize(viewport->Size);
@@ -1121,124 +1479,166 @@ namespace
         ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
         ImGui::Begin("Hive Project Hub", nullptr,
                      ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoBringToFrontOnFocus |
-                         ImGuiWindowFlags_NoNavFocus | ImGuiWindowFlags_NoSavedSettings);
+                         ImGuiWindowFlags_NoNavFocus | ImGuiWindowFlags_NoSavedSettings |
+                         ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
         ImGui::PopStyleVar(3);
 
         DrawHubBackground(viewport);
 
-        const float leftX = viewport->Pos.x + 74.0f;
-        const float topY = viewport->Pos.y + 72.0f;
-        const float leftWidth = (std::min)(560.0f, viewport->Size.x * 0.40f);
-        const float gutter = 32.0f;
-        const float rightX = leftX + leftWidth + gutter;
-        const float rightWidth = viewport->Pos.x + viewport->Size.x - rightX - 74.0f;
+        const float outerMargin = 28.0f;
+        const float topY = viewport->Pos.y + 74.0f;
+        const ImVec2 railPos{viewport->Pos.x + outerMargin, topY};
+        const ImVec2 railSize{196.0f, viewport->Size.y - 108.0f};
+        const float contentX = railPos.x + railSize.x + 16.0f;
+        const float contentWidth = viewport->Pos.x + viewport->Size.x - contentX - outerMargin;
+        const float contentHeight = viewport->Size.y - 108.0f;
+        const ImVec2 panelPos{contentX, topY};
+        const ImVec2 panelSize{contentWidth, contentHeight};
 
-        ImGui::SetCursorScreenPos(ImVec2{leftX, topY});
+        ImDrawList* drawList = ImGui::GetWindowDrawList();
+        drawList->AddRectFilled(railPos, AddVec2(railPos, railSize), ToU32(0.020f, 0.021f, 0.024f, 0.995f), 18.0f);
+        drawList->AddRect(railPos, AddVec2(railPos, railSize), ToU32(0.08f, 0.09f, 0.11f, 0.98f), 18.0f);
+        drawList->AddRectFilled(panelPos, AddVec2(panelPos, panelSize), ToU32(0.018f, 0.019f, 0.022f, 0.995f), 18.0f);
+        drawList->AddRect(panelPos, AddVec2(panelPos, panelSize), ToU32(0.08f, 0.09f, 0.11f, 0.98f), 18.0f);
+        drawList->AddRectFilled(panelPos, AddVec2(panelPos, ImVec2{panelSize.x, 84.0f}), ToU32(0.023f, 0.024f, 0.028f, 0.995f),
+                                18.0f);
+        drawList->AddLine(AddVec2(panelPos, ImVec2{0.0f, 84.0f}), AddVec2(panelPos, ImVec2{panelSize.x, 84.0f}),
+                          ToU32(0.08f, 0.09f, 0.11f, 0.98f), 1.0f);
+
+        ImGui::SetCursorScreenPos(AddVec2(railPos, ImVec2{24.0f, 22.0f}));
         ImGui::BeginGroup();
-        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4{0.70f, 0.80f, 0.93f, 1.0f});
-        ImGui::TextUnformatted("PROJECT PIPELINE");
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4{0.34f, 0.36f, 0.41f, 1.0f});
+        ImGui::TextUnformatted("HIVE ENGINE");
         ImGui::PopStyleColor();
-        ImGui::Dummy(ImVec2{0.0f, 10.0f});
+        ImGui::Dummy(ImVec2{0.0f, 6.0f});
 
         ImGui::PushFont(GetHubHeadingFont());
-        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4{0.97f, 0.99f, 1.0f, 1.0f});
-        ImGui::TextWrapped("Launch, open, or scaffold a Hive project.");
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4{0.86f, 0.88f, 0.91f, 1.0f});
+        ImGui::TextUnformatted("Launcher");
         ImGui::PopStyleColor();
         ImGui::PopFont();
 
-        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4{0.67f, 0.74f, 0.84f, 1.0f});
-        ImGui::PushTextWrapPos(leftX + leftWidth - 16.0f);
-        ImGui::TextUnformatted(
-            "Create a standalone game repository outside the engine, generate the CMake pipeline, and jump straight into the editor.");
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4{0.44f, 0.47f, 0.52f, 1.0f});
+        ImGui::PushTextWrapPos(railPos.x + railSize.x - 22.0f);
+        ImGui::TextUnformatted("Open a workspace or scaffold a standalone repository.");
         ImGui::PopTextWrapPos();
         ImGui::PopStyleColor();
 
-        ImGui::Dummy(ImVec2{0.0f, 22.0f});
-        if (DrawHubCard("OpenProjectCard", ImVec2{leftWidth, 134.0f}, ImVec4{0.25f, 0.63f, 1.0f, 1.0f},
-                        hub.m_page == LauncherHubPage::HUB_OPEN_EXISTING, "OPEN", "Open an existing project",
-                        "Paste a project.hive path, point to a project folder, or pick from local starter projects."))
+        ImGui::Dummy(ImVec2{0.0f, 24.0f});
+        if (DrawHubSidebarItem("OpenProjectCard", ImVec2{railSize.x - 48.0f, 76.0f}, kOpenAccent,
+                               hub.m_page == LauncherHubPage::HUB_OPEN_EXISTING, "OPEN", "Open project",
+                               "Existing workspace"))
         {
             hub.m_page = LauncherHubPage::HUB_OPEN_EXISTING;
         }
 
-        ImGui::Dummy(ImVec2{0.0f, 18.0f});
-        if (DrawHubCard("CreateProjectCard", ImVec2{leftWidth, 150.0f}, ImVec4{0.42f, 0.85f, 0.65f, 1.0f},
-                        hub.m_page == LauncherHubPage::HUB_CREATE_NEW, "CREATE", "Create a new standalone project",
-                        "Scaffold the CMake files, presets, manifest, and gameplay stub for an external mono-repo project."))
+        ImGui::Dummy(ImVec2{0.0f, 10.0f});
+        if (DrawHubSidebarItem("CreateProjectCard", ImVec2{railSize.x - 48.0f, 76.0f}, kCreateAccent,
+                               hub.m_page == LauncherHubPage::HUB_CREATE_NEW, "CREATE", "New project",
+                               "Standalone repository"))
         {
             hub.m_page = LauncherHubPage::HUB_CREATE_NEW;
         }
 
-        ImGui::Dummy(ImVec2{0.0f, 20.0f});
-        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4{0.77f, 0.84f, 0.93f, 1.0f});
-        ImGui::Text("Engine root");
+        const ImVec2 railInfoPos = AddVec2(railPos, ImVec2{24.0f, railSize.y - 104.0f});
+        drawList->AddRectFilled(railInfoPos, AddVec2(railInfoPos, ImVec2{railSize.x - 48.0f, 80.0f}),
+                                ToU32(0.028f, 0.030f, 0.034f, 0.995f), 14.0f);
+        drawList->AddRect(railInfoPos, AddVec2(railInfoPos, ImVec2{railSize.x - 48.0f, 80.0f}),
+                          ToU32(0.08f, 0.09f, 0.11f, 0.98f), 14.0f);
+        ImGui::SetCursorScreenPos(AddVec2(railInfoPos, ImVec2{16.0f, 14.0f}));
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4{0.34f, 0.36f, 0.41f, 1.0f});
+        ImGui::TextUnformatted("ENGINE ROOT");
         ImGui::PopStyleColor();
-        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4{0.60f, 0.67f, 0.77f, 1.0f});
+        ImGui::SetCursorScreenPos(AddVec2(railInfoPos, ImVec2{16.0f, 38.0f}));
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4{0.53f, 0.56f, 0.61f, 1.0f});
         if (!hub.m_engineRoot.empty())
         {
-            ImGui::TextWrapped("%s", hub.m_engineRoot.generic_string().c_str());
+            ImGui::TextWrapped("%s", CompactPathForUi(hub.m_engineRoot.generic_string(), 28).c_str());
         }
         else
         {
-            ImGui::TextWrapped("Engine root not detected. Creation is disabled until HIVE_ENGINE_DIR is available.");
+            ImGui::TextWrapped("Engine root unavailable.");
         }
         ImGui::PopStyleColor();
         ImGui::EndGroup();
 
-        const ImVec2 panelPos{rightX, topY};
-        const ImVec2 panelSize{rightWidth, viewport->Size.y - 2.0f * topY};
-        ImDrawList* drawList = ImGui::GetWindowDrawList();
-        drawList->AddRectFilled(panelPos, AddVec2(panelPos, panelSize), ToU32(0.04f, 0.06f, 0.10f, 0.92f), 30.0f);
-        drawList->AddRect(panelPos, AddVec2(panelPos, panelSize), ToU32(0.22f, 0.28f, 0.37f, 0.75f), 30.0f);
-
-        ImGui::SetCursorScreenPos(AddVec2(panelPos, ImVec2{28.0f, 28.0f}));
+        ImGui::SetCursorScreenPos(AddVec2(panelPos, ImVec2{28.0f, 22.0f}));
         ImGui::BeginGroup();
 
         const char* panelTitle =
-            hub.m_page == LauncherHubPage::HUB_OPEN_EXISTING ? "Open a project" : "Create a new project";
+            hub.m_page == LauncherHubPage::HUB_OPEN_EXISTING ? "Open Project" : "New Standalone Project";
         const char* panelBody = hub.m_page == LauncherHubPage::HUB_OPEN_EXISTING
-                                    ? "Project file or folder paths are accepted. The launcher will resolve project.hive automatically."
-                                    : "Projects are generated outside the engine with their own presets, manifest, and gameplay source stub.";
+                                    ? "Choose a .hive file, browse a folder, or open a detected workspace."
+                                    : "Scaffold a standalone repository with presets, manifests, and a gameplay stub.";
+        const float innerWidth = panelSize.x - 64.0f;
 
         ImGui::PushFont(GetHubHeadingFont());
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4{0.88f, 0.90f, 0.93f, 1.0f});
         ImGui::TextUnformatted(panelTitle);
+        ImGui::PopStyleColor();
         ImGui::PopFont();
-        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4{0.66f, 0.73f, 0.84f, 1.0f});
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4{0.42f, 0.45f, 0.50f, 1.0f});
         ImGui::PushTextWrapPos(panelPos.x + panelSize.x - 28.0f);
         ImGui::TextUnformatted(panelBody);
         ImGui::PopTextWrapPos();
         ImGui::PopStyleColor();
 
-        ImGui::Dummy(ImVec2{0.0f, 18.0f});
-        DrawStatusBanner(hub, panelSize.x - 56.0f);
+        ImGui::SetCursorScreenPos(AddVec2(panelPos, ImVec2{28.0f, 96.0f}));
+        DrawStatusBanner(hub, innerWidth);
 
-        ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 16.0f);
-        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2{16.0f, 14.0f});
-        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2{12.0f, 14.0f});
-        ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4{0.07f, 0.10f, 0.15f, 0.95f});
-        ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, ImVec4{0.09f, 0.13f, 0.19f, 0.98f});
-        ImGui::PushStyleColor(ImGuiCol_FrameBgActive, ImVec4{0.10f, 0.16f, 0.24f, 1.0f});
-        ImGui::PushStyleColor(ImGuiCol_Border, ImVec4{0.22f, 0.28f, 0.37f, 0.80f});
+        PushHubFieldStyle();
+        const float contentAreaHeight = panelSize.y - (ImGui::GetCursorScreenPos().y - panelPos.y) - 24.0f;
+        constexpr ImGuiChildFlags kHubPaddedChildFlags =
+            ImGuiChildFlags_Borders | ImGuiChildFlags_AlwaysUseWindowPadding;
+        constexpr ImGuiWindowFlags kHubNoScrollFlags =
+            ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse;
+        ImGui::BeginChild("HubContentArea", ImVec2{innerWidth, contentAreaHeight},
+                          ImGuiChildFlags_AlwaysUseWindowPadding, kHubNoScrollFlags);
 
         if (hub.m_page == LauncherHubPage::HUB_OPEN_EXISTING)
         {
-            ImGui::Text("Project path");
-            ImGui::SetNextItemWidth(panelSize.x - 56.0f);
-            ImGui::InputTextWithHint("##ProjectPath", "Paste a project.hive file or a project directory",
-                                     hub.m_openPath.data(), hub.m_openPath.size());
+            const float recentWidth = (std::min)(390.0f, innerWidth * 0.36f);
+            const float preferredSurfaceHeight = (std::clamp)(viewport->Size.y * 0.72f, 620.0f, 700.0f);
+            const float surfaceHeight = (std::min)(contentAreaHeight - 10.0f, preferredSurfaceHeight);
+            const float quickOpenHelpHeight = (std::clamp)(surfaceHeight * 0.24f, 164.0f, 208.0f);
+            ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4{0.015f, 0.016f, 0.019f, 0.995f});
+            ImGui::PushStyleColor(ImGuiCol_Border, ImVec4{0.08f, 0.09f, 0.11f, 0.98f});
 
-            ImGui::Dummy(ImVec2{0.0f, 8.0f});
-            if (DrawHubActionButton("OpenProjectButton", "Open Project", 210.0f, true))
+            ImGui::BeginChild("RecentProjectsPane", ImVec2{recentWidth, surfaceHeight}, kHubPaddedChildFlags,
+                              kHubNoScrollFlags);
+            ImGui::PushFont(GetHubHeadingFont());
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4{0.87f, 0.89f, 0.92f, 1.0f});
+            ImGui::TextUnformatted("Recent Projects");
+            ImGui::PopStyleColor();
+            ImGui::PopFont();
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4{0.42f, 0.45f, 0.50f, 1.0f});
+            ImGui::TextUnformatted("Detected around the engine repository.");
+            ImGui::PopStyleColor();
+
+            if (!hub.m_statusMessage.empty())
             {
-                OpenProject(ctx, state, std::filesystem::path{TrimmedCopy(hub.m_openPath.data())});
+                ImGui::Dummy(ImVec2{0.0f, 14.0f});
+                DrawStatusBanner(hub, recentWidth - 24.0f);
+            }
+            else
+            {
+                ImGui::Dummy(ImVec2{0.0f, 14.0f});
             }
 
-            if (!hub.m_discoveredProjects.empty())
+            const float footerHeight = 42.0f;
+            const float listHeight = (std::max)(120.0f, ImGui::GetContentRegionAvail().y - footerHeight - 10.0f);
+            ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4{0.019f, 0.020f, 0.024f, 0.995f});
+            ImGui::PushStyleColor(ImGuiCol_Border, ImVec4{0.08f, 0.09f, 0.11f, 0.98f});
+            ImGui::BeginChild("DetectedProjects", ImVec2{-1.0f, listHeight}, kHubPaddedChildFlags);
+            if (hub.m_discoveredProjects.empty())
             {
-                ImGui::Dummy(ImVec2{0.0f, 18.0f});
-                ImGui::Text("Starter and local projects");
-                ImGui::Dummy(ImVec2{0.0f, 6.0f});
-                const float cardWidth = panelSize.x - 56.0f;
+                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4{0.40f, 0.43f, 0.48f, 1.0f});
+                ImGui::TextWrapped("No recent workspaces were detected near the engine root.");
+                ImGui::PopStyleColor();
+            }
+            else
+            {
+                const float cardWidth = ImGui::GetContentRegionAvail().x;
                 for (const LauncherDiscoveredProject& project : hub.m_discoveredProjects)
                 {
                     if (DrawDiscoveredProjectCard(project, cardWidth))
@@ -1249,83 +1649,268 @@ namespace
                     ImGui::Dummy(ImVec2{0.0f, 10.0f});
                 }
             }
+            ImGui::EndChild();
+            ImGui::PopStyleColor(2);
+
+            const float spacerHeight = (std::max)(0.0f, ImGui::GetContentRegionAvail().y - footerHeight);
+            ImGui::Dummy(ImVec2{0.0f, spacerHeight});
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4{0.52f, 0.55f, 0.60f, 1.0f});
+            ImGui::TextUnformatted(CompactPathForUi(hub.m_engineRoot.generic_string(), 36).c_str());
+            ImGui::PopStyleColor();
+            ImGui::EndChild();
+
+            ImGui::SameLine();
+
+            ImGui::BeginChild("QuickOpenPane", ImVec2{0.0f, surfaceHeight}, kHubPaddedChildFlags, kHubNoScrollFlags);
+            ImGui::PushFont(GetHubHeadingFont());
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4{0.87f, 0.89f, 0.92f, 1.0f});
+            ImGui::TextUnformatted("Quick Open");
+            ImGui::PopStyleColor();
+            ImGui::PopFont();
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4{0.42f, 0.45f, 0.50f, 1.0f});
+            ImGui::TextWrapped("Choose a .hive file, browse a folder, or jump into a recent workspace.");
+            ImGui::PopStyleColor();
+            ImGui::Dummy(ImVec2{0.0f, 18.0f});
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4{0.45f, 0.48f, 0.53f, 1.0f});
+            ImGui::TextUnformatted("PROJECT PATH");
+            ImGui::PopStyleColor();
+
+            const float fileButtonWidth = 104.0f;
+            const float folderButtonWidth = 88.0f;
+            const float inputWidth = ImGui::GetContentRegionAvail().x - fileButtonWidth - folderButtonWidth - 24.0f;
+            ImGui::SetNextItemWidth(inputWidth);
+            ImGui::InputTextWithHint("##ProjectPath", "Paste a project.hive file or a project directory",
+                                     hub.m_openPath.data(), hub.m_openPath.size());
+            ImGui::SameLine();
+            if (DrawHubActionButton("PickProjectFile", "Project File", fileButtonWidth, false))
+            {
+                PickPathIntoBuffer(hub, NativePathPickerMode::PROJECT_FILE, GetPickerSeedDirectory(hub.m_openPath.data()),
+                                   hub.m_openPath.data(), hub.m_openPath.size());
+            }
+            ImGui::SameLine();
+            if (DrawHubActionButton("PickProjectFolder", "Folder", folderButtonWidth, false))
+            {
+                PickPathIntoBuffer(hub, NativePathPickerMode::DIRECTORY, GetPickerSeedDirectory(hub.m_openPath.data()),
+                                   hub.m_openPath.data(), hub.m_openPath.size());
+            }
+
+            ImGui::Dummy(ImVec2{0.0f, 18.0f});
+            if (DrawHubActionButton("OpenProjectButton", "Open Project", 184.0f, true))
+            {
+                OpenProject(ctx, state, std::filesystem::path{TrimmedCopy(hub.m_openPath.data())});
+            }
+
+            ImGui::Dummy(ImVec2{0.0f, 20.0f});
+            ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4{0.019f, 0.020f, 0.024f, 0.995f});
+            ImGui::PushStyleColor(ImGuiCol_Border, ImVec4{0.08f, 0.09f, 0.11f, 0.98f});
+            ImGui::BeginChild("QuickOpenHelp", ImVec2{-1.0f, quickOpenHelpHeight}, kHubPaddedChildFlags,
+                              kHubNoScrollFlags);
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4{0.39f, 0.42f, 0.47f, 1.0f});
+            ImGui::TextUnformatted("SUPPORTED INPUTS");
+            ImGui::PopStyleColor();
+            ImGui::Dummy(ImVec2{0.0f, 8.0f});
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4{0.75f, 0.78f, 0.82f, 1.0f});
+            ImGui::TextUnformatted(".hive project manifest");
+            ImGui::TextUnformatted("Project folder containing project.hive");
+            ImGui::TextUnformatted("Recent workspace discovered near the engine");
+            ImGui::PopStyleColor();
+            ImGui::EndChild();
+            ImGui::PopStyleColor(2);
+            ImGui::EndChild();
+
+            ImGui::PopStyleColor(2);
         }
         else
         {
-            ImGui::Text("Project name");
-            ImGui::SetNextItemWidth(panelSize.x - 56.0f);
+            const float setupWidth = (std::min)(620.0f, innerWidth * 0.58f);
+            const float preferredSurfaceHeight = (std::clamp)(viewport->Size.y * 0.72f, 620.0f, 700.0f);
+            const float surfaceHeight = (std::min)(contentAreaHeight - 10.0f, preferredSurfaceHeight);
+            const float setupContentTopPad = (std::clamp)((surfaceHeight - 520.0f) * 0.14f, 8.0f, 26.0f);
+            const float rootPreviewHeight = (std::clamp)(surfaceHeight * 0.24f, 152.0f, 196.0f);
+            const float filesPreviewHeight = (std::clamp)(surfaceHeight * 0.32f, 220.0f, 280.0f);
+            const float previewContentTopPad =
+                (std::clamp)((surfaceHeight - (rootPreviewHeight + filesPreviewHeight + 128.0f)) * 0.18f, 8.0f,
+                             24.0f);
+            const std::filesystem::path previewRoot =
+                BuildCreateTargetPath(hub, TrimmedCopy(hub.m_createName.data()));
+            const std::string previewRootLabel =
+                previewRoot.empty() ? "Set a valid name and destination to continue."
+                                    : CompactPathForUi(previewRoot.generic_string(), 56);
+
+            ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4{0.015f, 0.016f, 0.019f, 0.995f});
+            ImGui::PushStyleColor(ImGuiCol_Border, ImVec4{0.08f, 0.09f, 0.11f, 0.98f});
+
+            ImGui::BeginChild("ProjectSetupPane", ImVec2{setupWidth, surfaceHeight}, kHubPaddedChildFlags,
+                              kHubNoScrollFlags);
+            ImGui::Dummy(ImVec2{0.0f, setupContentTopPad});
+            ImGui::PushFont(GetHubHeadingFont());
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4{0.87f, 0.89f, 0.92f, 1.0f});
+            ImGui::TextUnformatted("Project Setup");
+            ImGui::PopStyleColor();
+            ImGui::PopFont();
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4{0.42f, 0.45f, 0.50f, 1.0f});
+            ImGui::TextWrapped("Scaffold a standalone repository with presets, manifests, and a gameplay stub.");
+            ImGui::PopStyleColor();
+
+            if (!hub.m_statusMessage.empty())
+            {
+                ImGui::Dummy(ImVec2{0.0f, 14.0f});
+                DrawStatusBanner(hub, setupWidth - 24.0f);
+            }
+            else
+            {
+                ImGui::Dummy(ImVec2{0.0f, 14.0f});
+            }
+
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4{0.45f, 0.48f, 0.53f, 1.0f});
+            ImGui::TextUnformatted("PROJECT IDENTITY");
+            ImGui::PopStyleColor();
+
+            const float versionWidth = 160.0f;
+            ImGui::SetNextItemWidth(setupWidth - 24.0f - versionWidth - 12.0f);
             ImGui::InputTextWithHint("##ProjectName", "Example: MyGame", hub.m_createName.data(),
                                      hub.m_createName.size());
+            ImGui::SameLine();
+            ImGui::SetNextItemWidth(versionWidth);
+            ImGui::InputTextWithHint("##CreateVersion", "0.1.0", hub.m_createVersion.data(), hub.m_createVersion.size());
 
-            ImGui::Text("Destination directory");
-            ImGui::SetNextItemWidth(panelSize.x - 56.0f);
+            ImGui::Dummy(ImVec2{0.0f, 16.0f});
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4{0.45f, 0.48f, 0.53f, 1.0f});
+            ImGui::TextUnformatted("DESTINATION");
+            ImGui::PopStyleColor();
+
+            const float browseButtonWidth = 92.0f;
+            const float defaultButtonWidth = 84.0f;
+            const float destinationWidth = setupWidth - 24.0f - browseButtonWidth - defaultButtonWidth - 24.0f;
+            ImGui::SetNextItemWidth(destinationWidth);
             ImGui::InputTextWithHint("##CreateDirectory", "Folder where the project repository will be generated",
                                      hub.m_createDirectory.data(), hub.m_createDirectory.size());
+            ImGui::SameLine();
+            if (DrawHubActionButton("BrowseCreateDirectory", "Browse", browseButtonWidth, false))
+            {
+                const std::filesystem::path seedDirectory = [&hub]() {
+                    const std::filesystem::path seeded = GetPickerSeedDirectory(hub.m_createDirectory.data());
+                    return seeded.empty() ? GetDefaultProjectsDirectory() : seeded;
+                }();
 
-            ImGui::Text("Initial version");
-            ImGui::SetNextItemWidth(180.0f);
-            ImGui::InputText("##CreateVersion", hub.m_createVersion.data(), hub.m_createVersion.size());
+                PickPathIntoBuffer(hub, NativePathPickerMode::DIRECTORY, seedDirectory, hub.m_createDirectory.data(),
+                                   hub.m_createDirectory.size());
+            }
+            ImGui::SameLine();
+            if (DrawHubActionButton("DefaultCreateDirectory", "Default", defaultButtonWidth, false))
+            {
+                const std::filesystem::path defaultDirectory = GetDefaultProjectsDirectory();
+                if (!defaultDirectory.empty())
+                {
+                    CopyStringToBuffer(defaultDirectory.generic_string(), hub.m_createDirectory.data(),
+                                       hub.m_createDirectory.size());
+                }
+            }
 
-            ImGui::Dummy(ImVec2{0.0f, 8.0f});
-            ImGui::Text("Supported runtimes");
-            if (DrawHubChip("SupportEditor", "Editor", hub.m_supportEditor, ImVec4{0.25f, 0.63f, 1.0f, 1.0f}))
+            ImGui::Dummy(ImVec2{0.0f, 22.0f});
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4{0.45f, 0.48f, 0.53f, 1.0f});
+            ImGui::TextUnformatted("RUNTIME MODES");
+            ImGui::PopStyleColor();
+            if (DrawHubChip("SupportEditor", "Editor", hub.m_supportEditor, kOpenAccent))
             {
                 hub.m_supportEditor = !hub.m_supportEditor;
             }
             ImGui::SameLine();
-            if (DrawHubChip("SupportGame", "Game", hub.m_supportGame, ImVec4{0.29f, 0.73f, 1.0f, 1.0f}))
+            if (DrawHubChip("SupportGame", "Game", hub.m_supportGame, kOpenAccent))
             {
                 hub.m_supportGame = !hub.m_supportGame;
             }
             ImGui::SameLine();
-            if (DrawHubChip("SupportHeadless", "Headless", hub.m_supportHeadless, ImVec4{0.42f, 0.85f, 0.65f, 1.0f}))
+            if (DrawHubChip("SupportHeadless", "Headless", hub.m_supportHeadless, kCreateAccent))
             {
                 hub.m_supportHeadless = !hub.m_supportHeadless;
             }
 
-            ImGui::Dummy(ImVec2{0.0f, 6.0f});
-            ImGui::Text("Compiler preset");
-            if (DrawHubChip("ToolchainLLVM", "LLVM", hub.m_toolchain == LauncherToolchainPreset::LLVM,
-                            ImVec4{0.50f, 0.71f, 1.0f, 1.0f}))
+            ImGui::Dummy(ImVec2{0.0f, 22.0f});
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4{0.45f, 0.48f, 0.53f, 1.0f});
+            ImGui::TextUnformatted("COMPILER PRESET");
+            ImGui::PopStyleColor();
+            if (DrawHubChip("ToolchainLLVM", "LLVM", hub.m_toolchain == LauncherToolchainPreset::LLVM, kOpenAccent))
             {
                 hub.m_toolchain = LauncherToolchainPreset::LLVM;
             }
             ImGui::SameLine();
 #if HIVE_PLATFORM_WINDOWS
             if (DrawHubChip("ToolchainMSVC", "MSVC", hub.m_toolchain == LauncherToolchainPreset::MSVC,
-                            ImVec4{0.69f, 0.82f, 1.0f, 1.0f}))
+                            kCreateAccent))
             {
                 hub.m_toolchain = LauncherToolchainPreset::MSVC;
             }
 #else
             if (DrawHubChip("ToolchainGCC", "GCC", hub.m_toolchain == LauncherToolchainPreset::GCC,
-                            ImVec4{0.69f, 0.82f, 1.0f, 1.0f}))
+                            kCreateAccent))
             {
                 hub.m_toolchain = LauncherToolchainPreset::GCC;
             }
 #endif
 
-            const std::filesystem::path previewRoot =
-                BuildCreateTargetPath(hub, TrimmedCopy(hub.m_createName.data()));
-            ImGui::Dummy(ImVec2{0.0f, 10.0f});
-            ImGui::Text("Output");
-            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4{0.64f, 0.72f, 0.84f, 1.0f});
-            ImGui::TextWrapped("%s", previewRoot.empty() ? "Set a valid name and directory to continue."
-                                                         : previewRoot.generic_string().c_str());
-            ImGui::TextWrapped("Preset base: %s", GetPresetBase(hub.m_toolchain));
-            ImGui::PopStyleColor();
-
-            ImGui::Dummy(ImVec2{0.0f, 14.0f});
+            ImGui::Dummy(ImVec2{0.0f, 28.0f});
             ImGui::BeginDisabled(hub.m_engineRoot.empty());
-            if (DrawHubActionButton("CreateProjectButton", "Create Project", 220.0f, true))
+            if (DrawHubActionButton("CreateProjectButton", "Create Project", 190.0f, true))
             {
                 CreateProjectFromHub(ctx, state);
             }
             ImGui::EndDisabled();
+            ImGui::EndChild();
+
+            ImGui::SameLine();
+
+            ImGui::BeginChild("GeneratedPipelinePane", ImVec2{0.0f, surfaceHeight}, kHubPaddedChildFlags,
+                              kHubNoScrollFlags);
+            ImGui::Dummy(ImVec2{0.0f, previewContentTopPad});
+            ImGui::PushFont(GetHubHeadingFont());
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4{0.87f, 0.89f, 0.92f, 1.0f});
+            ImGui::TextUnformatted("Generated Pipeline");
+            ImGui::PopStyleColor();
+            ImGui::PopFont();
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4{0.42f, 0.45f, 0.50f, 1.0f});
+            ImGui::TextWrapped("Preview the repository output before scaffolding.");
+            ImGui::PopStyleColor();
+            ImGui::Dummy(ImVec2{0.0f, 14.0f});
+            ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4{0.019f, 0.020f, 0.024f, 0.995f});
+            ImGui::PushStyleColor(ImGuiCol_Border, ImVec4{0.08f, 0.09f, 0.11f, 0.98f});
+
+            ImGui::BeginChild("PipelinePreviewRoot", ImVec2{-1.0f, rootPreviewHeight}, kHubPaddedChildFlags,
+                              kHubNoScrollFlags);
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4{0.39f, 0.42f, 0.47f, 1.0f});
+            ImGui::TextUnformatted("PROJECT ROOT");
+            ImGui::PopStyleColor();
+            ImGui::Dummy(ImVec2{0.0f, 8.0f});
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4{0.76f, 0.79f, 0.83f, 1.0f});
+            ImGui::TextWrapped("%s", previewRootLabel.c_str());
+            ImGui::Dummy(ImVec2{0.0f, 8.0f});
+            ImGui::Text("Preset base: %s", GetPresetBase(hub.m_toolchain));
+            ImGui::PopStyleColor();
+            ImGui::EndChild();
+
+            ImGui::Dummy(ImVec2{0.0f, 16.0f});
+            ImGui::BeginChild("PipelinePreviewFiles", ImVec2{-1.0f, filesPreviewHeight}, kHubPaddedChildFlags,
+                              kHubNoScrollFlags);
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4{0.39f, 0.42f, 0.47f, 1.0f});
+            ImGui::TextUnformatted("GENERATED FILES");
+            ImGui::PopStyleColor();
+            ImGui::Dummy(ImVec2{0.0f, 8.0f});
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4{0.75f, 0.78f, 0.82f, 1.0f});
+            ImGui::TextUnformatted("CMakeLists.txt");
+            ImGui::TextUnformatted("CMakeUserPresets.json");
+            ImGui::TextUnformatted("HiveProject.json");
+            ImGui::TextUnformatted("project.hive");
+            ImGui::TextUnformatted("src/gameplay.cpp");
+            ImGui::PopStyleColor();
+            ImGui::EndChild();
+            ImGui::PopStyleColor(2);
+            ImGui::EndChild();
+
+            ImGui::PopStyleColor(2);
         }
 
-        ImGui::PopStyleColor(4);
-        ImGui::PopStyleVar(3);
+        ImGui::EndChild();
+        PopHubFieldStyle();
         ImGui::EndGroup();
         ImGui::End();
     }

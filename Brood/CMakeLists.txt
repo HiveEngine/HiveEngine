@@ -53,6 +53,10 @@ if(TARGET Forge)
     target_link_libraries(hive_launcher PRIVATE Forge)
 endif()
 
+if(WIN32)
+    target_link_libraries(hive_launcher PRIVATE Ole32 Shell32)
+endif()
+
 if(HIVE_BUILD_TESTING)
 
     set(BROOD_TEST_DIRS
