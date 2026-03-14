@@ -34,12 +34,10 @@ target_link_libraries(Waggle
         Nectar
 )
 
+target_link_libraries(Waggle PUBLIC Terra Antennae)
+
 if(HIVE_HAS_RENDER_BACKEND)
     target_link_libraries(Waggle PUBLIC Swarm)
-endif()
-
-if(HIVE_FEATURE_GLFW)
-    target_link_libraries(Waggle PUBLIC Terra Antennae)
 endif()
 
 if(HIVE_ENGINE_MODE STREQUAL "Editor" AND HIVE_FEATURE_IMGUI AND HIVE_HAS_INTERACTIVE_GRAPHICS)
