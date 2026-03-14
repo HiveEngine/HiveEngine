@@ -4,18 +4,15 @@
 
 #include <waggle/engine_runner.h>
 
-#if HIVE_FEATURE_GLFW
-#include <terra/platform/glfw_terra.h>
 #include <terra/terra.h>
+#include <terra/window_context.h>
 
 #include <antennae/input.h>
 #include <antennae/keyboard.h>
-#endif
 
 #if HIVE_FEATURE_VULKAN || HIVE_FEATURE_D3D12
 #include <swarm/platform/diligent_swarm.h>
 #include <swarm/swarm.h>
-#if HIVE_FEATURE_GLFW
 #ifdef _WIN32
 #define TERRA_NATIVE_WIN32
 #include <swarm/platform/win32_swarm.h>
@@ -26,7 +23,6 @@
 #include <swarm/platform/linux_swarm.h>
 
 #include <terra/terra_native.h>
-#endif
 #endif
 #endif
 
@@ -45,11 +41,9 @@ namespace
             m_context.m_app = &m_app;
             m_context.m_world = &m_app.GetWorld();
 
-#if HIVE_FEATURE_GLFW
             terra::SetWindowTitle(&m_windowContext, config.m_windowTitle);
             terra::SetWindowSize(&m_windowContext, static_cast<int>(config.m_windowWidth),
                                  static_cast<int>(config.m_windowHeight));
-#endif
         }
 
         ~EngineSession()
@@ -101,7 +95,6 @@ namespace
                 return true;
             }
 
-#if HIVE_FEATURE_GLFW
             if (!InitializeWindow())
             {
                 return false;
@@ -115,13 +108,8 @@ namespace
 #endif
 
             return true;
-#else
-            hive::LogError(LOG_ENGINE, "Graphical mode requested but GLFW support is disabled");
-            return false;
-#endif
         }
 
-#if HIVE_FEATURE_GLFW
         [[nodiscard]] bool InitializeWindow()
         {
             if (!terra::InitSystem())
@@ -142,9 +130,8 @@ namespace
             m_context.m_window = &m_windowContext;
             return true;
         }
-#endif
 
-#if (HIVE_FEATURE_VULKAN || HIVE_FEATURE_D3D12) && HIVE_FEATURE_GLFW
+#if (HIVE_FEATURE_VULKAN || HIVE_FEATURE_D3D12)
         [[nodiscard]] bool InitializeRenderer()
         {
             if (!swarm::InitSystem())
@@ -206,18 +193,15 @@ namespace
 
         void RunMainLoop()
         {
-#if HIVE_FEATURE_GLFW
             if (IsGraphical())
             {
                 RunGraphicalLoop();
                 return;
             }
-#endif
 
             RunHeadlessLoop();
         }
 
-#if HIVE_FEATURE_GLFW
         void RunGraphicalLoop()
         {
             while (!terra::ShouldWindowClose(&m_windowContext) && m_app.IsRunning())
@@ -251,7 +235,6 @@ namespace
 #endif
             }
         }
-#endif
 
         void RunHeadlessLoop()
         {
@@ -299,7 +282,6 @@ namespace
             }
 #endif
 
-#if HIVE_FEATURE_GLFW
             if (m_windowInitialized)
             {
                 terra::ShutdownWindowContext(&m_windowContext);
@@ -312,7 +294,6 @@ namespace
                 terra::ShutdownSystem();
                 m_windowSystemInitialized = false;
             }
-#endif
 
             if (m_modulesInitialized)
             {
@@ -335,11 +316,9 @@ namespace
         bool m_setupCompleted{false};
         bool m_shutdownCallbackInvoked{false};
 
-#if HIVE_FEATURE_GLFW
         terra::WindowContext m_windowContext{};
         bool m_windowSystemInitialized{false};
         bool m_windowInitialized{false};
-#endif
 
 #if HIVE_FEATURE_VULKAN || HIVE_FEATURE_D3D12
         swarm::RenderContext m_renderContext{};
