@@ -12,13 +12,9 @@
 #include <waggle/project/project_manager.h>
 #include <waggle/project/project_scaffolder.h>
 
-#if HIVE_FEATURE_GLFW
 #include <terra/terra.h>
-#endif
 
-#if HIVE_FEATURE_VULKAN || HIVE_FEATURE_D3D12
 #include <swarm/swarm.h>
-#endif
 
 #if HIVE_MODE_EDITOR
 #include <queen/reflect/component_registry.h>
@@ -941,13 +937,11 @@ namespace
 
         ctx.m_world->InsertResource(waggle::ProjectContext{state.m_project});
 
-#if HIVE_FEATURE_GLFW
         if (ctx.m_window != nullptr)
         {
             const std::string windowTitle = BuildWindowTitle(projectPath);
             terra::SetWindowTitle(ctx.m_window, windowTitle.c_str());
         }
-#endif
 
         EnsureEditorProjectViewport(ctx, state);
         TryLoadGameplayModule(ctx, state);
