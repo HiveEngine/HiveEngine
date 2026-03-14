@@ -4,9 +4,31 @@
 #include <swarm/swarm.h>
 
 #include <EngineFactoryVk.h>
+
+#define TERRA_NATIVE_LINUX
+#include <terra/terra.h>
+#include <terra/terra_native.h>
+
 namespace swarm
 {
     extern bool InitRenderContextCommon(RenderContext* renderContext);
+
+    bool InitRenderContext(RenderContext* renderContext, terra::WindowContext* window)
+    {
+        terra::NativeWindow native = terra::GetNativeWindow(window);
+        switch (native.type_)
+        {
+            case terra::NativeWindowType::X11:
+                return InitRenderContextX11(*renderContext, native.x11Display_, native.x11Window_,
+                                            static_cast<uint32_t>(terra::GetWindowWidth(window)),
+                                            static_cast<uint32_t>(terra::GetWindowHeight(window)));
+            case terra::NativeWindowType::WAYLAND:
+                return InitRenderContextWayland(*renderContext, native.wlDisplay_, native.wlSurface_,
+                                                static_cast<uint32_t>(terra::GetWindowWidth(window)),
+                                                static_cast<uint32_t>(terra::GetWindowHeight(window)));
+        }
+        return false;
+    }
 
     bool InitRenderContextWayland(RenderContext& renderContext, wl_display* display, wl_surface* surface,
                                   uint32_t width, uint32_t height)

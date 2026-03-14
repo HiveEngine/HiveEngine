@@ -6,9 +6,21 @@
 
 #include "swarm/platform/diligent_swarm.h"
 
+#define TERRA_NATIVE_WIN32
+#include <terra/terra.h>
+#include <terra/terra_native.h>
+
 namespace swarm
 {
     extern bool InitRenderContextCommon(RenderContext* renderContext);
+
+    bool InitRenderContext(RenderContext* renderContext, terra::WindowContext* window)
+    {
+        terra::NativeWindow native = terra::GetNativeWindow(window);
+        return InitRenderContextWin32(renderContext, native.m_instance, native.m_window,
+                                      static_cast<uint32_t>(terra::GetWindowWidth(window)),
+                                      static_cast<uint32_t>(terra::GetWindowHeight(window)));
+    }
 
     bool InitRenderContextWin32(RenderContext* renderContext, HINSTANCE instance, HWND window, uint32_t width,
                                 uint32_t height)
