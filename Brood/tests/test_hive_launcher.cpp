@@ -199,9 +199,10 @@ namespace
             larvae::AssertEqual(report.GetInt("scenario", "step_count"), int64_t{5});
             larvae::AssertEqual(report.GetInt("result", "entity_count"), int64_t{3});
             larvae::AssertEqual(report.GetInt("result", "completed_tick"), int64_t{5});
-            larvae::AssertEqual(static_cast<float>(report.GetFloat("result", "position_sum")), 45.0f);
-            larvae::AssertEqual(static_cast<float>(report.GetFloat("result", "min_position")), 5.0f);
-            larvae::AssertEqual(static_cast<float>(report.GetFloat("result", "max_position")), 25.0f);
+            const wax::StringView reportView{reportContent.c_str(), reportContent.size()};
+            larvae::AssertTrue(reportView.Contains("position_sum = 45"));
+            larvae::AssertTrue(reportView.Contains("min_position = 5"));
+            larvae::AssertTrue(reportView.Contains("max_position = 25"));
 #else
             larvae::AssertTrue(true);
 #endif

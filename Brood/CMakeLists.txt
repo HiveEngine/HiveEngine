@@ -69,11 +69,19 @@ if(HIVE_BUILD_TESTING)
         ${CMAKE_CURRENT_SOURCE_DIR}/../Waggle/tests
     )
 
-    foreach(_module IN ITEMS Terra Swarm Antennae)
-        if(TARGET ${_module})
-            list(APPEND BROOD_TEST_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/../${_module}/tests)
-        endif()
-    endforeach()
+    if(TARGET Swarm)
+        list(APPEND BROOD_TEST_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/../Swarm/tests)
+    endif()
+
+    # Some module tests include GLFW-specific headers directly.
+    # Keep the headless runner buildable by collecting them only when windowing is enabled.
+    if(HIVE_FEATURE_GLFW)
+        foreach(_module IN ITEMS Terra Antennae)
+            if(TARGET ${_module})
+                list(APPEND BROOD_TEST_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/../${_module}/tests)
+            endif()
+        endforeach()
+    endif()
 
     function(brood_collect_sources out_var entrypoint pattern)
         set(_sources ${entrypoint})
