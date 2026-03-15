@@ -13,6 +13,8 @@ namespace larvae
     {
         std::string filter_pattern;
         std::string suite_filter;
+        std::string exclude_suite_filter;
+        std::string exclude_filter_pattern;
         bool verbose = false;
         bool list_only = false;
         bool shuffle = false;

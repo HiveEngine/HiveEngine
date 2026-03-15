@@ -97,6 +97,18 @@ namespace
             larvae::AssertTrue(config.fail_on_skip);
         });
 
+    auto t_parse_command_line_exclusions =
+        larvae::RegisterTest("LarvaeCapabilities", "parse_command_line_exclusions", []() {
+            char arg0[] = "larvae_runner";
+            char arg1[] = "--exclude-suite=LarvaeCapabilitiesSkip";
+            char arg2[] = "--exclude-filter=*benchmark*";
+            char* argv[] = {arg0, arg1, arg2};
+
+            const larvae::TestRunnerConfig config = larvae::ParseCommandLine(static_cast<int>(std::size(argv)), argv);
+            larvae::AssertStringEqual(config.exclude_suite_filter, "LarvaeCapabilitiesSkip");
+            larvae::AssertStringEqual(config.exclude_filter_pattern, "*benchmark*");
+        });
+
     auto t_benchmark_runner_filters_missing_capabilities =
         larvae::RegisterTest("LarvaeCapabilities", "benchmark_runner_filters_missing_capabilities", []() {
             auto& registry = larvae::BenchmarkRegistry::GetInstance();

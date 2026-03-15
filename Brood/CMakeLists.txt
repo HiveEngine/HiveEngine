@@ -3,6 +3,7 @@
 # ============================================================================
 
 set(BROOD_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
+set(BROOD_CMAKE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
 function(brood_link_test_target target)
     target_link_libraries(${target}
@@ -138,7 +139,8 @@ if(HIVE_BUILD_TESTING)
     # ============================================================================
 
     enable_testing()
-    add_test(NAME AllTests COMMAND larvae_runner)
+    add_test(NAME AllTests COMMAND larvae_runner --fail-on-skip --exclude-suite=LarvaeCapabilitiesSkip)
+    set_tests_properties(AllTests PROPERTIES LABELS "runner;ci")
 
     # ============================================================================
     # Benchmark Discovery
@@ -156,6 +158,41 @@ if(HIVE_BUILD_TESTING)
     hive_configure_target(larvae_benchmark)
 
     brood_link_test_target(larvae_benchmark)
+
+    add_test(NAME LarvaeRunnerCapabilityList COMMAND larvae_runner --suite=LarvaeCapabilitiesSkip --list)
+    set_tests_properties(LarvaeRunnerCapabilityList PROPERTIES LABELS "runner;capabilities")
+
+    add_test(NAME LarvaeRunnerStrictSkipRegression
+        COMMAND ${CMAKE_COMMAND}
+            -DTEST_EXECUTABLE=$<TARGET_FILE:larvae_runner>
+            -DTEST_ARGS=--suite=LarvaeCapabilitiesSkip|--capabilities=headless|--fail-on-skip
+            -DEXPECT_OUTPUT_REGEX=missing capabilities: window
+            -P ${BROOD_CMAKE_DIR}/run_expected_failure.cmake
+    )
+    set_tests_properties(LarvaeRunnerStrictSkipRegression
+        PROPERTIES
+            LABELS "runner;capabilities;regression"
+    )
+
+    add_test(NAME LarvaeBenchmarkCapabilityList COMMAND larvae_benchmark --benchmark-filter=LarvaeCapabilities* --list
+                                                              --capabilities=headless)
+    set_tests_properties(LarvaeBenchmarkCapabilityList
+        PROPERTIES
+            LABELS "benchmark;capabilities"
+            PASS_REGULAR_EXPRESSION "LarvaeCapabilities.WindowOnly"
+    )
+
+    add_test(NAME LarvaeBenchmarkStrictSkipRegression
+        COMMAND ${CMAKE_COMMAND}
+            -DTEST_EXECUTABLE=$<TARGET_FILE:larvae_benchmark>
+            -DTEST_ARGS=--benchmark-filter=LarvaeCapabilities*|--list|--capabilities=headless|--fail-on-skip
+            -DEXPECT_OUTPUT_REGEX=LarvaeCapabilities.WindowOnly
+            -P ${BROOD_CMAKE_DIR}/run_expected_failure.cmake
+    )
+    set_tests_properties(LarvaeBenchmarkStrictSkipRegression
+        PROPERTIES
+            LABELS "benchmark;capabilities;regression"
+    )
 
     # ============================================================================
     # GUI Test Runner (ImGui) - requires OpenGL, skip on headless builds

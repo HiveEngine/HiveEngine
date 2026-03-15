@@ -142,6 +142,10 @@ set_property(CACHE HIVE_DILIGENT_PROVIDER PROPERTY STRINGS AUTO PREBUILT SOURCE)
 set(HIVE_DILIGENT_PACKAGE_DIR "" CACHE PATH "Path to a local HiveDiligent package directory")
 set(HIVE_DILIGENT_BOOTSTRAP_BUILD_DIR "" CACHE PATH "Build directory used to bootstrap the local HiveDiligent package")
 
+if(HIVE_BUILD_TESTING)
+    enable_testing()
+endif()
+
 # Sanitizer options (for Debug builds with Clang)
 option(HIVE_ENABLE_SANITIZERS "Enable sanitizers (requires Clang)" OFF)
 set(HIVE_SANITIZER_TYPE "Address" CACHE STRING "Sanitizer type: Address, UndefinedBehavior, Thread, Memory")

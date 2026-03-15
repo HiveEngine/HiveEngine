@@ -11,6 +11,37 @@
 
 namespace larvae
 {
+    namespace
+    {
+        bool MatchesPattern(std::string_view value, std::string_view pattern)
+        {
+            if (pattern.empty())
+            {
+                return true;
+            }
+
+            if (pattern.front() == '*' && pattern.back() == '*')
+            {
+                const auto substr = pattern.substr(1, pattern.length() - 2);
+                return value.find(substr) != std::string_view::npos;
+            }
+
+            if (pattern.front() == '*')
+            {
+                const auto suffix = pattern.substr(1);
+                return value.ends_with(suffix);
+            }
+
+            if (pattern.back() == '*')
+            {
+                const auto prefix = pattern.substr(0, pattern.length() - 1);
+                return value.starts_with(prefix);
+            }
+
+            return value == pattern;
+        }
+    } // namespace
+
     TestRunner::TestRunner(const TestRunnerConfig& config)
         : config_{config}
     {
@@ -222,32 +253,24 @@ namespace larvae
             }
         }
 
+        if (!config_.exclude_suite_filter.empty() && test_info.suite_name == config_.exclude_suite_filter)
+        {
+            return false;
+        }
+
         if (!config_.filter_pattern.empty())
         {
-            const auto full_name = test_info.GetFullName();
-            const auto& pattern = config_.filter_pattern;
+            if (!MatchesPattern(test_info.GetFullName(), config_.filter_pattern))
+            {
+                return false;
+            }
+        }
 
-            // *pattern* = contains
-            if (pattern.front() == '*' && pattern.back() == '*')
+        if (!config_.exclude_filter_pattern.empty())
+        {
+            if (MatchesPattern(test_info.GetFullName(), config_.exclude_filter_pattern))
             {
-                const auto substr = pattern.substr(1, pattern.length() - 2);
-                return full_name.find(substr) != std::string::npos;
-            }
-            // *pattern = ends with
-            else if (pattern.front() == '*')
-            {
-                const auto suffix = pattern.substr(1);
-                return full_name.ends_with(suffix);
-            }
-            // pattern* = starts with
-            else if (pattern.back() == '*')
-            {
-                const auto prefix = pattern.substr(0, pattern.length() - 1);
-                return full_name.starts_with(prefix);
-            }
-            else
-            {
-                return full_name == pattern;
+                return false;
             }
         }
 
@@ -392,9 +415,17 @@ namespace larvae
             {
                 config.suite_filter = arg.substr(8);
             }
+            else if (arg.starts_with("--exclude-suite="))
+            {
+                config.exclude_suite_filter = arg.substr(16);
+            }
             else if (arg.starts_with("--repeat="))
             {
                 config.repeat_count = std::stoi(arg.substr(9));
+            }
+            else if (arg.starts_with("--exclude-filter="))
+            {
+                config.exclude_filter_pattern = arg.substr(17);
             }
             else if (arg.starts_with("--capabilities="))
             {
