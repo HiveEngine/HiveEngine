@@ -7,6 +7,7 @@
 #include <nectar/project/project_file.h>
 
 #include <waggle/engine_runner.h>
+#include <waggle/app_context.h>
 #include <waggle/project/gameplay_module.h>
 #include <waggle/project/project_context.h>
 #include <waggle/project/project_manager.h>
@@ -1112,6 +1113,7 @@ namespace
                 auto& alloc = s.m_alloc.Get();
 
                 s.m_project = comb::New<waggle::ProjectManager>(alloc, alloc);
+                ctx.m_world->InsertResource(waggle::AppContext{ctx.m_app});
 
 #if HIVE_MODE_EDITOR
                 if (ctx.m_renderContext != nullptr && ctx.m_window != nullptr)

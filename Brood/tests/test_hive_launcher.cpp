@@ -1,6 +1,11 @@
+#include <comb/default_allocator.h>
+
+#include <nectar/hive/hive_parser.h>
+
 #include <larvae/larvae.h>
 
 #include <filesystem>
+#include <fstream>
 #include <string>
 #include <vector>
 
@@ -10,6 +15,12 @@
 
 namespace
 {
+    auto& GetAlloc()
+    {
+        static comb::ModuleAllocator alloc{"TestHiveLauncher", 4 * 1024 * 1024};
+        return alloc.Get();
+    }
+
 #if HIVE_PLATFORM_WINDOWS
     std::filesystem::path GetCurrentExecutablePath()
     {
@@ -94,6 +105,12 @@ namespace
     }
 #endif
 
+    std::string ReadTextFile(const std::filesystem::path& path)
+    {
+        std::ifstream file{path, std::ios::binary};
+        return std::string{std::istreambuf_iterator<char>{file}, std::istreambuf_iterator<char>{}};
+    }
+
     auto t_launcher_headless_process_smoke =
         larvae::RegisterTest("HiveLauncher", "headless_exit_after_setup_process_smoke", []() {
 #if HIVE_PLATFORM_WINDOWS
@@ -143,6 +160,48 @@ namespace
 
             const int exitCode = RunProcess(launcherPath, {L"--headless"}, repoRoot, 10000);
             larvae::AssertEqual(exitCode, 1);
+#else
+            larvae::AssertTrue(true);
+#endif
+        });
+
+    auto t_launcher_headless_project_runs_gameplay =
+        larvae::RegisterTest("HiveLauncher", "headless_project_runs_gameplay", []() {
+#if HIVE_PLATFORM_WINDOWS
+            const auto repoRoot = FindRepoRoot();
+            larvae::AssertTrue(!repoRoot.empty());
+
+            const auto launcherPath = GetCurrentExecutablePath().parent_path() / "hive_launcher.exe";
+            const auto projectPath = repoRoot / "projects" / "sponza_demo" / "project.hive";
+            const auto reportPath = repoRoot / "projects" / "sponza_demo" / "assets" / ".nectar" / "headless_report.hive";
+
+            larvae::AssertTrue(std::filesystem::exists(launcherPath));
+            larvae::AssertTrue(std::filesystem::exists(projectPath));
+
+            std::error_code ec;
+            std::filesystem::remove(reportPath, ec);
+
+            const int exitCode = RunProcess(launcherPath, {L"--headless", projectPath.native()}, repoRoot, 30000);
+            larvae::AssertEqual(exitCode, 0);
+            larvae::AssertTrue(std::filesystem::exists(reportPath));
+
+            const std::string reportContent = ReadTextFile(reportPath);
+            larvae::AssertTrue(!reportContent.empty());
+
+            auto& alloc = GetAlloc();
+            const nectar::HiveParseResult parseResult =
+                nectar::HiveParser::Parse(wax::StringView{reportContent.c_str(), reportContent.size()}, alloc);
+            larvae::AssertTrue(parseResult.m_errors.IsEmpty());
+
+            const nectar::HiveDocument& report = parseResult.m_document;
+            larvae::AssertTrue(report.GetString("scenario", "source") == wax::StringView{"headless_simulation.hive"});
+            larvae::AssertEqual(report.GetInt("scenario", "entity_count"), int64_t{3});
+            larvae::AssertEqual(report.GetInt("scenario", "step_count"), int64_t{5});
+            larvae::AssertEqual(report.GetInt("result", "entity_count"), int64_t{3});
+            larvae::AssertEqual(report.GetInt("result", "completed_tick"), int64_t{5});
+            larvae::AssertEqual(static_cast<float>(report.GetFloat("result", "position_sum")), 45.0f);
+            larvae::AssertEqual(static_cast<float>(report.GetFloat("result", "min_position")), 5.0f);
+            larvae::AssertEqual(static_cast<float>(report.GetFloat("result", "max_position")), 25.0f);
 #else
             larvae::AssertTrue(true);
 #endif

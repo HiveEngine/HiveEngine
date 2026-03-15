@@ -1,0 +1,6 @@
+[simulation]
+entity_count = 3
+step_count = 5
+initial_position = 0.0
+spawn_spacing = 10.0
+velocity_per_second = 60.0
