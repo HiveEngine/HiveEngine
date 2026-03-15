@@ -1,5 +1,6 @@
-#include <terra/platform/glfw_terra.h>
 #include <terra/precomp.h>
+#include <terra/platform/glfw_terra.h>
+#include <terra/terramodule.h>
 
 namespace terra
 {
@@ -63,6 +64,55 @@ namespace terra
             windowContext->m_width = width;
             windowContext->m_height = height;
         }
+
+        bool InitWindowContext(WindowContext* windowContext)
+        {
+            glfwWindowHint(GLFW_CLIENT_API,
+                           GLFW_NO_API); // Disable glfw to create the OpenGL context. We will manage that in swarm
+
+            if (windowContext->m_width <= 0)
+                windowContext->m_width = 1280;
+            if (windowContext->m_height <= 0)
+                windowContext->m_height = 720;
+            if (!windowContext->m_title)
+                windowContext->m_title = "Hive Engine";
+            windowContext->m_window = glfwCreateWindow(windowContext->m_width, windowContext->m_height,
+                                                       windowContext->m_title, nullptr, nullptr);
+
+            if (!windowContext->m_window)
+            {
+                return false;
+            }
+
+            glfwSetWindowUserPointer(windowContext->m_window, windowContext);
+            glfwSetKeyCallback(windowContext->m_window, &GLFWKeyCallback);
+            glfwSetMouseButtonCallback(windowContext->m_window, &GLFWMouseButtonCallback);
+            glfwSetCursorPosCallback(windowContext->m_window, &GLFWCursorPositionCallback);
+            glfwSetWindowSizeCallback(windowContext->m_window, &GLFWWindowSizeCallback);
+
+            glfwGetWindowSize(windowContext->m_window, &windowContext->m_width, &windowContext->m_height);
+
+            double cursorX = 0.0;
+            double cursorY = 0.0;
+            glfwGetCursorPos(windowContext->m_window, &cursorX, &cursorY);
+            windowContext->m_currentInputState.m_mouseX = static_cast<float>(cursorX);
+            windowContext->m_currentInputState.m_mouseY = static_cast<float>(cursorY);
+            windowContext->m_lastInputState = windowContext->m_currentInputState;
+
+            glfwMakeContextCurrent(windowContext->m_window);
+            return true;
+        }
+
+        void ShutdownWindowContext(WindowContext* windowContext)
+        {
+            if (windowContext == nullptr || windowContext->m_window == nullptr)
+            {
+                return;
+            }
+
+            glfwDestroyWindow(windowContext->m_window);
+            windowContext->m_window = nullptr;
+        }
     } // namespace
 
     bool InitSystem()
@@ -75,54 +125,38 @@ namespace terra
         glfwTerminate();
     }
 
-    bool InitWindowContext(WindowContext* windowContext)
+    WindowContext* CreateWindow(const char* title, int width, int height)
     {
-        glfwWindowHint(GLFW_CLIENT_API,
-                       GLFW_NO_API); // Disable glfw to create the OpenGL context. We will manage that in swarm
+        auto& allocator = TerraModule::GetInstance().GetAllocator();
+        WindowContext* windowContext = comb::New<WindowContext>(allocator);
+        hive::Assert(windowContext != nullptr, "Failed to allocate WindowContext");
 
-        if (windowContext->m_width <= 0)
-            windowContext->m_width = 1280;
-        if (windowContext->m_height <= 0)
-            windowContext->m_height = 720;
-        if (!windowContext->m_title)
-            windowContext->m_title = "Hive Engine";
-        windowContext->m_window =
-            glfwCreateWindow(windowContext->m_width, windowContext->m_height, windowContext->m_title, nullptr, nullptr);
+        windowContext->m_title = title;
+        windowContext->m_width = width;
+        windowContext->m_height = height;
 
-        if (!windowContext->m_window)
+        if (!InitWindowContext(windowContext))
         {
-            return false;
+            comb::Delete(allocator, windowContext);
+            return nullptr;
         }
-
-        glfwSetWindowUserPointer(windowContext->m_window, windowContext);
-        glfwSetKeyCallback(windowContext->m_window, &GLFWKeyCallback);
-        glfwSetMouseButtonCallback(windowContext->m_window, &GLFWMouseButtonCallback);
-        glfwSetCursorPosCallback(windowContext->m_window, &GLFWCursorPositionCallback);
-        glfwSetWindowSizeCallback(windowContext->m_window, &GLFWWindowSizeCallback);
-
-        glfwGetWindowSize(windowContext->m_window, &windowContext->m_width, &windowContext->m_height);
-
-        double cursorX = 0.0;
-        double cursorY = 0.0;
-        glfwGetCursorPos(windowContext->m_window, &cursorX, &cursorY);
-        windowContext->m_currentInputState.m_mouseX = static_cast<float>(cursorX);
-        windowContext->m_currentInputState.m_mouseY = static_cast<float>(cursorY);
-        windowContext->m_lastInputState = windowContext->m_currentInputState;
-
-        glfwMakeContextCurrent(windowContext->m_window);
-        return true;
+        
+        return windowContext;
     }
-
-    void ShutdownWindowContext(WindowContext* windowContext)
+    
+    void DestroyWindow(WindowContext* windowContext)
     {
-        if (windowContext == nullptr || windowContext->m_window == nullptr)
+        if (windowContext == nullptr)
         {
             return;
         }
 
-        glfwDestroyWindow(windowContext->m_window);
-        windowContext->m_window = nullptr;
+        ShutdownWindowContext(windowContext);
+        auto& allocator = TerraModule::GetInstance().GetAllocator();
+        comb::Delete(allocator, windowContext);
     }
+
+    
 
     bool ShouldWindowClose(WindowContext* windowContext)
     {

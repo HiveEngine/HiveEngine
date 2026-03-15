@@ -9,6 +9,7 @@ hive_configure_target(Waggle)
 target_sources(Waggle
     PRIVATE
         src/waggle/app.cpp
+        src/waggle/registermodule.cpp
         src/waggle/systems/transform_system.cpp
         src/waggle/engine_runner.cpp
         src/waggle/project/project_manager.cpp

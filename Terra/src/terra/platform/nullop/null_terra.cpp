@@ -9,12 +9,13 @@ namespace terra
 
     void ShutdownSystem() {}
 
-    bool InitWindowContext(WindowContext* /*windowContext*/)
+
+    WindowContext* CreateWindow(const char* /*title*/, int /*width*/, int /*height*/)
     {
-        return false;
+        return nullptr;
     }
 
-    void ShutdownWindowContext(WindowContext* /*windowContext*/) {}
+    void DestroyWindow(WindowContext* /*windowContext*/) {}
 
     bool ShouldWindowClose(WindowContext* /*windowContext*/)
     {
