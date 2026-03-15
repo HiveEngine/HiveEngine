@@ -2,6 +2,7 @@
 
 #include <larvae/assertions.h>
 #include <larvae/benchmark.h>
+#include <larvae/capabilities.h>
 #include <larvae/benchmark_registry.h>
 #include <larvae/benchmark_runner.h>
 #include <larvae/fixture.h>

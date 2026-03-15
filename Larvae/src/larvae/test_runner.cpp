@@ -1,4 +1,5 @@
 #include <larvae/assertions.h>
+#include <larvae/capabilities.h>
 #include <larvae/precomp.h>
 #include <larvae/test_registry.h>
 #include <larvae/test_runner.h>
@@ -13,19 +14,18 @@ namespace larvae
     TestRunner::TestRunner(const TestRunnerConfig& config)
         : config_{config}
     {
+        if (!config_.capabilities_overridden)
+        {
+            config_.available_capabilities = DetectBuildCapabilities();
+        }
     }
 
-    int TestRunner::Run()
+    std::vector<TestInfo> TestRunner::CollectMatchingTests() const
     {
-        std::vector<TestInfo> tests = TestRegistry::GetInstance().GetTests();
-
-        if (tests.empty())
-        {
-            std::cout << "No tests registered!\n";
-            return 0;
-        }
-
         std::vector<TestInfo> filtered_tests;
+        const auto& tests = TestRegistry::GetInstance().GetTests();
+        filtered_tests.reserve(tests.size());
+
         for (const auto& test : tests)
         {
             if (MatchesFilter(test))
@@ -34,10 +34,46 @@ namespace larvae
             }
         }
 
+        return filtered_tests;
+    }
+
+    CapabilityMask TestRunner::GetMissingCapabilities(const TestInfo& test_info) const
+    {
+        return test_info.required_capabilities & ~config_.available_capabilities;
+    }
+
+    int TestRunner::Run()
+    {
+        results_.clear();
+
+        const auto& tests = TestRegistry::GetInstance().GetTests();
+        if (tests.empty())
+        {
+            std::cout << "No tests registered!\n";
+            return 0;
+        }
+
+        std::vector<TestInfo> filtered_tests = CollectMatchingTests();
         if (filtered_tests.empty())
         {
             std::cout << "No tests match the filter!\n";
             return 0;
+        }
+
+        if (config_.list_only)
+        {
+            PrintSelection(filtered_tests);
+
+            bool has_missing_capabilities = false;
+            for (const auto& test : filtered_tests)
+            {
+                if (GetMissingCapabilities(test) != 0)
+                {
+                    has_missing_capabilities = true;
+                    break;
+                }
+            }
+            return config_.fail_on_skip && has_missing_capabilities ? 1 : 0;
         }
 
         if (config_.shuffle)
@@ -70,6 +106,16 @@ namespace larvae
                     std::cout << "[----------] Running tests from " << current_suite << "\n";
                 }
 
+                if (!HasAllCapabilities(config_.available_capabilities, test.required_capabilities))
+                {
+                    const CapabilityMask missing = GetMissingCapabilities(test);
+                    TestResult skipped = MakeSkippedResult(test, missing);
+                    results_.push_back(skipped);
+                    std::cout << "[ SKIPPED  ] " << test.GetFullName() << " (missing capabilities: "
+                              << FormatCapabilities(missing) << ")\n";
+                    continue;
+                }
+
                 TestResult result = RunTest(test);
                 results_.push_back(result);
 
@@ -85,7 +131,7 @@ namespace larvae
         std::cout << "\n";
         PrintSummary();
 
-        return GetFailedTests() > 0 ? 1 : 0;
+        return GetFailedTests() > 0 || (config_.fail_on_skip && GetSkippedTests() > 0) ? 1 : 0;
     }
 
     TestResult TestRunner::RunTest(const TestInfo& test_info) const
@@ -155,6 +201,17 @@ namespace larvae
         return result;
     }
 
+    TestResult TestRunner::MakeSkippedResult(const TestInfo& test_info, CapabilityMask missing_capabilities) const
+    {
+        TestResult result;
+        result.suite_name = test_info.suite_name;
+        result.test_name = test_info.test_name;
+        result.status = TestStatus::Skipped;
+        result.error_message = "Missing capabilities: " + FormatCapabilities(missing_capabilities);
+        result.duration_ms = 0.0;
+        return result;
+    }
+
     bool TestRunner::MatchesFilter(const TestInfo& test_info) const
     {
         if (!config_.suite_filter.empty())
@@ -195,6 +252,24 @@ namespace larvae
         }
 
         return true;
+    }
+
+    void TestRunner::PrintSelection(const std::vector<TestInfo>& tests) const
+    {
+        std::cout << "Listing " << tests.size() << " test(s)\n";
+        std::cout << "Available capabilities: " << FormatCapabilities(config_.available_capabilities) << "\n";
+
+        for (const auto& test : tests)
+        {
+            const CapabilityMask missing = GetMissingCapabilities(test);
+            std::cout << (missing == 0 ? "[ RUNNABLE ] " : "[ SKIPPED  ] ") << test.GetFullName()
+                      << " (requires: " << FormatCapabilities(test.required_capabilities) << ")";
+            if (missing != 0)
+            {
+                std::cout << " (missing: " << FormatCapabilities(missing) << ")";
+            }
+            std::cout << "\n";
+        }
     }
 
     void TestRunner::PrintSummary() const
@@ -283,6 +358,7 @@ namespace larvae
     TestRunnerConfig ParseCommandLine(int argc, char** argv)
     {
         TestRunnerConfig config;
+        config.available_capabilities = DetectBuildCapabilities();
 
         for (int i = 1; i < argc; ++i)
         {
@@ -296,9 +372,17 @@ namespace larvae
             {
                 config.shuffle = true;
             }
+            else if (arg == "--list")
+            {
+                config.list_only = true;
+            }
             else if (arg == "--stop-on-failure")
             {
                 config.stop_on_failure = true;
+            }
+            else if (arg == "--fail-on-skip")
+            {
+                config.fail_on_skip = true;
             }
             else if (arg.starts_with("--filter="))
             {
@@ -311,6 +395,16 @@ namespace larvae
             else if (arg.starts_with("--repeat="))
             {
                 config.repeat_count = std::stoi(arg.substr(9));
+            }
+            else if (arg.starts_with("--capabilities="))
+            {
+                bool ok = false;
+                const CapabilityMask parsed = ParseCapabilityList(arg.substr(15), &ok);
+                if (ok)
+                {
+                    config.available_capabilities = parsed;
+                    config.capabilities_overridden = true;
+                }
             }
         }
 

@@ -1,3 +1,4 @@
+#include <larvae/capabilities.h>
 #include <terra/platform/glfw_terra.h>
 #include <terra/terra.h>
 
@@ -5,7 +6,8 @@
 
 namespace
 {
-    auto g_inputHelpersTest = larvae::RegisterTest("TerraApi", "InputHelpersReadState", []() {
+    auto g_inputHelpersTest = larvae::RegisterTestWithCapabilities(
+        "TerraApi", "InputHelpersReadState", larvae::ToMask(larvae::Capability::WINDOW), []() {
         terra::InputState input{};
         input.m_keys[static_cast<int>(terra::Key::A)] = true;
         input.m_mouseButton[static_cast<int>(terra::MouseButton::RIGHT)] = true;
@@ -24,7 +26,8 @@ namespace
         larvae::AssertEqual(terra::GetMouseDeltaY(&input), -1.5f);
     });
 
-    auto g_windowHelpersTest = larvae::RegisterTest("TerraApi", "WindowHelpersStoreMetadata", []() {
+    auto g_windowHelpersTest = larvae::RegisterTestWithCapabilities(
+        "TerraApi", "WindowHelpersStoreMetadata", larvae::ToMask(larvae::Capability::WINDOW), []() {
         terra::WindowContext window{};
 
         terra::SetWindowTitle(&window, "Test Window");

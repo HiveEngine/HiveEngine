@@ -11,24 +11,73 @@ namespace larvae
     BenchmarkRunner::BenchmarkRunner(BenchmarkConfig config)
         : config_{std::move(config)}
     {
+        if (!config_.capabilities_overridden)
+        {
+            config_.available_capabilities = DetectBuildCapabilities();
+        }
+    }
+
+    std::vector<BenchmarkInfo> BenchmarkRunner::CollectMatchingBenchmarks() const
+    {
+        std::vector<BenchmarkInfo> filtered_benchmarks;
+        const auto& benchmarks = BenchmarkRegistry::GetInstance().GetBenchmarks();
+        filtered_benchmarks.reserve(benchmarks.size());
+
+        for (const auto& info : benchmarks)
+        {
+            const std::string full_name = std::string{info.suite_name} + "." + info.benchmark_name;
+            if (MatchesFilter(full_name))
+            {
+                filtered_benchmarks.push_back(info);
+            }
+        }
+
+        return filtered_benchmarks;
+    }
+
+    CapabilityMask BenchmarkRunner::GetMissingCapabilities(const BenchmarkInfo& benchmark_info) const
+    {
+        return benchmark_info.required_capabilities & ~config_.available_capabilities;
     }
 
     std::vector<BenchmarkResult> BenchmarkRunner::RunAll()
     {
         std::vector<BenchmarkResult> results;
-        const auto& benchmarks = BenchmarkRegistry::GetInstance().GetBenchmarks();
+        matched_benchmarks_ = 0;
+        skipped_benchmarks_ = 0;
+        runnable_benchmarks_ = 0;
+
+        const std::vector<BenchmarkInfo> benchmarks = CollectMatchingBenchmarks();
+        matched_benchmarks_ = benchmarks.size();
+
+        if (config_.list_only)
+        {
+            PrintSelection(benchmarks);
+            for (const auto& info : benchmarks)
+            {
+                if (GetMissingCapabilities(info) != 0)
+                {
+                    ++skipped_benchmarks_;
+                }
+                else
+                {
+                    ++runnable_benchmarks_;
+                }
+            }
+            return results;
+        }
 
         for (const auto& info : benchmarks)
         {
-            std::string full_name = std::string{info.suite_name} + "." + info.benchmark_name;
-
-            if (!MatchesFilter(full_name))
+            if (!HasAllCapabilities(config_.available_capabilities, info.required_capabilities))
             {
+                ++skipped_benchmarks_;
                 continue;
             }
 
             auto result = RunSingle(info.suite_name, info.benchmark_name, info.benchmark_func);
             results.push_back(result);
+            ++runnable_benchmarks_;
         }
 
         return results;
@@ -62,6 +111,25 @@ namespace larvae
         }
 
         return full_name == pattern;
+    }
+
+    void BenchmarkRunner::PrintSelection(const std::vector<BenchmarkInfo>& benchmarks) const
+    {
+        std::cout << "Listing " << benchmarks.size() << " benchmark(s)\n";
+        std::cout << "Available capabilities: " << FormatCapabilities(config_.available_capabilities) << "\n";
+
+        for (const auto& benchmark : benchmarks)
+        {
+            const CapabilityMask missing = GetMissingCapabilities(benchmark);
+            std::cout << (missing == 0 ? "[ RUNNABLE ] " : "[ SKIPPED  ] ") << benchmark.suite_name << "."
+                      << benchmark.benchmark_name << " (requires: "
+                      << FormatCapabilities(benchmark.required_capabilities) << ")";
+            if (missing != 0)
+            {
+                std::cout << " (missing: " << FormatCapabilities(missing) << ")";
+            }
+            std::cout << "\n";
+        }
     }
 
     BenchmarkResult BenchmarkRunner::RunSingle(const char* suite_name, const char* benchmark_name,
@@ -213,6 +281,7 @@ namespace larvae
     BenchmarkConfig ParseBenchmarkCommandLine(int argc, char** argv)
     {
         BenchmarkConfig config{};
+        config.available_capabilities = DetectBuildCapabilities();
 
         for (int i = 1; i < argc; ++i)
         {
@@ -221,6 +290,14 @@ namespace larvae
             if (arg.starts_with("--benchmark-filter="))
             {
                 config.filter = arg.substr(19);
+            }
+            else if (arg == "--list")
+            {
+                config.list_only = true;
+            }
+            else if (arg == "--fail-on-skip")
+            {
+                config.fail_on_skip = true;
             }
             else if (arg.starts_with("--benchmark-min-time="))
             {
@@ -239,6 +316,16 @@ namespace larvae
             else if (arg.starts_with("--benchmark-repetitions="))
             {
                 config.repetitions = std::stoull(arg.substr(24));
+            }
+            else if (arg.starts_with("--capabilities="))
+            {
+                bool ok = false;
+                const CapabilityMask parsed = ParseCapabilityList(arg.substr(15), &ok);
+                if (ok)
+                {
+                    config.available_capabilities = parsed;
+                    config.capabilities_overridden = true;
+                }
             }
         }
 

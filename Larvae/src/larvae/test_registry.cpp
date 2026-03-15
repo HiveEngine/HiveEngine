@@ -16,7 +16,7 @@ namespace larvae
     }
 
     TestRegistrar::TestRegistrar(const char* suite_name, const char* test_name, const std::function<void()>& func,
-                                 const char* file, std::uint_least32_t line)
+                                 const char* file, std::uint_least32_t line, CapabilityMask required_capabilities)
     {
         TestInfo info;
         info.suite_name = suite_name;
@@ -24,6 +24,7 @@ namespace larvae
         info.func = func;
         info.file = file;
         info.line = line;
+        info.required_capabilities = required_capabilities;
 
         TestRegistry::GetInstance().Register(std::move(info));
     }

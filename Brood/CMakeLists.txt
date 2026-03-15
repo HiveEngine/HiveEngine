@@ -61,6 +61,7 @@ if(HIVE_BUILD_TESTING)
 
     set(BROOD_TEST_DIRS
         ${CMAKE_CURRENT_SOURCE_DIR}/tests
+        ${CMAKE_CURRENT_SOURCE_DIR}/../Larvae/tests
         ${CMAKE_CURRENT_SOURCE_DIR}/../Hive/tests
         ${CMAKE_CURRENT_SOURCE_DIR}/../Comb/tests
         ${CMAKE_CURRENT_SOURCE_DIR}/../Wax/tests
@@ -71,6 +72,7 @@ if(HIVE_BUILD_TESTING)
 
     set(BROOD_BENCHMARK_DIRS
         ${CMAKE_CURRENT_SOURCE_DIR}/tests
+        ${CMAKE_CURRENT_SOURCE_DIR}/../Larvae/tests
         ${CMAKE_CURRENT_SOURCE_DIR}/../Hive/tests
         ${CMAKE_CURRENT_SOURCE_DIR}/../Comb/tests
         ${CMAKE_CURRENT_SOURCE_DIR}/../Wax/tests
