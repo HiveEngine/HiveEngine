@@ -9,8 +9,9 @@ namespace larvae
     }
 
     void BenchmarkRegistry::RegisterBenchmark(const char* suite_name, const char* benchmark_name,
-                                              std::function<void(BenchmarkState&)> benchmark_func)
+                                              std::function<void(BenchmarkState&)> benchmark_func,
+                                              CapabilityMask required_capabilities)
     {
-        benchmarks_.push_back({suite_name, benchmark_name, std::move(benchmark_func)});
+        benchmarks_.push_back({suite_name, benchmark_name, std::move(benchmark_func), required_capabilities});
     }
 } // namespace larvae

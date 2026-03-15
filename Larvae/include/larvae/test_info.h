@@ -1,5 +1,7 @@
 #pragma once
 
+#include <larvae/capabilities.h>
+
 #include <cstdint>
 #include <functional>
 #include <string>
@@ -13,6 +15,7 @@ namespace larvae
         std::function<void()> func;
         const char* file;
         std::uint_least32_t line;
+        CapabilityMask required_capabilities{0};
 
         [[nodiscard]] std::string GetFullName() const
         {

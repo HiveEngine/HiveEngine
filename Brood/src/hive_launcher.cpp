@@ -7,18 +7,15 @@
 #include <nectar/project/project_file.h>
 
 #include <waggle/engine_runner.h>
+#include <waggle/app_context.h>
 #include <waggle/project/gameplay_module.h>
 #include <waggle/project/project_context.h>
 #include <waggle/project/project_manager.h>
 #include <waggle/project/project_scaffolder.h>
 
-#if HIVE_FEATURE_GLFW
 #include <terra/terra.h>
-#endif
 
-#if HIVE_FEATURE_VULKAN || HIVE_FEATURE_D3D12
 #include <swarm/swarm.h>
-#endif
 
 #if HIVE_MODE_EDITOR
 #include <queen/reflect/component_registry.h>
@@ -941,13 +938,11 @@ namespace
 
         ctx.m_world->InsertResource(waggle::ProjectContext{state.m_project});
 
-#if HIVE_FEATURE_GLFW
         if (ctx.m_window != nullptr)
         {
             const std::string windowTitle = BuildWindowTitle(projectPath);
             terra::SetWindowTitle(ctx.m_window, windowTitle.c_str());
         }
-#endif
 
         EnsureEditorProjectViewport(ctx, state);
         TryLoadGameplayModule(ctx, state);
@@ -1118,6 +1113,7 @@ namespace
                 auto& alloc = s.m_alloc.Get();
 
                 s.m_project = comb::New<waggle::ProjectManager>(alloc, alloc);
+                ctx.m_world->InsertResource(waggle::AppContext{ctx.m_app});
 
 #if HIVE_MODE_EDITOR
                 if (ctx.m_renderContext != nullptr && ctx.m_window != nullptr)

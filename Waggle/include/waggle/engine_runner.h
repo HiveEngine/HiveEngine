@@ -9,12 +9,10 @@ namespace terra
     struct WindowContext;
 }
 
-#if HIVE_FEATURE_VULKAN || HIVE_FEATURE_D3D12
 namespace swarm
 {
     struct RenderContext;
 }
-#endif
 
 namespace waggle
 {
@@ -42,10 +40,7 @@ namespace waggle
         waggle::App* m_app{nullptr};
         queen::World* m_world{nullptr};
         terra::WindowContext* m_window{nullptr};
-
-#if HIVE_FEATURE_VULKAN || HIVE_FEATURE_D3D12
         swarm::RenderContext* m_renderContext{nullptr};
-#endif
     };
 
     struct EngineCallbacks

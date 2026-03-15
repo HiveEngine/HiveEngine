@@ -4,6 +4,13 @@
 
 add_library(Swarm STATIC)
 
+target_include_directories(Swarm
+    PUBLIC
+        include
+)
+
+if(HIVE_HAS_RENDER_BACKEND)
+
 hive_configure_target(Swarm RTTI ON EXCEPTIONS ON)
 
 get_filename_component(_swarm_engine_root_dir "${CMAKE_CURRENT_SOURCE_DIR}/.." ABSOLUTE)
@@ -272,53 +279,65 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND TARGET Diligent-BuildSettings)
 endif()
 
 target_sources(Swarm
-        PRIVATE
-		src/swarm.cpp
+    PRIVATE
+        src/swarm.cpp
         src/diligent_swarm.cpp
-		src/diligent_swarm_vulkan.cpp
+        src/diligent_swarm_vulkan.cpp
 )
 
 if(UNIX)
-	target_sources(Swarm PRIVATE src/diligent_swarm_linux_vulkan.cpp)
-endif ()
+    target_sources(Swarm PRIVATE src/diligent_swarm_linux_vulkan.cpp)
+endif()
 
 if(WIN32)
-	target_sources(Swarm PRIVATE src/diligent_swarm_win32_vulkan.cpp)
-endif ()
+    target_sources(Swarm PRIVATE src/diligent_swarm_win32_vulkan.cpp)
+endif()
 
 target_include_directories(Swarm
-        PUBLIC
-        include
-)
-
-target_include_directories(Swarm
-        SYSTEM PUBLIC
+    SYSTEM PUBLIC
         ${_swarm_diligent_source_dir}/Graphics/GraphicsEngine/interface
 )
 
 target_include_directories(Swarm
-        SYSTEM PRIVATE
+    SYSTEM PRIVATE
         ${_swarm_diligent_source_dir}/Common/interface
         ${_swarm_diligent_source_dir}/Graphics/GraphicsEngineVulkan/interface
 )
 
 target_precompile_headers(Swarm
-        PRIVATE
+    PRIVATE
         include/swarm/precomp.h
 )
 
 target_link_libraries(Swarm
-        PUBLIC
+    PUBLIC
         Hive
         Comb
         Wax
-		Diligent-GraphicsEngineVk-static
-		Diligent-GraphicsEngine
-		Diligent-BuildSettings
+        Terra
+        Diligent-GraphicsEngineVk-static
+        Diligent-GraphicsEngine
+        Diligent-BuildSettings
 )
 
 if(UNIX AND TARGET Diligent-LinuxPlatform)
     # Static archive link order matters on ELF linkers. Repeat the platform
     # archive after the Diligent stack so DebugMessageCallback resolves.
     target_link_libraries(Swarm PUBLIC Diligent-LinuxPlatform)
+endif()
+
+else() # No render backend — null Swarm
+
+hive_configure_target(Swarm)
+
+target_sources(Swarm
+    PRIVATE
+        src/null_swarm.cpp
+)
+
+target_link_libraries(Swarm
+    PUBLIC
+        Hive
+)
+
 endif()

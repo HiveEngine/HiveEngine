@@ -1,5 +1,6 @@
 #pragma once
 
+#include <larvae/capabilities.h>
 #include <larvae/test_info.h>
 #include <larvae/test_result.h>
 
@@ -12,10 +13,16 @@ namespace larvae
     {
         std::string filter_pattern;
         std::string suite_filter;
+        std::string exclude_suite_filter;
+        std::string exclude_filter_pattern;
         bool verbose = false;
+        bool list_only = false;
         bool shuffle = false;
         int repeat_count = 1;
         bool stop_on_failure = false;
+        bool fail_on_skip = false;
+        CapabilityMask available_capabilities{0};
+        bool capabilities_overridden = false;
 
         TestRunnerConfig() = default;
     };
@@ -38,8 +45,12 @@ namespace larvae
         double GetTotalTime() const;
 
     private:
+        [[nodiscard]] std::vector<TestInfo> CollectMatchingTests() const;
+        [[nodiscard]] CapabilityMask GetMissingCapabilities(const TestInfo& test_info) const;
         [[nodiscard]] TestResult RunTest(const TestInfo& test_info) const;
+        [[nodiscard]] TestResult MakeSkippedResult(const TestInfo& test_info, CapabilityMask missing_capabilities) const;
         [[nodiscard]] bool MatchesFilter(const TestInfo& test_info) const;
+        void PrintSelection(const std::vector<TestInfo>& tests) const;
         void PrintSummary() const;
 
         TestRunnerConfig config_;

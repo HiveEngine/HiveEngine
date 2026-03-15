@@ -1,7 +1,3 @@
-if(NOT (HIVE_FEATURE_VULKAN OR HIVE_FEATURE_D3D12))
-    return()
-endif()
-
 add_library(sponza_demo MODULE src/gameplay.cpp)
 
 hive_configure_target(sponza_demo)

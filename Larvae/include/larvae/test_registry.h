@@ -32,7 +32,7 @@ namespace larvae
     {
     public:
         TestRegistrar(const char* suite_name, const char* test_name, const std::function<void()>& func,
-                      const char* file, std::uint_least32_t line);
+                      const char* file, std::uint_least32_t line, CapabilityMask required_capabilities = 0);
     };
 
     // Helper to create and register a simple test
@@ -41,6 +41,14 @@ namespace larvae
                                       const std::source_location& loc = std::source_location::current())
     {
         return {suite_name, test_name, std::move(test_body), loc.file_name(), loc.line()};
+    }
+
+    inline TestRegistrar RegisterTestWithCapabilities(const char* suite_name, const char* test_name,
+                                                      CapabilityMask required_capabilities,
+                                                      std::function<void()> test_body,
+                                                      const std::source_location& loc = std::source_location::current())
+    {
+        return {suite_name, test_name, std::move(test_body), loc.file_name(), loc.line(), required_capabilities};
     }
 
     // Helper template for tests with fixtures
@@ -59,5 +67,21 @@ namespace larvae
         };
 
         return {suite_name, test_name, std::move(wrapped_test), loc.file_name(), loc.line()};
+    }
+
+    template <typename FixtureClass>
+    TestRegistrar RegisterTestWithFixtureCapabilities(const char* suite_name, const char* test_name,
+                                                      CapabilityMask required_capabilities,
+                                                      std::function<void(FixtureClass&)> test_body,
+                                                      const std::source_location& loc = std::source_location::current())
+    {
+        auto wrapped_test = [test_body = std::move(test_body)]() {
+            FixtureClass fixture;
+            fixture.SetUp();
+            test_body(fixture);
+            fixture.TearDown();
+        };
+
+        return {suite_name, test_name, std::move(wrapped_test), loc.file_name(), loc.line(), required_capabilities};
     }
 } // namespace larvae

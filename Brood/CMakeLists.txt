@@ -3,6 +3,7 @@
 # ============================================================================
 
 set(BROOD_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
+set(BROOD_CMAKE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
 function(brood_link_test_target target)
     target_link_libraries(${target}
@@ -61,6 +62,7 @@ if(HIVE_BUILD_TESTING)
 
     set(BROOD_TEST_DIRS
         ${CMAKE_CURRENT_SOURCE_DIR}/tests
+        ${CMAKE_CURRENT_SOURCE_DIR}/../Larvae/tests
         ${CMAKE_CURRENT_SOURCE_DIR}/../Hive/tests
         ${CMAKE_CURRENT_SOURCE_DIR}/../Comb/tests
         ${CMAKE_CURRENT_SOURCE_DIR}/../Wax/tests
@@ -69,15 +71,40 @@ if(HIVE_BUILD_TESTING)
         ${CMAKE_CURRENT_SOURCE_DIR}/../Waggle/tests
     )
 
-    foreach(_module IN ITEMS Terra Swarm Antennae)
-        if(TARGET ${_module})
-            list(APPEND BROOD_TEST_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/../${_module}/tests)
-        endif()
-    endforeach()
+    set(BROOD_BENCHMARK_DIRS
+        ${CMAKE_CURRENT_SOURCE_DIR}/tests
+        ${CMAKE_CURRENT_SOURCE_DIR}/../Larvae/tests
+        ${CMAKE_CURRENT_SOURCE_DIR}/../Hive/tests
+        ${CMAKE_CURRENT_SOURCE_DIR}/../Comb/tests
+        ${CMAKE_CURRENT_SOURCE_DIR}/../Wax/tests
+        ${CMAKE_CURRENT_SOURCE_DIR}/../Queen/tests
+        ${CMAKE_CURRENT_SOURCE_DIR}/../Nectar/tests
+        ${CMAKE_CURRENT_SOURCE_DIR}/../Waggle/tests
+    )
+
+    if(TARGET Swarm)
+        list(APPEND BROOD_TEST_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/../Swarm/tests)
+        list(APPEND BROOD_BENCHMARK_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/../Swarm/tests)
+    endif()
+
+    # Some module tests include GLFW-specific headers directly.
+    # Keep the headless runner buildable by collecting them only when windowing is enabled.
+    if(HIVE_FEATURE_GLFW)
+        foreach(_module IN ITEMS Terra Antennae)
+            if(TARGET ${_module})
+                list(APPEND BROOD_TEST_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/../${_module}/tests)
+                list(APPEND BROOD_BENCHMARK_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/../${_module}/tests)
+            endif()
+        endforeach()
+    endif()
 
     function(brood_collect_sources out_var entrypoint pattern)
+        set(options)
+        set(one_value_args DIR_LIST)
+        cmake_parse_arguments(BROOD_COLLECT "${options}" "${one_value_args}" "" ${ARGN})
+
         set(_sources ${entrypoint})
-        foreach(_test_dir IN LISTS BROOD_TEST_DIRS)
+        foreach(_test_dir IN LISTS ${BROOD_COLLECT_DIR_LIST})
             file(GLOB_RECURSE _dir_sources CONFIGURE_DEPENDS "${_test_dir}/${pattern}")
             list(APPEND _sources ${_dir_sources})
         endforeach()
@@ -88,7 +115,7 @@ if(HIVE_BUILD_TESTING)
     # Test Executable
     # ============================================================================
 
-    brood_collect_sources(BROOD_TEST_SOURCES "" test_*.cpp)
+    brood_collect_sources(BROOD_TEST_SOURCES "" test_*.cpp DIR_LIST BROOD_TEST_DIRS)
 
     add_library(brood_tests OBJECT ${BROOD_TEST_SOURCES})
 
@@ -112,13 +139,15 @@ if(HIVE_BUILD_TESTING)
     # ============================================================================
 
     enable_testing()
-    add_test(NAME AllTests COMMAND larvae_runner)
+    add_test(NAME AllTests COMMAND larvae_runner --fail-on-skip --exclude-suite=LarvaeCapabilitiesSkip)
+    set_tests_properties(AllTests PROPERTIES LABELS "runner;ci")
 
     # ============================================================================
     # Benchmark Discovery
     # ============================================================================
 
-    brood_collect_sources(BROOD_BENCHMARK_SOURCES src/larvae_benchmark_main.cpp benchmark_*.cpp)
+    brood_collect_sources(BROOD_BENCHMARK_SOURCES src/larvae_benchmark_main.cpp benchmark_*.cpp DIR_LIST
+                          BROOD_BENCHMARK_DIRS)
 
     # ============================================================================
     # Benchmark Executable
@@ -129,6 +158,41 @@ if(HIVE_BUILD_TESTING)
     hive_configure_target(larvae_benchmark)
 
     brood_link_test_target(larvae_benchmark)
+
+    add_test(NAME LarvaeRunnerCapabilityList COMMAND larvae_runner --suite=LarvaeCapabilitiesSkip --list)
+    set_tests_properties(LarvaeRunnerCapabilityList PROPERTIES LABELS "runner;capabilities")
+
+    add_test(NAME LarvaeRunnerStrictSkipRegression
+        COMMAND ${CMAKE_COMMAND}
+            -DTEST_EXECUTABLE=$<TARGET_FILE:larvae_runner>
+            -DTEST_ARGS=--suite=LarvaeCapabilitiesSkip|--capabilities=headless|--fail-on-skip
+            -DEXPECT_OUTPUT_REGEX=missing capabilities: window
+            -P ${BROOD_CMAKE_DIR}/run_expected_failure.cmake
+    )
+    set_tests_properties(LarvaeRunnerStrictSkipRegression
+        PROPERTIES
+            LABELS "runner;capabilities;regression"
+    )
+
+    add_test(NAME LarvaeBenchmarkCapabilityList COMMAND larvae_benchmark --benchmark-filter=LarvaeCapabilities* --list
+                                                              --capabilities=headless)
+    set_tests_properties(LarvaeBenchmarkCapabilityList
+        PROPERTIES
+            LABELS "benchmark;capabilities"
+            PASS_REGULAR_EXPRESSION "LarvaeCapabilities.WindowOnly"
+    )
+
+    add_test(NAME LarvaeBenchmarkStrictSkipRegression
+        COMMAND ${CMAKE_COMMAND}
+            -DTEST_EXECUTABLE=$<TARGET_FILE:larvae_benchmark>
+            -DTEST_ARGS=--benchmark-filter=LarvaeCapabilities*|--list|--capabilities=headless|--fail-on-skip
+            -DEXPECT_OUTPUT_REGEX=LarvaeCapabilities.WindowOnly
+            -P ${BROOD_CMAKE_DIR}/run_expected_failure.cmake
+    )
+    set_tests_properties(LarvaeBenchmarkStrictSkipRegression
+        PROPERTIES
+            LABELS "benchmark;capabilities;regression"
+    )
 
     # ============================================================================
     # GUI Test Runner (ImGui) - requires OpenGL, skip on headless builds

@@ -2,6 +2,11 @@
 
 #include <cstdint>
 
+namespace terra
+{
+    struct WindowContext;
+}
+
 namespace swarm
 {
     // Opaque handle
@@ -9,6 +14,7 @@ namespace swarm
 
     bool InitSystem();
     void ShutdownSystem();
+    bool InitRenderContext(RenderContext* renderContext, terra::WindowContext* window);
     void ShutdownRenderContext(RenderContext& renderContext);
 
     void BeginFrame(RenderContext* ctx);
