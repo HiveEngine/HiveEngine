@@ -38,7 +38,7 @@ namespace hive
 } // namespace hive
 
 #define REGISTER_MODULE(ModuleClass)                                                                                   \
-    void Register##ModuleClass()                                                                                       \
+    inline void Register##ModuleClass()                                                                                       \
     {                                                                                                                  \
         hive::ModuleRegistry::GetInstance().RegisterModule(                                                            \
             []() -> std::unique_ptr<hive::Module> { return std::make_unique<ModuleClass>(); });                        \

@@ -4,17 +4,20 @@
 
 #include <waggle/engine_runner.h>
 
-#include <terra/terra.h>
-#include <terra/window_context.h>
-
 #include <swarm/render_context.h>
 #include <swarm/swarm.h>
+
+#include <terra/terra.h>
 
 #include <antennae/input.h>
 #include <antennae/keyboard.h>
 
 static const hive::LogCategory LOG_ENGINE{"Waggle.EngineRunner"};
 
+namespace waggle
+{
+    extern void RegisterModule();
+}
 namespace
 {
     class EngineSession
@@ -28,8 +31,8 @@ namespace
             m_context.m_app = &m_app;
             m_context.m_world = &m_app.GetWorld();
 
-            terra::SetWindowTitle(&m_windowContext, config.m_windowTitle);
-            terra::SetWindowSize(&m_windowContext, static_cast<int>(config.m_windowWidth),
+            terra::SetWindowTitle(m_windowContext, config.m_windowTitle);
+            terra::SetWindowSize(m_windowContext, static_cast<int>(config.m_windowWidth),
                                  static_cast<int>(config.m_windowHeight));
         }
 
@@ -68,6 +71,7 @@ namespace
                 m_callbacks.m_onRegisterModules();
             }
 
+            waggle::RegisterModule();
             m_moduleRegistry.CreateModules();
             m_moduleRegistry.ConfigureModules();
             m_moduleRegistry.InitModules();
@@ -105,14 +109,17 @@ namespace
 
             m_windowSystemInitialized = true;
 
-            if (!terra::InitWindowContext(&m_windowContext))
+            m_windowContext = terra::CreateWindow(m_config.m_windowTitle, static_cast<int>(m_config.m_windowWidth),
+                                              static_cast<int>(m_config.m_windowHeight));
+
+            if (m_windowContext == nullptr)
             {
                 hive::LogError(LOG_ENGINE, "Failed to create window");
                 return false;
             }
 
             m_windowInitialized = true;
-            m_context.m_window = &m_windowContext;
+            m_context.m_window = m_windowContext;
             return true;
         }
 
@@ -126,7 +133,7 @@ namespace
 
             m_rendererSystemInitialized = true;
 
-            if (!swarm::InitRenderContext(&m_renderContext, &m_windowContext))
+            if (!swarm::InitRenderContext(&m_renderContext, m_windowContext))
             {
                 hive::LogError(LOG_ENGINE, "Failed to create render context");
                 return false;
@@ -162,11 +169,11 @@ namespace
 
         void RunGraphicalLoop()
         {
-            while (!terra::ShouldWindowClose(&m_windowContext) && m_app.IsRunning())
+            while (!terra::ShouldWindowClose(m_windowContext) && m_app.IsRunning())
             {
                 HIVE_PROFILE_SCOPE_N("Frame");
-                terra::PollEvents(&m_windowContext);
-                antennae::UpdateInput(m_app.GetWorld(), &m_windowContext);
+                terra::PollEvents(m_windowContext);
+                antennae::UpdateInput(m_app.GetWorld(), m_windowContext);
 
                 if (m_config.m_autoTick)
                 {
@@ -236,7 +243,7 @@ namespace
 
             if (m_windowInitialized)
             {
-                terra::ShutdownWindowContext(&m_windowContext);
+                terra::DestroyWindow(m_windowContext);
                 m_windowInitialized = false;
             }
             m_context.m_window = nullptr;
@@ -268,7 +275,7 @@ namespace
         bool m_setupCompleted{false};
         bool m_shutdownCallbackInvoked{false};
 
-        terra::WindowContext m_windowContext{};
+        terra::WindowContext *m_windowContext{nullptr};
         bool m_windowSystemInitialized{false};
         bool m_windowInitialized{false};
 

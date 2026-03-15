@@ -18,6 +18,20 @@ target_precompile_headers(Terra
         include/terra/precomp.h
 )
 
+
+target_sources(Terra
+        PRIVATE
+        src/terra/terralog.cpp
+        src/terra/terramodule.cpp
+)
+
+target_link_libraries(Terra
+        PUBLIC
+        Hive
+        Comb
+)
+
+
 if(HIVE_FEATURE_GLFW)
     add_subdirectory(extern/glfw SYSTEM)
 
@@ -30,15 +44,15 @@ if(HIVE_FEATURE_GLFW)
 
     target_sources(Terra
         PRIVATE
-            src/terra/glfw_terra.cpp
+            src/terra/platform/glfw/glfw_terra.cpp
     )
 
     if(UNIX)
-        target_sources(Terra PRIVATE src/terra/linux_glfw_terra.cpp)
+        target_sources(Terra PRIVATE src/terra/platform/glfw/linux_glfw_terra.cpp)
     endif()
 
     if(WIN32)
-        target_sources(Terra PRIVATE src/terra/win32_glfw_terra.cpp)
+        target_sources(Terra PRIVATE src/terra/platform/glfw/win32_glfw_terra.cpp)
     endif()
 
     target_include_directories(Terra
@@ -48,6 +62,6 @@ if(HIVE_FEATURE_GLFW)
 else()
     target_sources(Terra
         PRIVATE
-            src/terra/null_terra.cpp
+            src/terra/platform/nullop/null_terra.cpp
     )
 endif()

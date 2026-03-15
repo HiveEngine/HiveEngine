@@ -2,11 +2,13 @@
 #include <hive/precomp.h>
 #include <hive/profiling/profiler.h>
 
+#include "hive/core/assert.h"
+
 namespace hive
 {
     void ModuleRegistry::RegisterModule(ModuleFactoryFn fn)
     {
-        m_moduleFactories.push_back(fn);
+        m_moduleFactories.emplace_back(fn);
     }
 
     void ModuleRegistry::CreateModules()
