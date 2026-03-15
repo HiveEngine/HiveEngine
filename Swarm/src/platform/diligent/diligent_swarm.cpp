@@ -8,8 +8,31 @@
 #include <EngineFactoryVk.h>
 #include <RefCntAutoPtr.hpp>
 #include <Shader.h>
+
+#include "swarm/swarmmodule.h"
 namespace swarm
 {
+    namespace
+    {
+        void ShutdownRenderContext(RenderContext& renderContext)
+        {
+            if (renderContext.m_swapchain != nullptr)
+            {
+                renderContext.m_swapchain->Release();
+            }
+
+            if (renderContext.m_context != nullptr)
+            {
+                renderContext.m_context->Release();
+            }
+
+            if (renderContext.m_device != nullptr)
+            {
+                renderContext.m_device->Release();
+            }
+        }
+    }
+
     const hive::LogCategory LOG_DILIGENT{"Diligent", &LOG_SWARM};
 
     static void DiligentToHiveMessageCallback(Diligent::DEBUG_MESSAGE_SEVERITY severity, const Diligent::Char* message,
@@ -42,23 +65,31 @@ namespace swarm
     {
     }
 
-    void ShutdownRenderContext(RenderContext& renderContext)
+
+    bool InitRenderContext(RenderContext* renderContext, terra::WindowContext* window);
+    RenderContext* CreateRenderContext(terra::WindowContext* windowContext)
     {
-        if (renderContext.m_swapchain != nullptr)
+        auto& allocator = SwarmModule::GetInstance().GetAllocator();
+
+        RenderContext* context = comb::New<RenderContext>(allocator);
+        if (!InitRenderContext(context, windowContext))
         {
-            renderContext.m_swapchain->Release();
+            comb::Delete(allocator, context);
+            return nullptr;
         }
 
-        if (renderContext.m_context != nullptr)
-        {
-            renderContext.m_context->Release();
-        }
-
-        if (renderContext.m_device != nullptr)
-        {
-            renderContext.m_device->Release();
-        }
+        return context;
     }
+
+    void DestroyRenderContext(RenderContext* renderContext)
+    {
+        ShutdownRenderContext(*renderContext);
+
+        auto& allocator = SwarmModule::GetInstance().GetAllocator();
+        comb::Delete(allocator, renderContext);
+    }
+
+
 
     void BeginFrame(RenderContext* ctx)
     {

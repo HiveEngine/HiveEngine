@@ -2,6 +2,8 @@
 
 #include <cstdint>
 
+#include "terra/platform/glfw_terra.h"
+
 namespace terra
 {
     struct WindowContext;
@@ -14,8 +16,9 @@ namespace swarm
 
     bool InitSystem();
     void ShutdownSystem();
-    bool InitRenderContext(RenderContext* renderContext, terra::WindowContext* window);
-    void ShutdownRenderContext(RenderContext& renderContext);
+
+    RenderContext* CreateRenderContext(terra::WindowContext* window);
+    void DestroyRenderContext(RenderContext* renderContext);
 
     void BeginFrame(RenderContext* ctx);
     void EndFrame(RenderContext* ctx);
