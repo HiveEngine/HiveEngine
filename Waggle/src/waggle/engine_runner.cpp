@@ -4,7 +4,6 @@
 
 #include <waggle/engine_runner.h>
 
-#include <swarm/render_context.h>
 #include <swarm/swarm.h>
 
 #include <terra/terra.h>
@@ -133,15 +132,16 @@ namespace
 
             m_rendererSystemInitialized = true;
 
-            if (!swarm::InitRenderContext(&m_renderContext, m_windowContext))
+            m_renderContext = swarm::CreateRenderContext(m_windowContext);
+            if (m_renderContext == nullptr)
             {
                 hive::LogError(LOG_ENGINE, "Failed to create render context");
                 return false;
             }
 
-            swarm::SetupGraphicPipeline(m_renderContext);
+            swarm::SetupGraphicPipeline(*m_renderContext);
             m_rendererInitialized = true;
-            m_context.m_renderContext = &m_renderContext;
+            m_context.m_renderContext = m_renderContext;
             return true;
         }
 
@@ -182,7 +182,7 @@ namespace
 
                 if (m_rendererInitialized)
                 {
-                    swarm::BeginFrame(&m_renderContext);
+                    swarm::BeginFrame(m_renderContext);
                 }
 
                 if (m_callbacks.m_onFrame != nullptr)
@@ -192,7 +192,7 @@ namespace
 
                 if (m_rendererInitialized)
                 {
-                    swarm::EndFrame(&m_renderContext);
+                    swarm::EndFrame(m_renderContext);
                 }
             }
         }
@@ -230,7 +230,7 @@ namespace
         {
             if (m_rendererInitialized)
             {
-                swarm::ShutdownRenderContext(m_renderContext);
+                swarm::DestroyRenderContext(m_renderContext);
                 m_rendererInitialized = false;
             }
             m_context.m_renderContext = nullptr;
@@ -279,7 +279,7 @@ namespace
         bool m_windowSystemInitialized{false};
         bool m_windowInitialized{false};
 
-        swarm::RenderContext m_renderContext{};
+        swarm::RenderContext* m_renderContext{nullptr};
         bool m_rendererSystemInitialized{false};
         bool m_rendererInitialized{false};
     };

@@ -281,16 +281,17 @@ endif()
 target_sources(Swarm
     PRIVATE
         src/swarm.cpp
-        src/diligent_swarm.cpp
-        src/diligent_swarm_vulkan.cpp
+        src/swarmmodule.cpp
+        src/platform/diligent/diligent_swarm.cpp
+        src/platform/diligent/diligent_swarm_vulkan.cpp
 )
 
 if(UNIX)
-    target_sources(Swarm PRIVATE src/diligent_swarm_linux_vulkan.cpp)
+    target_sources(Swarm PRIVATE src/platform/diligent/diligent_swarm_linux_vulkan.cpp)
 endif()
 
 if(WIN32)
-    target_sources(Swarm PRIVATE src/diligent_swarm_win32_vulkan.cpp)
+    target_sources(Swarm PRIVATE src/platform/diligent/diligent_swarm_win32_vulkan.cpp)
 endif()
 
 target_include_directories(Swarm
@@ -332,7 +333,7 @@ hive_configure_target(Swarm)
 
 target_sources(Swarm
     PRIVATE
-        src/null_swarm.cpp
+        src/platform/nullop/null_swarm.cpp
 )
 
 target_link_libraries(Swarm
