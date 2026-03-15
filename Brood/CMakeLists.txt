@@ -69,8 +69,19 @@ if(HIVE_BUILD_TESTING)
         ${CMAKE_CURRENT_SOURCE_DIR}/../Waggle/tests
     )
 
+    set(BROOD_BENCHMARK_DIRS
+        ${CMAKE_CURRENT_SOURCE_DIR}/tests
+        ${CMAKE_CURRENT_SOURCE_DIR}/../Hive/tests
+        ${CMAKE_CURRENT_SOURCE_DIR}/../Comb/tests
+        ${CMAKE_CURRENT_SOURCE_DIR}/../Wax/tests
+        ${CMAKE_CURRENT_SOURCE_DIR}/../Queen/tests
+        ${CMAKE_CURRENT_SOURCE_DIR}/../Nectar/tests
+        ${CMAKE_CURRENT_SOURCE_DIR}/../Waggle/tests
+    )
+
     if(TARGET Swarm)
         list(APPEND BROOD_TEST_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/../Swarm/tests)
+        list(APPEND BROOD_BENCHMARK_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/../Swarm/tests)
     endif()
 
     # Some module tests include GLFW-specific headers directly.
@@ -79,13 +90,18 @@ if(HIVE_BUILD_TESTING)
         foreach(_module IN ITEMS Terra Antennae)
             if(TARGET ${_module})
                 list(APPEND BROOD_TEST_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/../${_module}/tests)
+                list(APPEND BROOD_BENCHMARK_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/../${_module}/tests)
             endif()
         endforeach()
     endif()
 
     function(brood_collect_sources out_var entrypoint pattern)
+        set(options)
+        set(one_value_args DIR_LIST)
+        cmake_parse_arguments(BROOD_COLLECT "${options}" "${one_value_args}" "" ${ARGN})
+
         set(_sources ${entrypoint})
-        foreach(_test_dir IN LISTS BROOD_TEST_DIRS)
+        foreach(_test_dir IN LISTS ${BROOD_COLLECT_DIR_LIST})
             file(GLOB_RECURSE _dir_sources CONFIGURE_DEPENDS "${_test_dir}/${pattern}")
             list(APPEND _sources ${_dir_sources})
         endforeach()
@@ -96,7 +112,7 @@ if(HIVE_BUILD_TESTING)
     # Test Executable
     # ============================================================================
 
-    brood_collect_sources(BROOD_TEST_SOURCES "" test_*.cpp)
+    brood_collect_sources(BROOD_TEST_SOURCES "" test_*.cpp DIR_LIST BROOD_TEST_DIRS)
 
     add_library(brood_tests OBJECT ${BROOD_TEST_SOURCES})
 
@@ -126,7 +142,8 @@ if(HIVE_BUILD_TESTING)
     # Benchmark Discovery
     # ============================================================================
 
-    brood_collect_sources(BROOD_BENCHMARK_SOURCES src/larvae_benchmark_main.cpp benchmark_*.cpp)
+    brood_collect_sources(BROOD_BENCHMARK_SOURCES src/larvae_benchmark_main.cpp benchmark_*.cpp DIR_LIST
+                          BROOD_BENCHMARK_DIRS)
 
     # ============================================================================
     # Benchmark Executable
