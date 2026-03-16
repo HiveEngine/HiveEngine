@@ -29,6 +29,7 @@ namespace
         {
             m_context.m_app = &m_app;
             m_context.m_world = &m_app.GetWorld();
+            m_app.GetWorld().InsertResource(waggle::RuntimeContext{config.m_mode});
 
             terra::SetWindowTitle(m_windowContext, config.m_windowTitle);
             terra::SetWindowSize(m_windowContext, static_cast<int>(config.m_windowWidth),

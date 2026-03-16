@@ -1,8 +1,7 @@
 #pragma once
 
 #include <waggle/app.h>
-
-#include <cstdint>
+#include <waggle/runtime_context.h>
 
 namespace terra
 {
@@ -16,13 +15,6 @@ namespace swarm
 
 namespace waggle
 {
-    enum class EngineMode : uint8_t
-    {
-        GAME,
-        EDITOR,
-        HEADLESS
-    };
-
     struct EngineConfig
     {
         const char* m_windowTitle{"HiveEngine"};
