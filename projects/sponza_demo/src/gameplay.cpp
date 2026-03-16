@@ -276,6 +276,16 @@ HIVE_GAMEPLAY_EXPORT void HiveGameplayUnregister(queen::World& world)
     hive::LogInfo(LOG_SPONZA, "Sponza Demo unregistered");
 }
 
+HIVE_GAMEPLAY_EXPORT uint32_t HiveGameplayApiVersion()
+{
+    return HIVE_GAMEPLAY_API_VERSION;
+}
+
+HIVE_GAMEPLAY_EXPORT const char* HiveGameplayBuildSignature()
+{
+    return HIVE_GAMEPLAY_BUILD_SIGNATURE;
+}
+
 HIVE_GAMEPLAY_EXPORT const char* HiveGameplayVersion()
 {
     return "0.2.0";
