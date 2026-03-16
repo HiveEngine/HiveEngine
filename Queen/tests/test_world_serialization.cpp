@@ -473,6 +473,74 @@ namespace
         larvae::AssertEqual(result.m_componentsWritten, size_t{0});
     });
 
+    auto test_empty_archetype_entity = larvae::RegisterTest("QueenWorldSerialization", "EmptyArchetypeEntity", []() {
+        queen::ComponentRegistry<32> registry;
+        registry.Register<Pos>();
+
+        queen::World src;
+        const queen::Entity entity = src.Spawn().Build();
+        larvae::AssertTrue(src.IsAlive(entity));
+
+        queen::WorldSerializer<4096> serializer;
+        const auto serializeResult = serializer.Serialize(src, registry);
+
+        larvae::AssertTrue(serializeResult.m_success);
+        larvae::AssertEqual(serializeResult.m_entitiesWritten, size_t{1});
+        larvae::AssertEqual(serializeResult.m_componentsWritten, size_t{0});
+        larvae::AssertTrue(std::strstr(serializer.CStr(), "\"components\":{}") != nullptr);
+
+        queen::World dst;
+        const auto deserializeResult = queen::WorldDeserializer::Deserialize(dst, registry, serializer.CStr());
+
+        larvae::AssertTrue(deserializeResult.m_success);
+        larvae::AssertEqual(deserializeResult.m_entitiesLoaded, size_t{1});
+        larvae::AssertEqual(deserializeResult.m_componentsLoaded, size_t{0});
+        larvae::AssertEqual(dst.EntityCount(), size_t{1});
+    });
+
+    auto test_serialize_buffer_overflow_detected =
+        larvae::RegisterTest("QueenWorldSerialization", "SerializeBufferOverflowDetected", []() {
+            queen::ComponentRegistry<32> registry;
+            registry.Register<Pos>();
+
+            queen::World src;
+            for (int i = 0; i < 64; ++i)
+            {
+                static_cast<void>(src.Spawn(Pos{static_cast<float>(i), static_cast<float>(i + 1), static_cast<float>(i + 2)}));
+            }
+
+            queen::WorldSerializer<128> serializer;
+            const auto result = serializer.Serialize(src, registry);
+
+            larvae::AssertFalse(result.m_success);
+        });
+
+    auto test_dynamic_serializer_large_world =
+        larvae::RegisterTest("QueenWorldSerialization", "DynamicSerializerLargeWorld", []() {
+            queen::ComponentRegistry<32> registry;
+            registry.Register<Pos>();
+
+            queen::World src;
+            for (int i = 0; i < 512; ++i)
+            {
+                static_cast<void>(src.Spawn(Pos{static_cast<float>(i), static_cast<float>(i + 1), static_cast<float>(i + 2)}));
+            }
+
+            queen::DynamicWorldSerializer serializer;
+            const auto serializeResult = serializer.Serialize(src, registry);
+
+            larvae::AssertTrue(serializeResult.m_success);
+            larvae::AssertEqual(serializeResult.m_entitiesWritten, size_t{512});
+            larvae::AssertTrue(serializer.Size() > size_t{128});
+
+            queen::World dst;
+            const auto deserializeResult = queen::WorldDeserializer::Deserialize(dst, registry, serializer.CStr());
+
+            larvae::AssertTrue(deserializeResult.m_success);
+            larvae::AssertEqual(dst.EntityCount(), size_t{512});
+            larvae::AssertTrue(HasEntityWithPos(dst, 511.f, 512.f, 513.f));
+        });
+
     auto test_deserialize_result_counts =
         larvae::RegisterTest("QueenWorldSerialization", "DeserializeResultCounts", []() {
             queen::ComponentRegistry<32> registry;
