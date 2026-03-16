@@ -1,7 +1,15 @@
 #include <nectar/project/project_file.h>
 
+#include <queen/reflect/component_registry.h>
+#include <queen/reflect/world_serializer.h>
+#include <queen/world/world.h>
+
+#include <waggle/components/camera.h>
+#include <waggle/components/lighting.h>
+#include <waggle/components/transform.h>
 #include <waggle/project/project_scaffolder.h>
 
+#include <cctype>
 #include <filesystem>
 #include <fstream>
 #include <string>
@@ -53,6 +61,72 @@ namespace
         return normalized;
     }
 
+    char ToLowerAscii(char value)
+    {
+        return static_cast<char>(std::tolower(static_cast<unsigned char>(value)));
+    }
+
+    wax::String MakePresetPrefix(wax::StringView projectName, comb::DefaultAllocator& alloc)
+    {
+        wax::String prefix{alloc};
+        bool needsSeparator = false;
+        bool previousWasLowerOrDigit = false;
+
+        for (size_t i = 0; i < projectName.Size(); ++i)
+        {
+            const char value = projectName.Data()[i];
+            if (std::isalnum(static_cast<unsigned char>(value)) != 0)
+            {
+                const bool isUpper = value >= 'A' && value <= 'Z';
+                const bool shouldInsertSeparator = needsSeparator || (isUpper && previousWasLowerOrDigit);
+                if (shouldInsertSeparator && !prefix.IsEmpty())
+                {
+                    prefix.Append("-");
+                }
+
+                const char normalized = ToLowerAscii(value);
+                prefix.Append(&normalized, 1);
+                needsSeparator = false;
+                previousWasLowerOrDigit = (value >= 'a' && value <= 'z') || (value >= '0' && value <= '9');
+            }
+            else
+            {
+                needsSeparator = !prefix.IsEmpty();
+                previousWasLowerOrDigit = false;
+            }
+        }
+
+        if (prefix.IsEmpty())
+        {
+            prefix.Append("hive-project");
+        }
+
+        return prefix;
+    }
+
+    wax::String MakeModePresetName(wax::StringView prefix, wax::StringView modeSuffix, comb::DefaultAllocator& alloc)
+    {
+        wax::String name{alloc, prefix};
+        if (!name.IsEmpty())
+        {
+            name.Append("-");
+        }
+        name.Append(modeSuffix);
+        return name;
+    }
+
+    wax::String MakeDisplayPresetName(wax::StringView projectName, wax::StringView suffix,
+                                      comb::DefaultAllocator& alloc)
+    {
+        wax::String displayName{alloc, projectName.IsEmpty() ? wax::StringView{"Hive Project"} : projectName};
+        if (!suffix.IsEmpty())
+        {
+            displayName.Append(" ");
+            displayName.Append(suffix);
+        }
+        return displayName;
+    }
+
     const char* DetectDefaultPresetBase()
     {
 #if defined(_WIN32)
@@ -80,6 +154,38 @@ namespace
 
         file.write(content.Data(), static_cast<std::streamsize>(content.Size()));
         return file.good();
+    }
+
+    wax::String GenerateDefaultScene(comb::DefaultAllocator& alloc)
+    {
+        queen::World world{};
+        queen::ComponentRegistry<8> registry{};
+        registry.Register<waggle::Transform>();
+        registry.Register<waggle::Camera>();
+        registry.Register<waggle::DirectionalLight>();
+        registry.Register<waggle::AmbientLight>();
+
+        waggle::Transform cameraTransform{};
+        cameraTransform.m_position = hive::math::Float3{0.0f, 1.5f, 5.0f};
+        (void)world.Spawn(waggle::Transform{cameraTransform}, waggle::Camera{});
+
+        waggle::DirectionalLight sun{};
+        sun.direction = hive::math::Float3{0.35f, -1.0f, 0.15f};
+        (void)world.Spawn(waggle::DirectionalLight{sun});
+
+        waggle::AmbientLight ambient{};
+        ambient.color = hive::math::Float3{0.15f, 0.15f, 0.18f};
+        (void)world.Spawn(waggle::AmbientLight{ambient});
+
+        queen::WorldSerializer<8192> serializer{};
+        const auto result = serializer.Serialize(world, registry);
+
+        wax::String scene{alloc};
+        if (result.m_success)
+        {
+            scene.Append(serializer.CStr(), serializer.Size());
+        }
+        return scene;
     }
 
     bool SupportsMode(const waggle::ProjectScaffoldConfig& config, wax::StringView mode)
@@ -144,6 +250,31 @@ namespace
             out.Append("        \"CMAKE_CXX_COMPILER\": \"clang++\",\n");
         }
     }
+
+    void AppendBuildPreset(wax::String& out, bool& firstPreset, wax::StringView name, wax::StringView displayName,
+                           wax::StringView configurePreset, wax::StringView target)
+    {
+        if (!firstPreset)
+        {
+            out.Append(",\n");
+        }
+        firstPreset = false;
+
+        out.Append("    {\n");
+        out.Append("      \"name\": ");
+        AppendJsonEscaped(out, name);
+        out.Append(",\n");
+        out.Append("      \"displayName\": ");
+        AppendJsonEscaped(out, displayName);
+        out.Append(",\n");
+        out.Append("      \"configurePreset\": ");
+        AppendJsonEscaped(out, configurePreset);
+        out.Append(",\n");
+        out.Append("      \"targets\": [");
+        AppendJsonEscaped(out, target);
+        out.Append("]\n");
+        out.Append("    }");
+    }
 } // namespace
 
 namespace waggle
@@ -153,6 +284,7 @@ namespace waggle
     {
         wax::String out{alloc};
         out.Reserve(1024);
+        const wax::String presetPrefix = MakePresetPrefix(config.m_cmake.m_projectName, alloc);
 
         out.Append("{\n");
         out.Append("  \"version\": 1,\n");
@@ -188,24 +320,51 @@ namespace waggle
         out.Append("\n");
         out.Append("  },\n");
         out.Append("  \"presetNames\": {\n");
-        out.Append("    \"editor\": \"hive-editor\",\n");
-        out.Append("    \"game\": \"hive-game\",\n");
-        out.Append("    \"headless\": \"hive-headless\"\n");
+        bool firstPresetName = true;
+        const auto appendPresetName = [&](wax::StringView key, wax::StringView modeSuffix) {
+            if (!firstPresetName)
+            {
+                out.Append(",\n");
+            }
+
+            out.Append("    ");
+            AppendJsonEscaped(out, key);
+            out.Append(": ");
+
+            const wax::String presetName = MakeModePresetName(presetPrefix.View(), modeSuffix, alloc);
+            AppendJsonEscaped(out, presetName.View());
+            firstPresetName = false;
+        };
+
+        if (config.m_supportEditor)
+        {
+            appendPresetName("editor", "editor");
+        }
+        if (config.m_supportGame)
+        {
+            appendPresetName("game", "game");
+        }
+        if (config.m_supportHeadless)
+        {
+            appendPresetName("headless", "headless");
+        }
+        out.Append("\n");
         out.Append("  }\n");
         out.Append("}\n");
 
         return out;
     }
 
-    wax::String ProjectScaffolder::GenerateUserPresets(const ProjectScaffoldConfig& config,
-                                                       comb::DefaultAllocator& alloc)
+    wax::String ProjectScaffolder::GenerateCMakePresets(const ProjectScaffoldConfig& config,
+                                                        comb::DefaultAllocator& alloc)
     {
         wax::String out{alloc};
-        out.Reserve(4096);
+        out.Reserve(10240);
 
         wax::String enginePath = NormalizePath(config.m_cmake.m_enginePath, alloc);
         wax::String presetBase{alloc, config.m_presetBase.IsEmpty() ? wax::StringView{DetectDefaultPresetBase()}
                                                                     : config.m_presetBase};
+        const wax::String presetPrefix = MakePresetPrefix(config.m_cmake.m_projectName, alloc);
 
         out.Append("{\n");
         out.Append("  \"version\": 6,\n");
@@ -213,8 +372,9 @@ namespace waggle
 
         struct PresetEntry
         {
-            const char* m_name;
+            const char* m_suffix;
             const char* m_mode;
+            const char* m_runTarget;
             const char* m_buildType;
             bool m_vulkan;
             bool m_d3d12;
@@ -229,9 +389,12 @@ namespace waggle
         };
 
         const PresetEntry presetEntries[] = {
-            {"hive-editor", "Editor", "Debug", true, false, true, true, true, true, true, true, true, true},
-            {"hive-game", "Game", "Debug", true, false, true, false, false, false, false, false, false, false},
-            {"hive-headless", "Headless", "Debug", false, false, false, false, true, true, true, false, true, false},
+            {"editor", "Editor", "hive_run_editor", "Debug", true, false, true, true, true, true, true, true,
+             true, true},
+            {"game", "Game", "hive_run_game", "Debug", true, false, true, false, false, false, false, false,
+             false, false},
+            {"headless", "Headless", "hive_run_headless", "Debug", false, false, false, false, true, true, true,
+             false, true, false},
         };
 
         bool firstPreset = true;
@@ -248,9 +411,16 @@ namespace waggle
             }
             firstPreset = false;
 
+            const wax::String presetName = MakeModePresetName(presetPrefix.View(), entry.m_suffix, alloc);
+            const wax::String displayName =
+                MakeDisplayPresetName(config.m_cmake.m_projectName, entry.m_mode, alloc);
+
             out.Append("    {\n");
             out.Append("      \"name\": ");
-            AppendJsonEscaped(out, entry.m_name);
+            AppendJsonEscaped(out, presetName.View());
+            out.Append(",\n");
+            out.Append("      \"displayName\": ");
+            AppendJsonEscaped(out, displayName.View());
             out.Append(",\n");
             AppendPresetHeader(out, presetBase.View(), enginePath.View(), alloc);
             out.Append("      \"binaryDir\": \"${sourceDir}/out/build/${presetName}\",\n");
@@ -301,6 +471,36 @@ namespace waggle
             out.Append("    }");
         }
 
+        out.Append("\n  ],\n");
+        out.Append("  \"buildPresets\": [\n");
+
+        bool firstBuildPreset = true;
+        for (const PresetEntry& entry : presetEntries)
+        {
+            if (!SupportsMode(config, entry.m_mode))
+            {
+                continue;
+            }
+
+            const wax::String presetName = MakeModePresetName(presetPrefix.View(), entry.m_suffix, alloc);
+
+            wax::String buildName{alloc, presetName};
+            buildName.Append("-build");
+            wax::String buildDisplayName =
+                MakeDisplayPresetName(config.m_cmake.m_projectName, entry.m_mode, alloc);
+            buildDisplayName.Append(" Build");
+            AppendBuildPreset(out, firstBuildPreset, buildName.View(), buildDisplayName.View(), presetName.View(),
+                              "hive_launcher");
+
+            wax::String runName{alloc, presetName};
+            runName.Append("-run");
+            wax::String runDisplayName =
+                MakeDisplayPresetName(config.m_cmake.m_projectName, entry.m_mode, alloc);
+            runDisplayName.Append(" Run");
+            AppendBuildPreset(out, firstBuildPreset, runName.View(), runDisplayName.View(), presetName.View(),
+                              entry.m_runTarget);
+        }
+
         out.Append("\n  ]\n");
         out.Append("}\n");
 
@@ -317,6 +517,12 @@ namespace waggle
         out.Append("namespace queen\n");
         out.Append("{\n");
         out.Append("    class World;\n");
+        out.Append("}\n\n");
+        out.Append("HIVE_GAMEPLAY_EXPORT uint32_t HiveGameplayApiVersion() {\n");
+        out.Append("    return HIVE_GAMEPLAY_API_VERSION;\n");
+        out.Append("}\n\n");
+        out.Append("HIVE_GAMEPLAY_EXPORT const char* HiveGameplayBuildSignature() {\n");
+        out.Append("    return HIVE_GAMEPLAY_BUILD_SIGNATURE;\n");
         out.Append("}\n\n");
         out.Append("HIVE_GAMEPLAY_EXPORT void HiveGameplayRegister(queen::World& /*world*/) {}\n\n");
         out.Append("HIVE_GAMEPLAY_EXPORT void HiveGameplayUnregister(queen::World& /*world*/) {}\n\n");
@@ -349,16 +555,28 @@ namespace waggle
         {
             return false;
         }
+        if (config.m_writeDefaultScene && !config.m_defaultSceneRelative.IsEmpty())
+        {
+            std::filesystem::create_directories(root / "assets" /
+                                                    std::filesystem::path{std::string{config.m_defaultSceneRelative.Data(),
+                                                                                       config.m_defaultSceneRelative.Size()}}
+                                                        .parent_path(),
+                                                ec);
+            if (ec)
+            {
+                return false;
+            }
+        }
 
         if (!CMakeGenerator::WriteToProject(config.m_cmake, alloc))
         {
             return false;
         }
 
-        if (config.m_writeUserPresets)
+        if (config.m_writeCMakePresets)
         {
-            const wax::String presets = GenerateUserPresets(config, alloc);
-            if (!WriteTextFile(root / "CMakeUserPresets.json", presets.View()))
+            const wax::String presets = GenerateCMakePresets(config, alloc);
+            if (!WriteTextFile(root / "CMakePresets.json", presets.View()))
             {
                 return false;
             }
@@ -394,9 +612,22 @@ namespace waggle
                 .m_version = config.m_projectVersion,
                 .m_enginePath = {},
                 .m_backend = backend,
+                .m_startupScene = config.m_writeDefaultScene ? config.m_defaultSceneRelative : wax::StringView{},
             });
 
             if (!projectFile.SaveToDisk((root / "project.hive").generic_string().c_str()))
+            {
+                return false;
+            }
+        }
+
+        if (config.m_writeDefaultScene && !config.m_defaultSceneRelative.IsEmpty())
+        {
+            const wax::String scene = GenerateDefaultScene(alloc);
+            const std::filesystem::path scenePath =
+                root / "assets" /
+                std::filesystem::path{std::string{config.m_defaultSceneRelative.Data(), config.m_defaultSceneRelative.Size()}};
+            if (!WriteTextFile(scenePath, scene.View()))
             {
                 return false;
             }

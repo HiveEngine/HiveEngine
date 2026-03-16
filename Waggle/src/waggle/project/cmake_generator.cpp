@@ -62,41 +62,28 @@ namespace waggle
         out.Append("\" CACHE PATH \"Path to HiveEngine\")\n");
         out.Append("endif()\n\n");
 
+        out.Append("set(HIVE_BUILD_EMBEDDED_PROJECTS OFF CACHE BOOL \"Build bundled sample projects\" FORCE)\n");
         out.Append("add_subdirectory(${HIVE_ENGINE_DIR} ${CMAKE_BINARY_DIR}/engine EXCLUDE_FROM_ALL)\n\n");
+        out.Append("include(${HIVE_ENGINE_DIR}/cmake/HiveProject.cmake)\n\n");
 
         out.Append("file(GLOB_RECURSE GAMEPLAY_SOURCES CONFIGURE_DEPENDS src/*.cpp src/*.h)\n\n");
-
-        out.Append("if(GAMEPLAY_SOURCES)\n");
-        out.Append("    add_library(gameplay MODULE ${GAMEPLAY_SOURCES})\n");
-        out.Append("    target_link_libraries(gameplay PRIVATE Queen Waggle Hive Comb Wax Nectar)\n");
+        out.Append("hive_add_game_project(\n");
+        out.Append("    TARGET gameplay\n");
+        out.Append("    PROJECT_ROOT \"${CMAKE_CURRENT_SOURCE_DIR}\"\n");
+        out.Append("    SOURCES ${GAMEPLAY_SOURCES}\n");
         if (config.m_linkSwarm)
         {
-            out.Append("    if(TARGET Swarm)\n");
-            out.Append("        target_link_libraries(gameplay PRIVATE Swarm)\n");
-            out.Append("    endif()\n");
+            out.Append("    LINK_SWARM\n");
         }
         if (config.m_linkTerra)
         {
-            out.Append("    if(TARGET Terra)\n");
-            out.Append("        target_link_libraries(gameplay PRIVATE Terra)\n");
-            out.Append("    endif()\n");
+            out.Append("    LINK_TERRA\n");
         }
         if (config.m_linkAntennae)
         {
-            out.Append("    if(TARGET Antennae)\n");
-            out.Append("        target_link_libraries(gameplay PRIVATE Antennae)\n");
-            out.Append("    endif()\n");
+            out.Append("    LINK_ANTENNAE\n");
         }
-        out.Append("    target_include_directories(gameplay PRIVATE src)\n");
-        out.Append("    set_target_properties(gameplay PROPERTIES PREFIX \"\" OUTPUT_NAME \"gameplay\")\n");
-        out.Append("    foreach(_config IN ITEMS Debug Profile Retail Release RelWithDebInfo)\n");
-        out.Append("        string(TOUPPER \"${_config}\" _config_upper)\n");
-        out.Append("        set_target_properties(gameplay PROPERTIES\n");
-        out.Append("            \"LIBRARY_OUTPUT_DIRECTORY_${_config_upper}\" \"${CMAKE_CURRENT_SOURCE_DIR}\"\n");
-        out.Append("            \"RUNTIME_OUTPUT_DIRECTORY_${_config_upper}\" \"${CMAKE_CURRENT_SOURCE_DIR}\"\n");
-        out.Append("        )\n");
-        out.Append("    endforeach()\n");
-        out.Append("endif()\n\n");
+        out.Append(")\n\n");
 
         out.Append("if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/assets/shaders)\n");
         out.Append("    include(${HIVE_ENGINE_DIR}/cmake/CompileShaders.cmake)\n");

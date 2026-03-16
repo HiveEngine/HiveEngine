@@ -2,6 +2,13 @@
 
 #include <nectar/project/project_file.h>
 
+#include <queen/reflect/component_registry.h>
+#include <queen/reflect/world_deserializer.h>
+#include <queen/world/world.h>
+
+#include <waggle/components/camera.h>
+#include <waggle/components/lighting.h>
+#include <waggle/components/transform.h>
 #include <waggle/project/project_scaffolder.h>
 
 #include <larvae/larvae.h>
@@ -171,9 +178,12 @@ namespace
         larvae::AssertTrue(view.Contains("\"Swarm\": true"));
         larvae::AssertTrue(view.Contains("\"Terra\": true"));
         larvae::AssertTrue(view.Contains("\"Antennae\": true"));
+        larvae::AssertTrue(view.Contains("\"editor\": \"standalone-game-editor\""));
+        larvae::AssertFalse(view.Contains("\"game\":"));
+        larvae::AssertTrue(view.Contains("\"headless\": \"standalone-game-headless\""));
     });
 
-    auto t_presets = larvae::RegisterTest("WaggleProjectScaffolder", "GenerateUserPresets", []() {
+    auto t_presets = larvae::RegisterTest("WaggleProjectScaffolder", "GenerateCMakePresets", []() {
         auto& alloc = GetAlloc();
 
         waggle::ProjectScaffoldConfig config{};
@@ -185,12 +195,21 @@ namespace
         config.m_cmake.m_linkAntennae = true;
         config.m_presetBase = "llvm-windows-base";
 
-        const wax::String presets = waggle::ProjectScaffolder::GenerateUserPresets(config, alloc);
+        const wax::String presets = waggle::ProjectScaffolder::GenerateCMakePresets(config, alloc);
         const wax::StringView view = presets.View();
 
-        larvae::AssertTrue(view.Contains("\"name\": \"hive-editor\""));
-        larvae::AssertTrue(view.Contains("\"name\": \"hive-game\""));
-        larvae::AssertTrue(view.Contains("\"name\": \"hive-headless\""));
+        larvae::AssertTrue(view.Contains("\"name\": \"standalone-game-editor\""));
+        larvae::AssertTrue(view.Contains("\"name\": \"standalone-game-game\""));
+        larvae::AssertTrue(view.Contains("\"name\": \"standalone-game-headless\""));
+        larvae::AssertTrue(view.Contains("\"displayName\": \"StandaloneGame Editor\""));
+        larvae::AssertTrue(view.Contains("\"displayName\": \"StandaloneGame Headless Run\""));
+        larvae::AssertTrue(view.Contains("\"buildPresets\""));
+        larvae::AssertTrue(view.Contains("\"name\": \"standalone-game-editor-build\""));
+        larvae::AssertTrue(view.Contains("\"name\": \"standalone-game-editor-run\""));
+        larvae::AssertTrue(view.Contains("\"name\": \"standalone-game-game-build\""));
+        larvae::AssertTrue(view.Contains("\"name\": \"standalone-game-game-run\""));
+        larvae::AssertTrue(view.Contains("\"name\": \"standalone-game-headless-build\""));
+        larvae::AssertTrue(view.Contains("\"name\": \"standalone-game-headless-run\""));
         larvae::AssertTrue(view.Contains("\"generator\": \"Ninja\""));
         larvae::AssertTrue(view.Contains("\"toolchainFile\": \"C:/Dev/HE/cmake/toolchains/llvm-windows.cmake\""));
         larvae::AssertTrue(view.Contains("\"CMAKE_EXPORT_COMPILE_COMMANDS\": \"ON\""));
@@ -219,15 +238,33 @@ namespace
 
         larvae::AssertTrue(waggle::ProjectScaffolder::WriteToProject(config, alloc));
         larvae::AssertTrue(std::filesystem::exists(dir.m_path / "CMakeLists.txt"));
-        larvae::AssertTrue(std::filesystem::exists(dir.m_path / "CMakeUserPresets.json"));
+        larvae::AssertTrue(std::filesystem::exists(dir.m_path / "CMakePresets.json"));
         larvae::AssertTrue(std::filesystem::exists(dir.m_path / "HiveProject.json"));
         larvae::AssertTrue(std::filesystem::exists(dir.m_path / "project.hive"));
         larvae::AssertTrue(std::filesystem::exists(dir.m_path / "src" / "gameplay.cpp"));
+        larvae::AssertTrue(std::filesystem::exists(dir.m_path / "assets" / "scenes" / "main.hscene"));
 
         const std::string cmake = ReadTextFile(dir.m_path / "CMakeLists.txt");
-        larvae::AssertTrue(wax::StringView{cmake.c_str(), cmake.size()}.Contains("if(TARGET Swarm)"));
-        larvae::AssertTrue(wax::StringView{cmake.c_str(), cmake.size()}.Contains("if(TARGET Terra)"));
-        larvae::AssertTrue(wax::StringView{cmake.c_str(), cmake.size()}.Contains("if(TARGET Antennae)"));
+        const wax::StringView cmakeView{cmake.c_str(), cmake.size()};
+        larvae::AssertTrue(cmakeView.Contains("set(HIVE_BUILD_EMBEDDED_PROJECTS OFF"));
+        larvae::AssertTrue(cmakeView.Contains("include(${HIVE_ENGINE_DIR}/cmake/HiveProject.cmake)"));
+        larvae::AssertTrue(cmakeView.Contains("hive_add_game_project("));
+        larvae::AssertTrue(cmakeView.Contains("TARGET gameplay"));
+        larvae::AssertTrue(cmakeView.Contains("SOURCES ${GAMEPLAY_SOURCES}"));
+        larvae::AssertTrue(cmakeView.Contains("LINK_SWARM"));
+        larvae::AssertTrue(cmakeView.Contains("LINK_TERRA"));
+        larvae::AssertTrue(cmakeView.Contains("LINK_ANTENNAE"));
+
+        const std::string gameplayStub = ReadTextFile(dir.m_path / "src" / "gameplay.cpp");
+        larvae::AssertTrue(wax::StringView{gameplayStub.c_str(), gameplayStub.size()}.Contains("HiveGameplayApiVersion"));
+        larvae::AssertTrue(
+            wax::StringView{gameplayStub.c_str(), gameplayStub.size()}.Contains("HiveGameplayBuildSignature"));
+
+        const std::string manifest = ReadTextFile(dir.m_path / "HiveProject.json");
+        const wax::StringView manifestView{manifest.c_str(), manifest.size()};
+        larvae::AssertTrue(manifestView.Contains("\"editor\": \"write-project-editor\""));
+        larvae::AssertTrue(manifestView.Contains("\"game\": \"write-project-game\""));
+        larvae::AssertTrue(manifestView.Contains("\"headless\": \"write-project-headless\""));
 
         nectar::ProjectFile projectFile{alloc};
         const std::string projectPath = (dir.m_path / "project.hive").generic_string();
@@ -237,6 +274,19 @@ namespace
         larvae::AssertTrue(projectFile.Name() == wax::StringView{"WriteProject"});
         larvae::AssertTrue(projectFile.Version() == wax::StringView{"1.2.3"});
         larvae::AssertTrue(projectFile.Backend() == wax::StringView{"vulkan"});
+        larvae::AssertTrue(projectFile.StartupSceneRelative() == wax::StringView{"scenes/main.hscene"});
+
+        const std::string sceneContent = ReadTextFile(dir.m_path / "assets" / "scenes" / "main.hscene");
+        queen::ComponentRegistry<8> registry{};
+        registry.Register<waggle::Transform>();
+        registry.Register<waggle::Camera>();
+        registry.Register<waggle::DirectionalLight>();
+        registry.Register<waggle::AmbientLight>();
+
+        queen::World world{};
+        const auto sceneResult = queen::WorldDeserializer::Deserialize(world, registry, sceneContent.c_str());
+        larvae::AssertTrue(sceneResult.m_success);
+        larvae::AssertEqual(world.EntityCount(), size_t{3});
     });
 
     auto t_smoke = larvae::RegisterTest("WaggleProjectScaffolder", "HeadlessStandaloneBootstrap", []() {
@@ -260,17 +310,33 @@ namespace
 
         std::string listLog;
         larvae::AssertTrue(RunCommandWithLog(dir.m_path, "cmake --list-presets", "list-presets.log", listLog));
-        larvae::AssertTrue(wax::StringView{listLog.c_str(), listLog.size()}.Contains("hive-headless"));
+        larvae::AssertTrue(wax::StringView{listLog.c_str(), listLog.size()}.Contains("standalone-smoke-headless"));
+
+        std::string buildPresetListLog;
+        larvae::AssertTrue(
+            RunCommandWithLog(dir.m_path, "cmake --list-presets=build", "list-build-presets.log", buildPresetListLog));
+        larvae::AssertTrue(
+            wax::StringView{buildPresetListLog.c_str(), buildPresetListLog.size()}.Contains("standalone-smoke-headless-build"));
+        larvae::AssertTrue(
+            wax::StringView{buildPresetListLog.c_str(), buildPresetListLog.size()}.Contains("standalone-smoke-headless-run"));
 
         std::string configureLog;
         larvae::AssertTrue(
-            RunCommandWithLog(dir.m_path, "cmake --preset hive-headless", "configure.log", configureLog));
-        larvae::AssertTrue(std::filesystem::exists(dir.m_path / "out" / "build" / "hive-headless" / "build.ninja"));
+            RunCommandWithLog(dir.m_path, "cmake --preset standalone-smoke-headless", "configure.log", configureLog));
+        larvae::AssertTrue(
+            std::filesystem::exists(dir.m_path / "out" / "build" / "standalone-smoke-headless" / "build.ninja"));
+        const std::string buildNinja =
+            ReadTextFile(dir.m_path / "out" / "build" / "standalone-smoke-headless" / "build.ninja");
+        const wax::StringView buildNinjaView{buildNinja.c_str(), buildNinja.size()};
+        larvae::AssertTrue(buildNinjaView.Contains("hive_run_project"));
+        larvae::AssertTrue(buildNinjaView.Contains("hive_run_headless"));
+        larvae::AssertTrue(buildNinjaView.Contains("--headless"));
+        larvae::AssertTrue(buildNinjaView.Contains("--project"));
 
         std::string buildLog;
-        larvae::AssertTrue(
-            RunCommandWithLog(dir.m_path, "cmake --build \"out/build/hive-headless\" --config Debug --target gameplay",
-                              "build.log", buildLog));
+        larvae::AssertTrue(RunCommandWithLog(dir.m_path,
+                                             "cmake --build --preset standalone-smoke-headless-build", "build.log",
+                                             buildLog));
 
         larvae::AssertTrue(ContainsFileRecursive(dir.m_path, GetGameplayModuleName()));
     });
