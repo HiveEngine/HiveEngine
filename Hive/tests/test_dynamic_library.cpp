@@ -111,4 +111,16 @@ namespace
         larvae::AssertFalse(lib.IsLoaded());
     });
 
+    auto t_detach = larvae::RegisterTest("HiveDynamicLibrary", "DetachLoadedLibrary", []() {
+        DynamicLibrary lib;
+#if HIVE_PLATFORM_WINDOWS
+        larvae::AssertTrue(lib.Load("kernel32.dll"));
+#elif HIVE_PLATFORM_LINUX
+        larvae::AssertTrue(lib.Load("libc.so.6"));
+#endif
+        void* handle = lib.Detach();
+        larvae::AssertNotNull(handle);
+        larvae::AssertFalse(lib.IsLoaded());
+    });
+
 } // namespace
