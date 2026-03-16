@@ -401,12 +401,13 @@ namespace forge
             return changed;
         }
 
-        void DrawComponent(queen::World& world, queen::Entity entity, queen::TypeId typeId, void* componentData,
+        bool DrawComponent(queen::World& world, queen::Entity entity, queen::TypeId typeId, void* componentData,
                            const queen::ComponentReflection& reflection, UndoStack& undo)
         {
             IM_UNUSED(world);
 
             const char* typeName = reflection.m_name != nullptr ? reflection.m_name : "Component";
+            bool changed = false;
 
             const ImGuiTreeNodeFlags headerFlags =
                 ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_AllowOverlap;
@@ -418,27 +419,30 @@ namespace forge
 
                 for (size_t i = 0; i < reflection.m_fieldCount; ++i)
                 {
-                    DrawField(reflection.m_fields[i], componentData, entity, typeId, 0, undo);
+                    changed |= DrawField(reflection.m_fields[i], componentData, entity, typeId, 0, undo);
                 }
 
                 ImGui::Unindent(4.f);
                 ImGui::PopID();
             }
+
+            return changed;
         }
     } // namespace
 
-    void DrawInspectorPanel(queen::World& world, EditorSelection& selection,
+    bool DrawInspectorPanel(queen::World& world, EditorSelection& selection,
                             const queen::ComponentRegistry<256>& registry, UndoStack& undo)
     {
         const queen::Entity entity = selection.Primary();
         if (entity.IsNull() || !world.IsAlive(entity))
         {
             ImGui::TextDisabled("No entity selected");
-            return;
+            return false;
         }
 
         ImGui::Text("Entity %u", entity.Index());
         ImGui::Separator();
+        bool changed = false;
 
         world.ForEachComponentType(entity, [&](queen::TypeId typeId) {
             const auto* reg = registry.Find(typeId);
@@ -453,7 +457,9 @@ namespace forge
                 return;
             }
 
-            DrawComponent(world, entity, typeId, comp, reg->m_reflection, undo);
+            changed |= DrawComponent(world, entity, typeId, comp, reg->m_reflection, undo);
         });
+
+        return changed;
     }
 } // namespace forge

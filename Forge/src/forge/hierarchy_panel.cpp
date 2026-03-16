@@ -18,7 +18,7 @@ namespace forge
         snprintf(buf, bufSize, "Entity %u", entity.Index());
     }
 
-    static void DrawEntityNode(queen::World& world, EditorSelection& selection, queen::Entity entity,
+    static bool DrawEntityNode(queen::World& world, EditorSelection& selection, queen::Entity entity,
                                EntityLabelFn labelFn)
     {
         char label[64];
@@ -35,6 +35,7 @@ namespace forge
 
         ImGui::PushID(static_cast<int>(entity.Index()));
         bool open = ImGui::TreeNodeEx(label, flags);
+        bool modified = false;
 
         // Selection on click
         if (ImGui::IsItemClicked(ImGuiMouseButton_Left) && !ImGui::IsItemToggledOpen())
@@ -53,23 +54,28 @@ namespace forge
                 world.DespawnRecursive(entity);
                 if (selection.IsSelected(entity))
                     selection.Clear();
+                modified = true;
             }
             ImGui::EndPopup();
         }
 
         if (open && hasChildren)
         {
-            world.ForEachChild(entity, [&](queen::Entity child) { DrawEntityNode(world, selection, child, labelFn); });
+            world.ForEachChild(
+                entity, [&](queen::Entity child) { modified |= DrawEntityNode(world, selection, child, labelFn); });
             ImGui::TreePop();
         }
 
         ImGui::PopID();
+        return modified;
     }
 
-    void DrawHierarchyPanel(queen::World& world, EditorSelection& selection, EntityLabelFn labelFn)
+    bool DrawHierarchyPanel(queen::World& world, EditorSelection& selection, EntityLabelFn labelFn)
     {
         if (!labelFn)
             labelFn = DefaultEntityLabel;
+
+        bool modified = false;
 
         // Collect root entities (no Parent component)
         std::vector<queen::Entity> roots;
@@ -94,7 +100,9 @@ namespace forge
         {
             if (ImGui::MenuItem("New Entity"))
             {
-                world.Spawn().Build();
+                const queen::Entity entity = world.Spawn().Build();
+                selection.Select(entity);
+                modified = true;
             }
             ImGui::EndPopup();
         }
@@ -103,7 +111,9 @@ namespace forge
         for (queen::Entity root : roots)
         {
             if (world.IsAlive(root))
-                DrawEntityNode(world, selection, root, labelFn);
+                modified |= DrawEntityNode(world, selection, root, labelFn);
         }
+
+        return modified;
     }
 } // namespace forge

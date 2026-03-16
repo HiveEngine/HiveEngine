@@ -18,5 +18,6 @@ namespace forge
     using EntityLabelFn = void (*)(queen::World& world, queen::Entity entity, char* buf, size_t bufSize);
 
     // Must be called between ImGui::Begin("Hierarchy") and ImGui::End().
-    void DrawHierarchyPanel(queen::World& world, EditorSelection& selection, EntityLabelFn labelFn = nullptr);
+    // Returns true when the scene hierarchy was modified.
+    bool DrawHierarchyPanel(queen::World& world, EditorSelection& selection, EntityLabelFn labelFn = nullptr);
 } // namespace forge
