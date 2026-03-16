@@ -18,6 +18,7 @@
 #include <waggle/app_context.h>
 #include <waggle/project/project_context.h>
 #include <waggle/project/project_manager.h>
+#include <waggle/runtime_context.h>
 #include <waggle/time.h>
 
 #include <algorithm>
@@ -259,6 +260,13 @@ namespace
 
 HIVE_GAMEPLAY_EXPORT void HiveGameplayRegister(queen::World& world)
 {
+    const waggle::RuntimeContext* runtime = world.Resource<waggle::RuntimeContext>();
+    if (runtime == nullptr || runtime->m_mode != waggle::EngineMode::HEADLESS)
+    {
+        hive::LogInfo(LOG_SPONZA, "Sponza Demo registered with headless simulation disabled");
+        return;
+    }
+
     world.InsertResource(HeadlessScenarioState{});
     world.InsertResource(HeadlessMetrics{});
 
@@ -271,8 +279,16 @@ HIVE_GAMEPLAY_EXPORT void HiveGameplayRegister(queen::World& world)
 
 HIVE_GAMEPLAY_EXPORT void HiveGameplayUnregister(queen::World& world)
 {
-    world.RemoveResource<HeadlessMetrics>();
-    world.RemoveResource<HeadlessScenarioState>();
+    if (world.HasResource<HeadlessMetrics>())
+    {
+        world.RemoveResource<HeadlessMetrics>();
+    }
+
+    if (world.HasResource<HeadlessScenarioState>())
+    {
+        world.RemoveResource<HeadlessScenarioState>();
+    }
+
     hive::LogInfo(LOG_SPONZA, "Sponza Demo unregistered");
 }
 
