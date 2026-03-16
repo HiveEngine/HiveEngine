@@ -3,7 +3,7 @@
     <name>Hive Config</name>
     <vendor email="devnull@hive.local">Hive</vendor>
     <description><![CDATA[
-      CLion tool window that reads HiveFeatures.json and regenerates CMakeUserPresets.json.
+      CLion tool window for Hive engine workspaces and Hive game projects.
     ]]></description>
 
     <depends>com.intellij.modules.platform</depends>

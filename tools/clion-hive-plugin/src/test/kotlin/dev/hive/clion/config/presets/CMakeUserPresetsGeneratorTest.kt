@@ -12,6 +12,7 @@ import dev.hive.clion.config.model.ToolchainPlatform
 import dev.hive.clion.config.model.ToolchainSnapshot
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 
 class CMakeUserPresetsGeneratorTest {
     @Test
@@ -55,6 +56,23 @@ class CMakeUserPresetsGeneratorTest {
         assertEquals("OFF", preset.cacheVariables.getValue("HIVE_FEATURE_D3D12"))
         assertEquals("OFF", preset.cacheVariables.getValue("HIVE_FEATURE_GLFW"))
         assertEquals("OFF", preset.cacheVariables.getValue("HIVE_FEATURE_IMGUI"))
+    }
+
+    @Test
+    fun `fails with actionable message when root presets are missing the active toolchain base`() {
+        val catalog = testCatalog()
+        val uiState = defaultUiState(catalog)
+
+        val error = assertFailsWith<IllegalArgumentException> {
+            CMakeUserPresetsGenerator.buildDocument(
+                catalog = catalog,
+                uiState = uiState,
+                toolchain = ToolchainSnapshot(ToolchainPlatform.WINDOWS, CompilerFamily.LLVM, "LLVM", "test"),
+                availableBasePresets = emptySet(),
+            )
+        }
+
+        assertEquals("CMakePresets.json is missing required base preset 'llvm-windows-base'.", error.message)
     }
 
     private fun defaultUiState(catalog: HiveFeaturesFile): HiveUiState {
