@@ -8,17 +8,23 @@
 
 #include <waggle/engine_runner.h>
 #include <waggle/app_context.h>
+#include <waggle/components/camera.h>
+#include <waggle/components/lighting.h>
+#include <waggle/components/transform.h>
 #include <waggle/project/gameplay_module.h>
 #include <waggle/project/project_context.h>
 #include <waggle/project/project_manager.h>
 #include <waggle/project/project_scaffolder.h>
+#include <waggle/time.h>
 
 #include <terra/terra.h>
 
 #include <swarm/swarm.h>
 
 #if HIVE_MODE_EDITOR
+#include <queen/reflect/world_deserializer.h>
 #include <queen/reflect/component_registry.h>
+#include <queen/reflect/world_serializer.h>
 
 #include <terra/platform/glfw_terra.h>
 
@@ -26,6 +32,7 @@
 #include <forge/hierarchy_panel.h>
 #include <forge/imgui_integration.h>
 #include <forge/inspector_panel.h>
+#include <forge/scene_file.h>
 #include <forge/selection.h>
 #include <forge/toolbar.h>
 #include <forge/undo.h>
@@ -75,6 +82,8 @@ namespace
     {
         PROJECT_FILE,
         DIRECTORY,
+        SCENE_FILE_OPEN,
+        SCENE_FILE_SAVE,
     };
 
     enum class NativePathPickerResult
@@ -129,6 +138,15 @@ namespace
         bool m_supportGame{true};
         bool m_supportHeadless{true};
     };
+
+    enum class PendingEditorAction
+    {
+        NONE,
+        NEW_SCENE,
+        OPEN_SCENE,
+        RELOAD_SCENE,
+        EXIT_APP,
+    };
 #endif
 
     struct LauncherState
@@ -148,6 +166,17 @@ namespace
         forge::PlayState m_playState{forge::PlayState::EDITING};
         queen::ComponentRegistry<256> m_componentRegistry;
         std::string m_assetsRoot;
+        std::string m_currentSceneRelative;
+        std::string m_currentScenePath;
+        std::string m_scenePromptError;
+        PendingEditorAction m_pendingEditorAction{PendingEditorAction::NONE};
+        std::string m_pendingScenePath;
+        std::string m_recoverySceneRelative;
+        std::string m_recoveryPromptError;
+        double m_sceneAutosaveElapsedSeconds{0.0};
+        bool m_sceneDirty{false};
+        bool m_openUnsavedScenePopup{false};
+        bool m_openRecoveryScenePopup{false};
         bool m_firstFrame{true};
         bool m_imguiReady{false};
         swarm::ViewportRT* m_viewportRt{nullptr};
@@ -157,21 +186,146 @@ namespace
 
 #if HIVE_MODE_EDITOR
     void DrawProjectHub(waggle::EngineContext& ctx, LauncherState& state);
-    void DrawEditor(waggle::EngineContext& ctx, LauncherState& state);
+        void DrawEditor(waggle::EngineContext& ctx, LauncherState& state);
 #endif
+
+    enum class LauncherRequestedMode
+    {
+        AUTO,
+        EDITOR,
+        GAME,
+        HEADLESS,
+    };
 
     struct LauncherCommandLine
     {
         std::filesystem::path m_projectPath{};
-        bool m_forceHeadless{false};
+        LauncherRequestedMode m_requestedMode{LauncherRequestedMode::AUTO};
         bool m_exitAfterSetup{false};
     };
+
+    const char* GetLauncherModeArgumentName(LauncherRequestedMode mode)
+    {
+        switch (mode)
+        {
+            case LauncherRequestedMode::EDITOR:
+                return "--editor";
+            case LauncherRequestedMode::GAME:
+                return "--game";
+            case LauncherRequestedMode::HEADLESS:
+                return "--headless";
+            case LauncherRequestedMode::AUTO:
+            default:
+                return "auto";
+        }
+    }
+
+    const char* GetCompiledLauncherModeName()
+    {
+#if HIVE_MODE_EDITOR
+        return "editor";
+#elif HIVE_MODE_HEADLESS
+        return "headless";
+#else
+        return "game";
+#endif
+    }
+
+    LauncherRequestedMode GetDefaultLauncherMode()
+    {
+#if HIVE_MODE_EDITOR
+        return LauncherRequestedMode::EDITOR;
+#elif HIVE_MODE_HEADLESS
+        return LauncherRequestedMode::HEADLESS;
+#else
+        return LauncherRequestedMode::GAME;
+#endif
+    }
+
+    bool IsLauncherModeSupported(LauncherRequestedMode mode)
+    {
+        switch (mode)
+        {
+            case LauncherRequestedMode::AUTO:
+                return true;
+#if HIVE_MODE_EDITOR
+            case LauncherRequestedMode::EDITOR:
+            case LauncherRequestedMode::HEADLESS:
+                return true;
+            case LauncherRequestedMode::GAME:
+                return false;
+#elif HIVE_MODE_HEADLESS
+            case LauncherRequestedMode::HEADLESS:
+                return true;
+            case LauncherRequestedMode::EDITOR:
+            case LauncherRequestedMode::GAME:
+                return false;
+#else
+            case LauncherRequestedMode::GAME:
+            case LauncherRequestedMode::HEADLESS:
+                return true;
+            case LauncherRequestedMode::EDITOR:
+                return false;
+#endif
+        }
+
+        return false;
+    }
+
+    bool TryAssignRequestedMode(LauncherRequestedMode mode, LauncherCommandLine* commandLine)
+    {
+        if (commandLine->m_requestedMode == LauncherRequestedMode::AUTO || commandLine->m_requestedMode == mode)
+        {
+            commandLine->m_requestedMode = mode;
+            return true;
+        }
+
+        std::fprintf(stderr, "Error: conflicting launcher modes: %s and %s\n",
+                     GetLauncherModeArgumentName(commandLine->m_requestedMode), GetLauncherModeArgumentName(mode));
+        return false;
+    }
+
+    bool ResolveLauncherMode(const LauncherCommandLine& commandLine, waggle::EngineMode* outMode)
+    {
+        LauncherRequestedMode mode = commandLine.m_requestedMode;
+        if (mode == LauncherRequestedMode::AUTO)
+        {
+            mode = GetDefaultLauncherMode();
+        }
+
+        if (!IsLauncherModeSupported(mode))
+        {
+            std::fprintf(stderr,
+                         "Error: this launcher binary was built in %s mode and does not support %s\n",
+                         GetCompiledLauncherModeName(), GetLauncherModeArgumentName(mode));
+            return false;
+        }
+
+        switch (mode)
+        {
+            case LauncherRequestedMode::EDITOR:
+                *outMode = waggle::EngineMode::EDITOR;
+                return true;
+            case LauncherRequestedMode::GAME:
+                *outMode = waggle::EngineMode::GAME;
+                return true;
+            case LauncherRequestedMode::HEADLESS:
+                *outMode = waggle::EngineMode::HEADLESS;
+                return true;
+            case LauncherRequestedMode::AUTO:
+            default:
+                break;
+        }
+
+        return false;
+    }
 
     void PrintUsage()
     {
         std::fprintf(stderr,
-                     "Usage: hive_launcher [--headless] [--exit-after-setup] [path/to/project.hive]\n"
-                     "       Without a project path, the editor opens the project hub.\n");
+                     "Usage: hive_launcher [--editor|--game|--headless] [--project path/to/project.hive]\n"
+                     "                     [--exit-after-setup] [path/to/project.hive]\n"
+                     "       Positional project paths remain supported for compatibility.\n");
     }
 
     bool TryParseCommandLine(int argc, char* argv[], LauncherCommandLine* commandLine)
@@ -179,15 +333,59 @@ namespace
         for (int i = 1; i < argc; ++i)
         {
             const char* arg = argv[i];
+            if (std::strcmp(arg, "--editor") == 0)
+            {
+                if (!TryAssignRequestedMode(LauncherRequestedMode::EDITOR, commandLine))
+                {
+                    PrintUsage();
+                    return false;
+                }
+                continue;
+            }
+
+            if (std::strcmp(arg, "--game") == 0)
+            {
+                if (!TryAssignRequestedMode(LauncherRequestedMode::GAME, commandLine))
+                {
+                    PrintUsage();
+                    return false;
+                }
+                continue;
+            }
+
             if (std::strcmp(arg, "--headless") == 0)
             {
-                commandLine->m_forceHeadless = true;
+                if (!TryAssignRequestedMode(LauncherRequestedMode::HEADLESS, commandLine))
+                {
+                    PrintUsage();
+                    return false;
+                }
                 continue;
             }
 
             if (std::strcmp(arg, "--exit-after-setup") == 0)
             {
                 commandLine->m_exitAfterSetup = true;
+                continue;
+            }
+
+            if (std::strcmp(arg, "--project") == 0)
+            {
+                if (i + 1 >= argc)
+                {
+                    std::fprintf(stderr, "Error: --project requires a file path\n");
+                    PrintUsage();
+                    return false;
+                }
+
+                if (!commandLine->m_projectPath.empty())
+                {
+                    std::fprintf(stderr, "Error: multiple project paths provided\n");
+                    PrintUsage();
+                    return false;
+                }
+
+                commandLine->m_projectPath = argv[++i];
                 continue;
             }
 
@@ -655,19 +853,34 @@ namespace
         T* m_ptr{nullptr};
     };
 
-    void SetNativeDialogInitialDirectory(IFileDialog* dialog, const std::filesystem::path& seedDirectory)
+    void SetNativeDialogInitialPath(IFileDialog* dialog, const std::filesystem::path& seedPath)
     {
-        if (seedDirectory.empty())
+        if (seedPath.empty())
         {
             return;
         }
 
-        const std::wstring folder = seedDirectory.wstring();
+        std::filesystem::path initialDirectory = seedPath;
+        if (seedPath.has_filename())
+        {
+            initialDirectory = seedPath.parent_path();
+        }
+
+        const std::wstring folder = initialDirectory.wstring();
         ScopedComPtr<IShellItem> shellFolder{};
         if (SUCCEEDED(SHCreateItemFromParsingName(folder.c_str(), nullptr, IID_PPV_ARGS(shellFolder.Put()))))
         {
             dialog->SetDefaultFolder(shellFolder.Get());
             dialog->SetFolder(shellFolder.Get());
+        }
+
+        if (seedPath.has_filename())
+        {
+            const std::wstring fileName = seedPath.filename().wstring();
+            if (!fileName.empty())
+            {
+                dialog->SetFileName(fileName.c_str());
+            }
         }
     }
 #endif
@@ -722,7 +935,7 @@ namespace
     }
 #endif
 
-    NativePathPickerResult ShowNativePathPicker(NativePathPickerMode mode, const std::filesystem::path& seedDirectory,
+    NativePathPickerResult ShowNativePathPicker(NativePathPickerMode mode, const std::filesystem::path& seedPath,
                                                 std::filesystem::path* selectedPath)
     {
 #if HIVE_PLATFORM_WINDOWS
@@ -732,8 +945,10 @@ namespace
             return NativePathPickerResult::UNAVAILABLE;
         }
 
-        ScopedComPtr<IFileOpenDialog> dialog{};
-        HRESULT hr = CoCreateInstance(CLSID_FileOpenDialog, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(dialog.Put()));
+        ScopedComPtr<IFileDialog> dialog{};
+        const CLSID dialogClassId = mode == NativePathPickerMode::SCENE_FILE_SAVE ? CLSID_FileSaveDialog
+                                                                                  : CLSID_FileOpenDialog;
+        HRESULT hr = CoCreateInstance(dialogClassId, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(dialog.Put()));
         if (FAILED(hr))
         {
             return NativePathPickerResult::FAILED;
@@ -745,14 +960,15 @@ namespace
             return NativePathPickerResult::FAILED;
         }
 
-        options |= FOS_FORCEFILESYSTEM | FOS_PATHMUSTEXIST | FOS_NOCHANGEDIR;
+        options |= FOS_FORCEFILESYSTEM | FOS_NOCHANGEDIR;
         if (mode == NativePathPickerMode::DIRECTORY)
         {
-            options |= FOS_PICKFOLDERS;
+            options |= FOS_PICKFOLDERS | FOS_PATHMUSTEXIST;
             dialog->SetTitle(L"Select Project Directory");
         }
-        else
+        else if (mode == NativePathPickerMode::PROJECT_FILE)
         {
+            options |= FOS_PATHMUSTEXIST | FOS_FILEMUSTEXIST;
             dialog->SetTitle(L"Select Hive Project");
             const COMDLG_FILTERSPEC filters[] = {
                 {L"Hive Project", L"project.hive"},
@@ -762,13 +978,36 @@ namespace
             dialog->SetFileTypes(static_cast<UINT>(std::size(filters)), filters);
             dialog->SetFileTypeIndex(1);
         }
+        else if (mode == NativePathPickerMode::SCENE_FILE_OPEN)
+        {
+            options |= FOS_PATHMUSTEXIST | FOS_FILEMUSTEXIST;
+            dialog->SetTitle(L"Open Hive Scene");
+            const COMDLG_FILTERSPEC filters[] = {
+                {L"Hive Scene", L"*.hscene"},
+                {L"All Files", L"*.*"},
+            };
+            dialog->SetFileTypes(static_cast<UINT>(std::size(filters)), filters);
+            dialog->SetFileTypeIndex(1);
+        }
+        else
+        {
+            options |= FOS_PATHMUSTEXIST | FOS_OVERWRITEPROMPT;
+            dialog->SetTitle(L"Save Hive Scene");
+            const COMDLG_FILTERSPEC filters[] = {
+                {L"Hive Scene", L"*.hscene"},
+                {L"All Files", L"*.*"},
+            };
+            dialog->SetFileTypes(static_cast<UINT>(std::size(filters)), filters);
+            dialog->SetFileTypeIndex(1);
+            dialog->SetDefaultExtension(L"hscene");
+        }
 
         if (FAILED(dialog->SetOptions(options)))
         {
             return NativePathPickerResult::FAILED;
         }
 
-        SetNativeDialogInitialDirectory(dialog.Get(), seedDirectory);
+        SetNativeDialogInitialPath(dialog.Get(), seedPath);
 
         hr = dialog->Show(nullptr);
         if (hr == HRESULT_FROM_WIN32(ERROR_CANCELLED))
@@ -798,10 +1037,24 @@ namespace
         CoTaskMemFree(rawPath);
         return NativePathPickerResult::SUCCESS;
 #else
-        const std::string title =
-            mode == NativePathPickerMode::DIRECTORY ? "Select Project Directory" : "Select Hive Project";
-        const std::string seed =
-            (seedDirectory.empty() ? GetHomeDirectory() : seedDirectory).generic_string();
+        std::string title = "Select Hive Project";
+        std::string filter = "*.hive|Hive Project";
+        if (mode == NativePathPickerMode::DIRECTORY)
+        {
+            title = "Select Project Directory";
+        }
+        else if (mode == NativePathPickerMode::SCENE_FILE_OPEN)
+        {
+            title = "Open Hive Scene";
+            filter = "*.hscene|Hive Scene";
+        }
+        else if (mode == NativePathPickerMode::SCENE_FILE_SAVE)
+        {
+            title = "Save Hive Scene";
+            filter = "*.hscene|Hive Scene";
+        }
+
+        const std::string seed = (seedPath.empty() ? GetHomeDirectory() : seedPath).generic_string();
 
         std::string selected{};
         std::string zenityCommand = "zenity --file-selection ";
@@ -809,10 +1062,22 @@ namespace
         {
             zenityCommand += "--directory ";
         }
+        else if (mode == NativePathPickerMode::SCENE_FILE_SAVE)
+        {
+            zenityCommand += "--save --confirm-overwrite ";
+        }
         zenityCommand += "--title=" + QuoteShellArgument(title) + " ";
         if (!seed.empty())
         {
             zenityCommand += "--filename=" + QuoteShellArgument(seed) + " ";
+        }
+        if (mode == NativePathPickerMode::PROJECT_FILE)
+        {
+            zenityCommand += "--file-filter=" + QuoteShellArgument("Hive Project | project.hive *.hive") + " ";
+        }
+        else if (mode == NativePathPickerMode::SCENE_FILE_OPEN || mode == NativePathPickerMode::SCENE_FILE_SAVE)
+        {
+            zenityCommand += "--file-filter=" + QuoteShellArgument("Hive Scene | *.hscene") + " ";
         }
 
         if (RunShellDialogCommand(zenityCommand, &selected))
@@ -821,10 +1086,21 @@ namespace
             return NativePathPickerResult::SUCCESS;
         }
 
-        std::string kdialogCommand = mode == NativePathPickerMode::DIRECTORY
-                                         ? "kdialog --getexistingdirectory " + QuoteShellArgument(seed)
-                                         : "kdialog --getopenfilename " + QuoteShellArgument(seed) + " " +
-                                               QuoteShellArgument("*.hive|Hive Project");
+        std::string kdialogCommand;
+        if (mode == NativePathPickerMode::DIRECTORY)
+        {
+            kdialogCommand = "kdialog --getexistingdirectory " + QuoteShellArgument(seed);
+        }
+        else if (mode == NativePathPickerMode::SCENE_FILE_SAVE)
+        {
+            kdialogCommand =
+                "kdialog --getsavefilename " + QuoteShellArgument(seed) + " " + QuoteShellArgument(filter);
+        }
+        else
+        {
+            kdialogCommand =
+                "kdialog --getopenfilename " + QuoteShellArgument(seed) + " " + QuoteShellArgument(filter);
+        }
         if (RunShellDialogCommand(kdialogCommand, &selected))
         {
             *selectedPath = std::filesystem::path{selected};
@@ -833,6 +1109,941 @@ namespace
 
         return NativePathPickerResult::UNAVAILABLE;
 #endif
+    }
+#endif
+
+#if HIVE_MODE_EDITOR
+    void RegisterSceneComponentTypes(LauncherState& state)
+    {
+        auto& registry = state.m_componentRegistry;
+        if (!registry.Contains<waggle::Transform>())
+            registry.Register<waggle::Transform>();
+        if (!registry.Contains<waggle::Camera>())
+            registry.Register<waggle::Camera>();
+        if (!registry.Contains<waggle::DirectionalLight>())
+            registry.Register<waggle::DirectionalLight>();
+        if (!registry.Contains<waggle::AmbientLight>())
+            registry.Register<waggle::AmbientLight>();
+    }
+
+    void ResetSceneEditorState(LauncherState& state)
+    {
+        state.m_selection.Clear();
+        state.m_undo = std::make_unique<forge::UndoStack>();
+        state.m_pendingEditorAction = PendingEditorAction::NONE;
+        state.m_pendingScenePath.clear();
+        state.m_openUnsavedScenePopup = false;
+        state.m_scenePromptError.clear();
+    }
+
+    void ClearWorldEntities(queen::World& world)
+    {
+        std::vector<queen::Entity> roots;
+        roots.reserve(world.EntityCount());
+
+        world.ForEachArchetype([&](auto& archetype) {
+            for (uint32_t row = 0; row < archetype.EntityCount(); ++row)
+            {
+                const queen::Entity entity = archetype.GetEntity(row);
+                if (world.GetParent(entity).IsNull())
+                {
+                    roots.push_back(entity);
+                }
+            }
+        });
+
+        for (queen::Entity entity : roots)
+        {
+            if (world.IsAlive(entity))
+            {
+                world.DespawnRecursive(entity);
+            }
+        }
+
+        std::vector<queen::Entity> leftovers;
+        world.ForEachArchetype([&](auto& archetype) {
+            for (uint32_t row = 0; row < archetype.EntityCount(); ++row)
+            {
+                leftovers.push_back(archetype.GetEntity(row));
+            }
+        });
+
+        for (queen::Entity entity : leftovers)
+        {
+            if (world.IsAlive(entity))
+            {
+                world.Despawn(entity);
+            }
+        }
+    }
+
+    std::filesystem::path GetProjectAssetsDirectory(const LauncherState& state)
+    {
+        if (state.m_project == nullptr)
+        {
+            return {};
+        }
+
+        return std::filesystem::path{state.m_project->Paths().m_assets.CStr()};
+    }
+
+    std::filesystem::path CanonicalizePathForComparison(const std::filesystem::path& path)
+    {
+        std::error_code ec;
+        std::filesystem::path normalized = std::filesystem::weakly_canonical(path, ec);
+        if (ec)
+        {
+            normalized = std::filesystem::absolute(path, ec);
+            if (ec)
+            {
+                normalized = path;
+            }
+        }
+
+        return normalized.lexically_normal();
+    }
+
+    bool IsPathWithinDirectory(const std::filesystem::path& path, const std::filesystem::path& directory)
+    {
+        if (path.empty() || directory.empty())
+        {
+            return false;
+        }
+
+        const std::filesystem::path normalizedPath = CanonicalizePathForComparison(path);
+        const std::filesystem::path normalizedDirectory = CanonicalizePathForComparison(directory);
+
+        std::error_code ec;
+        const std::filesystem::path relative = std::filesystem::relative(normalizedPath, normalizedDirectory, ec);
+        if (ec)
+        {
+            return false;
+        }
+
+        const std::string relativeString = relative.generic_string();
+        return !relativeString.empty() && relativeString != ".." && !relativeString.starts_with("../");
+    }
+
+    std::filesystem::path ResolveScenePath(const waggle::ProjectManager& projectManager, wax::StringView relativePath)
+    {
+        if (relativePath.IsEmpty())
+        {
+            return {};
+        }
+
+        return std::filesystem::path{projectManager.Paths().m_assets.CStr()} /
+               std::string{relativePath.Data(), relativePath.Size()};
+    }
+
+    std::string MakeSceneRelativePath(const waggle::ProjectManager& projectManager, const std::filesystem::path& scenePath)
+    {
+        std::error_code ec;
+        const std::filesystem::path relative =
+            std::filesystem::relative(scenePath, std::filesystem::path{projectManager.Paths().m_assets.CStr()}, ec);
+        if (ec)
+        {
+            return scenePath.generic_string();
+        }
+
+        const std::string value = relative.generic_string();
+        if (value.empty() || value.starts_with(".."))
+        {
+            return scenePath.generic_string();
+        }
+        return value;
+    }
+
+    void ResetSceneRecoveryPrompt(LauncherState& state)
+    {
+        state.m_recoverySceneRelative.clear();
+        state.m_recoveryPromptError.clear();
+        state.m_openRecoveryScenePopup = false;
+    }
+
+    std::filesystem::path GetSceneRecoveryDirectory(const LauncherState& state)
+    {
+        return GetProjectAssetsDirectory(state) / ".nectar" / "editor_recovery";
+    }
+
+    std::filesystem::path GetSceneRecoveryScenePath(const LauncherState& state)
+    {
+        return GetSceneRecoveryDirectory(state) / "autosave.hscene";
+    }
+
+    std::filesystem::path GetSceneRecoveryMetadataPath(const LauncherState& state)
+    {
+        return GetSceneRecoveryDirectory(state) / "autosave.hive";
+    }
+
+    bool WriteTextFile(const std::filesystem::path& path, const std::string& content)
+    {
+        FILE* file = nullptr;
+#ifdef _MSC_VER
+        fopen_s(&file, path.string().c_str(), "wb");
+#else
+        file = fopen(path.string().c_str(), "wb");
+#endif
+        if (file == nullptr)
+        {
+            return false;
+        }
+
+        const size_t written = std::fwrite(content.data(), 1, content.size(), file);
+        std::fclose(file);
+        return written == content.size();
+    }
+
+    bool ReadTextFile(const std::filesystem::path& path, std::string* content)
+    {
+        FILE* file = nullptr;
+#ifdef _MSC_VER
+        fopen_s(&file, path.string().c_str(), "rb");
+#else
+        file = fopen(path.string().c_str(), "rb");
+#endif
+        if (file == nullptr)
+        {
+            return false;
+        }
+
+        if (std::fseek(file, 0, SEEK_END) != 0)
+        {
+            std::fclose(file);
+            return false;
+        }
+
+        const long fileSize = std::ftell(file);
+        if (fileSize < 0 || std::fseek(file, 0, SEEK_SET) != 0)
+        {
+            std::fclose(file);
+            return false;
+        }
+
+        std::vector<char> buffer(static_cast<size_t>(fileSize) + 1, '\0');
+        const size_t bytesRead = std::fread(buffer.data(), 1, static_cast<size_t>(fileSize), file);
+        std::fclose(file);
+        if (bytesRead != static_cast<size_t>(fileSize))
+        {
+            return false;
+        }
+
+        *content = std::string{buffer.data(), bytesRead};
+        return true;
+    }
+
+    std::string GetSceneRecoverySourceRelative(LauncherState& state)
+    {
+        if (!state.m_currentSceneRelative.empty())
+        {
+            return state.m_currentSceneRelative;
+        }
+
+        if (state.m_project == nullptr)
+        {
+            return {};
+        }
+
+        std::filesystem::path preferredScenePath{};
+        if (!state.m_currentScenePath.empty())
+        {
+            preferredScenePath = std::filesystem::path{state.m_currentScenePath};
+        }
+        else
+        {
+            const wax::StringView startupScene = state.m_project->Project().StartupSceneRelative();
+            preferredScenePath = !startupScene.IsEmpty() ? ResolveScenePath(*state.m_project, startupScene)
+                                                         : GetProjectAssetsDirectory(state) / "scenes" / "main.hscene";
+        }
+
+        return MakeSceneRelativePath(*state.m_project, preferredScenePath);
+    }
+
+    bool WriteSceneRecoveryMetadata(LauncherState& state, const std::string& sceneRelative)
+    {
+        auto& alloc = state.m_alloc.Get();
+        nectar::HiveDocument document{alloc};
+        document.SetValue("recovery", "scene", nectar::HiveValue::MakeString(alloc, {sceneRelative.c_str(), sceneRelative.size()}));
+        const wax::String content = nectar::HiveWriter::Write(document, alloc);
+        return WriteTextFile(GetSceneRecoveryMetadataPath(state), std::string{content.CStr(), content.Size()});
+    }
+
+    bool LoadSceneRecoveryMetadata(LauncherState& state, std::string* sceneRelative)
+    {
+        std::string content{};
+        if (!ReadTextFile(GetSceneRecoveryMetadataPath(state), &content))
+        {
+            return false;
+        }
+
+        auto& alloc = state.m_alloc.Get();
+        const nectar::HiveParseResult parseResult =
+            nectar::HiveParser::Parse(wax::StringView{content.c_str(), content.size()}, alloc);
+        if (!parseResult.Success())
+        {
+            return false;
+        }
+
+        const wax::StringView recoveryScene = parseResult.m_document.GetString("recovery", "scene");
+        if (recoveryScene.IsEmpty())
+        {
+            return false;
+        }
+
+        *sceneRelative = std::string{recoveryScene.Data(), recoveryScene.Size()};
+        return true;
+    }
+
+    void ClearSceneRecoveryArtifacts(LauncherState& state)
+    {
+        std::error_code ec;
+        std::filesystem::remove(GetSceneRecoveryScenePath(state), ec);
+        ec.clear();
+        std::filesystem::remove(GetSceneRecoveryMetadataPath(state), ec);
+        ResetSceneRecoveryPrompt(state);
+    }
+
+    void QueueSceneRecoveryPrompt(LauncherState& state)
+    {
+        std::error_code ec;
+        const std::filesystem::path recoveryScenePath = GetSceneRecoveryScenePath(state);
+        const std::filesystem::path recoveryMetadataPath = GetSceneRecoveryMetadataPath(state);
+        if (!std::filesystem::exists(recoveryScenePath, ec) || ec)
+        {
+            return;
+        }
+
+        ec.clear();
+        if (!std::filesystem::exists(recoveryMetadataPath, ec) || ec)
+        {
+            ClearSceneRecoveryArtifacts(state);
+            return;
+        }
+
+        std::string sceneRelative{};
+        if (!LoadSceneRecoveryMetadata(state, &sceneRelative))
+        {
+            ClearSceneRecoveryArtifacts(state);
+            return;
+        }
+
+        state.m_recoverySceneRelative = sceneRelative;
+        state.m_recoveryPromptError.clear();
+        state.m_openRecoveryScenePopup = true;
+    }
+
+    std::filesystem::path NormalizeScenePath(const LauncherState& state, std::filesystem::path scenePath, bool allowImplicitExtension)
+    {
+        if (scenePath.empty())
+        {
+            return {};
+        }
+
+        if (scenePath.is_relative())
+        {
+            scenePath = GetProjectAssetsDirectory(state) / scenePath;
+        }
+
+        scenePath = scenePath.lexically_normal();
+        if (allowImplicitExtension && scenePath.has_filename() && scenePath.extension().empty())
+        {
+            scenePath.replace_extension(".hscene");
+        }
+
+        return scenePath;
+    }
+
+    bool ResolveSceneAssetPath(const LauncherState& state, const std::filesystem::path& rawScenePath, bool requireExisting,
+                               std::filesystem::path* resolvedScenePath, std::string* error)
+    {
+        if (state.m_project == nullptr)
+        {
+            if (error != nullptr)
+            {
+                *error = "No project is currently open.";
+            }
+            return false;
+        }
+
+        const std::filesystem::path scenePath = NormalizeScenePath(state, rawScenePath, !requireExisting);
+        if (scenePath.empty() || !scenePath.has_filename())
+        {
+            if (error != nullptr)
+            {
+                *error = "The selected scene path is empty.";
+            }
+            return false;
+        }
+
+        if (scenePath.extension() != ".hscene")
+        {
+            if (error != nullptr)
+            {
+                *error = "Scene files must use the .hscene extension.";
+            }
+            return false;
+        }
+
+        const std::filesystem::path assetsDirectory = GetProjectAssetsDirectory(state);
+        if (!IsPathWithinDirectory(scenePath, assetsDirectory))
+        {
+            if (error != nullptr)
+            {
+                *error = "Scene files must be stored inside the project's assets directory.";
+            }
+            return false;
+        }
+
+        if (requireExisting)
+        {
+            std::error_code ec;
+            if (!std::filesystem::exists(scenePath, ec) || ec)
+            {
+                if (error != nullptr)
+                {
+                    *error = "The selected scene file does not exist.";
+                }
+                return false;
+            }
+
+            if (!std::filesystem::is_regular_file(scenePath, ec) || ec)
+            {
+                if (error != nullptr)
+                {
+                    *error = "The selected scene path is not a regular file.";
+                }
+                return false;
+            }
+        }
+
+        if (resolvedScenePath != nullptr)
+        {
+            *resolvedScenePath = scenePath;
+        }
+        return true;
+    }
+
+    std::filesystem::path GetPreferredScenePath(LauncherState& state)
+    {
+        if (!state.m_currentScenePath.empty())
+        {
+            return std::filesystem::path{state.m_currentScenePath};
+        }
+
+        const wax::StringView startupScene = state.m_project->Project().StartupSceneRelative();
+        if (!startupScene.IsEmpty())
+        {
+            return ResolveScenePath(*state.m_project, startupScene);
+        }
+
+        return GetProjectAssetsDirectory(state) / "scenes" / "main.hscene";
+    }
+
+    bool LoadEditorScene(waggle::EngineContext& ctx, LauncherState& state, const std::filesystem::path& scenePath);
+
+    bool PickScenePath(LauncherState& state, NativePathPickerMode mode, std::filesystem::path* selectedPath)
+    {
+        std::filesystem::path seedPath = GetPreferredScenePath(state);
+        if (seedPath.empty())
+        {
+            seedPath = GetProjectAssetsDirectory(state) / "scenes" / "main.hscene";
+        }
+
+        if (mode == NativePathPickerMode::SCENE_FILE_OPEN)
+        {
+            std::error_code ec;
+            if (!std::filesystem::exists(seedPath, ec) || ec)
+            {
+                seedPath = seedPath.parent_path();
+            }
+        }
+
+        const NativePathPickerResult result = ShowNativePathPicker(mode, seedPath, selectedPath);
+        if (result == NativePathPickerResult::SUCCESS)
+        {
+            return true;
+        }
+
+        if (result == NativePathPickerResult::FAILED)
+        {
+            hive::LogWarning(LOG_LAUNCHER, "The native scene file picker failed to open.");
+        }
+        else if (result == NativePathPickerResult::UNAVAILABLE)
+        {
+            hive::LogWarning(LOG_LAUNCHER, "The native scene file picker is not available on this platform.");
+        }
+
+        return false;
+    }
+
+    bool LoadEditorSceneAsset(waggle::EngineContext& ctx, LauncherState& state, const std::filesystem::path& rawScenePath)
+    {
+        std::filesystem::path scenePath{};
+        std::string error{};
+        if (!ResolveSceneAssetPath(state, rawScenePath, true, &scenePath, &error))
+        {
+            hive::LogWarning(LOG_LAUNCHER, "Failed to open scene '{}': {}", rawScenePath.generic_string(), error);
+            return false;
+        }
+
+        if (!LoadEditorScene(ctx, state, scenePath))
+        {
+            return false;
+        }
+
+        hive::LogInfo(LOG_LAUNCHER, "Scene opened: {}", scenePath.generic_string());
+        return true;
+    }
+
+    bool SaveEditorSceneToPath(waggle::EngineContext& ctx, LauncherState& state, const std::filesystem::path& rawScenePath)
+    {
+        std::filesystem::path scenePath{};
+        std::string error{};
+        if (!ResolveSceneAssetPath(state, rawScenePath, false, &scenePath, &error))
+        {
+            hive::LogWarning(LOG_LAUNCHER, "Failed to save scene '{}': {}", rawScenePath.generic_string(), error);
+            return false;
+        }
+
+        std::error_code ec;
+        std::filesystem::create_directories(scenePath.parent_path(), ec);
+        if (ec)
+        {
+            hive::LogWarning(LOG_LAUNCHER, "Failed to create scene directory: {}", scenePath.parent_path().generic_string());
+            return false;
+        }
+
+        const std::string scenePathString = scenePath.generic_string();
+        if (!forge::SaveScene(*ctx.m_world, state.m_componentRegistry, scenePathString.c_str()))
+        {
+            return false;
+        }
+
+        state.m_currentScenePath = scenePathString;
+        state.m_currentSceneRelative = MakeSceneRelativePath(*state.m_project, scenePath);
+        state.m_sceneAutosaveElapsedSeconds = 0.0;
+        state.m_sceneDirty = false;
+        ClearSceneRecoveryArtifacts(state);
+        hive::LogInfo(LOG_LAUNCHER, "Scene saved: {}", scenePathString);
+        return true;
+    }
+
+    bool SaveSceneRecoverySnapshot(waggle::EngineContext& ctx, LauncherState& state)
+    {
+        if (state.m_project == nullptr || !state.m_sceneDirty)
+        {
+            return false;
+        }
+
+        const std::string sceneRelative = GetSceneRecoverySourceRelative(state);
+        if (sceneRelative.empty())
+        {
+            return false;
+        }
+
+        const std::filesystem::path recoveryDirectory = GetSceneRecoveryDirectory(state);
+        std::error_code ec;
+        std::filesystem::create_directories(recoveryDirectory, ec);
+        if (ec)
+        {
+            hive::LogWarning(LOG_LAUNCHER, "Failed to create recovery directory: {}", recoveryDirectory.generic_string());
+            return false;
+        }
+
+        const std::filesystem::path recoveryScenePath = GetSceneRecoveryScenePath(state);
+        const std::string recoveryScenePathString = recoveryScenePath.generic_string();
+        if (!forge::SaveScene(*ctx.m_world, state.m_componentRegistry, recoveryScenePathString.c_str()))
+        {
+            return false;
+        }
+
+        if (!WriteSceneRecoveryMetadata(state, sceneRelative))
+        {
+            hive::LogWarning(LOG_LAUNCHER, "Failed to write recovery metadata: {}",
+                             GetSceneRecoveryMetadataPath(state).generic_string());
+            return false;
+        }
+
+        hive::LogInfo(LOG_LAUNCHER, "Scene autosaved for recovery: {}", sceneRelative);
+        return true;
+    }
+
+    std::string CaptureSceneBackup(queen::World& world, const queen::ComponentRegistry<256>& registry)
+    {
+        queen::DynamicWorldSerializer serializer{};
+        const auto result = serializer.Serialize(world, registry);
+        if (!result.m_success)
+        {
+            return {};
+        }
+
+        return serializer.TakeString();
+    }
+
+    bool RestoreSceneBackup(queen::World& world, const queen::ComponentRegistry<256>& registry,
+                            const std::string& backupScene)
+    {
+        if (backupScene.empty())
+        {
+            return false;
+        }
+
+        const auto result = queen::WorldDeserializer::Deserialize(world, registry, backupScene.c_str());
+        return result.m_success;
+    }
+
+    bool LoadEditorScene(waggle::EngineContext& ctx, LauncherState& state, const std::filesystem::path& scenePath)
+    {
+        if (scenePath.empty())
+        {
+            return false;
+        }
+
+        std::error_code ec;
+        if (!std::filesystem::exists(scenePath, ec) || ec)
+        {
+            hive::LogInfo(LOG_LAUNCHER, "Scene file not found: {}", scenePath.generic_string());
+            return false;
+        }
+
+        // The first startup-scene load happens before the editor owns a scene. Taking a
+        // serialized backup there is unnecessary and can walk non-scene bootstrap state.
+        const bool hasPreviousScene = !state.m_currentScenePath.empty() || !state.m_currentSceneRelative.empty();
+        const std::string previousSceneBackup =
+            hasPreviousScene ? CaptureSceneBackup(*ctx.m_world, state.m_componentRegistry) : std::string{};
+        const std::string previousScenePath = state.m_currentScenePath;
+        const std::string previousSceneRelative = state.m_currentSceneRelative;
+        const bool previousSceneDirty = state.m_sceneDirty;
+
+        ClearWorldEntities(*ctx.m_world);
+        ResetSceneEditorState(state);
+
+        const std::string scenePathString = scenePath.generic_string();
+        if (!forge::LoadScene(*ctx.m_world, state.m_componentRegistry, scenePathString.c_str()))
+        {
+            if (hasPreviousScene && RestoreSceneBackup(*ctx.m_world, state.m_componentRegistry, previousSceneBackup))
+            {
+                state.m_currentScenePath = previousScenePath;
+                state.m_currentSceneRelative = previousSceneRelative;
+                state.m_sceneDirty = previousSceneDirty;
+                hive::LogWarning(LOG_LAUNCHER, "Scene load failed; restored the previous scene state.");
+            }
+            else if (hasPreviousScene && !previousSceneBackup.empty())
+            {
+                hive::LogWarning(LOG_LAUNCHER, "Scene load failed and the previous scene backup could not be restored.");
+            }
+            hive::LogWarning(LOG_LAUNCHER, "Failed to load scene: {}", scenePathString);
+            return false;
+        }
+
+        state.m_currentScenePath = scenePathString;
+        state.m_currentSceneRelative = MakeSceneRelativePath(*state.m_project, scenePath);
+        state.m_sceneAutosaveElapsedSeconds = 0.0;
+        state.m_sceneDirty = false;
+        return true;
+    }
+
+    bool RestoreSceneRecovery(waggle::EngineContext& ctx, LauncherState& state)
+    {
+        const std::string recoveredSceneRelative = state.m_recoverySceneRelative;
+        if (recoveredSceneRelative.empty())
+        {
+            return false;
+        }
+
+        const std::filesystem::path recoveryScenePath = GetSceneRecoveryScenePath(state);
+        if (!LoadEditorScene(ctx, state, recoveryScenePath))
+        {
+            return false;
+        }
+
+        const std::filesystem::path restoredScenePath = NormalizeScenePath(state, std::filesystem::path{recoveredSceneRelative}, false);
+        state.m_currentScenePath = restoredScenePath.generic_string();
+        state.m_currentSceneRelative = recoveredSceneRelative;
+        state.m_sceneAutosaveElapsedSeconds = 0.0;
+        state.m_sceneDirty = true;
+        ClearSceneRecoveryArtifacts(state);
+        hive::LogInfo(LOG_LAUNCHER, "Recovered autosaved scene state for {}", restoredScenePath.generic_string());
+        return true;
+    }
+
+    void UpdateSceneAutosave(waggle::EngineContext& ctx, LauncherState& state)
+    {
+        constexpr double kAutosaveIntervalSeconds = 20.0;
+
+        if (state.m_project == nullptr || !state.m_sceneDirty)
+        {
+            state.m_sceneAutosaveElapsedSeconds = 0.0;
+            return;
+        }
+
+        if (state.m_playState != forge::PlayState::EDITING)
+        {
+            return;
+        }
+
+        const auto* frameInfo = ctx.m_world->Resource<waggle::FrameInfo>();
+        if (frameInfo == nullptr || frameInfo->m_realDt <= 0.0f)
+        {
+            return;
+        }
+
+        state.m_sceneAutosaveElapsedSeconds += static_cast<double>(frameInfo->m_realDt);
+        if (state.m_sceneAutosaveElapsedSeconds < kAutosaveIntervalSeconds)
+        {
+            return;
+        }
+
+        state.m_sceneAutosaveElapsedSeconds = 0.0;
+        (void)SaveSceneRecoverySnapshot(ctx, state);
+    }
+
+    bool SaveEditorScene(waggle::EngineContext& ctx, LauncherState& state)
+    {
+        if (state.m_project == nullptr)
+        {
+            return false;
+        }
+
+        const std::filesystem::path scenePath = GetPreferredScenePath(state);
+        if (scenePath.empty())
+        {
+            return false;
+        }
+
+        return SaveEditorSceneToPath(ctx, state, scenePath);
+    }
+
+    bool SaveEditorSceneAs(waggle::EngineContext& ctx, LauncherState& state)
+    {
+        std::filesystem::path selectedPath{};
+        if (!PickScenePath(state, NativePathPickerMode::SCENE_FILE_SAVE, &selectedPath))
+        {
+            return false;
+        }
+
+        return SaveEditorSceneToPath(ctx, state, selectedPath);
+    }
+
+    bool ReloadEditorScene(waggle::EngineContext& ctx, LauncherState& state)
+    {
+        const std::filesystem::path scenePath = GetPreferredScenePath(state);
+        if (scenePath.empty())
+        {
+            return false;
+        }
+
+        return LoadEditorScene(ctx, state, scenePath);
+    }
+
+    void NewEditorScene(waggle::EngineContext& ctx, LauncherState& state)
+    {
+        ClearWorldEntities(*ctx.m_world);
+        ResetSceneEditorState(state);
+        const std::filesystem::path scenePath = GetPreferredScenePath(state);
+        state.m_currentScenePath = scenePath.generic_string();
+        state.m_currentSceneRelative = MakeSceneRelativePath(*state.m_project, scenePath);
+        state.m_sceneDirty = true;
+        hive::LogInfo(LOG_LAUNCHER, "New scene initialized at {}", state.m_currentScenePath);
+    }
+
+    const char* DescribePendingEditorAction(PendingEditorAction action) noexcept
+    {
+        switch (action)
+        {
+            case PendingEditorAction::NEW_SCENE:
+                return "create a new scene";
+            case PendingEditorAction::OPEN_SCENE:
+                return "open another scene";
+            case PendingEditorAction::RELOAD_SCENE:
+                return "reload the current scene";
+            case PendingEditorAction::EXIT_APP:
+                return "exit the editor";
+            case PendingEditorAction::NONE:
+                break;
+        }
+
+        return "continue";
+    }
+
+    void ExecutePendingEditorAction(waggle::EngineContext& ctx, LauncherState& state)
+    {
+        const PendingEditorAction action = state.m_pendingEditorAction;
+        const std::filesystem::path pendingScenePath = state.m_pendingScenePath;
+        state.m_pendingEditorAction = PendingEditorAction::NONE;
+        state.m_pendingScenePath.clear();
+
+        switch (action)
+        {
+            case PendingEditorAction::NEW_SCENE:
+                NewEditorScene(ctx, state);
+                break;
+            case PendingEditorAction::OPEN_SCENE:
+                (void)LoadEditorSceneAsset(ctx, state, pendingScenePath);
+                break;
+            case PendingEditorAction::RELOAD_SCENE:
+                (void)ReloadEditorScene(ctx, state);
+                break;
+            case PendingEditorAction::EXIT_APP:
+                ctx.m_app->RequestStop();
+                break;
+            case PendingEditorAction::NONE:
+                break;
+        }
+    }
+
+    void RequestPendingEditorAction(waggle::EngineContext& ctx, LauncherState& state, PendingEditorAction action,
+                                    const std::filesystem::path& pendingScenePath = {})
+    {
+        state.m_pendingScenePath = pendingScenePath.generic_string();
+
+        if (!state.m_sceneDirty)
+        {
+            state.m_pendingEditorAction = action;
+            ExecutePendingEditorAction(ctx, state);
+            return;
+        }
+
+        state.m_pendingEditorAction = action;
+        state.m_scenePromptError.clear();
+        state.m_openUnsavedScenePopup = true;
+    }
+
+    bool OpenEditorSceneWithPicker(waggle::EngineContext& ctx, LauncherState& state)
+    {
+        std::filesystem::path selectedPath{};
+        if (!PickScenePath(state, NativePathPickerMode::SCENE_FILE_OPEN, &selectedPath))
+        {
+            return false;
+        }
+
+        RequestPendingEditorAction(ctx, state, PendingEditorAction::OPEN_SCENE, selectedPath);
+        return true;
+    }
+
+    void DrawSceneRecoveryPopup(waggle::EngineContext& ctx, LauncherState& state)
+    {
+        if (state.m_openRecoveryScenePopup)
+        {
+            ImGui::OpenPopup("Scene Recovery");
+            state.m_openRecoveryScenePopup = false;
+        }
+
+        bool popupOpen = true;
+        if (ImGui::BeginPopupModal("Scene Recovery", &popupOpen, ImGuiWindowFlags_AlwaysAutoResize))
+        {
+            ImGui::TextWrapped("An autosaved recovery snapshot was found for this project.");
+            if (!state.m_recoverySceneRelative.empty())
+            {
+                ImGui::Dummy(ImVec2{0.0f, 6.0f});
+                ImGui::TextDisabled("Scene: %s", state.m_recoverySceneRelative.c_str());
+            }
+
+            if (!state.m_recoveryPromptError.empty())
+            {
+                ImGui::Dummy(ImVec2{0.0f, 8.0f});
+                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4{0.89f, 0.39f, 0.32f, 1.0f});
+                ImGui::TextWrapped("%s", state.m_recoveryPromptError.c_str());
+                ImGui::PopStyleColor();
+            }
+
+            ImGui::Dummy(ImVec2{0.0f, 10.0f});
+            if (ImGui::Button("Restore", ImVec2{120.0f, 0.0f}))
+            {
+                if (RestoreSceneRecovery(ctx, state))
+                {
+                    ImGui::CloseCurrentPopup();
+                }
+                else
+                {
+                    state.m_recoveryPromptError =
+                        "Recovery restore failed. Inspect the log or discard the snapshot.";
+                }
+            }
+
+            ImGui::SameLine();
+            if (ImGui::Button("Discard", ImVec2{120.0f, 0.0f}))
+            {
+                ClearSceneRecoveryArtifacts(state);
+                ImGui::CloseCurrentPopup();
+            }
+
+            ImGui::EndPopup();
+        }
+        else if (!popupOpen)
+        {
+            state.m_recoveryPromptError.clear();
+            state.m_recoverySceneRelative.clear();
+        }
+    }
+
+    void DrawUnsavedScenePopup(waggle::EngineContext& ctx, LauncherState& state)
+    {
+        if (state.m_openUnsavedScenePopup)
+        {
+            ImGui::OpenPopup("Unsaved Scene Changes");
+            state.m_openUnsavedScenePopup = false;
+        }
+
+        bool popupOpen = true;
+        if (ImGui::BeginPopupModal("Unsaved Scene Changes", &popupOpen, ImGuiWindowFlags_AlwaysAutoResize))
+        {
+            ImGui::TextWrapped("The current scene has unsaved changes. Do you want to save before you %s?",
+                               DescribePendingEditorAction(state.m_pendingEditorAction));
+
+            if (!state.m_currentSceneRelative.empty())
+            {
+                ImGui::Dummy(ImVec2{0.0f, 6.0f});
+                ImGui::TextDisabled("Scene: %s", state.m_currentSceneRelative.c_str());
+            }
+
+            if (!state.m_scenePromptError.empty())
+            {
+                ImGui::Dummy(ImVec2{0.0f, 8.0f});
+                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4{0.89f, 0.39f, 0.32f, 1.0f});
+                ImGui::TextWrapped("%s", state.m_scenePromptError.c_str());
+                ImGui::PopStyleColor();
+            }
+
+            ImGui::Dummy(ImVec2{0.0f, 10.0f});
+
+            if (ImGui::Button("Save", ImVec2{120.0f, 0.0f}))
+            {
+                if (SaveEditorScene(ctx, state))
+                {
+                    ImGui::CloseCurrentPopup();
+                    ExecutePendingEditorAction(ctx, state);
+                }
+                else
+                {
+                    state.m_scenePromptError = "Scene save failed. Resolve the issue or discard changes.";
+                }
+            }
+
+            ImGui::SameLine();
+            if (ImGui::Button("Discard", ImVec2{120.0f, 0.0f}))
+            {
+                ClearSceneRecoveryArtifacts(state);
+                ImGui::CloseCurrentPopup();
+                ExecutePendingEditorAction(ctx, state);
+            }
+
+            ImGui::SameLine();
+            if (ImGui::Button("Cancel", ImVec2{120.0f, 0.0f}))
+            {
+                state.m_pendingEditorAction = PendingEditorAction::NONE;
+                state.m_pendingScenePath.clear();
+                state.m_scenePromptError.clear();
+                ImGui::CloseCurrentPopup();
+            }
+
+            ImGui::EndPopup();
+        }
+        else if (!popupOpen)
+        {
+            state.m_pendingEditorAction = PendingEditorAction::NONE;
+            state.m_pendingScenePath.clear();
+            state.m_scenePromptError.clear();
+        }
     }
 #endif
 
@@ -860,7 +2071,7 @@ namespace
         const auto root = std::string{state.m_project->Paths().m_root.CStr(), state.m_project->Paths().m_root.Size()};
 
 #if HIVE_MODE_EDITOR
-        state.m_assetsRoot = root + "/assets";
+        state.m_assetsRoot = std::string{state.m_project->Paths().m_assets.CStr(), state.m_project->Paths().m_assets.Size()};
 #endif
 
 #if HIVE_PLATFORM_WINDOWS
@@ -945,6 +2156,22 @@ namespace
         }
 
         EnsureEditorProjectViewport(ctx, state);
+#if HIVE_MODE_EDITOR
+        ResetSceneEditorState(state);
+        state.m_currentScenePath.clear();
+        state.m_currentSceneRelative.clear();
+
+        const wax::StringView startupScene = state.m_project->Project().StartupSceneRelative();
+        if (!startupScene.IsEmpty())
+        {
+            const std::filesystem::path startupScenePath = ResolveScenePath(*state.m_project, startupScene);
+            if (!LoadEditorScene(ctx, state, startupScenePath))
+            {
+                hive::LogWarning(LOG_LAUNCHER, "Failed to load startup scene: {}", startupScenePath.generic_string());
+            }
+        }
+        QueueSceneRecoveryPrompt(state);
+#endif
         TryLoadGameplayModule(ctx, state);
 
 #if HIVE_MODE_EDITOR
@@ -1057,22 +2284,29 @@ namespace
             return Run(commandLine);
         }
 
-    private:
-        int Run(const LauncherCommandLine& commandLine)
-        {
-            LauncherState state{};
-            state.m_exitAfterSetup = commandLine.m_exitAfterSetup;
+        private:
+            int Run(const LauncherCommandLine& commandLine)
+            {
+                LauncherState state{};
+                state.m_exitAfterSetup = commandLine.m_exitAfterSetup;
 
-            std::error_code ec;
-            std::filesystem::path startupProjectPath = commandLine.m_projectPath;
-            bool showProjectHub = false;
+                waggle::EngineMode requestedMode{};
+                if (!ResolveLauncherMode(commandLine, &requestedMode))
+                {
+                    PrintUsage();
+                    return 1;
+                }
+
+                std::error_code ec;
+                std::filesystem::path startupProjectPath = commandLine.m_projectPath;
+                bool showProjectHub = false;
 
 #if HIVE_MODE_EDITOR
-            if (startupProjectPath.empty() && !commandLine.m_forceHeadless)
-            {
-                showProjectHub = true;
-                InitializeProjectHub(state);
-            }
+                if (startupProjectPath.empty() && requestedMode == waggle::EngineMode::EDITOR)
+                {
+                    showProjectHub = true;
+                    InitializeProjectHub(state);
+                }
 #endif
 
             if (!showProjectHub)
@@ -1095,25 +2329,25 @@ namespace
             const std::string windowTitle =
                 state.m_projectPath.empty() ? std::string{"HiveEngine Launcher"} : BuildWindowTitle(state.m_projectPath);
 
-            waggle::EngineConfig config{};
-            config.m_windowTitle = windowTitle.c_str();
+                waggle::EngineConfig config{};
+                config.m_windowTitle = windowTitle.c_str();
 #if HIVE_MODE_EDITOR
-            config.m_windowWidth = 1920;
-            config.m_windowHeight = 1080;
-            config.m_mode = commandLine.m_forceHeadless ? waggle::EngineMode::HEADLESS : waggle::EngineMode::EDITOR;
-#elif HIVE_MODE_HEADLESS
-            config.m_mode = waggle::EngineMode::HEADLESS;
-#else
-            config.m_mode = commandLine.m_forceHeadless ? waggle::EngineMode::HEADLESS : waggle::EngineMode::GAME;
+                config.m_windowWidth = 1920;
+                config.m_windowHeight = 1080;
 #endif
+                config.m_mode = requestedMode;
 
-            waggle::EngineCallbacks callbacks{};
+                waggle::EngineCallbacks callbacks{};
             callbacks.m_onSetup = [](waggle::EngineContext& ctx, void* ud) -> bool {
                 auto& s = *static_cast<LauncherState*>(ud);
                 auto& alloc = s.m_alloc.Get();
 
                 s.m_project = comb::New<waggle::ProjectManager>(alloc, alloc);
                 ctx.m_world->InsertResource(waggle::AppContext{ctx.m_app});
+
+#if HIVE_MODE_EDITOR
+                RegisterSceneComponentTypes(s);
+#endif
 
 #if HIVE_MODE_EDITOR
                 if (ctx.m_renderContext != nullptr && ctx.m_window != nullptr)
@@ -1220,11 +2454,11 @@ namespace
                     s.m_project = nullptr;
                 }
 
-                // gameplay.Unload() is NOT called here: the World still has system
-                // lambdas whose code lives in the DLL (e.g. FreeCamera). Calling
-                // FreeLibrary now would unmap that code while the World still
-                // references it. Instead, GameplayModule::~GameplayModule() will
-                // call FreeLibrary after Run() returns and the World is destroyed.
+                // Do not FreeLibrary() during launcher teardown. The process exits
+                // immediately after Run() returns, so leaving the module loaded lets
+                // the OS reclaim it and avoids shutdown stalls in project DLL
+                // destructors while the runtime is already coming down.
+                s.m_gameplay.Abandon();
             };
 
             callbacks.m_userData = &state;
@@ -1893,9 +3127,10 @@ namespace
             ImGui::Dummy(ImVec2{0.0f, 8.0f});
             ImGui::PushStyleColor(ImGuiCol_Text, ImVec4{0.75f, 0.78f, 0.82f, 1.0f});
             ImGui::TextUnformatted("CMakeLists.txt");
-            ImGui::TextUnformatted("CMakeUserPresets.json");
+            ImGui::TextUnformatted("CMakePresets.json");
             ImGui::TextUnformatted("HiveProject.json");
             ImGui::TextUnformatted("project.hive");
+            ImGui::TextUnformatted("assets/scenes/main.hscene");
             ImGui::TextUnformatted("src/gameplay.cpp");
             ImGui::PopStyleColor();
             ImGui::EndChild();
@@ -1932,6 +3167,13 @@ namespace
 
     void DrawEditor(waggle::EngineContext& ctx, LauncherState& state)
     {
+        const auto focusEntityIfAlive = [&](queen::Entity entity) {
+            if (!entity.IsNull() && ctx.m_world->IsAlive(entity))
+            {
+                state.m_selection.Select(entity);
+            }
+        };
+
         // Fullscreen dockspace
         const ImGuiWindowFlags windowFlags = ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoDocking |
                                              ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse |
@@ -1957,13 +3199,97 @@ namespace
         }
         ImGui::DockSpace(dockspaceId, ImVec2(0.0f, 0.0f), ImGuiDockNodeFlags_None);
 
+        const bool canEditScene = state.m_playState == forge::PlayState::EDITING;
+        if (canEditScene && ImGui::GetIO().KeyCtrl && !ImGui::GetIO().KeyShift && ImGui::IsKeyPressed(ImGuiKey_S, false))
+        {
+            (void)SaveEditorScene(ctx, state);
+        }
+        if (canEditScene && ImGui::GetIO().KeyCtrl && ImGui::GetIO().KeyShift && ImGui::IsKeyPressed(ImGuiKey_S, false))
+        {
+            (void)SaveEditorSceneAs(ctx, state);
+        }
+        if (canEditScene && ImGui::GetIO().KeyCtrl && !ImGui::GetIO().KeyShift && ImGui::IsKeyPressed(ImGuiKey_O, false))
+        {
+            (void)OpenEditorSceneWithPicker(ctx, state);
+        }
+        if (canEditScene && ImGui::GetIO().KeyCtrl && ImGui::IsKeyPressed(ImGuiKey_Z, false))
+        {
+            if (ImGui::GetIO().KeyShift)
+            {
+                if (state.m_undo->CanRedo())
+                {
+                    focusEntityIfAlive(state.m_undo->Redo(*ctx.m_world));
+                    state.m_sceneDirty = true;
+                }
+            }
+            else if (state.m_undo->CanUndo())
+            {
+                focusEntityIfAlive(state.m_undo->Undo(*ctx.m_world));
+                state.m_sceneDirty = true;
+            }
+        }
+        if (canEditScene && ImGui::GetIO().KeyCtrl && ImGui::IsKeyPressed(ImGuiKey_Y, false) && state.m_undo->CanRedo())
+        {
+            focusEntityIfAlive(state.m_undo->Redo(*ctx.m_world));
+            state.m_sceneDirty = true;
+        }
+
         // Menu bar with toolbar
         if (ImGui::BeginMenuBar())
         {
             if (ImGui::BeginMenu("File"))
             {
                 if (ImGui::MenuItem("Exit"))
-                    ctx.m_app->RequestStop();
+                {
+                    RequestPendingEditorAction(ctx, state, PendingEditorAction::EXIT_APP);
+                }
+                ImGui::EndMenu();
+            }
+
+            if (ImGui::BeginMenu("Scene"))
+            {
+                if (!canEditScene)
+                {
+                    ImGui::BeginDisabled();
+                }
+
+                if (ImGui::MenuItem("New Scene"))
+                {
+                    RequestPendingEditorAction(ctx, state, PendingEditorAction::NEW_SCENE);
+                }
+                if (ImGui::MenuItem("Open Scene...", "Ctrl+O"))
+                {
+                    (void)OpenEditorSceneWithPicker(ctx, state);
+                }
+                if (ImGui::MenuItem("Save Scene", "Ctrl+S"))
+                {
+                    (void)SaveEditorScene(ctx, state);
+                }
+                if (ImGui::MenuItem("Save Scene As...", "Ctrl+Shift+S"))
+                {
+                    (void)SaveEditorSceneAs(ctx, state);
+                }
+                if (ImGui::MenuItem("Reload Scene"))
+                {
+                    RequestPendingEditorAction(ctx, state, PendingEditorAction::RELOAD_SCENE);
+                }
+
+                if (!canEditScene)
+                {
+                    ImGui::EndDisabled();
+                }
+
+                ImGui::Separator();
+                if (state.m_currentSceneRelative.empty())
+                {
+                    ImGui::TextDisabled("Active: (none)");
+                }
+                else
+                {
+                    ImGui::TextDisabled("Active: %s%s", state.m_currentSceneRelative.c_str(),
+                                        state.m_sceneDirty ? " *" : "");
+                }
+
                 ImGui::EndMenu();
             }
 
@@ -1981,16 +3307,25 @@ namespace
         }
 
         ImGui::End(); // DockSpace
+        DrawUnsavedScenePopup(ctx, state);
+        DrawSceneRecoveryPopup(ctx, state);
 
         // Hierarchy
+        bool hierarchyModified = false;
         if (ImGui::Begin("Hierarchy"))
-            forge::DrawHierarchyPanel(*ctx.m_world, state.m_selection);
+            hierarchyModified = forge::DrawHierarchyPanel(*ctx.m_world, state.m_selection);
         ImGui::End();
 
         // Inspector
+        bool inspectorModified = false;
         if (ImGui::Begin("Inspector"))
-            forge::DrawInspectorPanel(*ctx.m_world, state.m_selection, state.m_componentRegistry, *state.m_undo);
+            inspectorModified =
+                forge::DrawInspectorPanel(*ctx.m_world, state.m_selection, state.m_componentRegistry, *state.m_undo);
         ImGui::End();
+        if (hierarchyModified || inspectorModified)
+        {
+            state.m_sceneDirty = true;
+        }
 
         // Asset Browser
         if (ImGui::Begin("Asset Browser"))
@@ -2018,6 +3353,8 @@ namespace
         }
         ImGui::End();
         ImGui::PopStyleVar();
+
+        UpdateSceneAutosave(ctx, state);
     }
 #endif
 
