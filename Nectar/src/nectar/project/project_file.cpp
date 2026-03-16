@@ -103,6 +103,11 @@ namespace nectar
         {
             m_doc.SetValue("render", "backend", HiveValue::MakeString(*m_alloc, desc.m_backend));
         }
+
+        if (!desc.m_startupScene.IsEmpty())
+        {
+            m_doc.SetValue("startup", "scene", HiveValue::MakeString(*m_alloc, desc.m_startupScene));
+        }
     }
 
     wax::String ProjectFile::Serialize() const
@@ -155,6 +160,11 @@ namespace nectar
         return m_doc.GetString("paths", "assets", "assets");
     }
 
+    wax::StringView ProjectFile::StartupSceneRelative() const
+    {
+        return m_doc.GetString("startup", "scene");
+    }
+
     wax::StringView ProjectFile::CacheRelative() const
     {
         return m_doc.GetString("paths", "cache", ".hive-cache");
@@ -199,6 +209,11 @@ namespace nectar
         NormalizeSeparators(paths.m_root);
 
         paths.m_assets = JoinPath(*m_alloc, projectRoot, AssetsRelative());
+        const wax::StringView startupScene = StartupSceneRelative();
+        if (!startupScene.IsEmpty())
+        {
+            paths.m_startupScene = JoinPath(*m_alloc, paths.m_assets.View(), startupScene);
+        }
         paths.m_cache = JoinPath(*m_alloc, projectRoot, CacheRelative());
         paths.m_source = JoinPath(*m_alloc, projectRoot, SourceRelative());
 
