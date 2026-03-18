@@ -2,8 +2,6 @@
 
 #include <waggle/components.h>
 
-using namespace waggle;
-
 #include <queen/reflect/component_reflector.h>
 #include <queen/reflect/field_attributes.h>
 

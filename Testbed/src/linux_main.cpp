@@ -1,4 +1,3 @@
-#include <terra/platform/glfw_terra.h>
 #include <terra/terra.h>
 
 #include <antennae/actions.h>
@@ -138,9 +137,6 @@ void Engine::Loop()
         antennae::UpdateInputActions(*platformContext.actions_, *platformContext.actionMap_, *platformContext.keyboard_,
                                      *platformContext.mouse_);
         GameLogic(platformContext);
-
-        // TODO remove this
-        glfwSwapBuffers(terra::GetGlfwWindow(platformContext.windowContext_));
     }
 }
 

@@ -545,8 +545,6 @@ namespace comb
 
     inline void* BuddyAllocator::AllocateDebug(size_t size, size_t alignment, const char* tag)
     {
-        using namespace debug;
-
         hive::Assert(alignment <= alignof(std::max_align_t), "BuddyAllocator alignment limited to max_align_t");
 
         // 1. Calculate space needed
@@ -554,7 +552,7 @@ namespace comb
         // User data at block + DebugHeaderPrefix, properly aligned.
         // Front guard fits in the padding (guaranteed by DebugHeaderPrefix formula).
         const size_t guardSize = sizeof(uint32_t);
-        size_t totalSize = debugHeaderPrefix + size + guardSize;
+        size_t totalSize = debug::debugHeaderPrefix + size + guardSize;
         size_t blockSize = NextPowerOfTwo(totalSize);
         if (blockSize < minBlockSize)
         {
@@ -597,11 +595,11 @@ namespace comb
         }
 
         // Write header
-        auto* header = reinterpret_cast<AllocationHeader*>(block);
+        auto* header = reinterpret_cast<debug::AllocationHeader*>(block);
         header->m_size = blockSize;
 
         // Track used_memory_ with release layout (no guards) for consistent stats
-        size_t releaseTotalSize = size + headerPrefix;
+        size_t releaseTotalSize = size + debug::headerPrefix;
         size_t releaseBlockSize = NextPowerOfTwo(releaseTotalSize);
         if (releaseBlockSize < minBlockSize)
         {
@@ -610,29 +608,29 @@ namespace comb
         m_usedMemory += releaseBlockSize;
 
         // 3. Place guard bytes and user data
-        void* userPtr = reinterpret_cast<std::byte*>(block) + debugHeaderPrefix;
+        void* userPtr = reinterpret_cast<std::byte*>(block) + debug::debugHeaderPrefix;
 
-        WriteGuard(static_cast<std::byte*>(userPtr) - guardSize);
-        WriteGuard(static_cast<std::byte*>(userPtr) + size);
+        debug::WriteGuard(static_cast<std::byte*>(userPtr) - guardSize);
+        debug::WriteGuard(static_cast<std::byte*>(userPtr) + size);
 
         // 4. Initialize memory with pattern (detect uninitialized reads)
-        if constexpr (kMemDebugEnabled)
+        if constexpr (debug::kMemDebugEnabled)
         {
-            std::memset(userPtr, allocatedMemoryPattern, size);
+            std::memset(userPtr, debug::allocatedMemoryPattern, size);
         }
 
         // 5. Register allocation
-        AllocationInfo info{};
+        debug::AllocationInfo info{};
         info.m_address = userPtr;
         info.m_size = size;
         info.m_alignment = alignment;
-        info.m_timestamp = GetTimestamp();
+        info.m_timestamp = debug::GetTimestamp();
         info.m_tag = tag;
         info.m_allocationId = m_registry->GetNextAllocationId();
-        info.m_threadId = GetThreadId();
+        info.m_threadId = debug::GetThreadId();
 
 #if COMB_MEM_DEBUG_CALLSTACKS
-        CaptureCallstack(info.callstack, info.callstackDepth);
+        debug::CaptureCallstack(info.callstack, info.callstackDepth);
 #endif
 
         m_registry->RegisterAllocation(info);
@@ -647,8 +645,6 @@ namespace comb
 
     inline void BuddyAllocator::DeallocateDebug(void* ptr)
     {
-        using namespace debug;
-
         if (!ptr)
             return;
 
@@ -663,11 +659,11 @@ namespace comb
         }
 
         // 2. Check guard bytes
-        if constexpr (kMemDebugEnabled)
+        if constexpr (debug::kMemDebugEnabled)
         {
             if (!info->CheckGuards())
             {
-                if (info->ReadGuardFront() != guardMagic)
+                if (info->ReadGuardFront() != debug::guardMagic)
                 {
                     hive::LogError(comb::LOG_COMB_ROOT,
                                    "[MEM_DEBUG] [{}] Buffer UNDERRUN detected! Address: {}, Size: {}, Tag: {}",
@@ -675,7 +671,7 @@ namespace comb
                     hive::Assert(false, "Buffer underrun detected");
                 }
 
-                if (info->ReadGuardBack() != guardMagic)
+                if (info->ReadGuardBack() != debug::guardMagic)
                 {
                     hive::LogError(comb::LOG_COMB_ROOT,
                                    "[MEM_DEBUG] [{}] Buffer OVERRUN detected! Address: {}, Size: {}, Tag: {}",
@@ -688,7 +684,7 @@ namespace comb
         // 3. Calculate release block size BEFORE unregistering (info will be destroyed)
         // Track memory using release mode calculation (excluding guard bytes)
         // This ensures GetUsedMemory() returns consistent values between debug and release
-        size_t releaseTotalSize = info->m_size + headerPrefix;
+        size_t releaseTotalSize = info->m_size + debug::headerPrefix;
         size_t releaseBlockSize = NextPowerOfTwo(releaseTotalSize);
         if (releaseBlockSize < minBlockSize)
         {
@@ -697,7 +693,7 @@ namespace comb
 
         // 4. Fill with freed pattern (detect use-after-free)
 #if COMB_MEM_DEBUG_USE_AFTER_FREE
-        std::memset(ptr, freedMemoryPattern, info->m_size);
+        std::memset(ptr, debug::freedMemoryPattern, info->m_size);
 #endif
 
         // 5. Record deallocation in history
@@ -711,9 +707,9 @@ namespace comb
         // 7. Get block pointer (before header)
         // Layout: [AllocationHeader][...padding...][Guard Front][user data][Guard Back]
         // ptr = userPtr at block + DebugHeaderPrefix
-        void* blockPtr = static_cast<std::byte*>(ptr) - debugHeaderPrefix;
+        void* blockPtr = static_cast<std::byte*>(ptr) - debug::debugHeaderPrefix;
 
-        auto* header = reinterpret_cast<AllocationHeader*>(blockPtr);
+        auto* header = reinterpret_cast<debug::AllocationHeader*>(blockPtr);
         size_t blockSize = header->m_size;
         size_t level = GetLevel(blockSize);
 

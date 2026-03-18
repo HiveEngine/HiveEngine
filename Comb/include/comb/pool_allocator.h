@@ -403,8 +403,6 @@ namespace comb
 
     template <typename T> void* PoolAllocator<T>::AllocateDebug(size_t size, size_t alignment, const char* tag)
     {
-        using namespace debug;
-
         hive::Assert(size <= sizeof(T), "PoolAllocator can only allocate sizeof(T) bytes");
         hive::Assert(alignment <= alignof(T), "PoolAllocator alignment limited to alignof(T)");
 
@@ -429,27 +427,27 @@ namespace comb
         const size_t guardSize = sizeof(uint32_t);
         void* rawPtr = static_cast<std::byte*>(userPtr) - guardSize;
 
-        WriteGuard(rawPtr);
-        WriteGuard(static_cast<std::byte*>(userPtr) + sizeof(T));
+        debug::WriteGuard(rawPtr);
+        debug::WriteGuard(static_cast<std::byte*>(userPtr) + sizeof(T));
 
         // 3. Initialize memory with pattern (detect uninitialized reads)
-        if constexpr (kMemDebugEnabled)
+        if constexpr (debug::kMemDebugEnabled)
         {
-            std::memset(userPtr, allocatedMemoryPattern, sizeof(T));
+            std::memset(userPtr, debug::allocatedMemoryPattern, sizeof(T));
         }
 
         // 4. Register allocation
-        AllocationInfo info{};
+        debug::AllocationInfo info{};
         info.m_address = userPtr;
         info.m_size = sizeof(T);
         info.m_alignment = alignof(T);
-        info.m_timestamp = GetTimestamp();
+        info.m_timestamp = debug::GetTimestamp();
         info.m_tag = tag;
         info.m_allocationId = registry_->GetNextAllocationId();
-        info.m_threadId = GetThreadId();
+        info.m_threadId = debug::GetThreadId();
 
 #if COMB_MEM_DEBUG_CALLSTACKS
-        CaptureCallstack(info.callstack, info.callstackDepth);
+        debug::CaptureCallstack(info.callstack, info.callstackDepth);
 #endif
 
         registry_->RegisterAllocation(info);
@@ -464,8 +462,6 @@ namespace comb
 
     template <typename T> void PoolAllocator<T>::DeallocateDebug(void* ptr)
     {
-        using namespace debug;
-
         if (!ptr)
             return;
 
@@ -480,11 +476,11 @@ namespace comb
         }
 
         // 2. Check guard bytes
-        if constexpr (kMemDebugEnabled)
+        if constexpr (debug::kMemDebugEnabled)
         {
             if (!info->CheckGuards())
             {
-                if (info->ReadGuardFront() != guardMagic)
+                if (info->ReadGuardFront() != debug::guardMagic)
                 {
                     hive::LogError(comb::LOG_COMB_ROOT,
                                    "[MEM_DEBUG] [{}] Buffer UNDERRUN detected! Address: {}, Size: {}, Tag: {}",
@@ -492,7 +488,7 @@ namespace comb
                     hive::Assert(false, "Buffer underrun detected");
                 }
 
-                if (info->ReadGuardBack() != guardMagic)
+                if (info->ReadGuardBack() != debug::guardMagic)
                 {
                     hive::LogError(comb::LOG_COMB_ROOT,
                                    "[MEM_DEBUG] [{}] Buffer OVERRUN detected! Address: {}, Size: {}, Tag: {}",
@@ -504,7 +500,7 @@ namespace comb
 
         // 3. Fill with freed pattern (detect use-after-free)
 #if COMB_MEM_DEBUG_USE_AFTER_FREE
-        std::memset(ptr, freedMemoryPattern, sizeof(T));
+        std::memset(ptr, debug::freedMemoryPattern, sizeof(T));
 #endif
 
         // 4. Record deallocation in history
