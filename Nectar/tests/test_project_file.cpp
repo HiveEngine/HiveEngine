@@ -46,6 +46,7 @@ namespace
         larvae::AssertTrue(pf.Name().Equals("TestApp"));
         larvae::AssertTrue(pf.Version().IsEmpty());
         larvae::AssertTrue(pf.AssetsRelative().Equals("assets"));
+        larvae::AssertTrue(pf.StartupSceneRelative().IsEmpty());
         larvae::AssertTrue(pf.CacheRelative().Equals(".hive-cache"));
         larvae::AssertTrue(pf.SourceRelative().Equals("src"));
     });
@@ -67,7 +68,10 @@ namespace
                               "path = \"C:/Engine/HiveEngine\"\n"
                               "\n"
                               "[render]\n"
-                              "backend = \"vulkan\"\n";
+                              "backend = \"vulkan\"\n"
+                              "\n"
+                              "[startup]\n"
+                              "scene = \"scenes/main.hscene\"\n";
 
         auto result = pf.Load(content);
         larvae::AssertTrue(result.m_success);
@@ -76,6 +80,7 @@ namespace
         larvae::AssertTrue(pf.EnginePath().Equals("C:/Engine/HiveEngine"));
         larvae::AssertTrue(pf.Backend().Equals("vulkan"));
         larvae::AssertTrue(pf.AssetsRelative().Equals("data"));
+        larvae::AssertTrue(pf.StartupSceneRelative().Equals("scenes/main.hscene"));
         larvae::AssertTrue(pf.CacheRelative().Equals("build-cache"));
         larvae::AssertTrue(pf.SourceRelative().Equals("code"));
     });
@@ -110,6 +115,7 @@ namespace
         desc.m_version = "2.0.0";
         desc.m_enginePath = "C:/Dev/Engine";
         desc.m_backend = "d3d12";
+        desc.m_startupScene = "scenes/intro.hscene";
         pf1.Create(desc);
 
         larvae::AssertTrue(pf1.Name().Equals("RoundTrip"));
@@ -125,6 +131,7 @@ namespace
         larvae::AssertTrue(pf2.Version().Equals("2.0.0"));
         larvae::AssertTrue(pf2.EnginePath().Equals("C:/Dev/Engine"));
         larvae::AssertTrue(pf2.Backend().Equals("d3d12"));
+        larvae::AssertTrue(pf2.StartupSceneRelative().Equals("scenes/intro.hscene"));
     });
 
     // =========================================================================
@@ -141,7 +148,10 @@ namespace
                               "[paths]\n"
                               "assets = \"myassets\"\n"
                               "cache = \".cache\"\n"
-                              "source = \"src\"\n";
+                              "source = \"src\"\n"
+                              "\n"
+                              "[startup]\n"
+                              "scene = \"scenes/main.hscene\"\n";
 
         auto result = pf.Load(content);
         larvae::AssertTrue(result.m_success);
@@ -149,6 +159,7 @@ namespace
         auto paths = pf.ResolvePaths("C:/Projects/Game");
         larvae::AssertTrue(paths.m_root.View().Equals("C:/Projects/Game"));
         larvae::AssertTrue(paths.m_assets.View().Equals("C:/Projects/Game/myassets"));
+        larvae::AssertTrue(paths.m_startupScene.View().Equals("C:/Projects/Game/myassets/scenes/main.hscene"));
         larvae::AssertTrue(paths.m_cache.View().Equals("C:/Projects/Game/.cache"));
         larvae::AssertTrue(paths.m_source.View().Equals("C:/Projects/Game/src"));
         larvae::AssertTrue(paths.m_cas.View().Equals("C:/Projects/Game/.cache/cas"));
@@ -182,6 +193,7 @@ namespace
         larvae::AssertTrue(pf.AssetsRelative().Equals("assets"));
         larvae::AssertTrue(pf.CacheRelative().Equals(".hive-cache"));
         larvae::AssertTrue(pf.SourceRelative().Equals("src"));
+        larvae::AssertTrue(pf.StartupSceneRelative().IsEmpty());
         larvae::AssertTrue(pf.EnginePath().IsEmpty());
         larvae::AssertTrue(pf.Backend().IsEmpty());
     });
@@ -199,6 +211,7 @@ namespace
         desc.m_name = "DiskTest";
         desc.m_version = "3.0.0";
         desc.m_backend = "vulkan";
+        desc.m_startupScene = "scenes/main.hscene";
         pf1.Create(desc);
 
         auto file_path = dir.path / "project.hive";
@@ -214,6 +227,7 @@ namespace
         larvae::AssertTrue(pf2.Name().Equals("DiskTest"));
         larvae::AssertTrue(pf2.Version().Equals("3.0.0"));
         larvae::AssertTrue(pf2.Backend().Equals("vulkan"));
+        larvae::AssertTrue(pf2.StartupSceneRelative().Equals("scenes/main.hscene"));
     });
 
     // =========================================================================

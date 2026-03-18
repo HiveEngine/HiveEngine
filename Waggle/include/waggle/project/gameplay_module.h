@@ -1,5 +1,8 @@
 #pragma once
 
+#include <array>
+#include <cstdint>
+
 #include <hive/platform/dynamic_library.h>
 
 namespace queen
@@ -12,6 +15,8 @@ namespace waggle
     using GameplayRegisterFn = void (*)(queen::World& world);
     using GameplayUnregisterFn = void (*)(queen::World& world);
     using GameplayVersionFn = const char* (*)();
+    using GameplayApiVersionFn = uint32_t (*)();
+    using GameplayBuildSignatureFn = const char* (*)();
 
     class GameplayModule
     {
@@ -26,6 +31,7 @@ namespace waggle
 
         [[nodiscard]] bool Load(const char* dllPath);
         void Unload();
+        void Abandon() noexcept;
 
         [[nodiscard]] bool Register(queen::World& world);
         void Unregister(queen::World& world);
@@ -41,6 +47,9 @@ namespace waggle
         GameplayRegisterFn m_registerFn{nullptr};
         GameplayUnregisterFn m_unregisterFn{nullptr};
         GameplayVersionFn m_versionFn{nullptr};
+        GameplayApiVersionFn m_apiVersionFn{nullptr};
+        GameplayBuildSignatureFn m_buildSignatureFn{nullptr};
         bool m_registered{false};
+        std::array<char, 256> m_errorBuf{};
     };
 } // namespace waggle

@@ -333,12 +333,16 @@ hive_configure_target(Swarm)
 
 target_sources(Swarm
     PRIVATE
+        src/swarm.cpp
+        src/swarmmodule.cpp
         src/platform/nullop/null_swarm.cpp
 )
 
 target_link_libraries(Swarm
     PUBLIC
         Hive
+        Comb
+        Wax
 )
 
 endif()

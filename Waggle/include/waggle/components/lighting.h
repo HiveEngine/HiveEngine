@@ -17,7 +17,7 @@ namespace waggle
         static void Reflect(queen::ComponentReflector<>& r)
         {
             r.Field("direction", &DirectionalLight::direction);
-            r.Field("color", &DirectionalLight::color).Flag(queen::FieldFlag::Color);
+            r.Field("color", &DirectionalLight::color).Flag(queen::FieldFlag::COLOR);
             r.Field("intensity", &DirectionalLight::intensity).Range(0.f, 10.f);
         }
     };
@@ -28,7 +28,7 @@ namespace waggle
 
         static void Reflect(queen::ComponentReflector<>& r)
         {
-            r.Field("color", &AmbientLight::color).Flag(queen::FieldFlag::Color);
+            r.Field("color", &AmbientLight::color).Flag(queen::FieldFlag::COLOR);
         }
     };
 

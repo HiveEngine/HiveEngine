@@ -1,105 +1,108 @@
 #include <forge/toolbar.h>
 
-#include <imgui.h>
-
-#include <imgui_internal.h>
-
-#include <cmath>
-
 namespace forge
 {
-    static float StoL(float s)
+    static constexpr const char* kGreenStyle =
+        "QPushButton { background-color: #4CAF50; color: white; border: none; padding: 4px 12px; }"
+        "QPushButton:hover { background-color: #5CBF60; }"
+        "QPushButton:pressed { background-color: #3C9F40; }";
+
+    static constexpr const char* kRedStyle =
+        "QPushButton { background-color: #D32F2F; color: white; border: none; padding: 4px 12px; }"
+        "QPushButton:hover { background-color: #E34F4F; }"
+        "QPushButton:pressed { background-color: #B31F1F; }";
+
+    static constexpr const char* kAmberStyle =
+        "QPushButton { background-color: #E6AD0D; color: white; border: none; padding: 4px 12px; }"
+        "QPushButton:hover { background-color: #F6BD1D; }"
+        "QPushButton:pressed { background-color: #C69D00; }";
+
+    static constexpr const char* kAccentStyle =
+        "QPushButton { background-color: #0078D4; color: white; border: none; padding: 4px 12px; }"
+        "QPushButton:hover { background-color: #1088E4; }"
+        "QPushButton:pressed { background-color: #0068C4; }";
+
+    static constexpr const char* kInactiveStyle =
+        "QPushButton { background-color: #262626; color: #B3B3B3; border: none; padding: 4px 12px; }"
+        "QPushButton:hover { background-color: #404040; }"
+        "QPushButton:pressed { background-color: #0078D4; }";
+
+    EditorToolbar::EditorToolbar(QWidget* parent)
+        : QToolBar{parent}
     {
-        return s <= 0.04045f ? s / 12.92f : std::pow((s + 0.055f) / 1.055f, 2.4f);
+        m_playBtn = new QPushButton{"Play", this};
+        m_pauseBtn = new QPushButton{"Pause", this};
+        m_stopBtn = new QPushButton{"Stop", this};
+
+        m_playBtn->setStyleSheet(kGreenStyle);
+        m_pauseBtn->setStyleSheet(kAmberStyle);
+        m_stopBtn->setStyleSheet(kRedStyle);
+
+        addWidget(m_playBtn);
+        addWidget(m_pauseBtn);
+        addWidget(m_stopBtn);
+        addSeparator();
+
+        m_moveBtn = new QPushButton{"Move", this};
+        m_rotateBtn = new QPushButton{"Rotate", this};
+        m_scaleBtn = new QPushButton{"Scale", this};
+
+        addWidget(m_moveBtn);
+        addWidget(m_rotateBtn);
+        addWidget(m_scaleBtn);
+        addSeparator();
+
+        m_spaceBtn = new QPushButton{"World", this};
+        m_spaceBtn->setStyleSheet(kInactiveStyle);
+        addWidget(m_spaceBtn);
+
+        connect(m_playBtn, &QPushButton::clicked, this, &EditorToolbar::playPressed);
+        connect(m_pauseBtn, &QPushButton::clicked, this, &EditorToolbar::pausePressed);
+        connect(m_stopBtn, &QPushButton::clicked, this, &EditorToolbar::stopPressed);
+
+        connect(m_moveBtn, &QPushButton::clicked, this,
+                [this]() { emit gizmoModeChanged(static_cast<int>(GizmoMode::TRANSLATE)); });
+        connect(m_rotateBtn, &QPushButton::clicked, this,
+                [this]() { emit gizmoModeChanged(static_cast<int>(GizmoMode::ROTATE)); });
+        connect(m_scaleBtn, &QPushButton::clicked, this,
+                [this]() { emit gizmoModeChanged(static_cast<int>(GizmoMode::SCALE)); });
+        connect(m_spaceBtn, &QPushButton::clicked, this, &EditorToolbar::gizmoSpaceToggled);
+
+        SetPlayState(PlayState::EDITING);
     }
-    static ImVec4 L(float r, float g, float b, float a)
+
+    void EditorToolbar::SetPlayState(PlayState state)
     {
-        return {StoL(r), StoL(g), StoL(b), a};
+        switch (state)
+        {
+            case PlayState::EDITING:
+                m_playBtn->setText("Play");
+                m_playBtn->setStyleSheet(kGreenStyle);
+                m_playBtn->setVisible(true);
+                m_pauseBtn->setVisible(false);
+                m_stopBtn->setVisible(false);
+                break;
+            case PlayState::PLAYING:
+                m_playBtn->setVisible(false);
+                m_pauseBtn->setVisible(true);
+                m_stopBtn->setVisible(true);
+                break;
+            case PlayState::PAUSED:
+                m_playBtn->setText("Resume");
+                m_playBtn->setStyleSheet(kGreenStyle);
+                m_playBtn->setVisible(true);
+                m_pauseBtn->setVisible(false);
+                m_stopBtn->setVisible(true);
+                break;
+        }
     }
 
-    static const ImVec4 K_GREEN = L(0.298f, 0.686f, 0.314f, 1.f);
-    static const ImVec4 K_ACCENT = L(0.000f, 0.471f, 0.831f, 1.f);
-    static const ImVec4 K_RED = L(0.820f, 0.200f, 0.200f, 1.f);
-    static const ImVec4 K_AMBER = L(0.900f, 0.680f, 0.050f, 1.f);
-
-    static bool ColoredButton(const char* label, const ImVec4& color)
+    void EditorToolbar::SetGizmoState(GizmoState& state)
     {
-        ImGui::PushStyleColor(ImGuiCol_Button, color);
-        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, {color.x * 1.2f, color.y * 1.2f, color.z * 1.2f, 1.f});
-        ImGui::PushStyleColor(ImGuiCol_ButtonActive, {color.x * 0.8f, color.y * 0.8f, color.z * 0.8f, 1.f});
-        ImGui::PushStyleColor(ImGuiCol_Text, L(1.f, 1.f, 1.f, 1.f));
-        bool pressed = ImGui::Button(label);
-        ImGui::PopStyleColor(4);
-        return pressed;
-    }
+        m_moveBtn->setStyleSheet(state.m_mode == GizmoMode::TRANSLATE ? kAccentStyle : kInactiveStyle);
+        m_rotateBtn->setStyleSheet(state.m_mode == GizmoMode::ROTATE ? kAccentStyle : kInactiveStyle);
+        m_scaleBtn->setStyleSheet(state.m_mode == GizmoMode::SCALE ? kAccentStyle : kInactiveStyle);
 
-    static bool ToggleButton(const char* label, bool active)
-    {
-        if (active)
-        {
-            ImGui::PushStyleColor(ImGuiCol_Button, K_ACCENT);
-            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, K_ACCENT);
-            ImGui::PushStyleColor(ImGuiCol_ButtonActive, K_ACCENT);
-            ImGui::PushStyleColor(ImGuiCol_Text, L(1.f, 1.f, 1.f, 1.f));
-        }
-        else
-        {
-            ImGui::PushStyleColor(ImGuiCol_Button, L(0.15f, 0.15f, 0.15f, 1.f));
-            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, L(0.25f, 0.25f, 0.25f, 1.f));
-            ImGui::PushStyleColor(ImGuiCol_ButtonActive, K_ACCENT);
-            ImGui::PushStyleColor(ImGuiCol_Text, L(0.7f, 0.7f, 0.7f, 1.f));
-        }
-
-        bool pressed = ImGui::Button(label);
-        ImGui::PopStyleColor(4);
-        return pressed;
-    }
-
-    ToolbarAction DrawToolbarButtons(PlayState playState, GizmoState& gizmo)
-    {
-        ToolbarAction action{};
-
-        // Play / Pause / Stop
-        if (playState == PlayState::EDITING)
-        {
-            action.m_playPressed = ColoredButton("Play", K_GREEN);
-        }
-        else if (playState == PlayState::PLAYING)
-        {
-            action.m_pausePressed = ColoredButton("Pause", K_AMBER);
-            ImGui::SameLine();
-            action.m_stopPressed = ColoredButton("Stop", K_RED);
-        }
-        else
-        {
-            action.m_playPressed = ColoredButton("Resume", K_GREEN);
-            ImGui::SameLine();
-            action.m_stopPressed = ColoredButton("Stop", K_RED);
-        }
-
-        ImGui::SameLine();
-        ImGui::SeparatorEx(ImGuiSeparatorFlags_Vertical, 2.f);
-        ImGui::SameLine();
-
-        // Gizmo mode
-        if (ToggleButton("Move", gizmo.m_mode == GizmoMode::TRANSLATE))
-            gizmo.m_mode = GizmoMode::TRANSLATE;
-        ImGui::SameLine();
-        if (ToggleButton("Rotate", gizmo.m_mode == GizmoMode::ROTATE))
-            gizmo.m_mode = GizmoMode::ROTATE;
-        ImGui::SameLine();
-        if (ToggleButton("Scale", gizmo.m_mode == GizmoMode::SCALE))
-            gizmo.m_mode = GizmoMode::SCALE;
-
-        ImGui::SameLine();
-        ImGui::SeparatorEx(ImGuiSeparatorFlags_Vertical, 2.f);
-        ImGui::SameLine();
-
-        // Space toggle
-        const char* spaceLabel = (gizmo.m_space == GizmoSpace::WORLD) ? "World" : "Local";
-        if (ImGui::Button(spaceLabel))
-            gizmo.m_space = (gizmo.m_space == GizmoSpace::WORLD) ? GizmoSpace::LOCAL : GizmoSpace::WORLD;
-
-        return action;
+        m_spaceBtn->setText(state.m_space == GizmoSpace::WORLD ? "World" : "Local");
     }
 } // namespace forge

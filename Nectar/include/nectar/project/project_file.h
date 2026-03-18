@@ -16,6 +16,7 @@ namespace nectar
     {
         wax::String m_root;
         wax::String m_assets;
+        wax::String m_startupScene;
         wax::String m_cache;
         wax::String m_cas;
         wax::String m_source;
@@ -28,6 +29,7 @@ namespace nectar
         wax::StringView m_version;
         wax::StringView m_enginePath;
         wax::StringView m_backend;
+        wax::StringView m_startupScene;
     };
 
     class ProjectFile
@@ -55,6 +57,7 @@ namespace nectar
         [[nodiscard]] wax::StringView Backend() const;
 
         [[nodiscard]] wax::StringView AssetsRelative() const;
+        [[nodiscard]] wax::StringView StartupSceneRelative() const;
         [[nodiscard]] wax::StringView CacheRelative() const;
         [[nodiscard]] wax::StringView SourceRelative() const;
 

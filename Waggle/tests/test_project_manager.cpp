@@ -42,7 +42,13 @@ namespace
     {
         auto& alloc = GetAlloc();
         nectar::ProjectFile pf{alloc};
-        pf.Create(nectar::ProjectDesc{.m_name = name, .m_version = "1.0.0", .m_enginePath = "", .m_backend = "vulkan"});
+        pf.Create(nectar::ProjectDesc{
+            .m_name = name,
+            .m_version = "1.0.0",
+            .m_enginePath = "",
+            .m_backend = "vulkan",
+            .m_startupScene = {},
+        });
         auto file_path = dir / "project.hive";
         bool saved = pf.SaveToDisk(file_path.generic_string().c_str());
         (void)saved;

@@ -27,6 +27,8 @@ import kotlin.io.path.readText
 
 object CMakeUserPresetsGenerator {
     private const val CONFIGURE_PRESET_VERSION = 6
+    private const val ROOT_PRESETS_FILE = "CMakePresets.json"
+    private const val USER_PRESETS_FILE = "CMakeUserPresets.json"
     private val mapper: ObjectMapper = jacksonObjectMapper()
         .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
         .enable(SerializationFeature.INDENT_OUTPUT)
@@ -40,7 +42,7 @@ object CMakeUserPresetsGenerator {
 
     fun generate(project: Project, catalog: HiveFeaturesFile, uiState: HiveUiState, toolchain: ToolchainSnapshot): Path {
         val root = project.basePath ?: error("Project has no base path")
-        val presetsPath = Path.of(root, "CMakeUserPresets.json")
+        val presetsPath = Path.of(root, USER_PRESETS_FILE)
         val availableBasePresets = loadBasePresetNames(root)
         val document = buildDocument(catalog, uiState, toolchain, availableBasePresets)
 
@@ -167,7 +169,7 @@ object CMakeUserPresetsGenerator {
         NotificationGroupManager.getInstance()
             .getNotificationGroup("Hive Config")
             .createNotification(
-                "CMakeUserPresets.json regenerated",
+                "$USER_PRESETS_FILE regenerated",
                 path.invariantSeparatorsPathString,
                 NotificationType.INFORMATION,
             )
@@ -178,7 +180,7 @@ object CMakeUserPresetsGenerator {
         NotificationGroupManager.getInstance()
             .getNotificationGroup("Hive Config")
             .createNotification(
-                "Failed to generate CMakeUserPresets.json",
+                "Failed to generate $USER_PRESETS_FILE",
                 error.message ?: error::class.java.simpleName,
                 NotificationType.ERROR,
             )
@@ -186,9 +188,9 @@ object CMakeUserPresetsGenerator {
     }
 
     private fun loadBasePresetNames(root: String): Set<String> {
-        val presetsPath = Path.of(root, "CMakePresets.json")
-        if (!Files.exists(presetsPath)) {
-            return emptySet()
+        val presetsPath = Path.of(root, ROOT_PRESETS_FILE)
+        require(Files.exists(presetsPath)) {
+            "$ROOT_PRESETS_FILE is missing from the project root."
         }
 
         val document = mapper.readValue<RootPresetsDocument>(presetsPath.readText(StandardCharsets.UTF_8))
@@ -212,7 +214,7 @@ object CMakeUserPresetsGenerator {
         }
 
         require(presetName in availableBasePresets) {
-            "Base preset '$presetName' is missing from CMakePresets.json."
+            "$ROOT_PRESETS_FILE is missing required base preset '$presetName'."
         }
         return presetName
     }

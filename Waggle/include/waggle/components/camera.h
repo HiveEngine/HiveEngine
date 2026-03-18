@@ -16,7 +16,7 @@ namespace waggle
 
         static void Reflect(queen::ComponentReflector<>& r)
         {
-            r.Field("fov", &Camera::fov_rad).DisplayName("FOV").Flag(queen::FieldFlag::Angle);
+            r.Field("fov", &Camera::fov_rad).DisplayName("FOV").Flag(queen::FieldFlag::ANGLE);
             r.Field("z_near", &Camera::z_near).Range(0.001f, 10.f);
             r.Field("z_far", &Camera::z_far).Range(1.f, 10000.f);
         }

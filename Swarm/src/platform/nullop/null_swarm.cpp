@@ -9,12 +9,12 @@ namespace swarm
 
     void ShutdownSystem() {}
 
-    bool InitRenderContext(RenderContext* /*renderContext*/, terra::WindowContext* /*window*/)
+    RenderContext* CreateRenderContext(terra::WindowContext* /*window*/)
     {
-        return false;
+        return nullptr;
     }
 
-    void ShutdownRenderContext(RenderContext& /*renderContext*/) {}
+    void DestroyRenderContext(RenderContext* /*renderContext*/) {}
 
     void BeginFrame(RenderContext* /*ctx*/) {}
     void EndFrame(RenderContext* /*ctx*/) {}

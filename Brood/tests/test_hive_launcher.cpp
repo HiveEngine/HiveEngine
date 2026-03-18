@@ -2,8 +2,11 @@
 
 #include <nectar/hive/hive_parser.h>
 
+#include <waggle/project/project_scaffolder.h>
+
 #include <larvae/larvae.h>
 
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <string>
@@ -20,6 +23,46 @@ namespace
         static comb::ModuleAllocator alloc{"TestHiveLauncher", 4 * 1024 * 1024};
         return alloc.Get();
     }
+
+#if HIVE_PLATFORM_WINDOWS
+    std::filesystem::path GetCurrentExecutablePath();
+#endif
+
+    std::filesystem::path FindBuildRoot()
+    {
+#if HIVE_PLATFORM_WINDOWS
+        auto current = GetCurrentExecutablePath().parent_path();
+        for (int i = 0; i < 4; ++i)
+        {
+            if (std::filesystem::exists(current / "CMakeCache.txt"))
+            {
+                return current;
+            }
+
+            current = current.parent_path();
+        }
+#endif
+        return {};
+    }
+
+    struct TempDir
+    {
+        std::filesystem::path m_path;
+
+        explicit TempDir(const char* name)
+        {
+            m_path = std::filesystem::temp_directory_path() / name;
+            std::error_code ec;
+            std::filesystem::remove_all(m_path, ec);
+            std::filesystem::create_directories(m_path, ec);
+        }
+
+        ~TempDir()
+        {
+            std::error_code ec;
+            std::filesystem::remove_all(m_path, ec);
+        }
+    };
 
 #if HIVE_PLATFORM_WINDOWS
     std::filesystem::path GetCurrentExecutablePath()
@@ -111,20 +154,99 @@ namespace
         return std::string{std::istreambuf_iterator<char>{file}, std::istreambuf_iterator<char>{}};
     }
 
+#if HIVE_PLATFORM_WINDOWS
+    std::filesystem::path FindCMakeExecutable()
+    {
+        std::wstring buffer(static_cast<size_t>(MAX_PATH), L'\0');
+        const DWORD length = SearchPathW(nullptr, L"cmake.exe", nullptr, static_cast<DWORD>(buffer.size()), buffer.data(),
+                                         nullptr);
+        larvae::AssertTrue(length > 0 && length < buffer.size());
+        buffer.resize(length);
+        return std::filesystem::path{buffer};
+    }
+
+    void EnsureSponzaDemoBuilt(const std::filesystem::path& buildRoot, const std::filesystem::path& repoRoot)
+    {
+        static bool s_built = false;
+        if (s_built)
+        {
+            return;
+        }
+
+        larvae::AssertTrue(!buildRoot.empty());
+
+        const auto cmakePath = FindCMakeExecutable();
+        larvae::AssertTrue(std::filesystem::exists(cmakePath));
+
+        const auto gameplayDllPath = repoRoot / "projects" / "sponza_demo" / "gameplay.dll";
+        const auto gameplayPdbPath = repoRoot / "projects" / "sponza_demo" / "gameplay.pdb";
+
+        std::error_code ec;
+        std::filesystem::remove(gameplayDllPath, ec);
+        ec.clear();
+        std::filesystem::remove(gameplayPdbPath, ec);
+
+        const int exitCode =
+            RunProcess(cmakePath, {L"--build", buildRoot.native(), L"--config", L"Debug", L"--target", L"sponza_demo"},
+                       repoRoot, 120000);
+        larvae::AssertEqual(exitCode, 0);
+        larvae::AssertTrue(std::filesystem::exists(gameplayDllPath));
+        s_built = true;
+    }
+#endif
+
     auto t_launcher_headless_process_smoke =
         larvae::RegisterTest("HiveLauncher", "headless_exit_after_setup_process_smoke", []() {
 #if HIVE_PLATFORM_WINDOWS
             const auto repoRoot = FindRepoRoot();
             larvae::AssertTrue(!repoRoot.empty());
+            const auto buildRoot = FindBuildRoot();
+            larvae::AssertTrue(!buildRoot.empty());
 
             const auto launcherPath = GetCurrentExecutablePath().parent_path() / "hive_launcher.exe";
             const auto projectPath = repoRoot / "projects" / "sponza_demo" / "project.hive";
 
             larvae::AssertTrue(std::filesystem::exists(launcherPath));
             larvae::AssertTrue(std::filesystem::exists(projectPath));
+            EnsureSponzaDemoBuilt(buildRoot, repoRoot);
 
-            const int exitCode =
-                RunProcess(launcherPath, {L"--headless", L"--exit-after-setup", projectPath.native()}, repoRoot, 30000);
+            const int exitCode = RunProcess(launcherPath,
+                                            {L"--headless", L"--project", projectPath.native(), L"--exit-after-setup"},
+                                            repoRoot, 30000);
+            larvae::AssertEqual(exitCode, 0);
+#else
+            larvae::AssertTrue(true);
+#endif
+        });
+
+    auto t_launcher_headless_scaffolded_project_process_smoke =
+        larvae::RegisterTest("HiveLauncher", "headless_scaffolded_project_exit_after_setup", []() {
+#if HIVE_PLATFORM_WINDOWS
+            const auto repoRoot = FindRepoRoot();
+            larvae::AssertTrue(!repoRoot.empty());
+
+            const auto launcherPath = GetCurrentExecutablePath().parent_path() / "hive_launcher.exe";
+            larvae::AssertTrue(std::filesystem::exists(launcherPath));
+
+            TempDir dir{"hive_launcher_scaffolded_project"};
+            const std::string root = dir.m_path.generic_string();
+            const std::string engine = repoRoot.generic_string();
+
+            auto& alloc = GetAlloc();
+            waggle::ProjectScaffoldConfig config{};
+            config.m_cmake.m_projectName = "LauncherSmoke";
+            config.m_cmake.m_projectRoot = wax::StringView{root.c_str(), root.size()};
+            config.m_cmake.m_enginePath = wax::StringView{engine.c_str(), engine.size()};
+            config.m_projectVersion = "0.1.0";
+
+            larvae::AssertTrue(waggle::ProjectScaffolder::WriteToProject(config, alloc));
+
+            const auto projectPath = dir.m_path / "project.hive";
+            larvae::AssertTrue(std::filesystem::exists(projectPath));
+
+            const int exitCode = RunProcess(launcherPath,
+                                            {L"--headless", L"--project", projectPath.native(), L"--exit-after-setup"},
+                                            repoRoot, 30000);
             larvae::AssertEqual(exitCode, 0);
 #else
             larvae::AssertTrue(true);
@@ -142,7 +264,7 @@ namespace
 
             larvae::AssertTrue(std::filesystem::exists(launcherPath));
 
-            const int exitCode = RunProcess(launcherPath, {missingProjectPath.native()}, repoRoot, 10000);
+            const int exitCode = RunProcess(launcherPath, {L"--project", missingProjectPath.native()}, repoRoot, 10000);
             larvae::AssertEqual(exitCode, 1);
 #else
             larvae::AssertTrue(true);
@@ -170,6 +292,8 @@ namespace
 #if HIVE_PLATFORM_WINDOWS
             const auto repoRoot = FindRepoRoot();
             larvae::AssertTrue(!repoRoot.empty());
+            const auto buildRoot = FindBuildRoot();
+            larvae::AssertTrue(!buildRoot.empty());
 
             const auto launcherPath = GetCurrentExecutablePath().parent_path() / "hive_launcher.exe";
             const auto projectPath = repoRoot / "projects" / "sponza_demo" / "project.hive";
@@ -177,11 +301,13 @@ namespace
 
             larvae::AssertTrue(std::filesystem::exists(launcherPath));
             larvae::AssertTrue(std::filesystem::exists(projectPath));
+            EnsureSponzaDemoBuilt(buildRoot, repoRoot);
 
             std::error_code ec;
             std::filesystem::remove(reportPath, ec);
 
-            const int exitCode = RunProcess(launcherPath, {L"--headless", projectPath.native()}, repoRoot, 30000);
+            const int exitCode =
+                RunProcess(launcherPath, {L"--headless", L"--project", projectPath.native()}, repoRoot, 30000);
             larvae::AssertEqual(exitCode, 0);
             larvae::AssertTrue(std::filesystem::exists(reportPath));
 
@@ -203,6 +329,37 @@ namespace
             larvae::AssertTrue(reportView.Contains("position_sum = 45"));
             larvae::AssertTrue(reportView.Contains("min_position = 5"));
             larvae::AssertTrue(reportView.Contains("max_position = 25"));
+#else
+            larvae::AssertTrue(true);
+#endif
+        });
+
+    auto t_launcher_explicit_mode_flag =
+        larvae::RegisterTest("HiveLauncher", "explicit_mode_flag", []() {
+#if HIVE_PLATFORM_WINDOWS
+            const auto repoRoot = FindRepoRoot();
+            larvae::AssertTrue(!repoRoot.empty());
+
+            const auto launcherPath = GetCurrentExecutablePath().parent_path() / "hive_launcher.exe";
+            const auto projectPath = repoRoot / "projects" / "sponza_demo" / "project.hive";
+            larvae::AssertTrue(std::filesystem::exists(launcherPath));
+            larvae::AssertTrue(std::filesystem::exists(projectPath));
+
+#if HIVE_MODE_HEADLESS
+            const int exitCode =
+                RunProcess(launcherPath, {L"--editor", L"--project", projectPath.native()}, repoRoot, 10000);
+            larvae::AssertEqual(exitCode, 1);
+#elif HIVE_MODE_EDITOR
+            const int exitCode = RunProcess(
+                launcherPath, {L"--editor", L"--project", projectPath.native(), L"--exit-after-setup"}, repoRoot,
+                30000);
+            larvae::AssertEqual(exitCode, 0);
+#else
+            const int exitCode =
+                RunProcess(launcherPath, {L"--game", L"--project", projectPath.native(), L"--exit-after-setup"},
+                           repoRoot, 30000);
+            larvae::AssertEqual(exitCode, 0);
+#endif
 #else
             larvae::AssertTrue(true);
 #endif

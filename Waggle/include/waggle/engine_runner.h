@@ -1,8 +1,7 @@
 #pragma once
 
 #include <waggle/app.h>
-
-#include <cstdint>
+#include <waggle/runtime_context.h>
 
 namespace terra
 {
@@ -16,13 +15,6 @@ namespace swarm
 
 namespace waggle
 {
-    enum class EngineMode : uint8_t
-    {
-        GAME,
-        EDITOR,
-        HEADLESS
-    };
-
     struct EngineConfig
     {
         const char* m_windowTitle{"HiveEngine"};
@@ -32,6 +24,7 @@ namespace waggle
         bool m_autoTick{true};
         bool m_autoRenderer{true};
         bool m_autoSystems{true};
+        bool m_deferWindow{false};
         AppConfig m_app{};
     };
 
@@ -62,4 +55,6 @@ namespace waggle
     // Manages the full lifecycle: modules -> window -> device -> swapchain -> loop -> cleanup.
     // Returns 0 on success.
     int Run(const EngineConfig& config, const EngineCallbacks& callbacks);
+
+    bool CreateWindowAndRenderer(EngineContext& ctx, const char* title, uint32_t width, uint32_t height);
 } // namespace waggle

@@ -2,21 +2,44 @@
 
 #include <queen/core/entity.h>
 
+#include <QWidget>
+
+class QTreeWidget;
+class QTreeWidgetItem;
+
 namespace queen
 {
     class World;
 }
+
 namespace forge
 {
     class EditorSelection;
-}
 
-namespace forge
-{
-    // Optional callback to format entity display names.
-    // If null, defaults to "Entity <index>".
     using EntityLabelFn = void (*)(queen::World& world, queen::Entity entity, char* buf, size_t bufSize);
 
-    // Must be called between ImGui::Begin("Hierarchy") and ImGui::End().
-    void DrawHierarchyPanel(queen::World& world, EditorSelection& selection, EntityLabelFn labelFn = nullptr);
+    class HierarchyPanel : public QWidget
+    {
+        Q_OBJECT
+
+    public:
+        explicit HierarchyPanel(EditorSelection& selection, QWidget* parent = nullptr);
+
+        void SetLabelFn(EntityLabelFn fn);
+        void Refresh(queen::World& world);
+
+    signals:
+        void entitySelected(uint32_t entityIndex);
+        void sceneModified();
+
+    private:
+        void AddEntityNode(queen::World& world, queen::Entity entity, QTreeWidgetItem* parentItem);
+        void OnItemClicked(QTreeWidgetItem* item, int column);
+        void ShowEntityContextMenu(const QPoint& pos);
+
+        QTreeWidget* m_tree{};
+        EditorSelection& m_selection;
+        EntityLabelFn m_labelFn{};
+        queen::World* m_currentWorld{};
+    };
 } // namespace forge

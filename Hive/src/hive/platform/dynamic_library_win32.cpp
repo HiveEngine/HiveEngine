@@ -60,6 +60,14 @@ namespace hive
         }
     }
 
+    void* DynamicLibrary::Detach() noexcept
+    {
+        void* handle = m_handle;
+        m_handle = nullptr;
+        m_errorBuf[0] = '\0';
+        return handle;
+    }
+
     void* DynamicLibrary::GetSymbol(const char* name) const
     {
         if (!m_handle)

@@ -17,6 +17,7 @@ namespace hive
 
         [[nodiscard]] bool Load(const char* path);
         void Unload();
+        [[nodiscard]] void* Detach() noexcept;
         [[nodiscard]] void* GetSymbol(const char* name) const;
 
         template <typename Fn> [[nodiscard]] Fn GetFunction(const char* name) const

@@ -36,6 +36,8 @@ IncludeCategories:
     Priority: 10
   - Regex: '^<larvae/.*>'
     Priority: 11
+  - Regex: '^<Q[A-Z].*>'
+    Priority: 15
   - Regex: 'imgui\.h'
     Priority: 20
   - Regex: 'imgui_internal\.h'

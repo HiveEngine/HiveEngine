@@ -207,4 +207,34 @@ namespace
             larvae::AssertEqual(state.shutdown_callback_calls, 0);
         });
 
+    auto t_runtime_context_exposes_engine_mode =
+        larvae::RegisterTest("WaggleEngineRunner", "runtime_context_exposes_engine_mode", []() {
+            struct State
+            {
+                waggle::EngineMode mode{waggle::EngineMode::GAME};
+                bool saw_runtime_context{false};
+            };
+            State state{};
+
+            waggle::EngineConfig config{};
+            config.m_mode = waggle::EngineMode::HEADLESS;
+
+            waggle::EngineCallbacks callbacks{};
+            callbacks.m_userData = &state;
+            callbacks.m_onSetup = [](waggle::EngineContext& ctx, void* ud) -> bool {
+                auto* s = static_cast<State*>(ud);
+                const auto* runtime = ctx.m_world->Resource<waggle::RuntimeContext>();
+                larvae::AssertTrue(runtime != nullptr);
+                s->saw_runtime_context = runtime != nullptr;
+                s->mode = runtime != nullptr ? runtime->m_mode : waggle::EngineMode::GAME;
+                ctx.m_app->RequestStop();
+                return true;
+            };
+
+            const int result = waggle::Run(config, callbacks);
+            larvae::AssertEqual(result, 0);
+            larvae::AssertTrue(state.saw_runtime_context);
+            larvae::AssertEqual(static_cast<int>(state.mode), static_cast<int>(waggle::EngineMode::HEADLESS));
+        });
+
 } // namespace

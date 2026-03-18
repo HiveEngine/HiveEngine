@@ -2,8 +2,6 @@
 
 #include <cstdint>
 
-#include "terra/platform/glfw_terra.h"
-
 namespace terra
 {
     struct WindowContext;

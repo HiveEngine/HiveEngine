@@ -15,7 +15,7 @@ namespace forge
 {
     bool SaveScene(queen::World& world, const queen::ComponentRegistry<256>& registry, const char* path)
     {
-        queen::WorldSerializer<1024 * 1024> serializer;
+        queen::DynamicWorldSerializer serializer{};
         auto result = serializer.Serialize(world, registry);
         if (!result.m_success)
         {
