@@ -1,7 +1,3 @@
-#include <forge/inspector_panel.h>
-#include <forge/selection.h>
-#include <forge/undo.h>
-
 #include <hive/math/types.h>
 
 #include <queen/core/type_id.h>
@@ -9,6 +5,10 @@
 #include <queen/reflect/field_attributes.h>
 #include <queen/reflect/field_info.h>
 #include <queen/world/world.h>
+
+#include <forge/inspector_panel.h>
+#include <forge/selection.h>
+#include <forge/undo.h>
 
 #include <QCheckBox>
 #include <QColorDialog>
@@ -42,8 +42,8 @@ namespace forge
             uint16_t m_offset{0};
         };
 
-        void Snapshot(SnapshotState& state, queen::Entity entity, queen::TypeId typeId,
-                      uint16_t offset, uint16_t size, const void* current)
+        void Snapshot(SnapshotState& state, queen::Entity entity, queen::TypeId typeId, uint16_t offset, uint16_t size,
+                      const void* current)
         {
             state.m_entity = entity;
             state.m_typeId = typeId;
@@ -63,8 +63,8 @@ namespace forge
             }
             if (std::memcmp(state.m_before, current, state.m_size) != 0)
             {
-                undo.PushSetField(state.m_entity, state.m_typeId, state.m_offset,
-                                  state.m_size, state.m_before, current);
+                undo.PushSetField(state.m_entity, state.m_typeId, state.m_offset, state.m_size, state.m_before,
+                                  current);
             }
             state.m_size = 0;
         }
@@ -179,8 +179,8 @@ namespace forge
         setWidget(content);
     }
 
-    void InspectorPanel::BuildFieldWidget(const queen::FieldInfo& field, void* data,
-                                          const FieldContext& ctx, QFormLayout* form)
+    void InspectorPanel::BuildFieldWidget(const queen::FieldInfo& field, void* data, const FieldContext& ctx,
+                                          QFormLayout* form)
     {
         if (HasFlag(field, queen::FieldFlag::HIDDEN))
         {
@@ -213,22 +213,22 @@ namespace forge
                 auto* snapshot = new SnapshotState;
 
                 QObject::connect(spin, &QDoubleSpinBox::editingFinished, this,
-                    [this, spin, value, snapshot, entity, typeId, offset, &undo,
-                     isAngle = HasFlag(field, queen::FieldFlag::ANGLE)]() {
-                        float newVal = static_cast<float>(spin->value());
-                        if (isAngle)
-                        {
-                            newVal *= kRad;
-                        }
-                        if (newVal != *value)
-                        {
-                            CommitIfChanged(*snapshot, undo, value);
-                            Snapshot(*snapshot, entity, typeId, offset, sizeof(float), value);
-                            *value = newVal;
-                            CommitIfChanged(*snapshot, undo, value);
-                            emit sceneModified();
-                        }
-                    });
+                                 [this, spin, value, snapshot, entity, typeId, offset, &undo,
+                                  isAngle = HasFlag(field, queen::FieldFlag::ANGLE)]() {
+                                     float newVal = static_cast<float>(spin->value());
+                                     if (isAngle)
+                                     {
+                                         newVal *= kRad;
+                                     }
+                                     if (newVal != *value)
+                                     {
+                                         CommitIfChanged(*snapshot, undo, value);
+                                         Snapshot(*snapshot, entity, typeId, offset, sizeof(float), value);
+                                         *value = newVal;
+                                         CommitIfChanged(*snapshot, undo, value);
+                                         emit sceneModified();
+                                     }
+                                 });
 
                 widget = spin;
                 break;
@@ -241,17 +241,17 @@ namespace forge
                 auto* snapshot = new SnapshotState;
 
                 QObject::connect(spin, &QDoubleSpinBox::editingFinished, this,
-                    [this, spin, value, snapshot, entity, typeId, offset, &undo]() {
-                        double newVal = spin->value();
-                        if (newVal != *value)
-                        {
-                            Snapshot(*snapshot, entity, typeId, offset,
-                                     static_cast<uint16_t>(sizeof(double)), value);
-                            *value = newVal;
-                            CommitIfChanged(*snapshot, undo, value);
-                            emit sceneModified();
-                        }
-                    });
+                                 [this, spin, value, snapshot, entity, typeId, offset, &undo]() {
+                                     double newVal = spin->value();
+                                     if (newVal != *value)
+                                     {
+                                         Snapshot(*snapshot, entity, typeId, offset,
+                                                  static_cast<uint16_t>(sizeof(double)), value);
+                                         *value = newVal;
+                                         CommitIfChanged(*snapshot, undo, value);
+                                         emit sceneModified();
+                                     }
+                                 });
 
                 widget = spin;
                 break;
@@ -272,16 +272,16 @@ namespace forge
                 auto* snapshot = new SnapshotState;
 
                 QObject::connect(spin, &QSpinBox::editingFinished, this,
-                    [this, spin, value, snapshot, entity, typeId, offset, &undo]() {
-                        int32_t newVal = spin->value();
-                        if (newVal != *value)
-                        {
-                            Snapshot(*snapshot, entity, typeId, offset, sizeof(int32_t), value);
-                            *value = newVal;
-                            CommitIfChanged(*snapshot, undo, value);
-                            emit sceneModified();
-                        }
-                    });
+                                 [this, spin, value, snapshot, entity, typeId, offset, &undo]() {
+                                     int32_t newVal = spin->value();
+                                     if (newVal != *value)
+                                     {
+                                         Snapshot(*snapshot, entity, typeId, offset, sizeof(int32_t), value);
+                                         *value = newVal;
+                                         CommitIfChanged(*snapshot, undo, value);
+                                         emit sceneModified();
+                                     }
+                                 });
 
                 widget = spin;
                 break;
@@ -297,16 +297,16 @@ namespace forge
                 auto* snapshot = new SnapshotState;
 
                 QObject::connect(spin, &QSpinBox::editingFinished, this,
-                    [this, spin, value, snapshot, entity, typeId, offset, &undo]() {
-                        auto newVal = static_cast<uint32_t>(spin->value());
-                        if (newVal != *value)
-                        {
-                            Snapshot(*snapshot, entity, typeId, offset, sizeof(uint32_t), value);
-                            *value = newVal;
-                            CommitIfChanged(*snapshot, undo, value);
-                            emit sceneModified();
-                        }
-                    });
+                                 [this, spin, value, snapshot, entity, typeId, offset, &undo]() {
+                                     auto newVal = static_cast<uint32_t>(spin->value());
+                                     if (newVal != *value)
+                                     {
+                                         Snapshot(*snapshot, entity, typeId, offset, sizeof(uint32_t), value);
+                                         *value = newVal;
+                                         CommitIfChanged(*snapshot, undo, value);
+                                         emit sceneModified();
+                                     }
+                                 });
 
                 widget = spin;
                 break;
@@ -317,12 +317,11 @@ namespace forge
                 auto* check = new QCheckBox;
                 check->setChecked(*value);
 
-                QObject::connect(check, &QCheckBox::toggled, this,
-                    [this, value, entity, typeId, offset, &undo](bool checked) {
+                QObject::connect(
+                    check, &QCheckBox::toggled, this, [this, value, entity, typeId, offset, &undo](bool checked) {
                         bool before = *value;
                         *value = checked;
-                        undo.PushSetField(entity, typeId, offset,
-                                          static_cast<uint16_t>(sizeof(bool)), &before, value);
+                        undo.PushSetField(entity, typeId, offset, static_cast<uint16_t>(sizeof(bool)), &before, value);
                         emit sceneModified();
                     });
 
@@ -337,23 +336,21 @@ namespace forge
 
                     if (HasFlag(field, queen::FieldFlag::COLOR))
                     {
-                        QColor initial = QColor::fromRgbF(
-                            static_cast<double>(floats[0]),
-                            static_cast<double>(floats[1]),
-                            static_cast<double>(floats[2]));
+                        QColor initial =
+                            QColor::fromRgbF(static_cast<double>(floats[0]), static_cast<double>(floats[1]),
+                                             static_cast<double>(floats[2]));
 
                         auto* btn = new QPushButton{initial.name()};
-                        btn->setStyleSheet(
-                            QString{"background-color: %1;"}.arg(initial.name()));
+                        btn->setStyleSheet(QString{"background-color: %1;"}.arg(initial.name()));
 
                         auto* snapshot = new SnapshotState;
 
-                        QObject::connect(btn, &QPushButton::clicked, this,
+                        QObject::connect(
+                            btn, &QPushButton::clicked, this,
                             [this, btn, floats, snapshot, entity, typeId, offset, &undo]() {
-                                QColor cur = QColor::fromRgbF(
-                                    static_cast<double>(floats[0]),
-                                    static_cast<double>(floats[1]),
-                                    static_cast<double>(floats[2]));
+                                QColor cur =
+                                    QColor::fromRgbF(static_cast<double>(floats[0]), static_cast<double>(floats[1]),
+                                                     static_cast<double>(floats[2]));
 
                                 Snapshot(*snapshot, entity, typeId, offset, 12, floats);
 
@@ -364,8 +361,7 @@ namespace forge
                                     floats[1] = static_cast<float>(picked.greenF());
                                     floats[2] = static_cast<float>(picked.blueF());
                                     btn->setText(picked.name());
-                                    btn->setStyleSheet(
-                                        QString{"background-color: %1;"}.arg(picked.name()));
+                                    btn->setStyleSheet(QString{"background-color: %1;"}.arg(picked.name()));
                                     CommitIfChanged(*snapshot, undo, floats);
                                     emit sceneModified();
                                 }
@@ -392,19 +388,19 @@ namespace forge
                             hbox->addWidget(spin);
 
                             QObject::connect(spin, &QDoubleSpinBox::editingFinished, this,
-                                [this, spin, floats, axis, snapshot, entity, typeId, offset, &undo]() {
-                                    float newVal = static_cast<float>(spin->value());
-                                    if (newVal != floats[axis])
-                                    {
-                                        if (snapshot->m_size == 0)
-                                        {
-                                            Snapshot(*snapshot, entity, typeId, offset, 12, floats);
-                                        }
-                                        floats[axis] = newVal;
-                                        CommitIfChanged(*snapshot, undo, floats);
-                                        emit sceneModified();
-                                    }
-                                });
+                                             [this, spin, floats, axis, snapshot, entity, typeId, offset, &undo]() {
+                                                 float newVal = static_cast<float>(spin->value());
+                                                 if (newVal != floats[axis])
+                                                 {
+                                                     if (snapshot->m_size == 0)
+                                                     {
+                                                         Snapshot(*snapshot, entity, typeId, offset, 12, floats);
+                                                     }
+                                                     floats[axis] = newVal;
+                                                     CommitIfChanged(*snapshot, undo, floats);
+                                                     emit sceneModified();
+                                                 }
+                                             });
                         }
 
                         widget = container;
@@ -470,9 +466,9 @@ namespace forge
                         spin->setMaximum(360.0);
                         hbox->addWidget(spin);
 
-                        QObject::connect(spin, &QDoubleSpinBox::editingFinished, this,
-                            [this, spin, q, axis, snapshot, entity, typeId, offset, &undo,
-                             quatToEuler, eulerToQuat]() {
+                        QObject::connect(
+                            spin, &QDoubleSpinBox::editingFinished, this,
+                            [this, spin, q, axis, snapshot, entity, typeId, offset, &undo, quatToEuler, eulerToQuat]() {
                                 float curEuler[3];
                                 quatToEuler(q, curEuler);
                                 float newDeg = static_cast<float>(spin->value());
@@ -498,8 +494,7 @@ namespace forge
                     auto* nestedForm = new QFormLayout{nestedGroup};
 
                     FieldContext nestedCtx{ctx.m_world, ctx.m_entity, ctx.m_typeId,
-                                          static_cast<uint16_t>(ctx.m_baseOffset + field.m_offset),
-                                          ctx.m_undo};
+                                           static_cast<uint16_t>(ctx.m_baseOffset + field.m_offset), ctx.m_undo};
 
                     for (size_t i = 0; i < field.m_nestedFieldCount; ++i)
                     {
@@ -523,8 +518,7 @@ namespace forge
                     auto* combo = new QComboBox;
 
                     int64_t currentValue = 0;
-                    std::memcpy(&currentValue, fieldData,
-                                field.m_size <= 8 ? field.m_size : size_t{8});
+                    std::memcpy(&currentValue, fieldData, field.m_size <= 8 ? field.m_size : size_t{8});
 
                     int currentIndex = -1;
                     for (size_t i = 0; i < field.m_enumInfo->m_entryCount; ++i)
@@ -542,9 +536,9 @@ namespace forge
                         combo->setCurrentIndex(currentIndex);
                     }
 
-                    QObject::connect(combo, &QComboBox::currentIndexChanged, this,
-                        [this, combo, fieldData, fieldSize = field.m_size,
-                         entity, typeId, offset, &undo](int index) {
+                    QObject::connect(
+                        combo, &QComboBox::currentIndexChanged, this,
+                        [this, combo, fieldData, fieldSize = field.m_size, entity, typeId, offset, &undo](int index) {
                             if (index < 0)
                             {
                                 return;
@@ -553,8 +547,8 @@ namespace forge
                             std::byte before[8]{};
                             std::memcpy(before, fieldData, fieldSize);
                             std::memcpy(fieldData, &newValue, fieldSize);
-                            undo.PushSetField(entity, typeId, offset,
-                                              static_cast<uint16_t>(fieldSize), before, fieldData);
+                            undo.PushSetField(entity, typeId, offset, static_cast<uint16_t>(fieldSize), before,
+                                              fieldData);
                             emit sceneModified();
                         });
 

@@ -1,15 +1,15 @@
 #include <forge/project_hub.h>
 
-#include <QHBoxLayout>
-#include <QVBoxLayout>
 #include <QFileDialog>
 #include <QGraphicsDropShadowEffect>
+#include <QHBoxLayout>
 #include <QLabel>
 #include <QLineEdit>
 #include <QPushButton>
 #include <QScrollArea>
 #include <QStackedWidget>
 #include <QStyle>
+#include <QVBoxLayout>
 
 namespace forge
 {
@@ -305,11 +305,9 @@ namespace forge
         dirRow->addWidget(m_createDir, 1);
 
         auto* dirBrowse = new QPushButton{"Browse"};
-        dirBrowse->setStyleSheet(
-            "QPushButton { background: transparent; color: #999; border: 1px solid #444; "
-            "border-radius: 6px; padding: 8px 20px; font-size: 13px; }"
-            "QPushButton:hover { border-color: #f0a500; color: #f0a500; }"
-        );
+        dirBrowse->setStyleSheet("QPushButton { background: transparent; color: #999; border: 1px solid #444; "
+                                 "border-radius: 6px; padding: 8px 20px; font-size: 13px; }"
+                                 "QPushButton:hover { border-color: #f0a500; color: #f0a500; }");
         dirRow->addWidget(dirBrowse);
         dirRow->addStretch();
         createLayout->addLayout(dirRow);
@@ -366,16 +364,11 @@ namespace forge
         });
 
         connect(createBtn, &QPushButton::clicked, this, [this] {
-            emit createProjectRequested(
-                m_createName->text(),
-                m_createDir->text(),
-                m_createVersion->text()
-            );
+            emit createProjectRequested(m_createName->text(), m_createDir->text(), m_createVersion->text());
         });
 
         connect(dirBrowse, &QPushButton::clicked, this, [this] {
-            QString dir = QFileDialog::getExistingDirectory(this, "Select Project Location",
-                                                            m_createDir->text());
+            QString dir = QFileDialog::getExistingDirectory(this, "Select Project Location", m_createDir->text());
             if (!dir.isEmpty())
                 m_createDir->setText(dir);
         });
@@ -443,15 +436,13 @@ namespace forge
             // Click to open
             QString path = QString::fromStdString(project.m_path);
             card->installEventFilter(this);
-            connect(card, &QWidget::destroyed, this, []{});
+            connect(card, &QWidget::destroyed, this, [] {});
 
             // Use a mouse press event via a transparent button overlay
             auto* clickBtn = new QPushButton{card};
             clickBtn->setStyleSheet("background: transparent; border: none;");
             clickBtn->setGeometry(0, 0, 9999, 9999);
-            connect(clickBtn, &QPushButton::clicked, this, [this, path] {
-                emit projectSelected(path);
-            });
+            connect(clickBtn, &QPushButton::clicked, this, [this, path] { emit projectSelected(path); });
 
             m_cardLayout->insertWidget(m_cardLayout->count() - 1, card);
         }

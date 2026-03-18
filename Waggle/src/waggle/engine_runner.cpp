@@ -120,6 +120,10 @@ namespace
 
             m_windowInitialized = true;
             m_context.m_window = m_windowContext;
+
+            if (!m_config.m_deferWindow)
+                terra::SetWindowVisible(m_windowContext, true);
+
             return true;
         }
 
@@ -365,6 +369,7 @@ namespace waggle
             hive::LogError(LOG_ENGINE, "Failed to create window");
             return false;
         }
+        terra::SetWindowVisible(window, false);
         ctx.m_window = window;
 
         if (!swarm::InitSystem())

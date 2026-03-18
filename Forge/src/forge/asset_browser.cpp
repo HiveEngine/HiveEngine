@@ -71,9 +71,7 @@ namespace forge
 
         for (const auto& d : dirs)
         {
-            auto* item = parent
-                ? new QTreeWidgetItem{parent}
-                : new QTreeWidgetItem{m_tree};
+            auto* item = parent ? new QTreeWidgetItem{parent} : new QTreeWidgetItem{m_tree};
             item->setText(0, QString::fromStdString(d.path().filename().string()));
             PopulateDirectory(item, d.path());
         }
@@ -84,13 +82,10 @@ namespace forge
             std::string ext = f.path().extension().string();
             const char* icon = IconForExtension(ext);
 
-            QString label = icon
-                ? QString{"%1 %2"}.arg(icon, QString::fromStdString(name))
-                : QString::fromStdString(name);
+            QString label =
+                icon ? QString{"%1 %2"}.arg(icon, QString::fromStdString(name)) : QString::fromStdString(name);
 
-            auto* item = parent
-                ? new QTreeWidgetItem{parent}
-                : new QTreeWidgetItem{m_tree};
+            auto* item = parent ? new QTreeWidgetItem{parent} : new QTreeWidgetItem{m_tree};
             item->setText(0, label);
             item->setToolTip(0, QString::fromStdString(f.path().string()));
             item->setFlags(item->flags() & ~Qt::ItemIsDropEnabled);

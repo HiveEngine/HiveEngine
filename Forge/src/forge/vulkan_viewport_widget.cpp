@@ -1,14 +1,15 @@
-#include <forge/vulkan_viewport_widget.h>
-
 #include <swarm/swarm.h>
+
 #include <terra/platform/glfw_terra.h>
+
+#include <forge/vulkan_viewport_widget.h>
 
 #include <QVBoxLayout>
 #include <QWindow>
 
 #ifdef Q_OS_WIN
-#include <Windows.h>
 #include <GLFW/glfw3.h>
+#include <Windows.h>
 #define GLFW_EXPOSE_NATIVE_WIN32
 #include <GLFW/glfw3native.h>
 #endif

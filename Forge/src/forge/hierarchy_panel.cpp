@@ -30,8 +30,10 @@ namespace forge
 
         tree_ = new QTreeWidget{this};
         tree_->setHeaderHidden(true);
-        tree_->setSelectionMode(QAbstractItemView::NoSelection);
+        tree_->setSelectionMode(QAbstractItemView::SingleSelection);
         tree_->setContextMenuPolicy(Qt::CustomContextMenu);
+        tree_->setRootIsDecorated(false);
+        tree_->setIndentation(16);
 
         layout->addWidget(tree_);
 
@@ -49,8 +51,6 @@ namespace forge
         currentWorld_ = &world;
         tree_->clear();
 
-        EntityLabelFn fn = labelFn_ ? labelFn_ : DefaultEntityLabel;
-
         std::vector<queen::Entity> roots;
         world.ForEachArchetype([&](auto& arch) {
             if (arch.template HasComponent<queen::Parent>())
@@ -59,8 +59,7 @@ namespace forge
                 roots.push_back(arch.GetEntity(row));
         });
 
-        std::sort(roots.begin(), roots.end(),
-                  [](queen::Entity a, queen::Entity b) { return a.Index() < b.Index(); });
+        std::sort(roots.begin(), roots.end(), [](queen::Entity a, queen::Entity b) { return a.Index() < b.Index(); });
 
         for (queen::Entity root : roots)
         {

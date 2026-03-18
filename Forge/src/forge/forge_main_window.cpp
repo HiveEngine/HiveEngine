@@ -1,6 +1,7 @@
-#include <forge/forge_main_window.h>
+#include <queen/reflect/component_registry.h>
 
 #include <forge/asset_browser.h>
+#include <forge/forge_main_window.h>
 #include <forge/hierarchy_panel.h>
 #include <forge/inspector_panel.h>
 #include <forge/project_hub.h>
@@ -8,11 +9,17 @@
 #include <forge/toolbar.h>
 #include <forge/undo.h>
 #include <forge/vulkan_viewport_widget.h>
-#include <queen/reflect/component_registry.h>
 
 #include <QCloseEvent>
 #include <QDockWidget>
+#include <QLabel>
 #include <QMenuBar>
+#include <QPainter>
+#include <QPainterPath>
+#include <QPropertyAnimation>
+#include <QTimer>
+
+#include <cmath>
 #include <QStackedWidget>
 
 namespace forge
@@ -53,8 +60,123 @@ namespace forge
         resize(1200, 750);
     }
 
+    class HexSpinner : public QWidget
+    {
+    public:
+        explicit HexSpinner(QWidget* parent = nullptr)
+            : QWidget{parent}
+        {
+            setFixedSize(48, 48);
+            m_timer.setInterval(16);
+            connect(&m_timer, &QTimer::timeout, this, [this] {
+                m_angle += 3.0;
+                update();
+            });
+            m_timer.start();
+        }
+
+    protected:
+        void paintEvent(QPaintEvent*) override
+        {
+            QPainter p{this};
+            p.setRenderHint(QPainter::Antialiasing);
+            p.translate(width() / 2.0, height() / 2.0);
+            p.rotate(m_angle);
+
+            const double r = 18.0;
+            QPainterPath hex;
+            for (int i = 0; i < 6; ++i)
+            {
+                double a = (60.0 * i - 30.0) * 3.14159265 / 180.0;
+                QPointF pt{r * std::cos(a), r * std::sin(a)};
+                if (i == 0)
+                    hex.moveTo(pt);
+                else
+                    hex.lineTo(pt);
+            }
+            hex.closeSubpath();
+
+            QPen pen{QColor{0xf0, 0xa5, 0x00}, 2.5};
+            pen.setCapStyle(Qt::RoundCap);
+            p.setPen(pen);
+            p.setBrush(Qt::NoBrush);
+            p.drawPath(hex);
+
+            p.setPen(QPen{QColor{0xf0, 0xa5, 0x00, 60}, 2.0});
+            p.rotate(30.0);
+            p.drawPath(hex);
+        }
+
+    private:
+        QTimer m_timer;
+        double m_angle{0.0};
+    };
+
+    void ForgeMainWindow::ShowLoading(const QString& projectName)
+    {
+        m_hub->hide();
+        menuBar()->hide();
+
+        m_loadingWidget = new QWidget{this};
+        m_loadingWidget->setStyleSheet("background-color: #0d0d0d;");
+
+        auto* layout = new QVBoxLayout{m_loadingWidget};
+        layout->setAlignment(Qt::AlignCenter);
+        layout->setSpacing(0);
+
+        auto* spinnerRow = new QHBoxLayout;
+        spinnerRow->setAlignment(Qt::AlignCenter);
+        spinnerRow->addWidget(new HexSpinner{m_loadingWidget});
+        layout->addLayout(spinnerRow);
+
+        layout->addSpacing(24);
+
+        auto* title = new QLabel{"HIVE ENGINE"};
+        title->setAlignment(Qt::AlignCenter);
+        title->setStyleSheet("color: #f0a500; font-size: 24px; font-weight: bold; letter-spacing: 4px;");
+        layout->addWidget(title);
+
+        layout->addSpacing(8);
+
+        auto* sub = new QLabel{QString{"Loading %1"}.arg(projectName)};
+        sub->setAlignment(Qt::AlignCenter);
+        sub->setStyleSheet("color: #555; font-size: 12px;");
+        layout->addWidget(sub);
+
+        layout->addSpacing(20);
+
+        auto* bar = new QWidget{m_loadingWidget};
+        bar->setFixedSize(200, 2);
+        bar->setStyleSheet("background-color: #1a1a1a; border-radius: 1px;");
+
+        auto* barGlow = new QWidget{bar};
+        barGlow->setFixedSize(60, 2);
+        barGlow->setStyleSheet("background-color: #f0a500; border-radius: 1px;");
+
+        auto* barAnim = new QPropertyAnimation{barGlow, "pos", m_loadingWidget};
+        barAnim->setDuration(1200);
+        barAnim->setStartValue(QPoint{0, 0});
+        barAnim->setEndValue(QPoint{140, 0});
+        barAnim->setEasingCurve(QEasingCurve::InOutSine);
+        barAnim->setLoopCount(-1);
+        barAnim->start();
+
+        auto* barRow = new QHBoxLayout;
+        barRow->setAlignment(Qt::AlignCenter);
+        barRow->addWidget(bar);
+        layout->addLayout(barRow);
+
+        setCentralWidget(m_loadingWidget);
+        setWindowTitle(QString{"Hive Engine - %1"}.arg(projectName));
+    }
+
     void ForgeMainWindow::ShowEditor()
     {
+        if (m_loadingWidget != nullptr)
+        {
+            m_loadingWidget->hide();
+            m_loadingWidget = nullptr;
+        }
         m_hub->hide();
 
         CreateMenus();
@@ -191,9 +313,7 @@ namespace forge
                 m_inspector->Refresh(*m_world, *m_selection, *m_registry, *m_undo);
         });
 
-        connect(m_hierarchy, &HierarchyPanel::sceneModified, this, [this] {
-            RefreshAll();
-        });
+        connect(m_hierarchy, &HierarchyPanel::sceneModified, this, [this] { RefreshAll(); });
 
         connect(m_inspector, &InspectorPanel::sceneModified, this, [this] {
             if (m_world && m_hierarchy)

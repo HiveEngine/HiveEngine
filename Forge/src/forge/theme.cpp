@@ -29,8 +29,8 @@ namespace forge
         palette.setColor(QPalette::ButtonText, text);
         palette.setColor(QPalette::BrightText, accent);
         palette.setColor(QPalette::Link, accent);
-        palette.setColor(QPalette::Highlight, accent);
-        palette.setColor(QPalette::HighlightedText, QColor{0x0d, 0x0d, 0x0d});
+        palette.setColor(QPalette::Highlight, QColor{0x3d, 0x2e, 0x0a});
+        palette.setColor(QPalette::HighlightedText, accent);
         palette.setColor(QPalette::Disabled, QPalette::Text, dimText);
         palette.setColor(QPalette::Disabled, QPalette::ButtonText, dimText);
         palette.setColor(QPalette::Disabled, QPalette::WindowText, dimText);
@@ -61,8 +61,8 @@ namespace forge
                 border-bottom: 1px solid #2a2a2a;
             }
             QMenuBar::item:selected {
-                background-color: #f0a500;
-                color: #0d0d0d;
+                background-color: #3d2e0a;
+                color: #f0a500;
             }
             QMenu {
                 background-color: #1a1a1a;
@@ -70,21 +70,26 @@ namespace forge
                 border: 1px solid #2a2a2a;
             }
             QMenu::item:selected {
-                background-color: #f0a500;
-                color: #0d0d0d;
+                background-color: #3d2e0a;
+                color: #f0a500;
             }
             QTreeWidget, QTreeView, QListView {
                 background-color: #111;
                 color: #e8e8e8;
                 border: 1px solid #2a2a2a;
                 outline: none;
+                show-decoration-selected: 1;
+            }
+            QTreeView::branch {
+                border-image: none;
+                image: none;
             }
             QTreeWidget::item:hover, QTreeView::item:hover {
                 background-color: #1e1e1e;
             }
             QTreeWidget::item:selected, QTreeView::item:selected {
-                background-color: #f0a500;
-                color: #0d0d0d;
+                background-color: #3d2e0a;
+                color: #f0a500;
             }
             QScrollBar:vertical {
                 background: #111;

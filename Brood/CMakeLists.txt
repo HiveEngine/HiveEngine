@@ -33,7 +33,12 @@ endfunction()
 # Engine Launcher
 # ============================================================================
 
-add_executable(hive_launcher src/hive_launcher.cpp)
+add_executable(hive_launcher
+    src/hive_launcher.cpp
+    src/launcher/launcher_platform.cpp
+    src/launcher/launcher_scene.cpp
+    src/launcher/launcher_project.cpp
+)
 
 hive_configure_target(hive_launcher)
 
@@ -48,6 +53,7 @@ target_link_libraries(hive_launcher
 target_include_directories(hive_launcher
     PRIVATE
         ${BROOD_INCLUDE_DIR}
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
 
 if(TARGET Forge)

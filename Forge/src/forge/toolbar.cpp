@@ -60,15 +60,12 @@ namespace forge
         connect(m_pauseBtn, &QPushButton::clicked, this, &EditorToolbar::pausePressed);
         connect(m_stopBtn, &QPushButton::clicked, this, &EditorToolbar::stopPressed);
 
-        connect(m_moveBtn, &QPushButton::clicked, this, [this]() {
-            emit gizmoModeChanged(static_cast<int>(GizmoMode::TRANSLATE));
-        });
-        connect(m_rotateBtn, &QPushButton::clicked, this, [this]() {
-            emit gizmoModeChanged(static_cast<int>(GizmoMode::ROTATE));
-        });
-        connect(m_scaleBtn, &QPushButton::clicked, this, [this]() {
-            emit gizmoModeChanged(static_cast<int>(GizmoMode::SCALE));
-        });
+        connect(m_moveBtn, &QPushButton::clicked, this,
+                [this]() { emit gizmoModeChanged(static_cast<int>(GizmoMode::TRANSLATE)); });
+        connect(m_rotateBtn, &QPushButton::clicked, this,
+                [this]() { emit gizmoModeChanged(static_cast<int>(GizmoMode::ROTATE)); });
+        connect(m_scaleBtn, &QPushButton::clicked, this,
+                [this]() { emit gizmoModeChanged(static_cast<int>(GizmoMode::SCALE)); });
         connect(m_spaceBtn, &QPushButton::clicked, this, &EditorToolbar::gizmoSpaceToggled);
 
         SetPlayState(PlayState::EDITING);
@@ -78,36 +75,33 @@ namespace forge
     {
         switch (state)
         {
-        case PlayState::EDITING:
-            m_playBtn->setText("Play");
-            m_playBtn->setStyleSheet(K_GREEN_STYLE);
-            m_playBtn->setVisible(true);
-            m_pauseBtn->setVisible(false);
-            m_stopBtn->setVisible(false);
-            break;
-        case PlayState::PLAYING:
-            m_playBtn->setVisible(false);
-            m_pauseBtn->setVisible(true);
-            m_stopBtn->setVisible(true);
-            break;
-        case PlayState::PAUSED:
-            m_playBtn->setText("Resume");
-            m_playBtn->setStyleSheet(K_GREEN_STYLE);
-            m_playBtn->setVisible(true);
-            m_pauseBtn->setVisible(false);
-            m_stopBtn->setVisible(true);
-            break;
+            case PlayState::EDITING:
+                m_playBtn->setText("Play");
+                m_playBtn->setStyleSheet(K_GREEN_STYLE);
+                m_playBtn->setVisible(true);
+                m_pauseBtn->setVisible(false);
+                m_stopBtn->setVisible(false);
+                break;
+            case PlayState::PLAYING:
+                m_playBtn->setVisible(false);
+                m_pauseBtn->setVisible(true);
+                m_stopBtn->setVisible(true);
+                break;
+            case PlayState::PAUSED:
+                m_playBtn->setText("Resume");
+                m_playBtn->setStyleSheet(K_GREEN_STYLE);
+                m_playBtn->setVisible(true);
+                m_pauseBtn->setVisible(false);
+                m_stopBtn->setVisible(true);
+                break;
         }
     }
 
     void EditorToolbar::SetGizmoState(GizmoState& state)
     {
-        m_moveBtn->setStyleSheet(
-            state.m_mode == GizmoMode::TRANSLATE ? K_ACCENT_ACTIVE_STYLE : K_INACTIVE_STYLE);
-        m_rotateBtn->setStyleSheet(
-            state.m_mode == GizmoMode::ROTATE ? K_ACCENT_ACTIVE_STYLE : K_INACTIVE_STYLE);
-        m_scaleBtn->setStyleSheet(
-            state.m_mode == GizmoMode::SCALE ? K_ACCENT_ACTIVE_STYLE : K_INACTIVE_STYLE);
+        m_moveBtn->setStyleSheet(state.m_mode == GizmoMode::TRANSLATE ? K_ACCENT_ACTIVE_STYLE : K_INACTIVE_STYLE);
+        m_rotateBtn->setStyleSheet(state.m_mode == GizmoMode::ROTATE ? K_ACCENT_ACTIVE_STYLE : K_INACTIVE_STYLE);
+        m_scaleBtn->setStyleSheet(state.m_mode == GizmoMode::SCALE ? K_ACCENT_ACTIVE_STYLE : K_INACTIVE_STYLE);
 
         m_spaceBtn->setText(state.m_space == GizmoSpace::WORLD ? "World" : "Local");
     }

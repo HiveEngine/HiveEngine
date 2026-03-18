@@ -68,8 +68,8 @@ namespace terra
 
         bool InitWindowContext(WindowContext* windowContext)
         {
-            glfwWindowHint(GLFW_CLIENT_API,
-                           GLFW_NO_API); // Disable glfw to create the OpenGL context. We will manage that in swarm
+            glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+            glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
 
             if (windowContext->m_width <= 0)
                 windowContext->m_width = 1280;

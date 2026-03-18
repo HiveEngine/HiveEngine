@@ -27,8 +27,8 @@ namespace forge
     public:
         explicit InspectorPanel(QWidget* parent = nullptr);
 
-        void Refresh(queen::World& world, EditorSelection& selection,
-                     const queen::ComponentRegistry<256>& registry, UndoStack& undo);
+        void Refresh(queen::World& world, EditorSelection& selection, const queen::ComponentRegistry<256>& registry,
+                     UndoStack& undo);
 
     signals:
         void sceneModified();
@@ -43,7 +43,6 @@ namespace forge
             UndoStack* m_undo;
         };
 
-        void BuildFieldWidget(const queen::FieldInfo& field, void* data,
-                              const FieldContext& ctx, QFormLayout* form);
+        void BuildFieldWidget(const queen::FieldInfo& field, void* data, const FieldContext& ctx, QFormLayout* form);
     };
 } // namespace forge

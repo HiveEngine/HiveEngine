@@ -38,9 +38,10 @@ namespace forge
     public:
         explicit ForgeMainWindow(QWidget* parent = nullptr);
 
-        void Initialize(queen::World* world, EditorSelection* selection,
-                        const queen::ComponentRegistry<256>* registry, UndoStack* undo);
+        void Initialize(queen::World* world, EditorSelection* selection, const queen::ComponentRegistry<256>* registry,
+                        UndoStack* undo);
         void ShowHub(const std::vector<struct DiscoveredProject>& projects);
+        void ShowLoading(const QString& projectName);
         void ShowEditor();
 
         void RefreshAll();
@@ -78,6 +79,7 @@ namespace forge
         VulkanViewportWidget* m_viewport{};
         EditorToolbar* m_toolbar{};
         ProjectHub* m_hub{};
+        QWidget* m_loadingWidget{};
         QWidget* m_editorWidget{};
         QList<class QDockWidget*> m_docks;
     };
