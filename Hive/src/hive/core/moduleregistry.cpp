@@ -2,7 +2,7 @@
 #include <hive/precomp.h>
 #include <hive/profiling/profiler.h>
 
-#include "hive/core/assert.h"
+#include <hive/core/assert.h>
 
 namespace hive
 {

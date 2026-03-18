@@ -1,6 +1,7 @@
 #include <hive/core/log.h>
 #include <hive/precomp.h>
 
+#include <array>
 #include <iostream>
 namespace hive
 {
@@ -44,18 +45,17 @@ namespace hive
 
     void ConsoleLogger::Log(const LogCategory& category, LogSeverity severity, const char* message)
     {
-        // TODO use array instead for better performance
-        static const std::unordered_map<LogSeverity, const char*> SEVERITY_LABELS = {{LogSeverity::TRACE, "[TRACE] "},
-                                                                                     {LogSeverity::INFO, "[INFO] "},
-                                                                                     {LogSeverity::WARN, "[WARN] "},
-                                                                                     {LogSeverity::ERROR, "[ERROR] "}};
+        static constexpr std::array<const char*, 4> kSeverityLabels = {
+            "[TRACE] ",
+            "[INFO] ",
+            "[WARN] ",
+            "[ERROR] ",
+        };
 
-        auto it = SEVERITY_LABELS.find(severity);
-        if (it == SEVERITY_LABELS.end())
+        const auto index = static_cast<size_t>(severity);
+        if (index >= kSeverityLabels.size())
             return;
 
-        std::cout << it->second;
-
-        std::cout << category.GetFullPath() << " - " << message << std::endl;
+        std::cout << kSeverityLabels[index] << category.GetFullPath() << " - " << message << std::endl;
     }
 } // namespace hive

@@ -9,7 +9,7 @@
 #include <RefCntAutoPtr.hpp>
 #include <Shader.h>
 
-#include "swarm/swarmmodule.h"
+#include <swarm/swarmmodule.h>
 namespace swarm
 {
     namespace

@@ -4,7 +4,7 @@
 
 #include <EngineFactoryVk.h>
 
-#include "swarm/platform/diligent_swarm.h"
+#include <swarm/platform/diligent_swarm.h>
 
 #define TERRA_NATIVE_WIN32
 #include <terra/terra.h>

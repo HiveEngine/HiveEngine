@@ -14,5 +14,3 @@
 // Hive core
 #include <hive/core/assert.h>
 
-// Comb allocators (concepts only, not implementations)
-// #include <comb/allocator_concept.h>
