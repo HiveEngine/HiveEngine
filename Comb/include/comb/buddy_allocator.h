@@ -552,7 +552,7 @@ namespace comb
         // User data at block + DebugHeaderPrefix, properly aligned.
         // Front guard fits in the padding (guaranteed by DebugHeaderPrefix formula).
         const size_t guardSize = sizeof(uint32_t);
-        size_t totalSize = debug::debugHeaderPrefix + size + guardSize;
+        size_t totalSize = debugHeaderPrefix + size + guardSize;
         size_t blockSize = NextPowerOfTwo(totalSize);
         if (blockSize < minBlockSize)
         {
@@ -595,11 +595,11 @@ namespace comb
         }
 
         // Write header
-        auto* header = reinterpret_cast<debug::AllocationHeader*>(block);
+        auto* header = reinterpret_cast<AllocationHeader*>(block);
         header->m_size = blockSize;
 
         // Track used_memory_ with release layout (no guards) for consistent stats
-        size_t releaseTotalSize = size + debug::headerPrefix;
+        size_t releaseTotalSize = size + headerPrefix;
         size_t releaseBlockSize = NextPowerOfTwo(releaseTotalSize);
         if (releaseBlockSize < minBlockSize)
         {
@@ -608,7 +608,7 @@ namespace comb
         m_usedMemory += releaseBlockSize;
 
         // 3. Place guard bytes and user data
-        void* userPtr = reinterpret_cast<std::byte*>(block) + debug::debugHeaderPrefix;
+        void* userPtr = reinterpret_cast<std::byte*>(block) + debugHeaderPrefix;
 
         debug::WriteGuard(static_cast<std::byte*>(userPtr) - guardSize);
         debug::WriteGuard(static_cast<std::byte*>(userPtr) + size);
@@ -684,7 +684,7 @@ namespace comb
         // 3. Calculate release block size BEFORE unregistering (info will be destroyed)
         // Track memory using release mode calculation (excluding guard bytes)
         // This ensures GetUsedMemory() returns consistent values between debug and release
-        size_t releaseTotalSize = info->m_size + debug::headerPrefix;
+        size_t releaseTotalSize = info->m_size + headerPrefix;
         size_t releaseBlockSize = NextPowerOfTwo(releaseTotalSize);
         if (releaseBlockSize < minBlockSize)
         {
@@ -707,9 +707,9 @@ namespace comb
         // 7. Get block pointer (before header)
         // Layout: [AllocationHeader][...padding...][Guard Front][user data][Guard Back]
         // ptr = userPtr at block + DebugHeaderPrefix
-        void* blockPtr = static_cast<std::byte*>(ptr) - debug::debugHeaderPrefix;
+        void* blockPtr = static_cast<std::byte*>(ptr) - debugHeaderPrefix;
 
-        auto* header = reinterpret_cast<debug::AllocationHeader*>(blockPtr);
+        auto* header = reinterpret_cast<AllocationHeader*>(blockPtr);
         size_t blockSize = header->m_size;
         size_t level = GetLevel(blockSize);
 
