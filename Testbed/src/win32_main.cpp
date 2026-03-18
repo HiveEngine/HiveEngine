@@ -8,11 +8,7 @@
 #define TERRA_NATIVE_WIN32
 #include <hive/core/log.h>
 
-#include <swarm/platform/diligent_swarm.h>
-#include <swarm/platform/win32_swarm.h>
 #include <swarm/swarm.h>
-
-#include <terra/terra_native.h>
 
 #include <iostream>
 
@@ -53,8 +49,8 @@ private:
     hive::LogManager logManager_;
     hive::ConsoleLogger consoleLogger_;
 
-    terra::WindowContext windowContext_;
-    swarm::RenderContext renderContext_;
+    terra::WindowContext* windowContext_{nullptr};
+    swarm::RenderContext* renderContext_{nullptr};
     antennae::Keyboard keyboard_;
     antennae::Mouse mouse_;
     antennae::InputActions actions_;
@@ -80,10 +76,13 @@ void Engine::Run()
 
 bool Engine::Init()
 {
-    terra::SetWindowTitle(&windowContext_, "Hive Engine");
-    terra::SetWindowSize(&windowContext_, 1280, 720);
+    if (!terra::InitSystem())
+    {
+        return false;
+    }
 
-    if (!terra::InitSystem() || !terra::InitWindowContext(&windowContext_))
+    windowContext_ = terra::CreateWindowContext("Hive Engine", 1280, 720);
+    if (windowContext_ == nullptr)
     {
         return false;
     }
@@ -93,30 +92,36 @@ bool Engine::Init()
         return false;
     }
 
-    terra::NativeWindow nativeWindow = terra::GetNativeWindow(&windowContext_);
-    if (!swarm::InitRenderContextWin32(&renderContext_, nativeWindow.m_instance, nativeWindow.m_window,
-                                       static_cast<uint32_t>(terra::GetWindowWidth(&windowContext_)),
-                                       static_cast<uint32_t>(terra::GetWindowHeight(&windowContext_))))
+    renderContext_ = swarm::CreateRenderContext(windowContext_);
+    if (renderContext_ == nullptr)
     {
         return false;
     }
 
-    swarm::SetupGraphicPipeline(renderContext_);
+    swarm::SetupGraphicPipeline(*renderContext_);
     return true;
 }
 
 void Engine::Shutdown()
 {
-    swarm::ShutdownRenderContext(renderContext_);
+    if (renderContext_ != nullptr)
+    {
+        swarm::DestroyRenderContext(renderContext_);
+        renderContext_ = nullptr;
+    }
     swarm::ShutdownSystem();
 
-    terra::ShutdownWindowContext(&windowContext_);
+    if (windowContext_ != nullptr)
+    {
+        terra::DestroyWindowContext(windowContext_);
+        windowContext_ = nullptr;
+    }
     terra::ShutdownSystem();
 }
 
 void Engine::Loop()
 {
-    PlatformContext platformContext{&renderContext_, &windowContext_, &keyboard_, &mouse_, &actions_, &actionMap_};
+    PlatformContext platformContext{renderContext_, windowContext_, &keyboard_, &mouse_, &actions_, &actionMap_};
     while (!terra::ShouldWindowClose(platformContext.windowContext_))
     {
         terra::PollEvents(platformContext.windowContext_);

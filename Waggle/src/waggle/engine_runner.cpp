@@ -81,7 +81,7 @@ namespace
 
         [[nodiscard]] bool InitializeRuntime()
         {
-            if (!IsGraphical())
+            if (!IsGraphical() || m_config.m_deferWindow)
             {
                 return true;
             }
@@ -109,7 +109,7 @@ namespace
 
             m_windowSystemInitialized = true;
 
-            m_windowContext = terra::CreateWindow(m_config.m_windowTitle, static_cast<int>(m_config.m_windowWidth),
+            m_windowContext = terra::CreateWindowContext(m_config.m_windowTitle, static_cast<int>(m_config.m_windowWidth),
                                               static_cast<int>(m_config.m_windowHeight));
 
             if (m_windowContext == nullptr)
@@ -159,13 +159,56 @@ namespace
 
         void RunMainLoop()
         {
-            if (IsGraphical())
+            if (IsGraphical() && m_windowInitialized)
             {
                 RunGraphicalLoop();
                 return;
             }
 
+            if (IsGraphical() && m_config.m_deferWindow)
+            {
+                RunDeferredLoop();
+                return;
+            }
+
             RunHeadlessLoop();
+        }
+
+        void RunDeferredLoop()
+        {
+            while (m_app.IsRunning())
+            {
+                HIVE_PROFILE_SCOPE_N("Frame");
+
+                if (m_context.m_window != nullptr)
+                {
+                    terra::PollEvents(m_context.m_window);
+                    antennae::UpdateInput(m_app.GetWorld(), m_context.m_window);
+
+                    if (terra::ShouldWindowClose(m_context.m_window))
+                        break;
+                }
+
+                if (m_config.m_autoTick)
+                {
+                    m_app.Tick();
+                }
+
+                if (m_context.m_renderContext != nullptr)
+                {
+                    swarm::BeginFrame(m_context.m_renderContext);
+                }
+
+                if (m_callbacks.m_onFrame != nullptr)
+                {
+                    m_callbacks.m_onFrame(m_context, m_callbacks.m_userData);
+                }
+
+                if (m_context.m_renderContext != nullptr)
+                {
+                    swarm::EndFrame(m_context.m_renderContext);
+                }
+            }
         }
 
         void RunGraphicalLoop()
@@ -234,6 +277,11 @@ namespace
                 swarm::DestroyRenderContext(m_renderContext);
                 m_rendererInitialized = false;
             }
+            else if (m_context.m_renderContext != nullptr)
+            {
+                swarm::DestroyRenderContext(m_context.m_renderContext);
+                swarm::ShutdownSystem();
+            }
             m_context.m_renderContext = nullptr;
 
             if (m_rendererSystemInitialized)
@@ -244,8 +292,13 @@ namespace
 
             if (m_windowInitialized)
             {
-                terra::DestroyWindow(m_windowContext);
+                terra::DestroyWindowContext(m_windowContext);
                 m_windowInitialized = false;
+            }
+            else if (m_context.m_window != nullptr)
+            {
+                terra::DestroyWindowContext(m_context.m_window);
+                terra::ShutdownSystem();
             }
             m_context.m_window = nullptr;
 
@@ -293,6 +346,43 @@ namespace waggle
     {
         EngineSession session{config, callbacks};
         return session.Run();
+    }
+
+    bool CreateWindowAndRenderer(EngineContext& ctx, const char* title, uint32_t width, uint32_t height)
+    {
+        if (ctx.m_window != nullptr)
+            return true;
+
+        if (!terra::InitSystem())
+        {
+            hive::LogError(LOG_ENGINE, "Failed to initialize windowing backend");
+            return false;
+        }
+
+        auto* window = terra::CreateWindowContext(title, static_cast<int>(width), static_cast<int>(height));
+        if (window == nullptr)
+        {
+            hive::LogError(LOG_ENGINE, "Failed to create window");
+            return false;
+        }
+        ctx.m_window = window;
+
+        if (!swarm::InitSystem())
+        {
+            hive::LogError(LOG_ENGINE, "Failed to initialize Swarm");
+            return false;
+        }
+
+        auto* renderCtx = swarm::CreateRenderContext(window);
+        if (renderCtx == nullptr)
+        {
+            hive::LogError(LOG_ENGINE, "Failed to create render context");
+            return false;
+        }
+
+        swarm::SetupGraphicPipeline(*renderCtx);
+        ctx.m_renderContext = renderCtx;
+        return true;
     }
 
 } // namespace waggle

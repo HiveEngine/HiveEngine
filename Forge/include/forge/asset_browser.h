@@ -1,9 +1,26 @@
 #pragma once
 
+#include <QTreeWidget>
+#include <QWidget>
+
+#include <filesystem>
+
 namespace forge
 {
-    // Draw the asset browser panel.
-    // Must be called between ImGui::Begin("Asset Browser") and ImGui::End().
-    // assets_root: path to the assets directory on disk.
-    void DrawAssetBrowser(const char* assetsRoot);
+    class AssetBrowserPanel : public QWidget
+    {
+        Q_OBJECT
+
+    public:
+        explicit AssetBrowserPanel(QWidget* parent = nullptr);
+
+        void SetAssetsRoot(const char* path);
+
+    private:
+        void Refresh();
+        void PopulateDirectory(QTreeWidgetItem* parent, const std::filesystem::path& dir);
+
+        QTreeWidget* m_tree{};
+        std::filesystem::path m_root;
+    };
 } // namespace forge

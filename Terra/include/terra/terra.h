@@ -26,8 +26,8 @@ namespace terra
     void ShutdownSystem();
 
     // Window operation
-    WindowContext* CreateWindow(const char* title, int width, int height);
-    void DestroyWindow(WindowContext* windowContext);
+    WindowContext* CreateWindowContext(const char* title, int width, int height);
+    void DestroyWindowContext(WindowContext* windowContext);
 
 
     bool ShouldWindowClose(WindowContext* windowContext);
@@ -53,6 +53,8 @@ namespace terra
     [[nodiscard]] int GetWindowHeight(const WindowContext* windowContext);
 
     void SetWindowSize(WindowContext* windowContext, int width, int height);
+
+    void SetWindowVisible(WindowContext* windowContext, bool visible);
 
     void SetWindowTitle(WindowContext* windowContext, const char* title);
 

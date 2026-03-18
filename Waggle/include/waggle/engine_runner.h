@@ -24,6 +24,7 @@ namespace waggle
         bool m_autoTick{true};
         bool m_autoRenderer{true};
         bool m_autoSystems{true};
+        bool m_deferWindow{false};
         AppConfig m_app{};
     };
 
@@ -54,4 +55,6 @@ namespace waggle
     // Manages the full lifecycle: modules -> window -> device -> swapchain -> loop -> cleanup.
     // Returns 0 on success.
     int Run(const EngineConfig& config, const EngineCallbacks& callbacks);
+
+    bool CreateWindowAndRenderer(EngineContext& ctx, const char* title, uint32_t width, uint32_t height);
 } // namespace waggle

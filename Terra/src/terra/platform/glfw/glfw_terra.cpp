@@ -2,6 +2,7 @@
 #include <terra/platform/glfw_terra.h>
 #include <terra/terramodule.h>
 
+
 namespace terra
 {
     namespace
@@ -125,7 +126,7 @@ namespace terra
         glfwTerminate();
     }
 
-    WindowContext* CreateWindow(const char* title, int width, int height)
+    WindowContext* CreateWindowContext(const char* title, int width, int height)
     {
         auto& allocator = TerraModule::GetInstance().GetAllocator();
         WindowContext* windowContext = comb::New<WindowContext>(allocator);
@@ -144,7 +145,7 @@ namespace terra
         return windowContext;
     }
     
-    void DestroyWindow(WindowContext* windowContext)
+    void DestroyWindowContext(WindowContext* windowContext)
     {
         if (windowContext == nullptr)
         {
@@ -281,6 +282,17 @@ namespace terra
         {
             glfwSetWindowTitle(windowContext->m_window, title);
         }
+    }
+
+    void SetWindowVisible(WindowContext* windowContext, bool visible)
+    {
+        if (windowContext == nullptr || windowContext->m_window == nullptr)
+            return;
+
+        if (visible)
+            glfwShowWindow(windowContext->m_window);
+        else
+            glfwHideWindow(windowContext->m_window);
     }
 
     GLFWwindow* GetGlfwWindow(WindowContext* windowContext)

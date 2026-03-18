@@ -13,3 +13,7 @@
 [submodule "Swarm/extern/diligentcore"]
 	path = Swarm/extern/diligentcore
 	url = https://github.com/DiligentGraphics/DiligentCore.git
+[submodule "Forge/extern/qtbase"]
+	path = Forge/extern/qtbase
+	url = https://code.qt.io/qt/qtbase.git
+	shallow = true

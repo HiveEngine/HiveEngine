@@ -1,6 +1,7 @@
 #include <forge/asset_browser.h>
 
-#include <imgui.h>
+#include <QHeaderView>
+#include <QVBoxLayout>
 
 #include <algorithm>
 #include <filesystem>
@@ -19,12 +20,40 @@ namespace forge
             return "[Sh]";
         if (ext == ".hscene")
             return "[Scene]";
-        return "";
+        return nullptr;
     }
 
-    static void DrawDirectory(const std::filesystem::path& dir)
+    AssetBrowserPanel::AssetBrowserPanel(QWidget* parent)
+        : QWidget{parent}
     {
-        // Collect and sort entries
+        auto* layout = new QVBoxLayout{this};
+        layout->setContentsMargins(0, 0, 0, 0);
+
+        m_tree = new QTreeWidget{this};
+        m_tree->setHeaderHidden(true);
+        m_tree->setEditTriggers(QAbstractItemView::NoEditTriggers);
+        m_tree->setDragDropMode(QAbstractItemView::NoDragDrop);
+        layout->addWidget(m_tree);
+    }
+
+    void AssetBrowserPanel::SetAssetsRoot(const char* path)
+    {
+        m_root = std::filesystem::path{path};
+        Refresh();
+    }
+
+    void AssetBrowserPanel::Refresh()
+    {
+        m_tree->clear();
+
+        if (m_root.empty() || !std::filesystem::exists(m_root))
+            return;
+
+        PopulateDirectory(nullptr, m_root);
+    }
+
+    void AssetBrowserPanel::PopulateDirectory(QTreeWidgetItem* parent, const std::filesystem::path& dir)
+    {
         std::vector<std::filesystem::directory_entry> dirs;
         std::vector<std::filesystem::directory_entry> files;
 
@@ -40,47 +69,31 @@ namespace forge
         std::sort(dirs.begin(), dirs.end());
         std::sort(files.begin(), files.end());
 
-        // Directories
         for (const auto& d : dirs)
         {
-            std::string name = d.path().filename().string();
-            if (ImGui::TreeNode(name.c_str()))
-            {
-                DrawDirectory(d.path());
-                ImGui::TreePop();
-            }
+            auto* item = parent
+                ? new QTreeWidgetItem{parent}
+                : new QTreeWidgetItem{m_tree};
+            item->setText(0, QString::fromStdString(d.path().filename().string()));
+            PopulateDirectory(item, d.path());
         }
 
-        // Files
         for (const auto& f : files)
         {
             std::string name = f.path().filename().string();
             std::string ext = f.path().extension().string();
             const char* icon = IconForExtension(ext);
 
-            ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
+            QString label = icon
+                ? QString{"%1 %2"}.arg(icon, QString::fromStdString(name))
+                : QString::fromStdString(name);
 
-            char label[256];
-            if (icon[0])
-                snprintf(label, sizeof(label), "%s %s", icon, name.c_str());
-            else
-                snprintf(label, sizeof(label), "%s", name.c_str());
-
-            ImGui::TreeNodeEx(label, flags);
-
-            if (ImGui::IsItemHovered())
-                ImGui::SetTooltip("%s", f.path().string().c_str());
+            auto* item = parent
+                ? new QTreeWidgetItem{parent}
+                : new QTreeWidgetItem{m_tree};
+            item->setText(0, label);
+            item->setToolTip(0, QString::fromStdString(f.path().string()));
+            item->setFlags(item->flags() & ~Qt::ItemIsDropEnabled);
         }
-    }
-
-    void DrawAssetBrowser(const char* assetsRoot)
-    {
-        if (!assetsRoot || !std::filesystem::exists(assetsRoot))
-        {
-            ImGui::TextDisabled("Assets directory not found");
-            return;
-        }
-
-        DrawDirectory(std::filesystem::path{assetsRoot});
     }
 } // namespace forge

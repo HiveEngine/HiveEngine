@@ -5,7 +5,10 @@
 #include <forge/hierarchy_panel.h>
 #include <forge/selection.h>
 
-#include <imgui.h>
+#include <QApplication>
+#include <QMenu>
+#include <QTreeWidget>
+#include <QVBoxLayout>
 
 #include <algorithm>
 #include <cstdio>
@@ -18,66 +21,36 @@ namespace forge
         snprintf(buf, bufSize, "Entity %u", entity.Index());
     }
 
-    static bool DrawEntityNode(queen::World& world, EditorSelection& selection, queen::Entity entity,
-                               EntityLabelFn labelFn)
+    HierarchyPanel::HierarchyPanel(EditorSelection& selection, QWidget* parent)
+        : QWidget{parent}
+        , selection_{selection}
     {
-        char label[64];
-        labelFn(world, entity, label, sizeof(label));
+        auto* layout = new QVBoxLayout{this};
+        layout->setContentsMargins(0, 0, 0, 0);
 
-        size_t childCount = world.ChildCount(entity);
-        bool hasChildren = childCount > 0;
+        tree_ = new QTreeWidget{this};
+        tree_->setHeaderHidden(true);
+        tree_->setSelectionMode(QAbstractItemView::NoSelection);
+        tree_->setContextMenuPolicy(Qt::CustomContextMenu);
 
-        ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth;
-        if (!hasChildren)
-            flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
-        if (selection.IsSelected(entity))
-            flags |= ImGuiTreeNodeFlags_Selected;
+        layout->addWidget(tree_);
 
-        ImGui::PushID(static_cast<int>(entity.Index()));
-        bool open = ImGui::TreeNodeEx(label, flags);
-        bool modified = false;
-
-        // Selection on click
-        if (ImGui::IsItemClicked(ImGuiMouseButton_Left) && !ImGui::IsItemToggledOpen())
-        {
-            if (ImGui::GetIO().KeyCtrl)
-                selection.Toggle(entity);
-            else
-                selection.Select(entity);
-        }
-
-        // Context menu
-        if (ImGui::BeginPopupContextItem())
-        {
-            if (ImGui::MenuItem("Delete"))
-            {
-                world.DespawnRecursive(entity);
-                if (selection.IsSelected(entity))
-                    selection.Clear();
-                modified = true;
-            }
-            ImGui::EndPopup();
-        }
-
-        if (open && hasChildren)
-        {
-            world.ForEachChild(
-                entity, [&](queen::Entity child) { modified |= DrawEntityNode(world, selection, child, labelFn); });
-            ImGui::TreePop();
-        }
-
-        ImGui::PopID();
-        return modified;
+        connect(tree_, &QTreeWidget::itemClicked, this, &HierarchyPanel::OnItemClicked);
+        connect(tree_, &QTreeWidget::customContextMenuRequested, this, &HierarchyPanel::ShowEntityContextMenu);
     }
 
-    bool DrawHierarchyPanel(queen::World& world, EditorSelection& selection, EntityLabelFn labelFn)
+    void HierarchyPanel::SetLabelFn(EntityLabelFn fn)
     {
-        if (!labelFn)
-            labelFn = DefaultEntityLabel;
+        labelFn_ = fn;
+    }
 
-        bool modified = false;
+    void HierarchyPanel::Refresh(queen::World& world)
+    {
+        currentWorld_ = &world;
+        tree_->clear();
 
-        // Collect root entities (no Parent component)
+        EntityLabelFn fn = labelFn_ ? labelFn_ : DefaultEntityLabel;
+
         std::vector<queen::Entity> roots;
         world.ForEachArchetype([&](auto& arch) {
             if (arch.template HasComponent<queen::Parent>())
@@ -86,34 +59,86 @@ namespace forge
                 roots.push_back(arch.GetEntity(row));
         });
 
-        // Sort by entity index for stable ordering
-        std::sort(roots.begin(), roots.end(), [](queen::Entity a, queen::Entity b) { return a.Index() < b.Index(); });
+        std::sort(roots.begin(), roots.end(),
+                  [](queen::Entity a, queen::Entity b) { return a.Index() < b.Index(); });
 
-        // Click on empty space → deselect
-        if (ImGui::IsWindowHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Left) && !ImGui::IsAnyItemHovered())
-        {
-            selection.Clear();
-        }
-
-        // Context menu on empty space
-        if (ImGui::BeginPopupContextWindow("hierarchy_ctx", ImGuiPopupFlags_NoOpenOverItems))
-        {
-            if (ImGui::MenuItem("New Entity"))
-            {
-                const queen::Entity entity = world.Spawn().Build();
-                selection.Select(entity);
-                modified = true;
-            }
-            ImGui::EndPopup();
-        }
-
-        // Draw tree
         for (queen::Entity root : roots)
         {
             if (world.IsAlive(root))
-                modified |= DrawEntityNode(world, selection, root, labelFn);
+                AddEntityNode(world, root, nullptr);
+        }
+    }
+
+    void HierarchyPanel::AddEntityNode(queen::World& world, queen::Entity entity, QTreeWidgetItem* parentItem)
+    {
+        EntityLabelFn fn = labelFn_ ? labelFn_ : DefaultEntityLabel;
+
+        char label[64];
+        fn(world, entity, label, sizeof(label));
+
+        auto* item = parentItem ? new QTreeWidgetItem{parentItem} : new QTreeWidgetItem{tree_};
+        item->setText(0, QString::fromUtf8(label));
+        item->setData(0, Qt::UserRole, entity.Index());
+        item->setData(0, Qt::UserRole + 1, entity.Generation());
+
+        if (selection_.IsSelected(entity))
+            item->setSelected(true);
+
+        world.ForEachChild(entity, [&](queen::Entity child) { AddEntityNode(world, child, item); });
+    }
+
+    void HierarchyPanel::OnItemClicked(QTreeWidgetItem* item, int /*column*/)
+    {
+        if (!item || !currentWorld_)
+            return;
+
+        uint32_t index = item->data(0, Qt::UserRole).toUInt();
+        uint16_t generation = static_cast<uint16_t>(item->data(0, Qt::UserRole + 1).toUInt());
+        queen::Entity entity{index, generation};
+
+        if (QApplication::keyboardModifiers() & Qt::ControlModifier)
+            selection_.Toggle(entity);
+        else
+            selection_.Select(entity);
+
+        emit entitySelected(index);
+    }
+
+    void HierarchyPanel::ShowEntityContextMenu(const QPoint& pos)
+    {
+        if (!currentWorld_)
+            return;
+
+        QTreeWidgetItem* item = tree_->itemAt(pos);
+        QMenu menu{this};
+
+        if (item)
+        {
+            uint32_t index = item->data(0, Qt::UserRole).toUInt();
+            uint16_t generation = static_cast<uint16_t>(item->data(0, Qt::UserRole + 1).toUInt());
+            queen::Entity entity{index, generation};
+
+            menu.addAction("Delete", [this, entity]() {
+                if (selection_.IsSelected(entity))
+                    selection_.Clear();
+                currentWorld_->DespawnRecursive(entity);
+                Refresh(*currentWorld_);
+                emit sceneModified();
+            });
+        }
+        else
+        {
+            selection_.Clear();
+
+            menu.addAction("New Entity", [this]() {
+                const queen::Entity entity = currentWorld_->Spawn().Build();
+                selection_.Select(entity);
+                Refresh(*currentWorld_);
+                emit sceneModified();
+                emit entitySelected(entity.Index());
+            });
         }
 
-        return modified;
+        menu.exec(tree_->viewport()->mapToGlobal(pos));
     }
 } // namespace forge
