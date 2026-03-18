@@ -69,10 +69,10 @@ namespace
         auto result = waggle::CMakeGenerator::Generate(config, alloc);
         wax::StringView view = result.View();
 
-        larvae::AssertTrue(view.Contains("Queen Waggle Hive Comb Wax Nectar"));
-        larvae::AssertFalse(view.Contains("Swarm"));
-        larvae::AssertFalse(view.Contains("Terra"));
-        larvae::AssertFalse(view.Contains("Antennae"));
+        larvae::AssertTrue(view.Contains("hive_add_game_project"));
+        larvae::AssertFalse(view.Contains("LINK_SWARM"));
+        larvae::AssertFalse(view.Contains("LINK_TERRA"));
+        larvae::AssertFalse(view.Contains("LINK_ANTENNAE"));
     });
 
     auto t_optional_swarm = larvae::RegisterTest("WaggleCMakeGenerator", "OptionalSwarm", []() {
@@ -87,9 +87,9 @@ namespace
         auto result = waggle::CMakeGenerator::Generate(config, alloc);
         wax::StringView view = result.View();
 
-        larvae::AssertTrue(view.Contains("Swarm"));
-        larvae::AssertTrue(view.Contains("Terra"));
-        larvae::AssertTrue(view.Contains("Antennae"));
+        larvae::AssertTrue(view.Contains("LINK_SWARM"));
+        larvae::AssertTrue(view.Contains("LINK_TERRA"));
+        larvae::AssertTrue(view.Contains("LINK_ANTENNAE"));
     });
 
     // =========================================================================
