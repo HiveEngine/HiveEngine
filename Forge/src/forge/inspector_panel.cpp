@@ -25,6 +25,7 @@
 
 #include <cmath>
 #include <cstring>
+#include <memory>
 
 namespace forge
 {
@@ -210,7 +211,7 @@ namespace forge
                     spin->setValue(static_cast<double>(*value * kDeg));
                 }
 
-                auto* snapshot = new SnapshotState;
+                auto snapshot = std::make_shared<SnapshotState>();
 
                 QObject::connect(spin, &QDoubleSpinBox::editingFinished, this,
                                  [this, spin, value, snapshot, entity, typeId, offset, &undo,
@@ -238,7 +239,7 @@ namespace forge
                 auto* value = static_cast<double*>(fieldData);
                 auto* spin = MakeDoubleSpinBox(*value);
 
-                auto* snapshot = new SnapshotState;
+                auto snapshot = std::make_shared<SnapshotState>();
 
                 QObject::connect(spin, &QDoubleSpinBox::editingFinished, this,
                                  [this, spin, value, snapshot, entity, typeId, offset, &undo]() {
@@ -269,7 +270,7 @@ namespace forge
                 }
                 spin->setValue(*value);
 
-                auto* snapshot = new SnapshotState;
+                auto snapshot = std::make_shared<SnapshotState>();
 
                 QObject::connect(spin, &QSpinBox::editingFinished, this,
                                  [this, spin, value, snapshot, entity, typeId, offset, &undo]() {
@@ -294,7 +295,7 @@ namespace forge
                 spin->setMaximum(std::numeric_limits<int>::max());
                 spin->setValue(static_cast<int>(*value));
 
-                auto* snapshot = new SnapshotState;
+                auto snapshot = std::make_shared<SnapshotState>();
 
                 QObject::connect(spin, &QSpinBox::editingFinished, this,
                                  [this, spin, value, snapshot, entity, typeId, offset, &undo]() {
@@ -343,7 +344,7 @@ namespace forge
                         auto* btn = new QPushButton{initial.name()};
                         btn->setStyleSheet(QString{"background-color: %1;"}.arg(initial.name()));
 
-                        auto* snapshot = new SnapshotState;
+                        auto snapshot = std::make_shared<SnapshotState>();
 
                         QObject::connect(
                             btn, &QPushButton::clicked, this,
@@ -379,7 +380,7 @@ namespace forge
                         auto* hbox = new QHBoxLayout{container};
                         hbox->setContentsMargins(0, 0, 0, 0);
 
-                        auto* snapshot = new SnapshotState;
+                        auto snapshot = std::make_shared<SnapshotState>();
 
                         for (int axis = 0; axis < 3; ++axis)
                         {
@@ -456,7 +457,7 @@ namespace forge
                     auto* hbox = new QHBoxLayout{container};
                     hbox->setContentsMargins(0, 0, 0, 0);
 
-                    auto* snapshot = new SnapshotState;
+                    auto snapshot = std::make_shared<SnapshotState>();
 
                     for (int axis = 0; axis < 3; ++axis)
                     {

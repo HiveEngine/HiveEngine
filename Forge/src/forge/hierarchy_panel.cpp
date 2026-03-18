@@ -23,33 +23,33 @@ namespace forge
 
     HierarchyPanel::HierarchyPanel(EditorSelection& selection, QWidget* parent)
         : QWidget{parent}
-        , selection_{selection}
+        , m_selection{selection}
     {
         auto* layout = new QVBoxLayout{this};
         layout->setContentsMargins(0, 0, 0, 0);
 
-        tree_ = new QTreeWidget{this};
-        tree_->setHeaderHidden(true);
-        tree_->setSelectionMode(QAbstractItemView::SingleSelection);
-        tree_->setContextMenuPolicy(Qt::CustomContextMenu);
-        tree_->setRootIsDecorated(false);
-        tree_->setIndentation(16);
+        m_tree = new QTreeWidget{this};
+        m_tree->setHeaderHidden(true);
+        m_tree->setSelectionMode(QAbstractItemView::SingleSelection);
+        m_tree->setContextMenuPolicy(Qt::CustomContextMenu);
+        m_tree->setRootIsDecorated(false);
+        m_tree->setIndentation(16);
 
-        layout->addWidget(tree_);
+        layout->addWidget(m_tree);
 
-        connect(tree_, &QTreeWidget::itemClicked, this, &HierarchyPanel::OnItemClicked);
-        connect(tree_, &QTreeWidget::customContextMenuRequested, this, &HierarchyPanel::ShowEntityContextMenu);
+        connect(m_tree, &QTreeWidget::itemClicked, this, &HierarchyPanel::OnItemClicked);
+        connect(m_tree, &QTreeWidget::customContextMenuRequested, this, &HierarchyPanel::ShowEntityContextMenu);
     }
 
     void HierarchyPanel::SetLabelFn(EntityLabelFn fn)
     {
-        labelFn_ = fn;
+        m_labelFn = fn;
     }
 
     void HierarchyPanel::Refresh(queen::World& world)
     {
-        currentWorld_ = &world;
-        tree_->clear();
+        m_currentWorld = &world;
+        m_tree->clear();
 
         std::vector<queen::Entity> roots;
         world.ForEachArchetype([&](auto& arch) {
@@ -70,17 +70,17 @@ namespace forge
 
     void HierarchyPanel::AddEntityNode(queen::World& world, queen::Entity entity, QTreeWidgetItem* parentItem)
     {
-        EntityLabelFn fn = labelFn_ ? labelFn_ : DefaultEntityLabel;
+        EntityLabelFn fn = m_labelFn ? m_labelFn : DefaultEntityLabel;
 
         char label[64];
         fn(world, entity, label, sizeof(label));
 
-        auto* item = parentItem ? new QTreeWidgetItem{parentItem} : new QTreeWidgetItem{tree_};
+        auto* item = parentItem ? new QTreeWidgetItem{parentItem} : new QTreeWidgetItem{m_tree};
         item->setText(0, QString::fromUtf8(label));
         item->setData(0, Qt::UserRole, entity.Index());
         item->setData(0, Qt::UserRole + 1, entity.Generation());
 
-        if (selection_.IsSelected(entity))
+        if (m_selection.IsSelected(entity))
             item->setSelected(true);
 
         world.ForEachChild(entity, [&](queen::Entity child) { AddEntityNode(world, child, item); });
@@ -88,7 +88,7 @@ namespace forge
 
     void HierarchyPanel::OnItemClicked(QTreeWidgetItem* item, int /*column*/)
     {
-        if (!item || !currentWorld_)
+        if (!item || !m_currentWorld)
             return;
 
         uint32_t index = item->data(0, Qt::UserRole).toUInt();
@@ -96,19 +96,19 @@ namespace forge
         queen::Entity entity{index, generation};
 
         if (QApplication::keyboardModifiers() & Qt::ControlModifier)
-            selection_.Toggle(entity);
+            m_selection.Toggle(entity);
         else
-            selection_.Select(entity);
+            m_selection.Select(entity);
 
         emit entitySelected(index);
     }
 
     void HierarchyPanel::ShowEntityContextMenu(const QPoint& pos)
     {
-        if (!currentWorld_)
+        if (!m_currentWorld)
             return;
 
-        QTreeWidgetItem* item = tree_->itemAt(pos);
+        QTreeWidgetItem* item = m_tree->itemAt(pos);
         QMenu menu{this};
 
         if (item)
@@ -118,26 +118,26 @@ namespace forge
             queen::Entity entity{index, generation};
 
             menu.addAction("Delete", [this, entity]() {
-                if (selection_.IsSelected(entity))
-                    selection_.Clear();
-                currentWorld_->DespawnRecursive(entity);
-                Refresh(*currentWorld_);
+                if (m_selection.IsSelected(entity))
+                    m_selection.Clear();
+                m_currentWorld->DespawnRecursive(entity);
+                Refresh(*m_currentWorld);
                 emit sceneModified();
             });
         }
         else
         {
-            selection_.Clear();
+            m_selection.Clear();
 
             menu.addAction("New Entity", [this]() {
-                const queen::Entity entity = currentWorld_->Spawn().Build();
-                selection_.Select(entity);
-                Refresh(*currentWorld_);
+                const queen::Entity entity = m_currentWorld->Spawn().Build();
+                m_selection.Select(entity);
+                Refresh(*m_currentWorld);
                 emit sceneModified();
                 emit entitySelected(entity.Index());
             });
         }
 
-        menu.exec(tree_->viewport()->mapToGlobal(pos));
+        menu.exec(m_tree->viewport()->mapToGlobal(pos));
     }
 } // namespace forge

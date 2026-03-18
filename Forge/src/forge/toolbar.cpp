@@ -2,27 +2,27 @@
 
 namespace forge
 {
-    static constexpr const char* K_GREEN_STYLE =
+    static constexpr const char* kGreenStyle =
         "QPushButton { background-color: #4CAF50; color: white; border: none; padding: 4px 12px; }"
         "QPushButton:hover { background-color: #5CBF60; }"
         "QPushButton:pressed { background-color: #3C9F40; }";
 
-    static constexpr const char* K_RED_STYLE =
+    static constexpr const char* kRedStyle =
         "QPushButton { background-color: #D32F2F; color: white; border: none; padding: 4px 12px; }"
         "QPushButton:hover { background-color: #E34F4F; }"
         "QPushButton:pressed { background-color: #B31F1F; }";
 
-    static constexpr const char* K_AMBER_STYLE =
+    static constexpr const char* kAmberStyle =
         "QPushButton { background-color: #E6AD0D; color: white; border: none; padding: 4px 12px; }"
         "QPushButton:hover { background-color: #F6BD1D; }"
         "QPushButton:pressed { background-color: #C69D00; }";
 
-    static constexpr const char* K_ACCENT_ACTIVE_STYLE =
+    static constexpr const char* kAccentStyle =
         "QPushButton { background-color: #0078D4; color: white; border: none; padding: 4px 12px; }"
         "QPushButton:hover { background-color: #1088E4; }"
         "QPushButton:pressed { background-color: #0068C4; }";
 
-    static constexpr const char* K_INACTIVE_STYLE =
+    static constexpr const char* kInactiveStyle =
         "QPushButton { background-color: #262626; color: #B3B3B3; border: none; padding: 4px 12px; }"
         "QPushButton:hover { background-color: #404040; }"
         "QPushButton:pressed { background-color: #0078D4; }";
@@ -34,9 +34,9 @@ namespace forge
         m_pauseBtn = new QPushButton{"Pause", this};
         m_stopBtn = new QPushButton{"Stop", this};
 
-        m_playBtn->setStyleSheet(K_GREEN_STYLE);
-        m_pauseBtn->setStyleSheet(K_AMBER_STYLE);
-        m_stopBtn->setStyleSheet(K_RED_STYLE);
+        m_playBtn->setStyleSheet(kGreenStyle);
+        m_pauseBtn->setStyleSheet(kAmberStyle);
+        m_stopBtn->setStyleSheet(kRedStyle);
 
         addWidget(m_playBtn);
         addWidget(m_pauseBtn);
@@ -53,7 +53,7 @@ namespace forge
         addSeparator();
 
         m_spaceBtn = new QPushButton{"World", this};
-        m_spaceBtn->setStyleSheet(K_INACTIVE_STYLE);
+        m_spaceBtn->setStyleSheet(kInactiveStyle);
         addWidget(m_spaceBtn);
 
         connect(m_playBtn, &QPushButton::clicked, this, &EditorToolbar::playPressed);
@@ -77,7 +77,7 @@ namespace forge
         {
             case PlayState::EDITING:
                 m_playBtn->setText("Play");
-                m_playBtn->setStyleSheet(K_GREEN_STYLE);
+                m_playBtn->setStyleSheet(kGreenStyle);
                 m_playBtn->setVisible(true);
                 m_pauseBtn->setVisible(false);
                 m_stopBtn->setVisible(false);
@@ -89,7 +89,7 @@ namespace forge
                 break;
             case PlayState::PAUSED:
                 m_playBtn->setText("Resume");
-                m_playBtn->setStyleSheet(K_GREEN_STYLE);
+                m_playBtn->setStyleSheet(kGreenStyle);
                 m_playBtn->setVisible(true);
                 m_pauseBtn->setVisible(false);
                 m_stopBtn->setVisible(true);
@@ -99,9 +99,9 @@ namespace forge
 
     void EditorToolbar::SetGizmoState(GizmoState& state)
     {
-        m_moveBtn->setStyleSheet(state.m_mode == GizmoMode::TRANSLATE ? K_ACCENT_ACTIVE_STYLE : K_INACTIVE_STYLE);
-        m_rotateBtn->setStyleSheet(state.m_mode == GizmoMode::ROTATE ? K_ACCENT_ACTIVE_STYLE : K_INACTIVE_STYLE);
-        m_scaleBtn->setStyleSheet(state.m_mode == GizmoMode::SCALE ? K_ACCENT_ACTIVE_STYLE : K_INACTIVE_STYLE);
+        m_moveBtn->setStyleSheet(state.m_mode == GizmoMode::TRANSLATE ? kAccentStyle : kInactiveStyle);
+        m_rotateBtn->setStyleSheet(state.m_mode == GizmoMode::ROTATE ? kAccentStyle : kInactiveStyle);
+        m_scaleBtn->setStyleSheet(state.m_mode == GizmoMode::SCALE ? kAccentStyle : kInactiveStyle);
 
         m_spaceBtn->setText(state.m_space == GizmoSpace::WORLD ? "World" : "Local");
     }

@@ -10,9 +10,8 @@
 
 #include <brood/launcher/launcher_types.h>
 #include <filesystem>
-#include <string>
-
 #include <launcher/launcher_platform.h>
+#include <string>
 
 namespace queen
 {

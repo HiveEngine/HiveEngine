@@ -47,7 +47,13 @@ namespace forge
         m_tree->clear();
 
         if (m_root.empty() || !std::filesystem::exists(m_root))
+        {
+            auto* item = new QTreeWidgetItem{m_tree};
+            item->setText(0, "No assets directory");
+            item->setForeground(0, QColor{0x66, 0x66, 0x66});
+            item->setFlags(item->flags() & ~Qt::ItemIsSelectable);
             return;
+        }
 
         PopulateDirectory(nullptr, m_root);
     }

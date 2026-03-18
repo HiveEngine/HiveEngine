@@ -17,10 +17,10 @@
 #include <QPainter>
 #include <QPainterPath>
 #include <QPropertyAnimation>
+#include <QStackedWidget>
 #include <QTimer>
 
 #include <cmath>
-#include <QStackedWidget>
 
 namespace forge
 {
@@ -234,9 +234,6 @@ namespace forge
         menuBar()->clear();
 
         auto* fileMenu = menuBar()->addMenu("&File");
-
-        auto* newAction = fileMenu->addAction("&New Scene");
-        Q_UNUSED(newAction);
 
         auto* openAction = fileMenu->addAction("&Open Scene");
         openAction->setShortcut(QKeySequence{"Ctrl+O"});

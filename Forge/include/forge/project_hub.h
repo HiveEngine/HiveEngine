@@ -29,6 +29,9 @@ namespace forge
         void createProjectRequested(const QString& name, const QString& directory, const QString& version);
         void browseProjectRequested();
 
+    protected:
+        bool eventFilter(QObject* obj, QEvent* event) override;
+
     private:
         void BuildUi();
         void BuildProjectCards();

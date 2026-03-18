@@ -12,7 +12,6 @@
 #include <queen/reflect/component_registry.h>
 
 #include <forge/forge_main_window.h>
-#include <forge/gizmo.h>
 #include <forge/selection.h>
 #include <forge/toolbar.h>
 #include <forge/undo.h>

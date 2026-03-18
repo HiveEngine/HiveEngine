@@ -1,5 +1,3 @@
-#include <launcher/launcher_project.h>
-
 #include <hive/HiveConfig.h>
 #include <hive/core/log.h>
 
@@ -9,10 +7,10 @@
 
 #include <terra/terra.h>
 
-#include <string>
-
 #include <launcher/launcher_platform.h>
+#include <launcher/launcher_project.h>
 #include <launcher/launcher_scene.h>
+#include <string>
 
 namespace brood::launcher
 {

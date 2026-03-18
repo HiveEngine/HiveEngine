@@ -1,5 +1,3 @@
-#include <launcher/launcher_platform.h>
-
 #include <comb/default_allocator.h>
 
 #include <nectar/project/project_file.h>
@@ -8,6 +6,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <launcher/launcher_platform.h>
 
 namespace brood::launcher
 {

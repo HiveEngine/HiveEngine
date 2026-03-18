@@ -13,7 +13,6 @@
 
 #include <brood/launcher/launcher_cli.h>
 #include <brood/launcher/launcher_types.h>
-
 #include <launcher/launcher_platform.h>
 #include <launcher/launcher_project.h>
 #include <launcher/launcher_scene.h>
@@ -180,13 +179,13 @@ namespace
                             transitionToEditor(QString::fromStdString(s.m_projectPath));
                     });
 
-                QObject::connect(s.m_mainWindow, &forge::ForgeMainWindow::hubBrowseRequested, [&ctx, &s,
-                                                                                               transitionToEditor]() {
-                    std::filesystem::path selectedPath{};
-                    const auto result = ShowNativePathPicker(NativePathPickerMode::PROJECT_FILE, {}, &selectedPath);
-                    if (result == NativePathPickerResult::SUCCESS && OpenProject(ctx, s, selectedPath))
-                        transitionToEditor(QString::fromStdString(s.m_projectPath));
-                });
+                QObject::connect(
+                    s.m_mainWindow, &forge::ForgeMainWindow::hubBrowseRequested, [&ctx, &s, transitionToEditor]() {
+                        std::filesystem::path selectedPath{};
+                        const auto result = ShowNativePathPicker(NativePathPickerMode::PROJECT_FILE, {}, &selectedPath);
+                        if (result == NativePathPickerResult::SUCCESS && OpenProject(ctx, s, selectedPath))
+                            transitionToEditor(QString::fromStdString(s.m_projectPath));
+                    });
 
                 s.m_mainWindow->show();
 #endif

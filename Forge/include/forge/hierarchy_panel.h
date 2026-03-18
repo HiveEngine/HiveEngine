@@ -37,9 +37,9 @@ namespace forge
         void OnItemClicked(QTreeWidgetItem* item, int column);
         void ShowEntityContextMenu(const QPoint& pos);
 
-        QTreeWidget* tree_{};
-        EditorSelection& selection_;
-        EntityLabelFn labelFn_{};
-        queen::World* currentWorld_{};
+        QTreeWidget* m_tree{};
+        EditorSelection& m_selection;
+        EntityLabelFn m_labelFn{};
+        queen::World* m_currentWorld{};
     };
 } // namespace forge

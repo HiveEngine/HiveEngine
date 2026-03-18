@@ -1,18 +1,83 @@
 #include <forge/project_hub.h>
 
+#include <QEvent>
 #include <QFileDialog>
 #include <QGraphicsDropShadowEffect>
+#include <QGraphicsOpacityEffect>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QLineEdit>
+#include <QPainter>
+#include <QPainterPath>
+#include <QPropertyAnimation>
 #include <QPushButton>
 #include <QScrollArea>
 #include <QStackedWidget>
 #include <QStyle>
+#include <QTimer>
 #include <QVBoxLayout>
+
+#include <cmath>
 
 namespace forge
 {
+    constexpr int kSidebarWidth = 220;
+    constexpr int kCardHeight = 80;
+    constexpr int kCardIconSize = 28;
+    constexpr int kFormFieldMaxWidth = 500;
+    constexpr int kVersionFieldMaxWidth = 200;
+
+    class HubHexBadge : public QWidget
+    {
+    public:
+        explicit HubHexBadge(QWidget* parent = nullptr)
+            : QWidget{parent}
+        {
+            setFixedSize(64, 64);
+            m_timer.setInterval(30);
+            connect(&m_timer, &QTimer::timeout, this, [this] {
+                m_pulse += 0.04;
+                update();
+            });
+            m_timer.start();
+        }
+
+    protected:
+        void paintEvent(QPaintEvent*) override
+        {
+            QPainter p{this};
+            p.setRenderHint(QPainter::Antialiasing);
+            p.translate(width() / 2.0, height() / 2.0);
+
+            double glow = 0.4 + 0.3 * std::sin(m_pulse);
+            int alpha = static_cast<int>(glow * 255);
+
+            auto drawHex = [&](double r, QColor color) {
+                QPainterPath hex;
+                for (int i = 0; i < 6; ++i)
+                {
+                    double a = (60.0 * i - 30.0) * 3.14159265 / 180.0;
+                    QPointF pt{r * std::cos(a), r * std::sin(a)};
+                    if (i == 0)
+                        hex.moveTo(pt);
+                    else
+                        hex.lineTo(pt);
+                }
+                hex.closeSubpath();
+                p.setPen(QPen{color, 2.0, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin});
+                p.setBrush(Qt::NoBrush);
+                p.drawPath(hex);
+            };
+
+            drawHex(26.0, QColor{0xf0, 0xa5, 0x00, alpha});
+            drawHex(18.0, QColor{0xf0, 0xa5, 0x00});
+            drawHex(10.0, QColor{0xf0, 0xa5, 0x00, alpha / 2});
+        }
+
+    private:
+        QTimer m_timer;
+        double m_pulse{0.0};
+    };
     static const char* kHubStyleSheet = R"(
         QWidget#hubRoot {
             background-color: #0d0d0d;
@@ -52,11 +117,13 @@ namespace forge
         QWidget#projectCard {
             background-color: #1a1a1a;
             border: 1px solid #2a2a2a;
+            border-left: 3px solid transparent;
             border-radius: 8px;
         }
         QWidget#projectCard:hover {
-            border-color: #f0a500;
-            background-color: #1e1e1e;
+            border-left: 3px solid #f0a500;
+            background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                stop:0 #1a1800, stop:0.3 #1a1a1a);
         }
         QLabel#cardName {
             color: #e8e8e8;
@@ -165,6 +232,17 @@ namespace forge
     {
         setObjectName("hubRoot");
         BuildUi();
+
+        auto* fadeEffect = new QGraphicsOpacityEffect{this};
+        fadeEffect->setOpacity(0.0);
+        setGraphicsEffect(fadeEffect);
+
+        auto* fadeIn = new QPropertyAnimation{fadeEffect, "opacity", this};
+        fadeIn->setDuration(400);
+        fadeIn->setStartValue(0.0);
+        fadeIn->setEndValue(1.0);
+        fadeIn->setEasingCurve(QEasingCurve::OutCubic);
+        fadeIn->start(QAbstractAnimation::DeleteWhenStopped);
     }
 
     void ProjectHub::SetProjects(const std::vector<DiscoveredProject>& projects)
@@ -184,10 +262,15 @@ namespace forge
         // ---- Sidebar ----
         auto* sidebar = new QWidget;
         sidebar->setObjectName("sidebar");
-        sidebar->setFixedWidth(220);
+        sidebar->setFixedWidth(kSidebarWidth);
         auto* sidebarLayout = new QVBoxLayout{sidebar};
         sidebarLayout->setContentsMargins(20, 28, 20, 20);
         sidebarLayout->setSpacing(4);
+
+        auto* hexBadge = new HubHexBadge{sidebar};
+        sidebarLayout->addWidget(hexBadge, 0, Qt::AlignLeft);
+
+        sidebarLayout->addSpacing(8);
 
         auto* brandTitle = new QLabel{"HIVE ENGINE"};
         brandTitle->setObjectName("brandTitle");
@@ -197,7 +280,7 @@ namespace forge
         brandSub->setObjectName("brandSub");
         sidebarLayout->addWidget(brandSub);
 
-        sidebarLayout->addSpacing(32);
+        sidebarLayout->addSpacing(24);
 
         auto* btnProjects = new QPushButton{"Projects"};
         btnProjects->setObjectName("sidebarBtn");
@@ -218,10 +301,12 @@ namespace forge
 
         // ---- Content area (stacked) ----
         m_stack = new QStackedWidget;
+        m_stack->setStyleSheet("QStackedWidget { background: transparent; }");
         root->addWidget(m_stack, 1);
 
         // Page 0: Projects list
         auto* projectsPage = new QWidget;
+        projectsPage->setStyleSheet("background: transparent;");
         auto* projectsLayout = new QVBoxLayout{projectsPage};
         projectsLayout->setContentsMargins(40, 36, 40, 20);
         projectsLayout->setSpacing(12);
@@ -251,8 +336,10 @@ namespace forge
         auto* scrollArea = new QScrollArea;
         scrollArea->setWidgetResizable(true);
         scrollArea->setFrameShape(QFrame::NoFrame);
+        scrollArea->setStyleSheet("QScrollArea { background: transparent; } QWidget#projectListInner { background: transparent; }");
 
         m_projectList = new QWidget;
+        m_projectList->setObjectName("projectListInner");
         m_cardLayout = new QVBoxLayout{m_projectList};
         m_cardLayout->setContentsMargins(0, 0, 12, 0);
         m_cardLayout->setSpacing(8);
@@ -270,6 +357,7 @@ namespace forge
 
         // Page 1: Create project
         auto* createPage = new QWidget;
+        createPage->setStyleSheet("background: transparent;");
         auto* createLayout = new QVBoxLayout{createPage};
         createLayout->setContentsMargins(40, 36, 40, 20);
         createLayout->setSpacing(16);
@@ -290,7 +378,7 @@ namespace forge
 
         m_createName = new QLineEdit{"MyGame"};
         m_createName->setObjectName("formField");
-        m_createName->setMaximumWidth(500);
+        m_createName->setMaximumWidth(kFormFieldMaxWidth);
         createLayout->addWidget(m_createName);
 
         auto* dirLabel = new QLabel{"Location"};
@@ -318,7 +406,7 @@ namespace forge
 
         m_createVersion = new QLineEdit{"0.1.0"};
         m_createVersion->setObjectName("formField");
-        m_createVersion->setMaximumWidth(200);
+        m_createVersion->setMaximumWidth(kVersionFieldMaxWidth);
         createLayout->addWidget(m_createVersion);
 
         createLayout->addSpacing(16);
@@ -374,6 +462,24 @@ namespace forge
         });
     }
 
+    bool ProjectHub::eventFilter(QObject* obj, QEvent* event)
+    {
+        if (event->type() == QEvent::MouseButtonPress)
+        {
+            auto* widget = qobject_cast<QWidget*>(obj);
+            if (widget != nullptr)
+            {
+                QVariant pathVar = widget->property("projectPath");
+                if (pathVar.isValid())
+                {
+                    emit projectSelected(pathVar.toString());
+                    return true;
+                }
+            }
+        }
+        return QWidget::eventFilter(obj, event);
+    }
+
     void ProjectHub::BuildProjectCards()
     {
         // Clear existing cards
@@ -381,15 +487,36 @@ namespace forge
         {
             auto* item = m_cardLayout->takeAt(0);
             if (item->widget())
-                delete item->widget();
+                item->widget()->deleteLater();
             delete item;
+        }
+
+        if (m_projects.empty())
+        {
+            auto* emptyWidget = new QWidget;
+            auto* emptyLayout = new QVBoxLayout{emptyWidget};
+            emptyLayout->setAlignment(Qt::AlignCenter);
+
+            auto* emptyLabel = new QLabel{"No projects found"};
+            emptyLabel->setAlignment(Qt::AlignCenter);
+            emptyLabel->setStyleSheet("color: #666; font-size: 16px; font-weight: bold;");
+
+            auto* emptySub = new QLabel{"Create a new project or browse for an existing one."};
+            emptySub->setAlignment(Qt::AlignCenter);
+            emptySub->setStyleSheet("color: #444; font-size: 12px;");
+
+            emptyLayout->addWidget(emptyLabel);
+            emptyLayout->addWidget(emptySub);
+
+            m_cardLayout->insertWidget(m_cardLayout->count() - 1, emptyWidget);
+            return;
         }
 
         for (const auto& project : m_projects)
         {
             auto* card = new QWidget;
             card->setObjectName("projectCard");
-            card->setFixedHeight(80);
+            card->setFixedHeight(kCardHeight);
             card->setCursor(Qt::PointingHandCursor);
 
             auto* cardLayout = new QHBoxLayout{card};
@@ -398,7 +525,7 @@ namespace forge
 
             // Hex icon
             auto* icon = new QLabel{QString::fromUtf8("\u2B22")};
-            icon->setStyleSheet("color: #f0a500; font-size: 28px;");
+            icon->setStyleSheet(QString{"color: #f0a500; font-size: %1px;"}.arg(kCardIconSize));
             icon->setFixedWidth(36);
             icon->setAlignment(Qt::AlignCenter);
             cardLayout->addWidget(icon);
@@ -433,16 +560,8 @@ namespace forge
             versionLabel->setObjectName("cardVersion");
             cardLayout->addWidget(versionLabel);
 
-            // Click to open
-            QString path = QString::fromStdString(project.m_path);
+            card->setProperty("projectPath", QString::fromStdString(project.m_path));
             card->installEventFilter(this);
-            connect(card, &QWidget::destroyed, this, [] {});
-
-            // Use a mouse press event via a transparent button overlay
-            auto* clickBtn = new QPushButton{card};
-            clickBtn->setStyleSheet("background: transparent; border: none;");
-            clickBtn->setGeometry(0, 0, 9999, 9999);
-            connect(clickBtn, &QPushButton::clicked, this, [this, path] { emit projectSelected(path); });
 
             m_cardLayout->insertWidget(m_cardLayout->count() - 1, card);
         }
