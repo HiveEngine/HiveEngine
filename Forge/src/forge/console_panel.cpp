@@ -411,13 +411,8 @@ namespace forge
         m_hiddenCategories.clear();
         m_logView->clear();
 
-        auto actions = m_categoryMenu->actions();
-        while (actions.size() > 2)
-        {
-            m_categoryMenu->removeAction(actions.last());
-            delete actions.last();
-            actions = m_categoryMenu->actions();
-        }
+        while (m_categoryMenu->actions().size() > 2)
+            m_categoryMenu->removeAction(m_categoryMenu->actions().last());
         m_categoryButton->setText("All Categories");
 
         UpdateButtonLabels();

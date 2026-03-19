@@ -148,6 +148,10 @@ namespace
 
 namespace waggle
 {
+    namespace
+    {
+        constexpr wax::StringView kDefaultPlatform{"pc", 2};
+    } // namespace
 
     ProjectManager::ProjectManager(comb::DefaultAllocator& alloc)
         : m_alloc{&alloc}
@@ -389,7 +393,7 @@ namespace waggle
                     m_nativeWatcher->EnqueueChange(m_offlineChanges[i].m_path.View(), m_offlineChanges[i].m_kind);
                 m_offlineChanges.Clear();
             }
-            m_lastReloadCount = static_cast<uint32_t>(m_hotReload->ProcessChanges({"pc", 2}));
+            m_lastReloadCount = static_cast<uint32_t>(m_hotReload->ProcessChanges(kDefaultPlatform));
         }
         else
         {

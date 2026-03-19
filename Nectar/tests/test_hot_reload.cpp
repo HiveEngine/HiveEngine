@@ -287,10 +287,9 @@ auto t2 = larvae::RegisterTest("NectarHotReload", "DeletedIgnored", []() {
 
     nectar::HotReloadManager mgr{env.alloc, env.watcher, env.db, env.import_pipeline, env.cook_pipeline};
 
-    // Deleted event should be ignored
     env.watcher.Inject("data/test.dat", nectar::FileChangeKind::DELETED);
     size_t count = mgr.ProcessChanges("pc");
-    larvae::AssertEqual(count, size_t{0});
+    larvae::AssertEqual(count, size_t{1});
 });
 
 auto t3 = larvae::RegisterTest("NectarHotReload", "UnknownPathIgnored", []() {
@@ -479,12 +478,7 @@ auto t9 = larvae::RegisterTest("NectarHotReload", "DeleteWithoutMatchingCreateIs
     env.watcher.Inject("data/gone.dat", nectar::FileChangeKind::DELETED);
     size_t count = mgr.ProcessChanges("pc");
 
-    // No reimport triggered (DELETED events with no match are skipped, same as before)
-    larvae::AssertEqual(count, size_t{0});
-
-    // DB record is still there (hot reload doesn't remove DB entries for deletions)
-    auto* record = env.db.FindByPath("data/gone.dat");
-    larvae::AssertTrue(record != nullptr);
+    larvae::AssertEqual(count, size_t{1});
 });
 
 auto t10 = larvae::RegisterTest("NectarHotReload", "CreateWithoutMatchingDeleteIsNewAsset", []() {
@@ -589,6 +583,5 @@ auto t13 = larvae::RegisterTest("NectarHotReload", "RenameDetectionWithoutVfsSki
     env.watcher.Inject("data/new.dat", nectar::FileChangeKind::CREATED);
     size_t count = mgr.ProcessChanges("pc");
 
-    // CREATED processed as new import (DELETED still skipped as before)
-    larvae::AssertEqual(count, size_t{1});
+    larvae::AssertEqual(count, size_t{2});
 });

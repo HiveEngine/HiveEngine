@@ -166,11 +166,10 @@ namespace nectar
                 updated.m_path = static_cast<wax::String&&>(vfsPath);
                 m_db->Update(id, static_cast<AssetRecord&&>(updated));
 
-                auto oldFilename = std::filesystem::path{std::string{oldVfs.CStr(), oldVfs.Size()}}.filename().string();
-                auto newFilename = std::filesystem::path{std::string{newVfs.CStr(), newVfs.Size()}}.filename().string();
+                auto oldFilename = std::filesystem::path{oldVfs.CStr()}.filename().string();
+                auto newFilename = std::filesystem::path{newVfs.CStr()}.filename().string();
                 const char* verb = (oldFilename == newFilename) ? "Moved" : "Renamed";
-                hive::LogInfo(LOG_HOTRELOAD, "{}: {} -> {}", verb, std::string{oldVfs.CStr(), oldVfs.Size()}.c_str(),
-                              std::string{newVfs.CStr(), newVfs.Size()}.c_str());
+                hive::LogInfo(LOG_HOTRELOAD, "{}: {} -> {}", verb, oldVfs.CStr(), newVfs.CStr());
 
                 deletedConsumed[di] = true;
                 createdConsumed[ci] = true;
@@ -217,13 +216,11 @@ namespace nectar
             {
                 if (result.m_errorMessage.View().Contains("No importer"))
                     return;
-                hive::LogWarning(LOG_HOTRELOAD, "Import failed '{}': {}",
-                                 std::string{lookupPath.Data(), lookupPath.Size()}.c_str(),
-                                 result.m_errorMessage.CStr());
+                hive::LogWarning(LOG_HOTRELOAD, "Import failed '{}': {}", vfsPath.CStr(), result.m_errorMessage.CStr());
                 return;
             }
 
-            hive::LogInfo(LOG_HOTRELOAD, "Reimported: {}", std::string{lookupPath.Data(), lookupPath.Size()}.c_str());
+            hive::LogInfo(LOG_HOTRELOAD, "Reimported: {}", vfsPath.CStr());
 
             m_cookPipe->InvalidateCascade(id);
             toRecook.PushBack(id);
@@ -235,6 +232,19 @@ namespace nectar
                 toRecook.PushBack(dependents[j]);
             }
         };
+
+        for (size_t di = 0; di < deletedIndices.Size(); ++di)
+        {
+            if (deletedConsumed[di])
+                continue;
+            wax::String vfsPath = ToVfsPath(changes[deletedIndices[di]].m_path.View());
+            auto* record = m_db->FindByPath(vfsPath.View());
+            if (record)
+            {
+                hive::LogInfo(LOG_HOTRELOAD, "Deleted: {}", vfsPath.CStr());
+                m_lastReloaded.PushBack(record->m_uuid);
+            }
+        }
 
         for (size_t ci = 0; ci < createdIndices.Size(); ++ci)
         {
@@ -248,23 +258,24 @@ namespace nectar
             processImport(changes[modifiedIndices[mi]].m_path.View());
         }
 
-        if (toRecook.Size() == 0)
+        if (toRecook.Size() > 0)
         {
-            return 0;
+            for (size_t i = 0; i < toRecook.Size(); ++i)
+            {
+                m_lastReloaded.PushBack(toRecook[i]);
+            }
+
+            CookRequest cookReq;
+            cookReq.m_assets = static_cast<wax::Vector<AssetId>&&>(toRecook);
+            cookReq.m_platform = platform;
+            cookReq.m_workerCount = 1;
+            (void)m_cookPipe->CookAll(cookReq);
         }
 
-        for (size_t i = 0; i < toRecook.Size(); ++i)
+        if (m_lastReloaded.Size() > 0)
         {
-            m_lastReloaded.PushBack(toRecook[i]);
+            hive::LogInfo(LOG_HOTRELOAD, "{} asset(s) reloaded", m_lastReloaded.Size());
         }
-
-        CookRequest cookReq;
-        cookReq.m_assets = static_cast<wax::Vector<AssetId>&&>(toRecook);
-        cookReq.m_platform = platform;
-        cookReq.m_workerCount = 1;
-        (void)m_cookPipe->CookAll(cookReq);
-
-        hive::LogInfo(LOG_HOTRELOAD, "{} asset(s) reloaded", m_lastReloaded.Size());
         return m_lastReloaded.Size();
     }
 

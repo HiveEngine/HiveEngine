@@ -126,6 +126,7 @@ namespace brood::launcher
         state.m_projectPath = projectPath;
         state.m_projectOpen = true;
 
+        // Stateless singletons — no init order dependency, no mutable state
         static nectar::GltfImporter s_gltfImporter;
         static nectar::TextureImporter s_textureImporter;
         state.m_project->RegisterImporter(&s_gltfImporter);
