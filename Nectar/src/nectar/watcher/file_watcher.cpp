@@ -53,6 +53,13 @@ namespace nectar
         m_watchedDirs.PushBack(static_cast<wax::String&&>(dir));
     }
 
+    void PollingFileWatcher::Baseline()
+    {
+        wax::Vector<FileChange> discarded{*m_alloc};
+        ScanDirectories(discarded);
+        m_lastPollTime = GetCurrentTimeMs();
+    }
+
     void PollingFileWatcher::Poll(wax::Vector<FileChange>& changes)
     {
         const int64_t now = GetCurrentTimeMs();
@@ -112,19 +119,31 @@ namespace nectar
     void PollingFileWatcher::ScanDirectory(wax::StringView dir, wax::Vector<FileChange>& changes)
     {
         std::error_code error;
-        const auto it = std::filesystem::recursive_directory_iterator(
+        auto it = std::filesystem::recursive_directory_iterator(
             std::filesystem::path{std::string{dir.Data(), dir.Size()}}, error);
         if (error)
         {
             return;
         }
 
-        for (const auto& entry : it)
+        for (auto dirIt = std::filesystem::begin(it); dirIt != std::filesystem::end(it); ++dirIt)
         {
-            if (!entry.is_regular_file())
+            if (dirIt->is_directory())
+            {
+                auto dirName = dirIt->path().filename().string();
+                if (!dirName.empty() && dirName[0] == '.')
+                {
+                    dirIt.disable_recursion_pending();
+                }
+                continue;
+            }
+
+            if (!dirIt->is_regular_file())
             {
                 continue;
             }
+
+            const auto& entry = *dirIt;
 
             std::string pathStr = entry.path().string();
             for (char& c : pathStr)

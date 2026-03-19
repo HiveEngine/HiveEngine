@@ -9,6 +9,13 @@ hive_configure_target(Nectar)
 hive_get_vendor_warning_compile_options(NECTAR_VENDOR_WARNING_COMPILE_OPTIONS)
 
 file(GLOB_RECURSE NECTAR_SOURCES CONFIGURE_DEPENDS src/nectar/*.cpp)
+list(FILTER NECTAR_SOURCES EXCLUDE REGEX "native_file_watcher_(win32|linux)\\.cpp$")
+
+if(WIN32)
+    list(APPEND NECTAR_SOURCES src/nectar/watcher/native_file_watcher_win32.cpp)
+elseif(UNIX)
+    list(APPEND NECTAR_SOURCES src/nectar/watcher/native_file_watcher_linux.cpp)
+endif()
 
 target_sources(Nectar
     PRIVATE
