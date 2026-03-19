@@ -1,20 +1,31 @@
+#include <hive/core/log.h>
+
+#include <wax/containers/hash_map.h>
+
+#include <nectar/core/content_hash.h>
 #include <nectar/database/asset_database.h>
 #include <nectar/database/dependency_graph.h>
 #include <nectar/hive/hive_document.h>
 #include <nectar/pipeline/cook_pipeline.h>
 #include <nectar/pipeline/hot_reload.h>
 #include <nectar/pipeline/import_pipeline.h>
+#include <nectar/vfs/virtual_filesystem.h>
 #include <nectar/watcher/file_watcher.h>
+
+#include <filesystem>
+#include <string>
 
 namespace nectar
 {
+    static const hive::LogCategory LOG_HOTRELOAD{"Nectar.HotReload"};
     HotReloadManager::HotReloadManager(comb::DefaultAllocator& alloc, IFileWatcher& watcher, AssetDatabase& db,
-                                       ImportPipeline& importPipe, CookPipeline& cookPipe)
+                                       ImportPipeline& importPipe, CookPipeline& cookPipe, VirtualFilesystem* vfs)
         : m_alloc{&alloc}
         , m_watcher{&watcher}
         , m_db{&db}
         , m_importPipe{&importPipe}
         , m_cookPipe{&cookPipe}
+        , m_vfs{vfs}
         , m_lastReloaded{alloc}
         , m_baseDir{alloc}
     {
@@ -50,6 +61,21 @@ namespace nectar
         m_settingsUserData = userData;
     }
 
+    wax::String HotReloadManager::ToVfsPath(wax::StringView absPath) const
+    {
+        wax::String result{*m_alloc};
+        if (m_baseDir.Size() > 0 && absPath.Size() > m_baseDir.Size() &&
+            wax::StringView{absPath.Data(), m_baseDir.Size()} == m_baseDir.View())
+        {
+            result.Append(absPath.Data() + m_baseDir.Size(), absPath.Size() - m_baseDir.Size());
+        }
+        else
+        {
+            result.Append(absPath.Data(), absPath.Size());
+        }
+        return result;
+    }
+
     size_t HotReloadManager::ProcessChanges(wax::StringView platform)
     {
         HIVE_PROFILE_SCOPE_N("HotReload::ProcessChanges");
@@ -63,34 +89,113 @@ namespace nectar
             return 0;
         }
 
-        wax::Vector<AssetId> toRecook{*m_alloc};
+        for (size_t i = 0; i < changes.Size(); ++i)
+        {
+            const char* kind = changes[i].m_kind == FileChangeKind::CREATED    ? "CREATED"
+                               : changes[i].m_kind == FileChangeKind::MODIFIED ? "MODIFIED"
+                                                                               : "DELETED";
+            hive::LogTrace(LOG_HOTRELOAD, "{}: {}", kind, changes[i].m_path.CStr());
+        }
+
+        // Separate events by kind for rename detection
+        wax::Vector<size_t> deletedIndices{*m_alloc};
+        wax::Vector<size_t> createdIndices{*m_alloc};
+        wax::Vector<size_t> modifiedIndices{*m_alloc};
 
         for (size_t i = 0; i < changes.Size(); ++i)
         {
-            if (changes[i].m_kind == FileChangeKind::DELETED)
+            switch (changes[i].m_kind)
             {
-                continue;
+                case FileChangeKind::DELETED:
+                    deletedIndices.PushBack(i);
+                    break;
+                case FileChangeKind::CREATED:
+                    createdIndices.PushBack(i);
+                    break;
+                case FileChangeKind::MODIFIED:
+                    modifiedIndices.PushBack(i);
+                    break;
             }
+        }
 
-            wax::StringView lookupPath = changes[i].m_path.View();
-            wax::String vfsBuf{*m_alloc};
-            if (m_baseDir.Size() > 0)
+        // Detect renames: match DELETED records by content hash against CREATED files
+        wax::Vector<bool> deletedConsumed{*m_alloc};
+        wax::Vector<bool> createdConsumed{*m_alloc};
+        deletedConsumed.Resize(deletedIndices.Size(), false);
+        createdConsumed.Resize(createdIndices.Size(), false);
+
+        if (m_vfs && deletedIndices.Size() > 0 && createdIndices.Size() > 0)
+        {
+            // Build a map from content hash -> index into deletedIndices for DB records
+            wax::HashMap<ContentHash, size_t> deletedByHash{*m_alloc, deletedIndices.Size()};
+
+            for (size_t di = 0; di < deletedIndices.Size(); ++di)
             {
-                auto abs = changes[i].m_path.View();
-                if (abs.Size() > m_baseDir.Size() && wax::StringView{abs.Data(), m_baseDir.Size()} == m_baseDir.View())
+                wax::String vfsPath = ToVfsPath(changes[deletedIndices[di]].m_path.View());
+                auto* record = m_db->FindByPath(vfsPath.View());
+                if (record && record->m_contentHash.IsValid())
                 {
-                    vfsBuf.Append(abs.Data() + m_baseDir.Size(), abs.Size() - m_baseDir.Size());
-                    lookupPath = vfsBuf.View();
+                    deletedByHash.Insert(record->m_contentHash, di);
                 }
             }
 
-            auto* record = m_db->FindByPath(lookupPath);
-            if (!record)
+            for (size_t ci = 0; ci < createdIndices.Size(); ++ci)
             {
-                continue;
-            }
+                wax::String vfsPath = ToVfsPath(changes[createdIndices[ci]].m_path.View());
+                auto fileData = m_vfs->ReadSync(vfsPath.View());
+                if (fileData.Size() == 0)
+                    continue;
 
-            AssetId id = record->m_uuid;
+                ContentHash createdHash = ContentHash::FromData(fileData.Data(), fileData.Size());
+                auto* matchIdx = deletedByHash.Find(createdHash);
+                if (!matchIdx)
+                    continue;
+
+                size_t di = *matchIdx;
+                if (deletedConsumed[di])
+                    continue;
+
+                wax::String oldVfs = ToVfsPath(changes[deletedIndices[di]].m_path.View());
+                auto* record = m_db->FindByPath(oldVfs.View());
+                if (!record)
+                    continue;
+
+                AssetId id = record->m_uuid;
+                wax::String newVfs = ToVfsPath(changes[createdIndices[ci]].m_path.View());
+                AssetRecord updated = *record;
+                updated.m_path = static_cast<wax::String&&>(vfsPath);
+                m_db->Update(id, static_cast<AssetRecord&&>(updated));
+
+                auto oldFilename = std::filesystem::path{std::string{oldVfs.CStr(), oldVfs.Size()}}.filename().string();
+                auto newFilename = std::filesystem::path{std::string{newVfs.CStr(), newVfs.Size()}}.filename().string();
+                const char* verb = (oldFilename == newFilename) ? "Moved" : "Renamed";
+                hive::LogInfo(LOG_HOTRELOAD, "{}: {} -> {}", verb, std::string{oldVfs.CStr(), oldVfs.Size()}.c_str(),
+                              std::string{newVfs.CStr(), newVfs.Size()}.c_str());
+
+                deletedConsumed[di] = true;
+                createdConsumed[ci] = true;
+                deletedByHash.Remove(createdHash);
+            }
+        }
+
+        // Process unmatched CREATED and MODIFIED events as imports
+        wax::Vector<AssetId> toRecook{*m_alloc};
+
+        auto processImport = [&](wax::StringView rawPath) {
+            wax::String vfsPath = ToVfsPath(rawPath);
+            wax::StringView lookupPath = vfsPath.View();
+
+            auto* record = m_db->FindByPath(lookupPath);
+            AssetId id;
+            if (record)
+            {
+                id = record->m_uuid;
+            }
+            else
+            {
+                auto pathHash = ContentHash::FromData(lookupPath.Data(), lookupPath.Size());
+                id = AssetId{pathHash.High(), pathHash.Low()};
+            }
 
             ImportRequest req;
             req.m_sourcePath = lookupPath;
@@ -110,8 +215,15 @@ namespace nectar
 
             if (!result.m_success)
             {
-                continue;
+                if (result.m_errorMessage.View().Contains("No importer"))
+                    return;
+                hive::LogWarning(LOG_HOTRELOAD, "Import failed '{}': {}",
+                                 std::string{lookupPath.Data(), lookupPath.Size()}.c_str(),
+                                 result.m_errorMessage.CStr());
+                return;
             }
+
+            hive::LogInfo(LOG_HOTRELOAD, "Reimported: {}", std::string{lookupPath.Data(), lookupPath.Size()}.c_str());
 
             m_cookPipe->InvalidateCascade(id);
             toRecook.PushBack(id);
@@ -122,6 +234,18 @@ namespace nectar
             {
                 toRecook.PushBack(dependents[j]);
             }
+        };
+
+        for (size_t ci = 0; ci < createdIndices.Size(); ++ci)
+        {
+            if (createdConsumed[ci])
+                continue;
+            processImport(changes[createdIndices[ci]].m_path.View());
+        }
+
+        for (size_t mi = 0; mi < modifiedIndices.Size(); ++mi)
+        {
+            processImport(changes[modifiedIndices[mi]].m_path.View());
         }
 
         if (toRecook.Size() == 0)
@@ -140,6 +264,7 @@ namespace nectar
         cookReq.m_workerCount = 1;
         (void)m_cookPipe->CookAll(cookReq);
 
+        hive::LogInfo(LOG_HOTRELOAD, "{} asset(s) reloaded", m_lastReloaded.Size());
         return m_lastReloaded.Size();
     }
 

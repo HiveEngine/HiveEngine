@@ -5,6 +5,7 @@
 #include <wax/containers/string_view.h>
 
 #include <nectar/project/project_file.h>
+#include <nectar/watcher/file_watcher.h>
 
 #include <cstdint>
 
@@ -21,7 +22,6 @@ namespace nectar
     class CookCache;
     class AssetServer;
     class IOScheduler;
-    class PollingFileWatcher;
     class HotReloadManager;
     class IAssetImporter;
     class IAssetCooker;
@@ -62,10 +62,12 @@ namespace waggle
         [[nodiscard]] nectar::AssetDatabase& Database() noexcept;
         [[nodiscard]] nectar::IOScheduler& IO() noexcept;
         [[nodiscard]] nectar::HotReloadManager* HotReload() noexcept;
-        [[nodiscard]] nectar::PollingFileWatcher* Watcher() noexcept;
+        [[nodiscard]] nectar::IFileWatcher* Watcher() noexcept;
 
         void SaveImportCache();
         void Update();
+
+        [[nodiscard]] uint32_t LastReloadCount() const noexcept;
 
     private:
         comb::DefaultAllocator* m_alloc;
@@ -86,7 +88,11 @@ namespace waggle
         nectar::CookerRegistry* m_cookerRegistry{};
         nectar::CookCache* m_cookCache{};
         nectar::CookPipeline* m_cookPipeline{};
-        nectar::PollingFileWatcher* m_watcher{};
+        nectar::IFileWatcher* m_watcher{};
+        nectar::NativeFileWatcher* m_nativeWatcher{};
         nectar::HotReloadManager* m_hotReload{};
+        wax::Vector<nectar::FileChange> m_offlineChanges;
+        wax::String m_watcherStatePath;
+        uint32_t m_lastReloadCount{0};
     };
 } // namespace waggle

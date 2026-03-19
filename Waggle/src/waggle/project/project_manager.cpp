@@ -152,6 +152,8 @@ namespace waggle
     ProjectManager::ProjectManager(comb::DefaultAllocator& alloc)
         : m_alloc{&alloc}
         , m_project{alloc}
+        , m_offlineChanges{alloc}
+        , m_watcherStatePath{alloc}
     {
     }
 
@@ -206,9 +208,34 @@ namespace waggle
 
         if (config.m_enableHotReload)
         {
-            m_watcher = comb::New<nectar::PollingFileWatcher>(*m_alloc, *m_alloc, config.m_watcherIntervalMs);
+            m_nativeWatcher = comb::New<nectar::NativeFileWatcher>(*m_alloc, *m_alloc);
+            m_watcher = m_nativeWatcher;
             m_hotReload = comb::New<nectar::HotReloadManager>(*m_alloc, *m_alloc, *m_watcher, *m_importDb,
-                                                              *m_importPipeline, *m_cookPipeline);
+                                                              *m_importPipeline, *m_cookPipeline, m_vfs);
+            m_hotReload->SetBaseDirectory(m_paths.m_assets.View());
+            m_hotReload->WatchDirectory(m_paths.m_assets.View());
+            m_hotReload->SetImportSettingsProvider(
+                [](nectar::AssetId, wax::StringView vfsPath, nectar::HiveDocument& settings, void* ud) {
+                    auto* self = static_cast<ProjectManager*>(ud);
+                    std::string pathStr{vfsPath.Data(), vfsPath.Size()};
+                    auto parentDir = std::filesystem::path{pathStr}.parent_path().generic_string();
+                    if (!parentDir.empty())
+                    {
+                        std::string fullDir{self->m_paths.m_assets.Data(), self->m_paths.m_assets.Size()};
+                        fullDir += "/" + parentDir + "/";
+                        settings.SetValue(
+                            "import", "base_path",
+                            nectar::HiveValue::MakeString(*self->m_alloc, {fullDir.c_str(), fullDir.size()}));
+                    }
+                },
+                this);
+
+            wax::String statePath{*m_alloc};
+            statePath.Append(m_paths.m_cache.Data(), m_paths.m_cache.Size());
+            statePath.Append("/watcher_state.bin", 18);
+            m_nativeWatcher->LoadState(statePath.View());
+            m_nativeWatcher->DetectOfflineChanges(m_offlineChanges);
+            m_watcherStatePath = static_cast<wax::String&&>(statePath);
         }
 
         m_open = true;
@@ -226,6 +253,9 @@ namespace waggle
 
         SaveImportCache();
 
+        if (m_nativeWatcher != nullptr && m_watcherStatePath.Size() > 0)
+            m_nativeWatcher->SaveState(m_watcherStatePath.View());
+
         comb::Delete(*m_alloc, m_hotReload);
         comb::Delete(*m_alloc, m_watcher);
         comb::Delete(*m_alloc, m_cookPipeline);
@@ -242,6 +272,7 @@ namespace waggle
         comb::Delete(*m_alloc, m_vfs);
 
         m_hotReload = nullptr;
+        m_nativeWatcher = nullptr;
         m_watcher = nullptr;
         m_cookPipeline = nullptr;
         m_cookCache = nullptr;
@@ -329,7 +360,7 @@ namespace waggle
         return m_hotReload;
     }
 
-    nectar::PollingFileWatcher* ProjectManager::Watcher() noexcept
+    nectar::IFileWatcher* ProjectManager::Watcher() noexcept
     {
         return m_watcher;
     }
@@ -349,6 +380,26 @@ namespace waggle
     {
         if (m_server != nullptr)
             m_server->Update();
+
+        if (m_hotReload != nullptr)
+        {
+            if (m_offlineChanges.Size() > 0 && m_nativeWatcher != nullptr)
+            {
+                for (size_t i = 0; i < m_offlineChanges.Size(); ++i)
+                    m_nativeWatcher->EnqueueChange(m_offlineChanges[i].m_path.View(), m_offlineChanges[i].m_kind);
+                m_offlineChanges.Clear();
+            }
+            m_lastReloadCount = static_cast<uint32_t>(m_hotReload->ProcessChanges({"pc", 2}));
+        }
+        else
+        {
+            m_lastReloadCount = 0;
+        }
+    }
+
+    uint32_t ProjectManager::LastReloadCount() const noexcept
+    {
+        return m_lastReloadCount;
     }
 
 } // namespace waggle

@@ -1,6 +1,9 @@
 #include <hive/HiveConfig.h>
 #include <hive/core/log.h>
 
+#include <nectar/mesh/gltf_importer.h>
+#include <nectar/texture/texture_importer.h>
+
 #include <waggle/app_context.h>
 #include <waggle/project/project_context.h>
 #include <waggle/project/project_scaffolder.h>
@@ -15,6 +18,43 @@
 namespace brood::launcher
 {
 
+    static std::string ResolveGameplayDllPath(const std::string& projectRoot)
+    {
+#if HIVE_PLATFORM_WINDOWS
+        constexpr const char* kDllName = "gameplay.dll";
+#else
+        constexpr const char* kDllName = "gameplay.so";
+#endif
+
+#if HIVE_CONFIG_DEBUG
+        constexpr const char* kConfig = "Debug";
+#elif HIVE_CONFIG_RELEASE
+        constexpr const char* kConfig = "Release";
+#elif HIVE_CONFIG_PROFILE
+        constexpr const char* kConfig = "Profile";
+#elif HIVE_CONFIG_RETAIL
+        constexpr const char* kConfig = "Retail";
+#else
+        constexpr const char* kConfig = "Debug";
+#endif
+
+        std::error_code ec;
+
+        auto configPath = projectRoot + "/.hive/modules/" + kConfig + "/" + kDllName;
+        if (std::filesystem::exists(configPath, ec) && !ec)
+            return configPath;
+
+        auto basePath = projectRoot + "/.hive/modules/" + kDllName;
+        if (std::filesystem::exists(basePath, ec) && !ec)
+            return basePath;
+
+        auto rootPath = projectRoot + "/" + kDllName;
+        if (std::filesystem::exists(rootPath, ec) && !ec)
+            return rootPath;
+
+        return {};
+    }
+
     void TryLoadGameplayModule(waggle::EngineContext& ctx, LauncherState& state)
     {
         const auto root = std::string{state.m_project->Paths().m_root.CStr(), state.m_project->Paths().m_root.Size()};
@@ -24,30 +64,23 @@ namespace brood::launcher
             std::string{state.m_project->Paths().m_assets.CStr(), state.m_project->Paths().m_assets.Size()};
 #endif
 
-#if HIVE_PLATFORM_WINDOWS
-        const std::string dllPath = root + "/gameplay.dll";
-#else
-        const std::string dllPath = root + "/gameplay.so";
-#endif
-
-        std::error_code dllEc;
-        if (std::filesystem::exists(dllPath, dllEc) && !dllEc)
+        const std::string dllPath = ResolveGameplayDllPath(root);
+        if (dllPath.empty())
         {
-            if (state.m_gameplay.Load(dllPath.c_str()))
+            hive::LogInfo(LOG_LAUNCHER, "No gameplay DLL found for project at {}", root);
+            return;
+        }
+
+        if (state.m_gameplay.Load(dllPath.c_str()))
+        {
+            if (!state.m_gameplay.Register(*ctx.m_world))
             {
-                if (!state.m_gameplay.Register(*ctx.m_world))
-                {
-                    hive::LogWarning(LOG_LAUNCHER, "Gameplay DLL Register() failed");
-                }
-            }
-            else
-            {
-                hive::LogWarning(LOG_LAUNCHER, "Failed to load gameplay DLL: {}", state.m_gameplay.GetError());
+                hive::LogWarning(LOG_LAUNCHER, "Gameplay DLL Register() failed");
             }
         }
         else
         {
-            hive::LogInfo(LOG_LAUNCHER, "No gameplay DLL found at {}", dllPath);
+            hive::LogWarning(LOG_LAUNCHER, "Failed to load gameplay DLL: {}", state.m_gameplay.GetError());
         }
     }
 
@@ -92,6 +125,11 @@ namespace brood::launcher
 
         state.m_projectPath = projectPath;
         state.m_projectOpen = true;
+
+        static nectar::GltfImporter s_gltfImporter;
+        static nectar::TextureImporter s_textureImporter;
+        state.m_project->RegisterImporter(&s_gltfImporter);
+        state.m_project->RegisterImporter(&s_textureImporter);
 
         const auto& project = state.m_project->Project();
         hive::LogInfo(LOG_LAUNCHER, "Project '{}' v{}", std::string{project.Name().Data(), project.Name().Size()},
