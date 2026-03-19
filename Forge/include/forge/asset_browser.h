@@ -16,8 +16,9 @@ namespace forge
 
         void SetAssetsRoot(const char* path);
 
-    private:
         void Refresh();
+
+    private:
         void PopulateDirectory(QTreeWidgetItem* parent, const std::filesystem::path& dir);
 
         QTreeWidget* m_tree{};

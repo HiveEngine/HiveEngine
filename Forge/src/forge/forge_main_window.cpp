@@ -1,6 +1,7 @@
 #include <queen/reflect/component_registry.h>
 
 #include <forge/asset_browser.h>
+#include <forge/console_panel.h>
 #include <forge/forge_main_window.h>
 #include <forge/hierarchy_panel.h>
 #include <forge/inspector_panel.h>
@@ -201,6 +202,9 @@ namespace forge
 
         if (m_world && m_inspector && m_selection && m_registry && m_undo)
             m_inspector->Refresh(*m_world, *m_selection, *m_registry, *m_undo);
+
+        if (m_assetBrowser)
+            m_assetBrowser->Refresh();
     }
 
     void ForgeMainWindow::SetAssetsRoot(const char* path)
@@ -298,6 +302,14 @@ namespace forge
         assetDock->setWidget(m_assetBrowser);
         addDockWidget(Qt::BottomDockWidgetArea, assetDock);
         m_docks.append(assetDock);
+
+        m_console = new ConsolePanel{this};
+        auto* consoleDock = new QDockWidget{"Console", this};
+        consoleDock->setWidget(m_console);
+        addDockWidget(Qt::BottomDockWidgetArea, consoleDock);
+        tabifyDockWidget(assetDock, consoleDock);
+        assetDock->raise();
+        m_docks.append(consoleDock);
 
         m_viewport = new VulkanViewportWidget{this};
         setCentralWidget(m_viewport);

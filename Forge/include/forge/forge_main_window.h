@@ -23,6 +23,7 @@ namespace queen
 namespace forge
 {
     class AssetBrowserPanel;
+    class ConsolePanel;
     class EditorSelection;
     class EditorToolbar;
     class HierarchyPanel;
@@ -76,6 +77,7 @@ namespace forge
         HierarchyPanel* m_hierarchy{};
         InspectorPanel* m_inspector{};
         AssetBrowserPanel* m_assetBrowser{};
+        ConsolePanel* m_console{};
         VulkanViewportWidget* m_viewport{};
         EditorToolbar* m_toolbar{};
         ProjectHub* m_hub{};
