@@ -1,7 +1,6 @@
-#include <terra/precomp.h>
 #include <terra/platform/glfw_terra.h>
+#include <terra/precomp.h>
 #include <terra/terramodule.h>
-
 
 namespace terra
 {
@@ -54,6 +53,18 @@ namespace terra
             windowContext->m_currentInputState.m_mouseY = newY;
         }
 
+        void GLFWScrollCallback(GLFWwindow* window, double xOffset, double yOffset)
+        {
+            WindowContext* windowContext = static_cast<WindowContext*>(glfwGetWindowUserPointer(window));
+            if (windowContext == nullptr)
+            {
+                return;
+            }
+
+            windowContext->m_currentInputState.m_scrollDeltaX += static_cast<float>(xOffset);
+            windowContext->m_currentInputState.m_scrollDeltaY += static_cast<float>(yOffset);
+        }
+
         void GLFWWindowSizeCallback(GLFWwindow* window, int width, int height)
         {
             WindowContext* windowContext = static_cast<WindowContext*>(glfwGetWindowUserPointer(window));
@@ -89,6 +100,7 @@ namespace terra
             glfwSetKeyCallback(windowContext->m_window, &GLFWKeyCallback);
             glfwSetMouseButtonCallback(windowContext->m_window, &GLFWMouseButtonCallback);
             glfwSetCursorPosCallback(windowContext->m_window, &GLFWCursorPositionCallback);
+            glfwSetScrollCallback(windowContext->m_window, &GLFWScrollCallback);
             glfwSetWindowSizeCallback(windowContext->m_window, &GLFWWindowSizeCallback);
 
             glfwGetWindowSize(windowContext->m_window, &windowContext->m_width, &windowContext->m_height);
@@ -141,10 +153,10 @@ namespace terra
             comb::Delete(allocator, windowContext);
             return nullptr;
         }
-        
+
         return windowContext;
     }
-    
+
     void DestroyWindowContext(WindowContext* windowContext)
     {
         if (windowContext == nullptr)
@@ -156,8 +168,6 @@ namespace terra
         auto& allocator = TerraModule::GetInstance().GetAllocator();
         comb::Delete(allocator, windowContext);
     }
-
-    
 
     bool ShouldWindowClose(WindowContext* windowContext)
     {
@@ -176,6 +186,8 @@ namespace terra
             windowContext->m_lastInputState = windowContext->m_currentInputState;
             windowContext->m_currentInputState.m_mouseDeltaX = 0.0f;
             windowContext->m_currentInputState.m_mouseDeltaY = 0.0f;
+            windowContext->m_currentInputState.m_scrollDeltaX = 0.0f;
+            windowContext->m_currentInputState.m_scrollDeltaY = 0.0f;
         }
 
         glfwPollEvents();
@@ -241,6 +253,16 @@ namespace terra
     float GetMouseY(const InputState* inputState)
     {
         return inputState != nullptr ? inputState->m_mouseY : 0.0f;
+    }
+
+    float GetScrollDeltaX(const InputState* inputState)
+    {
+        return inputState != nullptr ? inputState->m_scrollDeltaX : 0.0f;
+    }
+
+    float GetScrollDeltaY(const InputState* inputState)
+    {
+        return inputState != nullptr ? inputState->m_scrollDeltaY : 0.0f;
     }
 
     int GetWindowWidth(const WindowContext* windowContext)

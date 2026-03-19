@@ -7,26 +7,35 @@ namespace terra
         return false;
     }
 
-    void ShutdownSystem() {}
-
+    void ShutdownSystem()
+    {
+    }
 
     WindowContext* CreateWindowContext(const char* /*title*/, int /*width*/, int /*height*/)
     {
         return nullptr;
     }
 
-    void DestroyWindowContext(WindowContext* /*windowContext*/) {}
+    void DestroyWindowContext(WindowContext* /*windowContext*/)
+    {
+    }
 
-    void SetWindowVisible(WindowContext* /*windowContext*/, bool /*visible*/) {}
+    void SetWindowVisible(WindowContext* /*windowContext*/, bool /*visible*/)
+    {
+    }
 
     bool ShouldWindowClose(WindowContext* /*windowContext*/)
     {
         return true;
     }
 
-    void PollEvents() {}
+    void PollEvents()
+    {
+    }
 
-    void PollEvents(WindowContext* /*windowContext*/) {}
+    void PollEvents(WindowContext* /*windowContext*/)
+    {
+    }
 
     const InputState* GetWindowInputState(const WindowContext* windowContext)
     {
@@ -64,6 +73,16 @@ namespace terra
     }
 
     float GetMouseY(const InputState* /*inputState*/)
+    {
+        return 0.0f;
+    }
+
+    float GetScrollDeltaX(const InputState* /*inputState*/)
+    {
+        return 0.0f;
+    }
+
+    float GetScrollDeltaY(const InputState* /*inputState*/)
     {
         return 0.0f;
     }

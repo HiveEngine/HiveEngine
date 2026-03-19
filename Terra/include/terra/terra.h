@@ -18,6 +18,8 @@ namespace terra
         float m_mouseDeltaY{0.0f}; // Delta from last frame
         float m_mouseX{0.0f};
         float m_mouseY{0.0f}; // Current mouse position on screen
+        float m_scrollDeltaX{0.0f};
+        float m_scrollDeltaY{0.0f};
     };
 
     // Windowing system init
@@ -28,7 +30,6 @@ namespace terra
     // Window operation
     WindowContext* CreateWindowContext(const char* title, int width, int height);
     void DestroyWindowContext(WindowContext* windowContext);
-
 
     bool ShouldWindowClose(WindowContext* windowContext);
 
@@ -47,6 +48,10 @@ namespace terra
     [[nodiscard]] float GetMouseX(const InputState* inputState);
 
     [[nodiscard]] float GetMouseY(const InputState* inputState);
+
+    [[nodiscard]] float GetScrollDeltaX(const InputState* inputState);
+
+    [[nodiscard]] float GetScrollDeltaY(const InputState* inputState);
 
     [[nodiscard]] int GetWindowWidth(const WindowContext* windowContext);
 

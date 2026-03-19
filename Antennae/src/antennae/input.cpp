@@ -143,8 +143,8 @@ namespace antennae
             mouse.buttons[static_cast<int>(btn)] = terra::IsMouseButtonDown(input, btn);
         }
 
-        mouse.scroll_x = 0.0f;
-        mouse.scroll_y = 0.0f;
+        mouse.scroll_x = terra::GetScrollDeltaX(input);
+        mouse.scroll_y = terra::GetScrollDeltaY(input);
     }
 
     void UpdateInput(queen::World& world, terra::WindowContext* window)
