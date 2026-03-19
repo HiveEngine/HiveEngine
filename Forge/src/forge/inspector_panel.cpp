@@ -1,5 +1,7 @@
 #include <hive/math/types.h>
 
+#include <wax/containers/fixed_string.h>
+
 #include <queen/core/type_id.h>
 #include <queen/reflect/component_registry.h>
 #include <queen/reflect/field_attributes.h>
@@ -18,6 +20,7 @@
 #include <QGroupBox>
 #include <QHBoxLayout>
 #include <QLabel>
+#include <QLineEdit>
 #include <QPushButton>
 #include <QSpinBox>
 #include <QVBoxLayout>
@@ -560,6 +563,31 @@ namespace forge
                     widget = new QLabel{"(unsupported)"};
                     widget->setEnabled(false);
                 }
+                break;
+            }
+
+            case queen::FieldType::STRING: {
+                auto* value = static_cast<wax::FixedString*>(fieldData);
+                auto* lineEdit = new QLineEdit{QString::fromUtf8(value->CStr(), static_cast<int>(value->Size()))};
+                lineEdit->setMaxLength(static_cast<int>(wax::FixedString::MaxCapacity));
+
+                auto snapshot = std::make_shared<SnapshotState>();
+
+                QObject::connect(lineEdit, &QLineEdit::editingFinished, this,
+                                 [this, lineEdit, value, snapshot, entity, typeId, offset, &undo]() {
+                                     QByteArray utf8 = lineEdit->text().toUtf8();
+                                     wax::FixedString newVal{utf8.constData(), static_cast<size_t>(utf8.size())};
+                                     if (newVal != *value)
+                                     {
+                                         Snapshot(*snapshot, entity, typeId, offset,
+                                                  static_cast<uint16_t>(sizeof(wax::FixedString)), value);
+                                         *value = newVal;
+                                         CommitIfChanged(*snapshot, undo, value);
+                                         emit sceneModified();
+                                     }
+                                 });
+
+                widget = lineEdit;
                 break;
             }
 

@@ -2,6 +2,8 @@
 #include <queen/hierarchy/parent.h>
 #include <queen/world/world.h>
 
+#include <waggle/components/name.h>
+
 #include <forge/hierarchy_panel.h>
 #include <forge/selection.h>
 
@@ -16,8 +18,14 @@
 
 namespace forge
 {
-    static void DefaultEntityLabel(queen::World& /*world*/, queen::Entity entity, char* buf, size_t bufSize)
+    static void DefaultEntityLabel(queen::World& world, queen::Entity entity, char* buf, size_t bufSize)
     {
+        const auto* name = world.Get<waggle::Name>(entity);
+        if (name != nullptr && !name->m_name.IsEmpty())
+        {
+            snprintf(buf, bufSize, "%s", name->m_name.CStr());
+            return;
+        }
         snprintf(buf, bufSize, "Entity %u", entity.Index());
     }
 

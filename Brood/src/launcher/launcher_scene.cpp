@@ -15,6 +15,7 @@
 
 #include <waggle/components/camera.h>
 #include <waggle/components/lighting.h>
+#include <waggle/components/name.h>
 #include <waggle/components/transform.h>
 #include <waggle/project/project_manager.h>
 #include <waggle/time.h>
@@ -40,6 +41,8 @@ namespace brood::launcher
             registry.Register<waggle::DirectionalLight>();
         if (!registry.Contains<waggle::AmbientLight>())
             registry.Register<waggle::AmbientLight>();
+        if (!registry.Contains<waggle::Name>())
+            registry.Register<waggle::Name>();
     }
 
     void ResetSceneEditorState(LauncherState& state)
