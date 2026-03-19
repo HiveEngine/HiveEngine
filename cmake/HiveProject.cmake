@@ -104,20 +104,22 @@ function(hive_configure_gameplay_module target)
 
     target_include_directories(${target} PRIVATE "${HIVE_GAMEPLAY_SOURCE_INCLUDE_DIR}")
 
+    set(_module_dir "${HIVE_GAMEPLAY_PROJECT_ROOT}/.hive/modules")
+
     set_target_properties(${target}
         PROPERTIES
             PREFIX ""
             OUTPUT_NAME "gameplay"
-            LIBRARY_OUTPUT_DIRECTORY "${HIVE_GAMEPLAY_PROJECT_ROOT}"
-            RUNTIME_OUTPUT_DIRECTORY "${HIVE_GAMEPLAY_PROJECT_ROOT}"
+            LIBRARY_OUTPUT_DIRECTORY "${_module_dir}"
+            RUNTIME_OUTPUT_DIRECTORY "${_module_dir}"
     )
 
     foreach(_config IN ITEMS Debug Profile Retail Release RelWithDebInfo)
         string(TOUPPER "${_config}" _config_upper)
         set_target_properties(${target}
             PROPERTIES
-                "LIBRARY_OUTPUT_DIRECTORY_${_config_upper}" "${HIVE_GAMEPLAY_PROJECT_ROOT}"
-                "RUNTIME_OUTPUT_DIRECTORY_${_config_upper}" "${HIVE_GAMEPLAY_PROJECT_ROOT}"
+                "LIBRARY_OUTPUT_DIRECTORY_${_config_upper}" "${_module_dir}/${_config}"
+                "RUNTIME_OUTPUT_DIRECTORY_${_config_upper}" "${_module_dir}/${_config}"
         )
     endforeach()
 endfunction()

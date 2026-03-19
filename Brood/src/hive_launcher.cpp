@@ -197,6 +197,11 @@ namespace
                     return false;
                 }
 
+#if HIVE_MODE_EDITOR
+                if (s.m_mainWindow && !s.m_assetsRoot.empty())
+                    s.m_mainWindow->SetAssetsRoot(s.m_assetsRoot.c_str());
+#endif
+
                 if (s.m_exitAfterSetup)
                 {
                     ctx.m_app->RequestStop();
@@ -215,6 +220,9 @@ namespace
 #if HIVE_MODE_EDITOR
                 if (s.m_mainWindow != nullptr)
                 {
+                    if (s.m_project != nullptr && s.m_project->LastReloadCount() > 0)
+                        s.m_mainWindow->RefreshAll();
+
                     s.m_mainWindow->RenderFrame();
                     QApplication::processEvents();
                 }
