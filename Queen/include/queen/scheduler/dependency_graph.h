@@ -129,7 +129,7 @@ namespace queen
                 {
                     SystemId afterId = system->AfterDep(a);
                     uint32_t afterIdx = afterId.Index();
-                    if (afterIdx < systemCount)
+                    if (afterIdx < systemCount && !HasEdge(afterIdx, static_cast<uint32_t>(i)))
                     {
                         m_adjacency[afterIdx].PushBack(static_cast<uint32_t>(i));
                         m_nodes[i].IncrementDependencyCount();
@@ -141,7 +141,7 @@ namespace queen
                 {
                     SystemId beforeId = system->BeforeDep(b);
                     uint32_t beforeIdx = beforeId.Index();
-                    if (beforeIdx < systemCount)
+                    if (beforeIdx < systemCount && !HasEdge(static_cast<uint32_t>(i), beforeIdx))
                     {
                         m_adjacency[i].PushBack(beforeIdx);
                         m_nodes[beforeIdx].IncrementDependencyCount();
@@ -256,6 +256,19 @@ namespace queen
         }
 
     private:
+        bool HasEdge(uint32_t from, uint32_t to) const
+        {
+            const auto& deps = m_adjacency[from];
+            for (size_t i = 0; i < deps.Size(); ++i)
+            {
+                if (deps[i] == to)
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
         void Clear()
         {
             m_nodes.Clear();

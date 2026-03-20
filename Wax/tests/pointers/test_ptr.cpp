@@ -16,9 +16,7 @@ namespace
         }
     };
 
-    // =============================================================================
     // Construction
-    // =============================================================================
 
     auto test1 = larvae::RegisterTest("WaxPtr", "DefaultConstructor", []() {
         wax::Ptr<int> ptr;
@@ -59,9 +57,7 @@ namespace
         larvae::AssertEqual(*ptr, 123);
     });
 
-    // =============================================================================
     // Copy and Assignment
-    // =============================================================================
 
     auto test6 = larvae::RegisterTest("WaxPtr", "CopyConstructor", []() {
         int x = 42;
@@ -101,9 +97,7 @@ namespace
         larvae::AssertEqual(*ptr, 99);
     });
 
-    // =============================================================================
     // Dereference
-    // =============================================================================
 
     auto test10 = larvae::RegisterTest("WaxPtr", "DereferenceOperator", []() {
         int x = 42;
@@ -134,9 +128,7 @@ namespace
         larvae::AssertEqual(*raw, 42);
     });
 
-    // =============================================================================
     // Bool Conversion
-    // =============================================================================
 
     auto test13 = larvae::RegisterTest("WaxPtr", "BoolConversionTrue", []() {
         int x = 42;
@@ -178,9 +170,7 @@ namespace
         larvae::AssertFalse(ptr2.IsValid());
     });
 
-    // =============================================================================
     // Reset and Rebind
-    // =============================================================================
 
     auto test16 = larvae::RegisterTest("WaxPtr", "Reset", []() {
         int x = 42;
@@ -211,9 +201,7 @@ namespace
         larvae::AssertEqual(*ptr, 99);
     });
 
-    // =============================================================================
     // Comparison
-    // =============================================================================
 
     auto test19 = larvae::RegisterTest("WaxPtr", "EqualityOperator", []() {
         int x = 42;
@@ -259,9 +247,7 @@ namespace
         larvae::AssertTrue(ptr3 >= ptr1);
     });
 
-    // =============================================================================
     // Const Correctness
-    // =============================================================================
 
     auto test23 = larvae::RegisterTest("WaxPtr", "ConstPtr", []() {
         int x = 42;

@@ -16,9 +16,7 @@ namespace
         }
     };
 
-    // =============================================================================
     // Construction
-    // =============================================================================
 
     auto test1 = larvae::RegisterTest("WaxRef", "ConstructFromReference", []() {
         int x = 42;
@@ -51,9 +49,7 @@ namespace
         larvae::AssertEqual(*ref, 123);
     });
 
-    // =============================================================================
     // Copy and Assignment
-    // =============================================================================
 
     auto test5 = larvae::RegisterTest("WaxRef", "CopyConstructor", []() {
         int x = 42;
@@ -75,9 +71,7 @@ namespace
         larvae::AssertEqual(ref1.Get(), ref2.Get());
     });
 
-    // =============================================================================
     // Dereference
-    // =============================================================================
 
     auto test7 = larvae::RegisterTest("WaxRef", "DereferenceOperator", []() {
         int x = 42;
@@ -117,9 +111,7 @@ namespace
         larvae::AssertEqual(&y, &x);
     });
 
-    // =============================================================================
     // Rebind
-    // =============================================================================
 
     auto test11 = larvae::RegisterTest("WaxRef", "RebindToReference", []() {
         int x = 42, y = 99;
@@ -140,9 +132,7 @@ namespace
         larvae::AssertEqual(*ref, 99);
     });
 
-    // =============================================================================
     // Comparison
-    // =============================================================================
 
     auto test13 = larvae::RegisterTest("WaxRef", "EqualityOperator", []() {
         int x = 42;
@@ -172,9 +162,7 @@ namespace
         larvae::AssertTrue(ref3 >= ref1);
     });
 
-    // =============================================================================
     // Const Correctness
-    // =============================================================================
 
     auto test16 = larvae::RegisterTest("WaxRef", "ConstRef", []() {
         int x = 42;

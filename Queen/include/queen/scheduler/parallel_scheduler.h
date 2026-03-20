@@ -5,10 +5,12 @@
 
 #include <comb/allocator_concepts.h>
 
+#include <drone/counter.h>
+#include <drone/job_submitter.h>
+#include <drone/job_types.h>
+
 #include <queen/core/tick.h>
 #include <queen/scheduler/dependency_graph.h>
-#include <queen/scheduler/parallel.h>
-#include <queen/scheduler/thread_pool.h>
 #include <queen/system/system_storage.h>
 
 #include <atomic>
@@ -60,33 +62,13 @@ namespace queen
     template <comb::Allocator Allocator> class ParallelScheduler
     {
     public:
-        /**
-         * Create a ParallelScheduler with an existing thread pool
-         */
-        explicit ParallelScheduler(Allocator& allocator, ThreadPool<Allocator>& pool)
+        explicit ParallelScheduler(Allocator& allocator, drone::JobSubmitter jobs)
             : m_graph{allocator}
-            , m_pool{&pool}
-            , m_ownsPool{false}
+            , m_jobs{jobs}
             , m_remaining{nullptr}
             , m_remainingCount{0}
             , m_allocator{&allocator}
         {
-        }
-
-        /**
-         * Create a ParallelScheduler with a new internal thread pool
-         */
-        explicit ParallelScheduler(Allocator& allocator, size_t workerCount = 0)
-            : m_graph{allocator}
-            , m_pool{nullptr}
-            , m_ownsPool{true}
-            , m_remaining{nullptr}
-            , m_remainingCount{0}
-            , m_allocator{&allocator}
-        {
-            void* poolMem = m_allocator->Allocate(sizeof(ThreadPool<Allocator>), alignof(ThreadPool<Allocator>));
-            m_pool = new (poolMem) ThreadPool<Allocator>{allocator, workerCount};
-            m_pool->Start();
         }
 
         ~ParallelScheduler()
@@ -98,13 +80,6 @@ namespace queen
                     m_remaining[i].~atomic<uint16_t>();
                 }
                 m_allocator->Deallocate(m_remaining);
-            }
-
-            if (m_ownsPool && m_pool != nullptr)
-            {
-                m_pool->Stop();
-                m_pool->~ThreadPool<Allocator>();
-                m_allocator->Deallocate(m_pool);
             }
         }
 
@@ -159,12 +134,9 @@ namespace queen
             return m_graph;
         }
 
-        /**
-         * Get the thread pool
-         */
-        [[nodiscard]] ThreadPool<Allocator>* Pool() noexcept
+        [[nodiscard]] drone::JobSubmitter& Jobs() noexcept
         {
-            return m_pool;
+            return m_jobs;
         }
 
         /**
@@ -225,9 +197,8 @@ namespace queen
         }
 
         void SubmitSystemTask(uint32_t nodeIndex, World& world, SystemStorage<Allocator>& storage, Tick tick,
-                              WaitGroup& wg)
+                              drone::Counter& counter)
         {
-            // Pack context into task data
             struct TaskData
             {
                 ParallelScheduler* m_scheduler;
@@ -235,7 +206,7 @@ namespace queen
                 SystemStorage<Allocator>* m_storage;
                 uint32_t m_nodeIndex;
                 Tick m_tick;
-                WaitGroup* m_wg;
+                drone::Counter* m_counter;
             };
 
             static constexpr size_t kMaxTasks = 256;
@@ -243,32 +214,34 @@ namespace queen
             thread_local size_t s_taskIdx = 0;
 
             hive::Assert(s_taskIdx < kMaxTasks, "ParallelScheduler: too many concurrent tasks");
-            auto& td = s_tasks[s_taskIdx % kMaxTasks];
-            s_taskIdx++;
+            auto& td = s_tasks[s_taskIdx++ % kMaxTasks];
 
             td.m_scheduler = this;
             td.m_world = &world;
             td.m_storage = &storage;
             td.m_nodeIndex = nodeIndex;
             td.m_tick = tick;
-            td.m_wg = &wg;
+            td.m_counter = &counter;
 
-            m_pool->Submit(
-                [](void* data) {
-                    auto* td = static_cast<TaskData*>(data);
-                    td->m_scheduler->ExecuteSystem(td->m_nodeIndex, *td->m_world, *td->m_storage, td->m_tick,
-                                                   *td->m_wg);
-                },
-                &td);
+            drone::JobDecl job;
+            job.m_func = [](void* data) {
+                auto* td = static_cast<TaskData*>(data);
+                td->m_scheduler->ExecuteSystem(td->m_nodeIndex, *td->m_world, *td->m_storage, td->m_tick,
+                                               *td->m_counter);
+            };
+            job.m_userData = &td;
+            job.m_priority = drone::Priority::HIGH;
+
+            m_jobs.SubmitDetached(job);
         }
 
         void ExecuteSystem(uint32_t nodeIndex, World& world, SystemStorage<Allocator>& storage, Tick tick,
-                           WaitGroup& wg)
+                           drone::Counter& counter)
         {
             SystemNode* node = m_graph.GetNode(nodeIndex);
             if (node == nullptr)
             {
-                wg.Done();
+                counter.Decrement();
                 return;
             }
 
@@ -290,24 +263,20 @@ namespace queen
                 for (size_t i = 0; i < dependents->Size(); ++i)
                 {
                     uint32_t depIdx = (*dependents)[i];
-
                     uint16_t prev = m_remaining[depIdx].fetch_sub(1, std::memory_order_acq_rel);
-
-                    // If we were the last dependency, submit the dependent
                     if (prev == 1)
                     {
-                        SubmitSystemTask(depIdx, world, storage, tick, wg);
+                        SubmitSystemTask(depIdx, world, storage, tick, counter);
                     }
                 }
             }
 
-            wg.Done();
+            counter.Decrement();
         }
 
         DependencyGraph<Allocator> m_graph;
-        ThreadPool<Allocator>* m_pool;
-        bool m_ownsPool;
-        std::atomic<uint16_t>* m_remaining; // Remaining dependency count per node
+        drone::JobSubmitter m_jobs;
+        std::atomic<uint16_t>* m_remaining;
         size_t m_remainingCount;
         Allocator* m_allocator;
     };

@@ -52,7 +52,10 @@ namespace queen
          */
         void Done() noexcept
         {
-            m_counter.fetch_sub(1, std::memory_order_release);
+            if (m_counter.fetch_sub(1, std::memory_order_acq_rel) == 1)
+            {
+                m_counter.notify_all();
+            }
         }
 
         /**
@@ -60,9 +63,12 @@ namespace queen
          */
         void Wait() const noexcept
         {
-            while (m_counter.load(std::memory_order_acquire) > 0)
+            for (;;)
             {
-                std::this_thread::yield();
+                int64_t val = m_counter.load(std::memory_order_acquire);
+                if (val <= 0)
+                    return;
+                m_counter.wait(val, std::memory_order_relaxed);
             }
         }
 
@@ -256,8 +262,9 @@ namespace queen
             thread_local WrappedTask s_wrappedTasks[kMaxWrapped];
             thread_local size_t s_wrappedIdx = 0;
 
-            auto& wt = s_wrappedTasks[s_wrappedIdx % kMaxWrapped];
-            s_wrappedIdx++;
+            hive::Assert(m_wg.Count() < static_cast<int64_t>(kMaxWrapped),
+                         "TaskBatch: too many pending tasks, call Wait() before submitting more");
+            auto& wt = s_wrappedTasks[s_wrappedIdx++ % kMaxWrapped];
 
             wt.m_func = func;
             wt.m_userData = userData;
