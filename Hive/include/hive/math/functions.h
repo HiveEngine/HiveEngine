@@ -139,7 +139,10 @@ namespace hive::math
     }
     [[nodiscard]] inline Float2 Normalize(Float2 a)
     {
-        return FromHMM(HMM_NormV2(ToHMM(a)));
+        float lenSq = HMM_LenSqrV2(ToHMM(a));
+        if (lenSq < 1e-12f)
+            return Float2{0.f, 0.f};
+        return FromHMM(HMM_MulV2F(ToHMM(a), HMM_InvSqrtF(lenSq)));
     }
     [[nodiscard]] inline Float2 Lerp(Float2 a, float t, Float2 b)
     {
@@ -211,7 +214,10 @@ namespace hive::math
     }
     [[nodiscard]] inline Float3 Normalize(Float3 a)
     {
-        return FromHMM(HMM_NormV3(ToHMM(a)));
+        float lenSq = HMM_LenSqrV3(ToHMM(a));
+        if (lenSq < 1e-12f)
+            return Float3{0.f, 0.f, 0.f};
+        return FromHMM(HMM_MulV3F(ToHMM(a), HMM_InvSqrtF(lenSq)));
     }
     [[nodiscard]] inline Float3 Lerp(Float3 a, float t, Float3 b)
     {
@@ -279,7 +285,10 @@ namespace hive::math
     }
     [[nodiscard]] inline Float4 Normalize(Float4 a)
     {
-        return FromHMM(HMM_NormV4(ToHMM(a)));
+        float lenSq = HMM_LenSqrV4(ToHMM(a));
+        if (lenSq < 1e-12f)
+            return Float4{0.f, 0.f, 0.f, 0.f};
+        return FromHMM(HMM_MulV4F(ToHMM(a), HMM_InvSqrtF(lenSq)));
     }
     [[nodiscard]] inline Float4 Lerp(Float4 a, float t, Float4 b)
     {
@@ -321,7 +330,16 @@ namespace hive::math
     }
     [[nodiscard]] inline Quat Normalize(Quat q)
     {
-        return FromHMM(HMM_NormQ(ToHMM(q)));
+        float lenSq = HMM_DotQ(ToHMM(q), ToHMM(q));
+        if (lenSq < 1e-12f)
+            return Quat{0.f, 0.f, 0.f, 1.f};
+        HMM_Quat h = ToHMM(q);
+        float inv = HMM_InvSqrtF(lenSq);
+        h.X *= inv;
+        h.Y *= inv;
+        h.Z *= inv;
+        h.W *= inv;
+        return FromHMM(h);
     }
     [[nodiscard]] inline Quat Inverse(Quat q)
     {

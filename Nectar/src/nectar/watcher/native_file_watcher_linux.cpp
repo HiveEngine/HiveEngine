@@ -7,7 +7,6 @@
 #include <comb/new.h>
 #include <hive/core/log.h>
 
-#include <poll.h>
 #include <sys/inotify.h>
 #include <unistd.h>
 
@@ -16,8 +15,6 @@ namespace nectar
     struct NativeFileWatcher::PlatformData
     {
         int inotifyFd{-1};
-        int wakeReadFd{-1};
-        int wakeWriteFd{-1};
     };
 
     void NativeFileWatcher::PlatformInit()
@@ -29,22 +26,6 @@ namespace nectar
         {
             hive::LogWarning(hive::LOG_HIVE_ROOT, "NativeFileWatcher: inotify_init1 failed");
         }
-
-        int pipeFds[2]{-1, -1};
-        if (pipe(pipeFds) == 0)
-        {
-            m_platform->wakeReadFd = pipeFds[0];
-            m_platform->wakeWriteFd = pipeFds[1];
-        }
-    }
-
-    void NativeFileWatcher::PlatformWakeThread()
-    {
-        if (m_platform != nullptr && m_platform->wakeWriteFd >= 0)
-        {
-            char c = 'w';
-            [[maybe_unused]] auto r = write(m_platform->wakeWriteFd, &c, 1);
-        }
     }
 
     void NativeFileWatcher::PlatformShutdown()
@@ -52,14 +33,6 @@ namespace nectar
         if (m_platform->inotifyFd >= 0)
         {
             close(m_platform->inotifyFd);
-        }
-        if (m_platform->wakeReadFd >= 0)
-        {
-            close(m_platform->wakeReadFd);
-        }
-        if (m_platform->wakeWriteFd >= 0)
-        {
-            close(m_platform->wakeWriteFd);
         }
 
         comb::Delete(*m_alloc, m_platform);
@@ -82,48 +55,15 @@ namespace nectar
         }
     }
 
-    void NativeFileWatcher::ThreadMain()
+    void NativeFileWatcher::PlatformTick()
     {
         alignas(struct inotify_event) uint8_t buffer[4096]{};
 
-        while (m_running.load(std::memory_order_acquire))
+        for (;;)
         {
-            struct pollfd fds[2]{};
-            fds[0].fd = m_platform->inotifyFd;
-            fds[0].events = POLLIN;
-            fds[1].fd = m_platform->wakeReadFd;
-            fds[1].events = POLLIN;
-
-            int ret = poll(fds, 2, 500);
-            if (!m_running.load(std::memory_order_acquire))
-            {
-                break;
-            }
-
-            if (ret <= 0)
-            {
-                continue;
-            }
-
-            // Drain wake pipe
-            if (fds[1].revents & POLLIN)
-            {
-                char drain[64];
-                while (read(m_platform->wakeReadFd, drain, sizeof(drain)) > 0)
-                {
-                }
-            }
-
-            if (!(fds[0].revents & POLLIN))
-            {
-                continue;
-            }
-
             ssize_t len = read(m_platform->inotifyFd, buffer, sizeof(buffer));
             if (len <= 0)
-            {
-                continue;
-            }
+                break;
 
             for (ssize_t offset = 0; offset < len;)
             {
@@ -131,25 +71,17 @@ namespace nectar
                 offset += static_cast<ssize_t>(sizeof(struct inotify_event) + event->len);
 
                 if (event->len == 0)
-                {
                     continue;
-                }
 
                 wax::StringView name{event->name};
                 if (IsDotDirectory(name))
-                {
                     continue;
-                }
 
                 FileChangeKind kind = FileChangeKind::MODIFIED;
                 if (event->mask & (IN_CREATE | IN_MOVED_TO))
-                {
                     kind = FileChangeKind::CREATED;
-                }
                 else if (event->mask & (IN_DELETE | IN_MOVED_FROM))
-                {
                     kind = FileChangeKind::DELETED;
-                }
 
                 EnqueueChange(name, kind);
             }

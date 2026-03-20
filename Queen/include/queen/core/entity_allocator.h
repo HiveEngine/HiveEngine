@@ -91,7 +91,8 @@ namespace queen
             uint32_t index = entity.Index();
 
             Entity::GenerationType& gen = m_generations[index];
-            ++gen;
+            if (gen < Entity::kMaxGeneration)
+                ++gen;
 
             m_freeList.PushBack(index);
         }

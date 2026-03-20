@@ -2,6 +2,7 @@
 
 #include <hive/profiling/profiler.h>
 
+#include <nectar/core/file_util.h>
 #include <nectar/pak/compression.h>
 #include <nectar/pak/crc32.h>
 
@@ -89,7 +90,7 @@ namespace nectar
                 wax::ByteSpan chunk{src, chunkSize};
 
                 // Pad file position to 4KB alignment
-                long pos = std::ftell(file);
+                int64_t pos = FileTell64(file);
                 size_t aligned = (static_cast<size_t>(pos) + kBlockAlignment - 1) & ~(kBlockAlignment - 1);
                 if (static_cast<size_t>(pos) < aligned)
                 {
@@ -104,7 +105,7 @@ namespace nectar
                     }
                 }
 
-                uint64_t blockOffset = static_cast<uint64_t>(std::ftell(file));
+                uint64_t blockOffset = static_cast<uint64_t>(FileTell64(file));
 
                 // Try to compress
                 auto compressed = Compress(chunk, entry.m_compression, *m_alloc);
@@ -149,7 +150,7 @@ namespace nectar
         }
 
         // Write TOC
-        uint64_t tocOffset = static_cast<uint64_t>(std::ftell(file));
+        uint64_t tocOffset = static_cast<uint64_t>(FileTell64(file));
 
         // TOC layout: [asset_count u32] [asset entries...] [block_count u32] [block entries...]
         uint32_t assetCount = static_cast<uint32_t>(assetEntries.Size());
@@ -185,7 +186,7 @@ namespace nectar
         header.m_tocSize = static_cast<uint32_t>(tocSize);
         header.m_tocCrc32 = Crc32(tocBuf.Data(), tocSize);
 
-        std::fseek(file, 0, SEEK_SET);
+        FileSeek64(file, 0, SEEK_SET);
         std::fwrite(&header, sizeof(NpakHeader), 1, file);
 
         std::fclose(file);

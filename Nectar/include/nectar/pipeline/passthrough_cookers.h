@@ -52,4 +52,25 @@ namespace nectar
         }
     };
 
+    class PassthroughMaterialCooker final : public IAssetCooker
+    {
+    public:
+        wax::StringView TypeName() const override
+        {
+            return "Material";
+        }
+        uint32_t Version() const override
+        {
+            return 1;
+        }
+        CookResult Cook(wax::ByteSpan data, const CookContext& ctx) override
+        {
+            CookResult r;
+            r.m_success = true;
+            r.m_cookedData = wax::ByteBuffer{*ctx.m_alloc};
+            r.m_cookedData.Append(data.Data(), data.Size());
+            return r;
+        }
+    };
+
 } // namespace nectar

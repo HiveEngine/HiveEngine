@@ -63,6 +63,20 @@ namespace nectar
         /// Returns false if cycle detected.
         [[nodiscard]] bool TopologicalSortLevels(wax::Vector<wax::Vector<AssetId>>& levels) const;
 
+        /// Remove all outgoing edges from a node (keeps incoming edges intact).
+        void RemoveOutgoingEdges(AssetId id);
+
+        /// Iterate all edges in the graph. F signature: void(const DependencyEdge&).
+        template <typename F>
+        void ForEachEdge(F&& fn) const
+        {
+            for (auto it = m_forward.Begin(); it != m_forward.End(); ++it)
+            {
+                for (size_t i = 0; i < it.Value().Size(); ++i)
+                    fn(it.Value()[i]);
+            }
+        }
+
         // -- Stats --
 
         [[nodiscard]] size_t NodeCount() const;

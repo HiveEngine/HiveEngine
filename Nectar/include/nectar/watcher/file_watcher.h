@@ -7,7 +7,7 @@
 #include <wax/containers/string_view.h>
 #include <wax/containers/vector.h>
 
-#include <drone/job_submitter.h>
+#include <drone/service_thread.h>
 
 #include <atomic>
 #include <cstdint>
@@ -70,11 +70,10 @@ namespace nectar
         wax::HashMap<wax::String, FileSnapshot> m_knownFiles;
     };
 
-    /// Native OS file watcher using platform notification APIs.
-    class NativeFileWatcher final : public IFileWatcher
+    class NativeFileWatcher final : public IFileWatcher, public drone::IService
     {
     public:
-        NativeFileWatcher(comb::DefaultAllocator& alloc, drone::JobSubmitter jobs = {});
+        explicit NativeFileWatcher(comb::DefaultAllocator& alloc);
         ~NativeFileWatcher() override;
 
         NativeFileWatcher(const NativeFileWatcher&) = delete;
@@ -82,28 +81,24 @@ namespace nectar
 
         void Watch(wax::StringView directory) override;
         void Poll(wax::Vector<FileChange>& changes) override;
+        void Tick() override;
 
         bool SaveState(wax::StringView path) const;
         bool LoadState(wax::StringView path);
 
-        // TODO: for 100k+ assets, run this on a background thread to avoid blocking editor startup
         void DetectOfflineChanges(wax::Vector<FileChange>& changes);
 
         void Shutdown();
         void EnqueueChange(wax::StringView path, FileChangeKind kind);
 
     private:
-        void ThreadMain();
         void PlatformInit();
-        void PlatformWakeThread();
         void PlatformShutdown();
         void PlatformAddWatch(wax::StringView directory);
+        void PlatformTick();
         static bool IsDotDirectory(wax::StringView name);
 
-        static void WatcherJob(void* data);
-
         comb::DefaultAllocator* m_alloc;
-        drone::JobSubmitter m_jobs;
         std::atomic<bool> m_running{false};
         std::mutex m_queueMutex;
         wax::Vector<FileChange> m_pendingChanges;

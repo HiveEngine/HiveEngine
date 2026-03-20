@@ -44,6 +44,10 @@ namespace nectar
         /// Returns the number of assets reloaded.
         [[nodiscard]] size_t ProcessChanges(wax::StringView platform);
 
+        /// Discard all pending watcher events without processing them.
+        /// Also suppresses the next poll cycle to catch late-arriving events.
+        void DrainPending();
+
         /// Get the list of assets reloaded in the last ProcessChanges call.
         [[nodiscard]] const wax::Vector<AssetId>& LastReloaded() const noexcept;
 
@@ -58,6 +62,7 @@ namespace nectar
         wax::String m_baseDir;
         ImportSettingsProvider m_settingsFn{nullptr};
         void* m_settingsUserData{nullptr};
+        uint32_t m_drainCount{0};
 
         [[nodiscard]] wax::String ToVfsPath(wax::StringView absPath) const;
     };

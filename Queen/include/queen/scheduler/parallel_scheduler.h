@@ -213,8 +213,8 @@ namespace queen
             thread_local TaskData s_tasks[kMaxTasks];
             thread_local size_t s_taskIdx = 0;
 
-            hive::Assert(s_taskIdx < kMaxTasks, "ParallelScheduler: too many concurrent tasks");
-            auto& td = s_tasks[s_taskIdx++ % kMaxTasks];
+            auto& td = s_tasks[s_taskIdx % kMaxTasks];
+            ++s_taskIdx;
 
             td.m_scheduler = this;
             td.m_world = &world;

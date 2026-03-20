@@ -24,10 +24,6 @@ namespace hive
             : m_name{name}
             , m_parentCategory{parentCategory}
         {
-            if (m_parentCategory)
-                m_fullPath = std::string(m_parentCategory->GetFullPath()) + "/" + name;
-            else
-                m_fullPath = name;
         }
 
         [[nodiscard]] constexpr const char* GetName() const
@@ -38,9 +34,9 @@ namespace hive
         {
             return m_parentCategory;
         }
-        [[nodiscard]] const std::string& GetFullPath() const
+        [[nodiscard]] constexpr const char* GetFullPath() const
         {
-            return m_fullPath;
+            return m_name;
         }
 
         LogCategory(const LogCategory& other) = delete;
@@ -50,8 +46,7 @@ namespace hive
 
     private:
         const char* m_name;
-        std::string m_fullPath;
-        const LogCategory* m_parentCategory;
+        const LogCategory* m_parentCategory{nullptr};
     };
 
     extern const LogCategory LOG_HIVE_ROOT;

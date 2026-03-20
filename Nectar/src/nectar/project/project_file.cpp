@@ -1,5 +1,7 @@
 #include <nectar/project/project_file.h>
 
+#include <nectar/core/file_util.h>
+
 #include <cstdio>
 
 namespace nectar
@@ -48,9 +50,7 @@ namespace nectar
             return result;
         }
 
-        std::fseek(file, 0, SEEK_END);
-        long fileSize = std::ftell(file);
-        std::fseek(file, 0, SEEK_SET);
+        int64_t fileSize = FileSize(file);
 
         if (fileSize <= 0)
         {

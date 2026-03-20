@@ -10,6 +10,7 @@
 namespace nectar
 {
     class AssetDatabase;
+    class ImportPipeline;
 
     struct GltfImportDesc
     {
@@ -26,5 +27,9 @@ namespace nectar
         wax::String m_error;
     };
 
-    GltfImportResult ExecuteGltfImport(const GltfImportDesc& desc, AssetDatabase& db, comb::DefaultAllocator& alloc);
+    using GltfProgressFn = void (*)(const char* step, uint32_t current, uint32_t total, void* userData);
+
+    GltfImportResult ExecuteGltfImport(const GltfImportDesc& desc, AssetDatabase& db, comb::DefaultAllocator& alloc,
+                                       ImportPipeline* pipeline = nullptr, GltfProgressFn progress = nullptr,
+                                       void* progressUserData = nullptr);
 } // namespace nectar

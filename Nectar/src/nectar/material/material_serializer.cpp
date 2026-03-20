@@ -1,5 +1,6 @@
 #include <nectar/material/material_serializer.h>
 
+#include <nectar/core/file_util.h>
 #include <nectar/hive/hive_document.h>
 #include <nectar/hive/hive_parser.h>
 #include <nectar/hive/hive_writer.h>
@@ -171,9 +172,7 @@ namespace nectar
         if (!file)
             return false;
 
-        std::fseek(file, 0, SEEK_END);
-        long fileSize = std::ftell(file);
-        std::fseek(file, 0, SEEK_SET);
+        int64_t fileSize = FileSize(file);
 
         if (fileSize <= 0)
         {

@@ -81,6 +81,10 @@ namespace comb
         if (IsPowerOfTwo(value))
             return value;
 
+        constexpr size_t kMaxPow2 = size_t{1} << (sizeof(size_t) * 8 - 1);
+        if (value > kMaxPow2)
+            return kMaxPow2;
+
         value--;
         value |= value >> 1;
         value |= value >> 2;

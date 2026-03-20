@@ -1,6 +1,8 @@
 #include <nectar/io/io_scheduler.h>
 #include <nectar/server/asset_server.h>
 
+#include <nectar/core/file_util.h>
+
 #include <cstdio>
 
 namespace nectar
@@ -93,9 +95,27 @@ namespace nectar
             }
         }
 
+        size_t collected = 0;
         for (auto it = m_storages.Begin(); it != m_storages.End(); ++it)
         {
-            it.Value()->CollectGarbage(m_gcGraceFrames);
+            collected += it.Value()->CollectGarbage(m_gcGraceFrames);
+        }
+
+        if (collected > 0)
+        {
+            wax::Vector<PathKey> stale{*m_allocator};
+            for (auto it = m_pathCache.Begin(); it != m_pathCache.End(); ++it)
+            {
+                auto* storage = m_storages.Find(it.Key().m_type);
+                if (!storage)
+                    continue;
+                if (!(*storage)->IsHandleValid(it.Value().m_index, it.Value().m_generation))
+                {
+                    stale.PushBack(it.Key());
+                }
+            }
+            for (size_t i = 0; i < stale.Size(); ++i)
+                m_pathCache.Remove(stale[i]);
         }
     }
 
@@ -140,9 +160,7 @@ namespace nectar
             return buffer;
         }
 
-        std::fseek(file, 0, SEEK_END);
-        const long fileSize = std::ftell(file);
-        std::fseek(file, 0, SEEK_SET);
+        const int64_t fileSize = FileSize(file);
 
         if (fileSize <= 0)
         {

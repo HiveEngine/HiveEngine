@@ -134,6 +134,32 @@ namespace nectar
         }
     }
 
+    void DependencyGraph::RemoveOutgoingEdges(AssetId id)
+    {
+        auto* fwd = m_forward.Find(id);
+        if (!fwd)
+            return;
+
+        for (size_t i = 0; i < fwd->Size(); ++i)
+        {
+            auto* rev = m_reverse.Find((*fwd)[i].m_to);
+            if (rev)
+            {
+                for (size_t j = 0; j < rev->Size(); ++j)
+                {
+                    if ((*rev)[j].m_from == id)
+                    {
+                        if (j < rev->Size() - 1)
+                            (*rev)[j] = (*rev)[rev->Size() - 1];
+                        rev->PopBack();
+                        break;
+                    }
+                }
+            }
+        }
+        fwd->Clear();
+    }
+
     void DependencyGraph::GetDependencies(AssetId id, DepKind filter, wax::Vector<AssetId>& out) const
     {
         auto* edges = m_forward.Find(id);

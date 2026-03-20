@@ -30,7 +30,7 @@ namespace waggle
 
     struct TransformVersion
     {
-        uint32_t m_lastModified{0};
+        uint64_t m_lastModified{0};
     };
 
     struct LocalAABB

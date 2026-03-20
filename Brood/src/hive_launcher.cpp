@@ -4,6 +4,7 @@
 #include <comb/new.h>
 
 #include <nectar/import/gltf_import_job.h>
+#include <nectar/pipeline/hot_reload.h>
 
 #include <waggle/app_context.h>
 #include <waggle/engine_runner.h>
@@ -193,11 +194,15 @@ namespace
                     });
 
                 QObject::connect(
-                    s.m_mainWindow, &forge::ForgeMainWindow::gltfImportRequested, [&ctx, &s](const QString& path) {
+                    s.m_mainWindow, &forge::ForgeMainWindow::gltfImportRequested, [&s](const QString& path) {
                         hive::LogInfo(LOG_LAUNCHER, "gltfImportRequested received: {}", path.toStdString());
 
                         if (s.m_project == nullptr)
                             return;
+
+                        auto gltfName = std::filesystem::path{path.toStdString()}.stem().string();
+                        s.m_mainWindow->ShowProgress(
+                            QString{"Importing %1..."}.arg(QString::fromStdString(gltfName)));
 
                         auto& alloc = s.m_alloc.Get();
                         auto& db = s.m_project->Database();
@@ -207,7 +212,17 @@ namespace
                         desc.m_gltfPath = wax::StringView{gltfStdPath.c_str()};
                         desc.m_assetsDir = s.m_project->Paths().m_assets.View();
 
-                        auto result = nectar::ExecuteGltfImport(desc, db, alloc);
+                        auto progressCb = [](const char* step, uint32_t current, uint32_t total, void* ud) {
+                            auto* mw = static_cast<forge::ForgeMainWindow*>(ud);
+                            mw->ProgressSetStep(QString::fromUtf8(step));
+                            mw->ProgressSetProgress(static_cast<int>(current), static_cast<int>(total));
+                            QApplication::processEvents();
+                        };
+
+                        auto result = nectar::ExecuteGltfImport(desc, db, alloc, &s.m_project->Import(), progressCb,
+                                                                s.m_mainWindow);
+
+                        s.m_mainWindow->HideProgress();
 
                         if (result.m_success)
                         {
@@ -218,6 +233,9 @@ namespace
                         {
                             hive::LogError(LOG_LAUNCHER, "glTF import failed: {}", result.m_error.CStr());
                         }
+
+                        if (auto* hr = s.m_project->HotReload())
+                            hr->DrainPending();
 
                         s.m_mainWindow->RefreshAll();
                     });

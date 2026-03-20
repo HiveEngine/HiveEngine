@@ -94,6 +94,24 @@ namespace nectar
         }
     }
 
+    void CookCache::StoreRaw(uint64_t compositeKey, AssetId id, const CookCacheEntry& entry)
+    {
+        std::lock_guard lock{m_mutex};
+        m_entries.Insert(compositeKey, entry);
+
+        auto* keys = m_assetKeys.Find(id);
+        if (keys)
+        {
+            keys->PushBack(compositeKey);
+        }
+        else
+        {
+            wax::Vector<uint64_t> v{*m_alloc};
+            v.PushBack(compositeKey);
+            m_assetKeys.Insert(id, static_cast<wax::Vector<uint64_t>&&>(v));
+        }
+    }
+
     void CookCache::Invalidate(AssetId id)
     {
         std::lock_guard lock{m_mutex};

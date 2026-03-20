@@ -1,5 +1,7 @@
 #pragma once
 
+#include <hive/core/assert.h>
+#include <hive/core/log.h>
 #include <hive/profiling/profiler.h>
 
 #include <comb/allocator_concepts.h>
@@ -158,6 +160,14 @@ namespace queen
             }
 
             ComputeTopologicalOrder();
+
+            if (m_executionOrder.Size() != m_nodes.Size())
+            {
+                hive::LogError(hive::LOG_HIVE_ROOT,
+                               "System dependency cycle detected: {} of {} systems unreachable",
+                               m_nodes.Size() - m_executionOrder.Size(), m_nodes.Size());
+                hive::Assert(false, "System dependency cycle in Queen scheduler");
+            }
 
             m_dirty = false;
         }

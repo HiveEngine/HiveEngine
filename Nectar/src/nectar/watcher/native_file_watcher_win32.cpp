@@ -80,14 +80,6 @@ namespace nectar
         m_platform->hCompletionPort = CreateIoCompletionPort(INVALID_HANDLE_VALUE, nullptr, 0, 1);
     }
 
-    void NativeFileWatcher::PlatformWakeThread()
-    {
-        if (m_platform != nullptr && m_platform->hCompletionPort != INVALID_HANDLE_VALUE)
-        {
-            PostQueuedCompletionStatus(m_platform->hCompletionPort, 0, 0, nullptr);
-        }
-    }
-
     void NativeFileWatcher::PlatformShutdown()
     {
         for (size_t i = 0; i < m_platform->watches.Size(); ++i)
@@ -158,26 +150,19 @@ namespace nectar
         m_platform->watches.PushBack(watch);
     }
 
-    void NativeFileWatcher::ThreadMain()
+    void NativeFileWatcher::PlatformTick()
     {
-        while (m_running.load(std::memory_order_acquire))
+        for (;;)
         {
             DWORD bytesTransferred{};
             ULONG_PTR completionKey{};
             OVERLAPPED* pOverlapped{};
 
             BOOL result = GetQueuedCompletionStatus(m_platform->hCompletionPort, &bytesTransferred, &completionKey,
-                                                    &pOverlapped, 500);
-
-            if (!m_running.load(std::memory_order_acquire))
-            {
-                break;
-            }
+                                                    &pOverlapped, 0);
 
             if (!result || pOverlapped == nullptr)
-            {
-                continue;
-            }
+                break;
 
             auto* watch = reinterpret_cast<PlatformData::DirWatch*>(completionKey);
 

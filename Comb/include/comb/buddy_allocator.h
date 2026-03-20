@@ -588,33 +588,34 @@ namespace comb
             return;
 
         // 1. Find allocation info
-        auto* info = m_registry->FindAllocation(ptr);
-        if (!info)
+        auto infoOpt = m_registry->FindAllocation(ptr);
+        if (!infoOpt)
         {
             hive::LogError(comb::LOG_COMB_ROOT, "[MEM_DEBUG] [{}] Double-free or invalid pointer detected! Address: {}",
                            GetName(), ptr);
             hive::Assert(false, "Double-free or invalid pointer (not found in registry)");
             return;
         }
+        auto& info = *infoOpt;
 
         // 2. Check guard bytes
         if constexpr (debug::kMemDebugEnabled)
         {
-            if (!info->CheckGuards())
+            if (!info.CheckGuards())
             {
-                if (info->ReadGuardFront() != debug::guardMagic)
+                if (info.ReadGuardFront() != debug::guardMagic)
                 {
                     hive::LogError(comb::LOG_COMB_ROOT,
                                    "[MEM_DEBUG] [{}] Buffer UNDERRUN detected! Address: {}, Size: {}, Tag: {}",
-                                   GetName(), ptr, info->m_size, info->GetTagOrDefault());
+                                   GetName(), ptr, info.m_size, info.GetTagOrDefault());
                     hive::Assert(false, "Buffer underrun detected");
                 }
 
-                if (info->ReadGuardBack() != debug::guardMagic)
+                if (info.ReadGuardBack() != debug::guardMagic)
                 {
                     hive::LogError(comb::LOG_COMB_ROOT,
                                    "[MEM_DEBUG] [{}] Buffer OVERRUN detected! Address: {}, Size: {}, Tag: {}",
-                                   GetName(), ptr, info->m_size, info->GetTagOrDefault());
+                                   GetName(), ptr, info.m_size, info.GetTagOrDefault());
                     hive::Assert(false, "Buffer overrun detected");
                 }
             }
@@ -623,7 +624,7 @@ namespace comb
         // 3. Calculate release block size BEFORE unregistering (info will be destroyed)
         // Track memory using release mode calculation (excluding guard bytes)
         // This ensures GetUsedMemory() returns consistent values between debug and release
-        size_t releaseTotalSize = info->m_size + headerPrefix;
+        size_t releaseTotalSize = info.m_size + headerPrefix;
         size_t releaseBlockSize = NextPowerOfTwo(releaseTotalSize);
         if (releaseBlockSize < minBlockSize)
         {
@@ -632,12 +633,12 @@ namespace comb
 
         // 4. Fill with freed pattern (detect use-after-free)
 #if COMB_MEM_DEBUG_USE_AFTER_FREE
-        std::memset(ptr, debug::freedMemoryPattern, info->m_size);
+        std::memset(ptr, debug::freedMemoryPattern, info.m_size);
 #endif
 
         // 5. Record deallocation in history
 #if COMB_MEM_DEBUG_HISTORY
-        m_history->RecordDeallocation(ptr, info->m_size);
+        m_history->RecordDeallocation(ptr, info.m_size);
 #endif
 
         // 6. Unregister allocation (info pointer becomes invalid after this!)

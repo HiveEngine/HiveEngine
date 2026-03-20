@@ -19,6 +19,7 @@ target_sources(Forge
         src/forge/scene_file.cpp
         src/forge/forge_module.cpp
         src/forge/forge_main_window.cpp
+        src/forge/progress_overlay.cpp
         src/forge/project_hub.cpp
         src/forge/vulkan_viewport_widget.cpp
         include/forge/hierarchy_panel.h
@@ -29,6 +30,7 @@ target_sources(Forge
         include/forge/asset_browser.h
         include/forge/toolbar.h
         include/forge/forge_main_window.h
+        include/forge/progress_overlay.h
 )
 
 target_include_directories(Forge

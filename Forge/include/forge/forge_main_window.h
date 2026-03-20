@@ -28,6 +28,7 @@ namespace forge
     class EditorToolbar;
     class HierarchyPanel;
     class InspectorPanel;
+    class ProgressOverlay;
     class ProjectHub;
     class UndoStack;
     class VulkanViewportWidget;
@@ -49,6 +50,11 @@ namespace forge
         void SetAssetsRoot(const char* path);
         void AttachViewport(terra::WindowContext* window, swarm::RenderContext* ctx);
         void RenderFrame();
+
+        void ShowProgress(const QString& title);
+        void ProgressSetStep(const QString& step);
+        void ProgressSetProgress(int current, int total);
+        void HideProgress();
 
         EditorToolbar* Toolbar();
 
@@ -84,6 +90,7 @@ namespace forge
         ProjectHub* m_hub{};
         QWidget* m_loadingWidget{};
         QWidget* m_editorWidget{};
+        ProgressOverlay* m_progressOverlay{};
         QList<class QDockWidget*> m_docks;
     };
 } // namespace forge

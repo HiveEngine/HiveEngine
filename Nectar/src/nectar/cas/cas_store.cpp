@@ -2,6 +2,8 @@
 
 #include <hive/profiling/profiler.h>
 
+#include <nectar/core/file_util.h>
+
 #include <wax/containers/string.h>
 
 #include <cstdio>
@@ -20,17 +22,23 @@ namespace nectar
         HIVE_PROFILE_SCOPE_N("CasStore::Store");
         ContentHash hash = ContentHash::FromData(data);
 
-        // Already exists — dedup
-        if (Contains(hash))
-            return hash;
-
         wax::String path{*m_alloc};
         BuildBlobPath(hash, path);
+
+        {
+            std::error_code ec;
+            if (std::filesystem::exists(path.CStr(), ec))
+                return hash;
+        }
 
         auto parent = std::filesystem::path{path.CStr()}.parent_path();
         EnsureDirectoryExists(wax::StringView{parent.string().c_str()});
 
-        FILE* file = std::fopen(path.CStr(), "wb");
+        wax::String tmpPath{*m_alloc};
+        tmpPath.Append(path.Data(), path.Size());
+        tmpPath.Append(".tmp");
+
+        FILE* file = std::fopen(tmpPath.CStr(), "wb");
         if (!file)
             return ContentHash::Invalid();
 
@@ -38,6 +46,15 @@ namespace nectar
             std::fwrite(data.Data(), 1, data.Size(), file);
 
         std::fclose(file);
+
+        std::error_code ec;
+        std::filesystem::rename(tmpPath.CStr(), path.CStr(), ec);
+        if (ec)
+        {
+            // Another thread won the race — our content is identical, discard temp
+            std::filesystem::remove(tmpPath.CStr(), ec);
+        }
+
         return hash;
     }
 
@@ -53,9 +70,7 @@ namespace nectar
         if (!file)
             return buffer;
 
-        std::fseek(file, 0, SEEK_END);
-        long fileSize = std::ftell(file);
-        std::fseek(file, 0, SEEK_SET);
+        int64_t fileSize = FileSize(file);
 
         if (fileSize > 0)
         {
