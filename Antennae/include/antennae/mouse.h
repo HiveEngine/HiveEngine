@@ -8,29 +8,29 @@ namespace antennae
     {
         static constexpr int kButtonCount = static_cast<int>(terra::MouseButton::COUNT);
 
-        float x{}, y{};
-        float dx{}, dy{};
-        float scroll_x{}, scroll_y{};
+        float m_x{}, m_y{};
+        float m_dx{}, m_dy{};
+        float m_scrollX{}, m_scrollY{};
 
-        bool buttons[kButtonCount]{};
-        bool prev_buttons[kButtonCount]{};
-        bool first_update{true};
+        bool m_buttons[kButtonCount]{};
+        bool m_prevButtons[kButtonCount]{};
+        bool m_firstUpdate{true};
 
-        [[nodiscard]] bool IsDown(terra::MouseButton b) const
+        [[nodiscard]] bool IsDown(terra::MouseButton b) const noexcept
         {
-            return buttons[static_cast<int>(b)];
+            return m_buttons[static_cast<int>(b)];
         }
 
-        [[nodiscard]] bool JustPressed(terra::MouseButton b) const
+        [[nodiscard]] bool JustPressed(terra::MouseButton b) const noexcept
         {
             int i = static_cast<int>(b);
-            return buttons[i] && !prev_buttons[i];
+            return m_buttons[i] && !m_prevButtons[i];
         }
 
-        [[nodiscard]] bool JustReleased(terra::MouseButton b) const
+        [[nodiscard]] bool JustReleased(terra::MouseButton b) const noexcept
         {
             int i = static_cast<int>(b);
-            return !buttons[i] && prev_buttons[i];
+            return !m_buttons[i] && m_prevButtons[i];
         }
     };
 } // namespace antennae

@@ -8,49 +8,8 @@
 
 namespace wax
 {
-    /**
-     * Non-owning view over a string
-     *
-     * StringView provides a lightweight reference to an existing string without
-     * owning the data. It's essentially a const char* + size with bounds checking.
-     * Immutable, zero-allocation, and perfect for passing strings to functions.
-     *
-     * Performance characteristics:
-     * - Storage: 16 bytes (pointer + size) on 64-bit systems
-     * - Access: O(1) - direct pointer arithmetic
-     * - Construction: O(1) for pointer+size, O(n) for null-terminated strings
-     * - Copy: O(1) - trivially copyable
-     * - Comparison: O(n) worst case
-     * - Find: O(n*m) naive search
-     * - Bounds check: O(1) in debug, zero overhead in release
-     *
-     * Limitations:
-     * - Non-owning (caller must ensure data stays alive)
-     * - Immutable (read-only view)
-     * - No null termination guarantee (unless constructed from C string)
-     * - Dangling pointer risk (if source data is destroyed)
-     *
-     * Use cases:
-     * - Function parameters (avoid copying strings)
-     * - View into String, string literals, or C strings
-     * - Substrings of existing data
-     * - Parsing and tokenization
-     *
-     * Example:
-     * @code
-     *   void ProcessName(wax::StringView name) {
-     *       if (name.StartsWith("Player")) {
-     *           // ...
-     *       }
-     *   }
-     *
-     *   ProcessName("Player1");  // String literal
-     *   wax::String str{alloc, "Enemy"};
-     *   ProcessName(str);  // Implicit conversion from String
-     *
-     *   wax::StringView sub = name.Substr(0, 6);  // "Player"
-     * @endcode
-     */
+    // Non-owning, immutable view over a string (const char* + size).
+    // No null-termination guarantee unless constructed from a C string.
     class StringView
     {
     public:

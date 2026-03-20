@@ -140,9 +140,7 @@ namespace queen
             return m_entities.IsEmpty();
         }
 
-        // ─────────────────────────────────────────────────────────────
         // Iterator support
-        // ─────────────────────────────────────────────────────────────
 
         [[nodiscard]] const Entity* Begin() const noexcept
         {

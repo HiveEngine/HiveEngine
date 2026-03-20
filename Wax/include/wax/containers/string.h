@@ -412,7 +412,18 @@ namespace wax
 
             if (newSize > Capacity())
             {
+                // Detect self-referencing: str points inside our buffer
+                const char* bufStart = Data();
+                const char* bufEnd = bufStart + currentSize;
+                const bool isSelfRef = (str >= bufStart && str < bufEnd);
+                size_t selfOffset = static_cast<size_t>(str - bufStart);
+
                 Reserve(newSize * 2);
+
+                if (isSelfRef)
+                {
+                    str = Data() + selfOffset;
+                }
             }
 
             std::memcpy(Data() + currentSize, str, count);

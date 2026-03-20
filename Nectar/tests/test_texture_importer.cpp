@@ -104,7 +104,6 @@ namespace
         return wax::ByteSpan{b.data.Data(), b.data.Size()};
     }
 
-    // =========================================================================
 
     auto t1 = larvae::RegisterTest("NectarTexture", "DecodeBMP", []() {
         auto& alloc = GetTexAlloc();

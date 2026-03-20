@@ -34,12 +34,10 @@ namespace
         return wax::ByteSpan{reinterpret_cast<const uint8_t*>(json), std::strlen(json)};
     }
 
-    // =========================================================================
     // Minimal glTF test data — base64 generated via Python struct.pack
     //
     // Triangle: 3 float3 positions + 3 uint16 indices + 2-byte pad = 44 bytes
     //   pos = {0,0,0, 1,0,0, 0,1,0}, idx = {0,1,2}
-    // =========================================================================
 
     constexpr const char* kTriangleGltf =
         "{"
@@ -185,9 +183,7 @@ namespace
         "  \"scene\": 0"
         "}";
 
-    // =========================================================================
     // Tests
-    // =========================================================================
 
     auto t1 = larvae::RegisterTest("NectarGltf", "ParseTriangle", []() {
         auto& alloc = GetGltfAlloc();
@@ -202,7 +198,7 @@ namespace
 
         auto* header = reinterpret_cast<const nectar::NmshHeader*>(result.m_intermediateData.Data());
         larvae::AssertEqual(header->m_magic, nectar::kNmshMagic);
-        larvae::AssertEqual(header->m_version, uint32_t{2});
+        larvae::AssertEqual(header->m_version, uint32_t{3});
         larvae::AssertEqual(header->m_vertexCount, uint32_t{3});
         larvae::AssertEqual(header->m_indexCount, uint32_t{3});
         larvae::AssertEqual(header->m_submeshCount, uint32_t{1});
@@ -365,7 +361,7 @@ namespace
 
     auto t9 = larvae::RegisterTest("NectarGltf", "VersionAndTypeName", []() {
         nectar::GltfImporter importer;
-        larvae::AssertEqual(importer.Version(), uint32_t{2});
+        larvae::AssertEqual(importer.Version(), uint32_t{3});
         larvae::AssertTrue(importer.TypeName().Equals("Mesh"));
     });
 

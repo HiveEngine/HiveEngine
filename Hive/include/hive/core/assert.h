@@ -1,10 +1,8 @@
 #pragma once
 
-#include <hive/HiveConfig.h>
+#include <hive/hive_config.h>
 
-// ============================================================================
 // Compiler Intrinsics
-// ============================================================================
 
 #if HIVE_COMPILER_MSVC
 #define HIVE_INTERNAL_DEBUG_BREAK() __debugbreak()

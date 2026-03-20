@@ -21,4 +21,5 @@ target_link_libraries(Queen
         Hive
         Comb
         Wax
+        Drone
 )

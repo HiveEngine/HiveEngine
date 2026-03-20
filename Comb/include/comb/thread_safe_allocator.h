@@ -8,39 +8,7 @@
 
 namespace comb
 {
-    /**
-     * Thread-safe allocator wrapper
-     *
-     * Wraps any allocator to make it thread-safe by protecting
-     * Allocate/Deallocate calls with a mutex.
-     *
-     * Use cases:
-     * - Sharing an allocator across multiple threads
-     * - Thread pools that need concurrent allocations
-     * - Any situation where multiple threads access the same allocator
-     *
-     * Performance characteristics:
-     * - Allocation: Base allocator time + mutex lock/unlock (~50ns overhead)
-     * - Deallocation: Base allocator time + mutex lock/unlock (~50ns overhead)
-     * - Contention: High contention will degrade performance
-     *
-     * Limitations:
-     * - Adds mutex overhead to every allocation
-     * - Not suitable for high-frequency allocations from many threads
-     * - Consider per-thread allocators for better performance
-     *
-     * Example:
-     * @code
-     *   comb::BuddyAllocator buddy{10_MB};
-     *   comb::ThreadSafeAllocator<comb::BuddyAllocator> safe{buddy};
-     *
-     *   // Can now safely use from multiple threads
-     *   std::thread t1([&]() { void* p = safe.Allocate(64, 8); });
-     *   std::thread t2([&]() { void* p = safe.Allocate(128, 8); });
-     * @endcode
-     *
-     * @tparam Allocator The underlying allocator type (must satisfy comb::Allocator)
-     */
+    // Thread-safe allocator wrapper. Protects Allocate/Deallocate with a mutex.
     template <Allocator UnderlyingAllocator> class ThreadSafeAllocator
     {
     public:
@@ -108,7 +76,7 @@ namespace comb
          * Safe to call without a lock because the block header is
          * immutable between Allocate and Deallocate.
          */
-        [[nodiscard]] size_t GetBlockUsableSize(const void* ptr) const
+        [[nodiscard]] size_t GetBlockUsableSize(const void* ptr) const noexcept
         {
             return m_allocator->GetBlockUsableSize(ptr);
         }
@@ -141,7 +109,7 @@ namespace comb
         /**
          * Get used memory (delegates to underlying, may not be thread-safe depending on allocator)
          */
-        [[nodiscard]] size_t GetUsedMemory() const
+        [[nodiscard]] size_t GetUsedMemory() const noexcept
         {
             std::lock_guard<HIVE_PROFILE_LOCKABLE_BASE(std::mutex)> lock{m_mutex};
             return m_allocator->GetUsedMemory();
@@ -150,7 +118,7 @@ namespace comb
         /**
          * Get total memory capacity
          */
-        [[nodiscard]] size_t GetTotalMemory() const
+        [[nodiscard]] size_t GetTotalMemory() const noexcept
         {
             std::lock_guard<HIVE_PROFILE_LOCKABLE_BASE(std::mutex)> lock{m_mutex};
             return m_allocator->GetTotalMemory();

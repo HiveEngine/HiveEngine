@@ -21,9 +21,9 @@ namespace queen
      *
      * Memory layout:
      * ┌─────────────────────────────────────────────────────────────────┐
-     * │ ptr_: T* - pointer to component data                            │
-     * │ ticks_: ComponentTicks* - pointer to component's ticks          │
-     * │ current_tick_: Tick - world's current tick for marking          │
+     * │ m_ptr: T* - pointer to component data                            │
+     * │ m_ticks: ComponentTicks* - pointer to component's ticks          │
+     * │ m_currentTick: Tick - world's current tick for marking          │
      * └─────────────────────────────────────────────────────────────────┘
      *
      * Performance characteristics:
@@ -46,16 +46,16 @@ namespace queen
         using ComponentType = T;
 
         constexpr Mut() noexcept
-            : ptr_{nullptr}
-            , ticks_{nullptr}
-            , current_tick_{0}
+            : m_ptr{nullptr}
+            , m_ticks{nullptr}
+            , m_currentTick{0}
         {
         }
 
         constexpr Mut(T* ptr, ComponentTicks* ticks, Tick current_tick) noexcept
-            : ptr_{ptr}
-            , ticks_{ticks}
-            , current_tick_{current_tick}
+            : m_ptr{ptr}
+            , m_ticks{ticks}
+            , m_currentTick{current_tick}
         {
         }
 
@@ -66,12 +66,12 @@ namespace queen
         [[nodiscard]] T* operator->() noexcept
         {
             MarkChanged();
-            return ptr_;
+            return m_ptr;
         }
 
         [[nodiscard]] const T* operator->() const noexcept
         {
-            return ptr_;
+            return m_ptr;
         }
 
         /**
@@ -81,12 +81,12 @@ namespace queen
         [[nodiscard]] T& operator*() noexcept
         {
             MarkChanged();
-            return *ptr_;
+            return *m_ptr;
         }
 
         [[nodiscard]] const T& operator*() const noexcept
         {
-            return *ptr_;
+            return *m_ptr;
         }
 
         /**
@@ -95,7 +95,7 @@ namespace queen
         [[nodiscard]] T* Get() noexcept
         {
             MarkChanged();
-            return ptr_;
+            return m_ptr;
         }
 
         /**
@@ -103,7 +103,7 @@ namespace queen
          */
         [[nodiscard]] const T* Get() const noexcept
         {
-            return ptr_;
+            return m_ptr;
         }
 
         /**
@@ -112,7 +112,7 @@ namespace queen
          */
         [[nodiscard]] const T* GetReadOnly() const noexcept
         {
-            return ptr_;
+            return m_ptr;
         }
 
         /**
@@ -120,7 +120,7 @@ namespace queen
          */
         [[nodiscard]] constexpr explicit operator bool() const noexcept
         {
-            return ptr_ != nullptr;
+            return m_ptr != nullptr;
         }
 
         /**
@@ -129,9 +129,9 @@ namespace queen
          */
         void MarkChanged() noexcept
         {
-            if (ticks_ != nullptr)
+            if (m_ticks != nullptr)
             {
-                ticks_->MarkChanged(current_tick_);
+                m_ticks->MarkChanged(m_currentTick);
             }
         }
 
@@ -140,7 +140,7 @@ namespace queen
          */
         [[nodiscard]] bool WasAdded(Tick last_run) const noexcept
         {
-            return ticks_ != nullptr && ticks_->WasAdded(last_run);
+            return m_ticks != nullptr && m_ticks->WasAdded(last_run);
         }
 
         /**
@@ -148,7 +148,7 @@ namespace queen
          */
         [[nodiscard]] bool WasChanged(Tick last_run) const noexcept
         {
-            return ticks_ != nullptr && ticks_->WasChanged(last_run);
+            return m_ticks != nullptr && m_ticks->WasChanged(last_run);
         }
 
         /**
@@ -156,13 +156,13 @@ namespace queen
          */
         [[nodiscard]] const ComponentTicks* Ticks() const noexcept
         {
-            return ticks_;
+            return m_ticks;
         }
 
     private:
-        T* ptr_;
-        ComponentTicks* ticks_;
-        Tick current_tick_;
+        T* m_ptr;
+        ComponentTicks* m_ticks;
+        Tick m_currentTick;
     };
 
     // Type traits to detect Mut<T>

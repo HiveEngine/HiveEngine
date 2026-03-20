@@ -17,9 +17,7 @@ namespace
         return mb * 1024 * 1024;
     }
 
-    // =============================================================================
     // Basic Functionality
-    // =============================================================================
 
     auto test1 = larvae::RegisterTest("LinearAllocator", "ConstructorInitializesCorrectly", []() {
         comb::LinearAllocator allocator{1024};
@@ -68,9 +66,7 @@ namespace
         larvae::AssertEqual(allocator.GetUsedMemory(), 192u);
     });
 
-    // =============================================================================
     // Alignment
-    // =============================================================================
 
     auto test5 = larvae::RegisterTest("LinearAllocator", "AllocateRespectsAlignment", []() {
         comb::LinearAllocator allocator{1024};
@@ -99,9 +95,7 @@ namespace
         larvae::AssertGreaterThan(allocator.GetUsedMemory(), 65u);
     });
 
-    // =============================================================================
     // Out of Memory
-    // =============================================================================
 
     auto test7 = larvae::RegisterTest("LinearAllocator", "AllocateReturnsNullWhenOutOfMemory", []() {
         // Create small allocator that can only fit one allocation (with margin for alignment)
@@ -127,9 +121,7 @@ namespace
         larvae::AssertEqual(allocator.GetUsedMemory(), 0u);
     });
 
-    // =============================================================================
     // Reset
-    // =============================================================================
 
     auto test9 = larvae::RegisterTest("LinearAllocator", "ResetFreesAllMemory", []() {
         comb::LinearAllocator allocator{1024};
@@ -164,9 +156,7 @@ namespace
         larvae::AssertEqual(ptr2, ptr4);
     });
 
-    // =============================================================================
     // Markers
-    // =============================================================================
 
     auto test11 = larvae::RegisterTest("LinearAllocator", "GetMarkerReturnsCurrentPosition", []() {
         comb::LinearAllocator allocator{1024};
@@ -217,9 +207,7 @@ namespace
         larvae::AssertEqual(allocator.GetUsedMemory(), 104u);
     });
 
-    // =============================================================================
     // Memory Access
-    // =============================================================================
 
     auto test14 = larvae::RegisterTest("LinearAllocator", "AllocatedMemoryIsReadable", []() {
         comb::LinearAllocator allocator{1024};
@@ -272,9 +260,7 @@ namespace
         larvae::AssertEqual(bytes2[99], static_cast<unsigned char>(0xBB));
     });
 
-    // =============================================================================
     // New/Delete Templates
-    // =============================================================================
 
     auto test17 = larvae::RegisterTest("LinearAllocator", "NewConstructsObject", []() {
         comb::LinearAllocator allocator{1024};
@@ -340,9 +326,7 @@ namespace
         }
     });
 
-    // =============================================================================
     // Edge Cases
-    // =============================================================================
 
     auto test20 = larvae::RegisterTest("LinearAllocator", "DeallocateIsNoOp", []() {
         comb::LinearAllocator allocator{1024};
@@ -365,9 +349,7 @@ namespace
         larvae::AssertTrue(true);
     });
 
-    // =============================================================================
     // Move Semantics
-    // =============================================================================
 
     auto test22 = larvae::RegisterTest("LinearAllocator", "MoveConstructorTransfersOwnership", []() {
         comb::LinearAllocator allocator1{1024};
@@ -391,9 +373,7 @@ namespace
         larvae::AssertEqual(allocator2.GetTotalMemory(), 1024u);
     });
 
-    // =============================================================================
     // Performance
-    // =============================================================================
 
     auto test24 = larvae::RegisterTest("LinearAllocator", "ManySmallAllocations", []() {
         comb::LinearAllocator allocator{10_MB};
@@ -423,9 +403,7 @@ namespace
         larvae::AssertEqual(byte_ptr[5_MB - 1], static_cast<unsigned char>(0xFF));
     });
 
-    // =============================================================================
     // Fixture-based Tests
-    // =============================================================================
 
     class LinearAllocatorFixture : public larvae::TestFixture
     {

@@ -174,9 +174,7 @@ namespace
         }
     };
 
-    // ============================================================
     // ComponentReflector tests
-    // ============================================================
 
     auto test1 = larvae::RegisterTest("QueenReflection", "ComponentReflectorBasic", []() {
         queen::ComponentReflector<> reflector;
@@ -222,9 +220,7 @@ namespace
         larvae::AssertNull(field);
     });
 
-    // ============================================================
     // Reflectable concept tests
-    // ============================================================
 
     auto test6 = larvae::RegisterTest("QueenReflection", "ReflectableConceptPositive", []() {
         larvae::AssertTrue(queen::Reflectable<Position>);
@@ -246,9 +242,7 @@ namespace
         larvae::AssertEqual(reflection.m_typeId, queen::TypeIdOf<Position>());
     });
 
-    // ============================================================
     // Serialization tests
-    // ============================================================
 
     auto test9 = larvae::RegisterTest("QueenReflection", "SerializeDeserializePosition", []() {
         Position original{1.0f, 2.0f, 3.0f};
@@ -326,9 +320,7 @@ namespace
         larvae::AssertEqual(loaded.data, int32_t{12345});
     });
 
-    // ============================================================
     // ComponentRegistry tests
-    // ============================================================
 
     auto test13 = larvae::RegisterTest("QueenReflection", "RegistryRegisterFind", []() {
         queen::ComponentRegistry<32> registry;
@@ -413,9 +405,7 @@ namespace
         larvae::AssertEqual(loaded.z, 15.0f);
     });
 
-    // ============================================================
     // Nested struct serialization tests
-    // ============================================================
 
     auto test19 = larvae::RegisterTest("QueenReflection", "NestedReflectableFieldInfo", []() {
         queen::ComponentReflector<> reflector;
@@ -546,9 +536,7 @@ namespace
         larvae::AssertEqual(loaded.aggro_range, 25.0f);
     });
 
-    // ============================================================
     // Registry FindByName tests
-    // ============================================================
 
     auto test25 = larvae::RegisterTest("QueenReflection", "RegistryFindByNameFound", []() {
         queen::ComponentRegistry<32> registry;

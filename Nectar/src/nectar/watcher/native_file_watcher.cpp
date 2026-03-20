@@ -1,4 +1,4 @@
-#include <hive/HiveConfig.h>
+#include <hive/hive_config.h>
 
 #include <nectar/watcher/file_watcher.h>
 
@@ -6,7 +6,6 @@
 #include <cstring>
 #include <filesystem>
 #include <fstream>
-#include <string>
 
 namespace nectar
 {
@@ -16,15 +15,24 @@ namespace nectar
         constexpr uint32_t kStateVersion = 1;
     } // namespace
 
-    NativeFileWatcher::NativeFileWatcher(comb::DefaultAllocator& alloc)
+    NativeFileWatcher::NativeFileWatcher(comb::DefaultAllocator& alloc, drone::JobSubmitter jobs)
         : m_alloc{&alloc}
+        , m_jobs{jobs}
         , m_pendingChanges{alloc}
         , m_watchedDirs{alloc}
         , m_knownFiles{alloc, 256}
     {
         PlatformInit();
         m_running.store(true, std::memory_order_release);
-        m_thread = std::thread{&NativeFileWatcher::ThreadMain, this};
+
+        if (m_jobs.IsValid())
+        {
+            drone::JobDecl job;
+            job.m_func = &NativeFileWatcher::WatcherJob;
+            job.m_userData = this;
+            job.m_priority = drone::Priority::LOW;
+            m_jobs.SubmitDetached(job);
+        }
     }
 
     NativeFileWatcher::~NativeFileWatcher()
@@ -40,13 +48,13 @@ namespace nectar
         }
 
         PlatformWakeThread();
-
-        if (m_thread.joinable())
-        {
-            m_thread.join();
-        }
-
         PlatformShutdown();
+    }
+
+    void NativeFileWatcher::WatcherJob(void* data)
+    {
+        auto* self = static_cast<NativeFileWatcher*>(data);
+        self->ThreadMain();
     }
 
     void NativeFileWatcher::Watch(wax::StringView directory)
@@ -98,8 +106,8 @@ namespace nectar
 
     bool NativeFileWatcher::SaveState(wax::StringView path) const
     {
-        std::string filePath{path.Data(), path.Size()};
-        std::ofstream file{filePath, std::ios::binary};
+        wax::String filePath{*m_alloc, path};
+        std::ofstream file{filePath.CStr(), std::ios::binary};
         if (!file)
         {
             return false;
@@ -139,8 +147,8 @@ namespace nectar
 
     bool NativeFileWatcher::LoadState(wax::StringView path)
     {
-        std::string filePath{path.Data(), path.Size()};
-        std::ifstream file{filePath, std::ios::binary};
+        wax::String filePath{*m_alloc, path};
+        std::ifstream file{filePath.CStr(), std::ios::binary};
         if (!file)
         {
             return false;
@@ -182,6 +190,10 @@ namespace nectar
             {
                 return false;
             }
+            if (pathLen > 4096)
+            {
+                return false;
+            }
 
             wax::String entryPath{*m_alloc};
             entryPath.Resize(pathLen);
@@ -210,8 +222,7 @@ namespace nectar
         for (size_t i = 0; i < m_watchedDirs.Size(); ++i)
         {
             std::error_code ec;
-            auto it = std::filesystem::recursive_directory_iterator(
-                std::filesystem::path{std::string{m_watchedDirs[i].Data(), m_watchedDirs[i].Size()}}, ec);
+            auto it = std::filesystem::recursive_directory_iterator(std::filesystem::path{m_watchedDirs[i].CStr()}, ec);
             if (ec)
                 continue;
 
@@ -228,13 +239,12 @@ namespace nectar
                 if (!dirIt->is_regular_file())
                     continue;
 
-                std::string pathStr = dirIt->path().string();
-                for (char& c : pathStr)
-                    if (c == '\\')
-                        c = '/';
-
-                wax::String key{*m_alloc};
-                key.Append(pathStr.c_str(), pathStr.size());
+                auto fsPath = dirIt->path().string();
+                wax::String pathStr{*m_alloc};
+                pathStr.Append(fsPath.c_str(), fsPath.size());
+                for (size_t ci = 0; ci < pathStr.Size(); ++ci)
+                    if (pathStr[ci] == '\\')
+                        pathStr[ci] = '/';
 
                 auto fileTime = std::filesystem::last_write_time(dirIt->path(), ec);
                 int64_t mtime =
@@ -242,29 +252,25 @@ namespace nectar
                 auto fileSize = std::filesystem::file_size(dirIt->path(), ec);
                 int64_t size = ec ? 0 : static_cast<int64_t>(fileSize);
 
-                wax::String seenKey{*m_alloc};
-                seenKey.Append(pathStr.c_str(), pathStr.size());
+                wax::String seenKey{*m_alloc, pathStr.View()};
                 seen.Insert(static_cast<wax::String&&>(seenKey), true);
 
-                auto* prev = m_knownFiles.Find(key);
+                auto* prev = m_knownFiles.Find(pathStr);
                 if (prev == nullptr)
                 {
                     FileChange change{};
                     change.m_kind = FileChangeKind::CREATED;
-                    change.m_path = wax::String{*m_alloc};
-                    change.m_path.Append(pathStr.c_str(), pathStr.size());
+                    change.m_path = wax::String{*m_alloc, pathStr.View()};
                     changes.PushBack(static_cast<FileChange&&>(change));
 
-                    wax::String insertKey{*m_alloc};
-                    insertKey.Append(pathStr.c_str(), pathStr.size());
+                    wax::String insertKey{*m_alloc, pathStr.View()};
                     m_knownFiles.Insert(static_cast<wax::String&&>(insertKey), FileSnapshot{mtime, size});
                 }
                 else if (prev->m_mtime != mtime || prev->m_size != size)
                 {
                     FileChange change{};
                     change.m_kind = FileChangeKind::MODIFIED;
-                    change.m_path = wax::String{*m_alloc};
-                    change.m_path.Append(pathStr.c_str(), pathStr.size());
+                    change.m_path = wax::String{*m_alloc, pathStr.View()};
                     changes.PushBack(static_cast<FileChange&&>(change));
 
                     prev->m_mtime = mtime;

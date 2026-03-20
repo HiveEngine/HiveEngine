@@ -36,9 +36,7 @@ namespace
     static_assert(queen::Event<SpawnEvent>);
     static_assert(queen::Event<JumpEvent>);
 
-    // ─────────────────────────────────────────────────────────────
     // Event Concept Tests
-    // ─────────────────────────────────────────────────────────────
 
     auto test_event_1 = larvae::RegisterTest("QueenEvent", "EventConceptValid", []() {
         static_assert(queen::Event<DamageEvent>);
@@ -70,9 +68,7 @@ namespace
         larvae::AssertTrue(damage_meta.m_id.IsValid());
     });
 
-    // ─────────────────────────────────────────────────────────────
     // EventQueue Tests
-    // ─────────────────────────────────────────────────────────────
 
     auto test_queue_1 = larvae::RegisterTest("QueenEvent", "EventQueueConstruction", []() {
         comb::BuddyAllocator alloc{1024 * 1024};
@@ -180,9 +176,7 @@ namespace
         larvae::AssertEqual(queue.TotalCount(), size_t{0});
     });
 
-    // ─────────────────────────────────────────────────────────────
     // EventWriter Tests
-    // ─────────────────────────────────────────────────────────────
 
     auto test_writer_1 = larvae::RegisterTest("QueenEvent", "EventWriterSend", []() {
         comb::BuddyAllocator alloc{1024 * 1024};
@@ -207,9 +201,7 @@ namespace
         larvae::AssertEqual(writer.Count(), size_t{1});
     });
 
-    // ─────────────────────────────────────────────────────────────
     // EventReader Tests
-    // ─────────────────────────────────────────────────────────────
 
     auto test_reader_1 = larvae::RegisterTest("QueenEvent", "EventReaderIterate", []() {
         comb::BuddyAllocator alloc{1024 * 1024};
@@ -280,9 +272,7 @@ namespace
         larvae::AssertEqual(reader.Count(), size_t{1});
     });
 
-    // ─────────────────────────────────────────────────────────────
     // Events Registry Tests
-    // ─────────────────────────────────────────────────────────────
 
     auto test_events_1 = larvae::RegisterTest("QueenEvent", "EventsConstruction", []() {
         comb::BuddyAllocator alloc{1024 * 1024};

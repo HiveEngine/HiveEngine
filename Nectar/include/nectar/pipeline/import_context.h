@@ -30,10 +30,15 @@ namespace nectar
 
         [[nodiscard]] const wax::Vector<DependencyEdge>& GetDeclaredDeps() const noexcept;
         [[nodiscard]] AssetId GetCurrentAsset() const noexcept;
+        [[nodiscard]] comb::DefaultAllocator& GetAllocator() noexcept
+        {
+            return *m_alloc;
+        }
 
     private:
         void DeclareDep(AssetId dep, DepKind kind);
 
+        comb::DefaultAllocator* m_alloc;
         AssetDatabase* m_db;
         AssetId m_currentAsset;
         wax::Vector<DependencyEdge> m_declaredDeps;

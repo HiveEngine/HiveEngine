@@ -11,41 +11,8 @@
 
 namespace wax
 {
-    /**
-     * Binary deserialization reader with little-endian decoding
-     *
-     * BinaryReader provides methods for reading primitive types and raw bytes
-     * from a ByteSpan. All multi-byte values are read in little-endian format.
-     * The reader maintains a position cursor that advances with each read.
-     *
-     * Performance characteristics:
-     * - Storage: 24 bytes (ByteSpan + position)
-     * - Read: O(1) - memcpy
-     * - Seek/Skip: O(1)
-     * - VarInt: O(1) - max 10 iterations
-     *
-     * Limitations:
-     * - Non-owning (source buffer must stay alive)
-     * - Little-endian only
-     * - Not thread-safe
-     * - No automatic bounds checking in release (use TryRead for safety)
-     *
-     * Use cases:
-     * - Asset deserialization
-     * - Network packet parsing
-     * - Binary file format reading
-     * - Configuration loading
-     *
-     * Example:
-     * @code
-     *   uint8_t data[] = {0x78, 0x56, 0x34, 0x12, 0x01, 0x00};
-     *   wax::BinaryReader reader{data, sizeof(data)};
-     *
-     *   uint32_t magic = reader.Read<uint32_t>();  // 0x12345678
-     *   uint16_t version = reader.Read<uint16_t>(); // 1
-     *   bool eof = reader.IsEof();  // true
-     * @endcode
-     */
+    // Binary deserialization reader with little-endian decoding.
+    // Maintains a position cursor over a non-owning ByteSpan.
     class BinaryReader
     {
     public:

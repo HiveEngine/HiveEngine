@@ -10,60 +10,11 @@
 
 namespace wax
 {
-    /**
-     * Shared ownership smart pointer with non-atomic reference counting
-     *
-     * Rc<T, Allocator> is a shared-ownership smart pointer that uses NON-ATOMIC
-     * reference counting for maximum performance in single-threaded contexts.
-     * Multiple Rc instances can share ownership of the same object.
-     *
-     * Performance characteristics:
-     * - Storage: 16 bytes (control block* + allocator* on 64-bit)
-     * - Access: O(1) - single pointer dereference
-     * - Copy: O(1) - increment ref count (10-50x faster than std::shared_ptr)
-     * - Destruction: O(1) - decrement ref count, deallocate if zero
-     * - Ref count ops: Non-atomic (no locks, no memory barriers)
-     *
-     * Memory layout:
-     * ┌──────────────────────────┐
-     * │ Control Block:           │
-     * │   size_t ref_count       │
-     * │   T object (inline)      │
-     * └──────────────────────────┘
-     *
-     * Rc stores pointer to control block + allocator reference = 16 bytes
-     *
-     * Limitations:
-     * - NOT thread-safe (use Arc<T> for atomic ref counting)
-     * - Allocator must outlive all Rc instances
-     * - No weak pointers (yet)
-     * - No custom deleters
-     *
-     * Use cases:
-     * - Shared ownership in single-threaded game loops
-     * - Resource sharing (textures, meshes, materials)
-     * - Graph structures (nodes with multiple parents)
-     * - Event systems (multiple subscribers)
-     *
-     * Example:
-     * @code
-     *   comb::LinearAllocator alloc{1024};
-     *
-     *   // Create shared object
-     *   auto texture = wax::MakeRc<Texture>(alloc, "player.png");
-     *   auto copy1 = texture;  // RefCount = 2 (no atomic!)
-     *   auto copy2 = texture;  // RefCount = 3
-     *
-     *   // All copies share the same Texture
-     *   texture->Load();
-     *
-     *   // Object destroyed when last Rc goes out of scope
-     * @endcode
-     */
+    // Shared-ownership smart pointer with non-atomic reference counting.
+    // NOT thread-safe — use Arc<T> for cross-thread sharing.
     template <typename T, comb::Allocator Allocator = comb::DefaultAllocator> class Rc
     {
     private:
-        // Control block with ref count and object
         struct ControlBlock
         {
             size_t ref_count;
@@ -77,7 +28,6 @@ namespace wax
             }
         };
 
-        // Friend declarations for MakeRc
         template <typename U, comb::Allocator A, typename... Args> friend Rc<U, A> MakeRc(A& allocator, Args&&... args);
 
         template <typename U, typename... Args> friend Rc<U, comb::DefaultAllocator> MakeRc(Args&&... args);
@@ -87,26 +37,24 @@ namespace wax
         using AllocatorType = Allocator;
 
         constexpr Rc() noexcept
-            : control_{nullptr}
-            , allocator_{nullptr}
+            : m_control{nullptr}
+            , m_allocator{nullptr}
         {
         }
 
-        // Constructor with control block (takes ownership)
         constexpr Rc(Allocator& allocator, ControlBlock* control) noexcept
-            : control_{control}
-            , allocator_{&allocator}
+            : m_control{control}
+            , m_allocator{&allocator}
         {
         }
 
-        // Copy constructor (increments ref count)
         Rc(const Rc& other) noexcept
-            : control_{other.control_}
-            , allocator_{other.allocator_}
+            : m_control{other.m_control}
+            , m_allocator{other.m_allocator}
         {
-            if (control_)
+            if (m_control)
             {
-                ++control_->ref_count;
+                ++m_control->ref_count;
             }
         }
 
@@ -116,23 +64,23 @@ namespace wax
             {
                 Release();
 
-                control_ = other.control_;
-                allocator_ = other.allocator_;
+                m_control = other.m_control;
+                m_allocator = other.m_allocator;
 
-                if (control_)
+                if (m_control)
                 {
-                    ++control_->ref_count;
+                    ++m_control->ref_count;
                 }
             }
             return *this;
         }
 
         constexpr Rc(Rc&& other) noexcept
-            : control_{other.control_}
-            , allocator_{other.allocator_}
+            : m_control{other.m_control}
+            , m_allocator{other.m_allocator}
         {
-            other.control_ = nullptr;
-            other.allocator_ = nullptr;
+            other.m_control = nullptr;
+            other.m_allocator = nullptr;
         }
 
         constexpr Rc& operator=(Rc&& other) noexcept
@@ -141,109 +89,101 @@ namespace wax
             {
                 Release();
 
-                control_ = other.control_;
-                allocator_ = other.allocator_;
+                m_control = other.m_control;
+                m_allocator = other.m_allocator;
 
-                other.control_ = nullptr;
-                other.allocator_ = nullptr;
+                other.m_control = nullptr;
+                other.m_allocator = nullptr;
             }
             return *this;
         }
 
-        // Destructor (decrements ref count, destroys if zero)
         ~Rc() noexcept
         {
             Release();
         }
 
-        // Dereference operators (checked in debug)
         [[nodiscard]] T& operator*() const noexcept
         {
-            hive::Assert(control_ != nullptr, "Dereferencing null Rc");
-            return control_->object;
+            hive::Assert(m_control != nullptr, "Dereferencing null Rc");
+            return m_control->object;
         }
 
         [[nodiscard]] T* operator->() const noexcept
         {
-            hive::Assert(control_ != nullptr, "Dereferencing null Rc");
-            return &control_->object;
+            hive::Assert(m_control != nullptr, "Dereferencing null Rc");
+            return &m_control->object;
         }
 
         [[nodiscard]] T* Get() const noexcept
         {
-            return control_ ? &control_->object : nullptr;
+            return m_control ? &m_control->object : nullptr;
         }
 
         [[nodiscard]] Allocator* GetAllocator() const noexcept
         {
-            return allocator_;
+            return m_allocator;
         }
 
         [[nodiscard]] size_t GetRefCount() const noexcept
         {
-            return control_ ? control_->ref_count : 0;
+            return m_control ? m_control->ref_count : 0;
         }
 
         [[nodiscard]] bool IsUnique() const noexcept
         {
-            return control_ && control_->ref_count == 1;
+            return m_control && m_control->ref_count == 1;
         }
 
-        // Bool conversion (null check)
         [[nodiscard]] explicit operator bool() const noexcept
         {
-            return control_ != nullptr;
+            return m_control != nullptr;
         }
 
         [[nodiscard]] bool IsNull() const noexcept
         {
-            return control_ == nullptr;
+            return m_control == nullptr;
         }
 
         [[nodiscard]] bool IsValid() const noexcept
         {
-            return control_ != nullptr;
+            return m_control != nullptr;
         }
 
-        // Reset (releases ownership)
         void Reset() noexcept
         {
             Release();
-            control_ = nullptr;
-            allocator_ = nullptr;
+            m_control = nullptr;
+            m_allocator = nullptr;
         }
 
-        // Comparison operators
         [[nodiscard]] bool operator==(const Rc& other) const noexcept
         {
-            return control_ == other.control_;
+            return m_control == other.m_control;
         }
 
         [[nodiscard]] bool operator==(std::nullptr_t) const noexcept
         {
-            return control_ == nullptr;
+            return m_control == nullptr;
         }
 
     private:
         void Release() noexcept
         {
-            if (control_ && allocator_)
+            if (m_control && m_allocator)
             {
-                --control_->ref_count;
+                --m_control->ref_count;
 
-                if (control_->ref_count == 0)
+                if (m_control->ref_count == 0)
                 {
-                    // Destroy object
-                    control_->object.~T();
-
-                    // Deallocate control block
-                    allocator_->Deallocate(control_);
+                    m_control->object.~T();
+                    m_allocator->Deallocate(m_control);
                 }
             }
         }
 
-        ControlBlock* control_;
-        Allocator* allocator_;
+        ControlBlock* m_control;
+        Allocator* m_allocator;
     };
 
     template <typename T, comb::Allocator Allocator, typename... Args>
@@ -259,7 +199,6 @@ namespace wax
         return Rc<T, Allocator>{allocator, control};
     }
 
-    // Default allocator overload
     template <typename T, typename... Args> [[nodiscard]] Rc<T, comb::DefaultAllocator> MakeRc(Args&&... args)
     {
         auto& allocator = comb::GetDefaultAllocator();

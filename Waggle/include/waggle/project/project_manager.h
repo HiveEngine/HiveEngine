@@ -3,6 +3,9 @@
 #include <comb/default_allocator.h>
 
 #include <wax/containers/string_view.h>
+#include <wax/pointers/box.h>
+
+#include <drone/job_submitter.h>
 
 #include <nectar/project/project_file.h>
 #include <nectar/watcher/file_watcher.h>
@@ -38,7 +41,7 @@ namespace waggle
     class ProjectManager
     {
     public:
-        explicit ProjectManager(comb::DefaultAllocator& alloc);
+        explicit ProjectManager(comb::DefaultAllocator& alloc, drone::JobSubmitter jobs = {});
         ~ProjectManager();
 
         ProjectManager(const ProjectManager&) = delete;
@@ -71,26 +74,27 @@ namespace waggle
 
     private:
         comb::DefaultAllocator* m_alloc;
+        drone::JobSubmitter m_jobs;
         bool m_open{false};
 
         nectar::ProjectFile m_project;
         nectar::ProjectPaths m_paths;
 
-        nectar::VirtualFilesystem* m_vfs{};
-        nectar::DiskMountSource* m_assetsMount{};
-        nectar::DiskMountSource* m_casMount{};
-        nectar::CasStore* m_cas{};
-        nectar::IOScheduler* m_io{};
-        nectar::AssetServer* m_server{};
-        nectar::ImporterRegistry* m_importerRegistry{};
-        nectar::AssetDatabase* m_importDb{};
-        nectar::ImportPipeline* m_importPipeline{};
-        nectar::CookerRegistry* m_cookerRegistry{};
-        nectar::CookCache* m_cookCache{};
-        nectar::CookPipeline* m_cookPipeline{};
+        wax::Box<nectar::VirtualFilesystem> m_vfs;
+        wax::Box<nectar::DiskMountSource> m_assetsMount;
+        wax::Box<nectar::DiskMountSource> m_casMount;
+        wax::Box<nectar::CasStore> m_cas;
+        wax::Box<nectar::IOScheduler> m_io;
+        wax::Box<nectar::AssetServer> m_server;
+        wax::Box<nectar::ImporterRegistry> m_importerRegistry;
+        wax::Box<nectar::AssetDatabase> m_importDb;
+        wax::Box<nectar::ImportPipeline> m_importPipeline;
+        wax::Box<nectar::CookerRegistry> m_cookerRegistry;
+        wax::Box<nectar::CookCache> m_cookCache;
+        wax::Box<nectar::CookPipeline> m_cookPipeline;
         nectar::IFileWatcher* m_watcher{};
-        nectar::NativeFileWatcher* m_nativeWatcher{};
-        nectar::HotReloadManager* m_hotReload{};
+        wax::Box<nectar::NativeFileWatcher> m_nativeWatcher;
+        wax::Box<nectar::HotReloadManager> m_hotReload;
         wax::Vector<nectar::FileChange> m_offlineChanges;
         wax::String m_watcherStatePath;
         uint32_t m_lastReloadCount{0};

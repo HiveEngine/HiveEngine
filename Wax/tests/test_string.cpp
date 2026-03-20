@@ -7,9 +7,7 @@
 
 namespace
 {
-    // =============================================================================
     // Construction
-    // =============================================================================
 
     auto test1 = larvae::RegisterTest("WaxString", "DefaultConstructor", []() {
         comb::LinearAllocator alloc{1024};
@@ -68,9 +66,7 @@ namespace
         larvae::AssertTrue(str.IsEmpty());
     });
 
-    // =============================================================================
     // Copy and Move
-    // =============================================================================
 
     auto test7 = larvae::RegisterTest("WaxString", "CopyConstructorSSO", []() {
         comb::LinearAllocator alloc{1024};
@@ -125,9 +121,7 @@ namespace
         larvae::AssertEqual(str2[4], 'o');
     });
 
-    // =============================================================================
     // Element Access
-    // =============================================================================
 
     auto test12 = larvae::RegisterTest("WaxString", "IndexOperator", []() {
         comb::LinearAllocator alloc{1024};
@@ -176,9 +170,7 @@ namespace
         larvae::AssertEqual(c_str[5], '\0');
     });
 
-    // =============================================================================
     // Iterators
-    // =============================================================================
 
     auto test17 = larvae::RegisterTest("WaxString", "RangeBasedFor", []() {
         comb::LinearAllocator alloc{1024};
@@ -196,9 +188,7 @@ namespace
         larvae::AssertEqual(result[2], 'c');
     });
 
-    // =============================================================================
     // StringView Conversion
-    // =============================================================================
 
     auto test18 = larvae::RegisterTest("WaxString", "ViewConversion", []() {
         comb::LinearAllocator alloc{1024};
@@ -221,9 +211,7 @@ namespace
         larvae::AssertEqual(sv[0], 'W');
     });
 
-    // =============================================================================
     // Capacity Management
-    // =============================================================================
 
     auto test20 = larvae::RegisterTest("WaxString", "ReserveSSO", []() {
         comb::LinearAllocator alloc{1024};
@@ -258,9 +246,7 @@ namespace
         larvae::AssertEqual(str.Capacity(), wax::String::ssoCapacity);
     });
 
-    // =============================================================================
     // Modifiers
-    // =============================================================================
 
     auto test23 = larvae::RegisterTest("WaxString", "Clear", []() {
         comb::LinearAllocator alloc{1024};
@@ -374,9 +360,7 @@ namespace
         larvae::AssertEqual(str[4], 'o');
     });
 
-    // =============================================================================
     // Search Operations
-    // =============================================================================
 
     auto test33 = larvae::RegisterTest("WaxString", "FindChar", []() {
         comb::LinearAllocator alloc{1024};
@@ -425,9 +409,7 @@ namespace
         larvae::AssertFalse(str.EndsWith("Hello"));
     });
 
-    // =============================================================================
     // Comparison Operations
-    // =============================================================================
 
     auto test38 = larvae::RegisterTest("WaxString", "CompareEqual", []() {
         comb::LinearAllocator alloc{1024};
@@ -477,9 +459,7 @@ namespace
         larvae::AssertTrue(sv == str);
     });
 
-    // =============================================================================
     // Concatenation
-    // =============================================================================
 
     auto test43 = larvae::RegisterTest("WaxString", "ConcatenateStrings", []() {
         comb::LinearAllocator alloc{1024};
@@ -502,9 +482,7 @@ namespace
         larvae::AssertTrue(result == "Hello World");
     });
 
-    // =============================================================================
     // SSO Edge Cases
-    // =============================================================================
 
     auto test45 = larvae::RegisterTest("WaxString", "SSOBoundary22Chars", []() {
         comb::LinearAllocator alloc{1024};

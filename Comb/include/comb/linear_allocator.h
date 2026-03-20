@@ -16,66 +16,11 @@
 
 namespace comb
 {
-    /**
-     * Linear allocator (also called Arena or Bump allocator)
-     *
-     * Allocates memory sequentially by bumping a pointer forward.
-     * Provides the fastest possible allocation with zero overhead.
-     * Cannot free individual allocations, only reset all at once.
-     *
-     * Satisfies the comb::Allocator concept.
-     *
-     * Use cases:
-     * - Frame-scoped allocations (reset every frame)
-     * - Temporary parsing/loading data (destroyed after use)
-     * - Scope-based allocations with markers
-     * - Single-threaded high-frequency allocations
-     *
-     * Memory layout:
-     * ┌──────────────────────────────────────────┐
-     * │ base_           current_        capacity_│
-     * │  ↓                ↓                      │
-     * │  [===== Used =====][===== Free =====]    │
-     * └──────────────────────────────────────────┘
-     *
-     * Performance characteristics:
-     * - Allocation: O(1) - pointer bump
-     * - Deallocation: No-op (instant, does nothing)
-     * - Reset: O(1) - single pointer write (instant)
-     * - Thread-safe: No (use per-thread allocators)
-     * - Fragmentation: None (sequential allocation)
-     *
-     * Limitations:
-     * - No individual deallocation (must Reset() entire arena)
-     * - Memory wasted if objects have different lifetimes
-     * - Not thread-safe (requires external synchronization)
-     * - Fixed capacity (set at construction)
-     *
-     * Example:
-     * @code
-     *   // Create 10MB frame allocator
-     *   comb::LinearAllocator frameAlloc{10 * 1024 * 1024};
-     *
-     *   // Allocate during frame
-     *   auto* entity = comb::New<Entity>(frameAlloc);
-     *   auto* buffer = frameAlloc.Allocate(1024, 16);
-     *
-     *   // Use marker for scoped allocation
-     *   void* marker = frameAlloc.GetMarker();
-     *   // ... temp allocations ...
-     *   frameAlloc.ResetToMarker(marker);
-     *
-     *   // End of frame - reset everything
-     *   frameAlloc.Reset(); // instant
-     * @endcode
-     */
+    // Linear (bump/arena) allocator — O(1) alloc, no individual deallocation.
+    // Reset() frees everything at once. Supports markers for scoped rollback.
     class LinearAllocator
     {
     public:
-        /**
-         * Construct a linear allocator with given capacity
-         * @param capacity Total size in bytes to allocate from OS
-         */
         explicit LinearAllocator(size_t capacity);
 
         /**
@@ -124,7 +69,7 @@ namespace comb
          * Can be used to restore to this point later
          * @return Opaque pointer representing current position
          */
-        [[nodiscard]] void* GetMarker() const;
+        [[nodiscard]] void* GetMarker() const noexcept;
 
         /**
          * Reset allocator to a previously saved marker
@@ -137,19 +82,19 @@ namespace comb
          * Get number of bytes currently allocated
          * @return Bytes allocated (difference between current and base)
          */
-        [[nodiscard]] size_t GetUsedMemory() const;
+        [[nodiscard]] size_t GetUsedMemory() const noexcept;
 
         /**
          * Get total capacity of allocator
          * @return Total bytes available
          */
-        [[nodiscard]] size_t GetTotalMemory() const;
+        [[nodiscard]] size_t GetTotalMemory() const noexcept;
 
         /**
          * Get allocator name for debugging
          * @return "LinearAllocator"
          */
-        [[nodiscard]] const char* GetName() const;
+        [[nodiscard]] const char* GetName() const noexcept;
 
     private:
         void* m_base{nullptr};

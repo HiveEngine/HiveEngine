@@ -10,9 +10,7 @@
 
 namespace
 {
-    // ============================================================================
     // Task Tests
-    // ============================================================================
 
     auto test1 = larvae::RegisterTest("QueenTask", "DefaultConstruction", []() {
         queen::Task task{};
@@ -33,9 +31,7 @@ namespace
         task.Execute();
     });
 
-    // ============================================================================
     // ThreadPool Basic Tests
-    // ============================================================================
 
     auto test4 = larvae::RegisterTest("QueenThreadPool", "Creation", []() {
         comb::LinearAllocator alloc{4 * 1024 * 1024};
@@ -91,9 +87,7 @@ namespace
         larvae::AssertEqual(pool.WorkerCount(), expected);
     });
 
-    // ============================================================================
     // Task Submission Tests
-    // ============================================================================
 
     auto test9 = larvae::RegisterTest("QueenThreadPool", "SubmitSingleTask", []() {
         comb::LinearAllocator alloc{4 * 1024 * 1024};
@@ -180,9 +174,7 @@ namespace
         pool.Stop();
     });
 
-    // ============================================================================
     // Work Stealing Tests
-    // ============================================================================
 
     auto test13 = larvae::RegisterTest("QueenThreadPool", "WorkStealing", []() {
         comb::LinearAllocator alloc{4 * 1024 * 1024};
@@ -235,9 +227,7 @@ namespace
         larvae::AssertEqual(counter.load(), kNumTasks);
     });
 
-    // ============================================================================
     // Stress Tests
-    // ============================================================================
 
     auto test15 = larvae::RegisterTest("QueenThreadPool", "StressTest", []() {
         comb::LinearAllocator alloc{16 * 1024 * 1024};
@@ -389,9 +379,7 @@ namespace
         larvae::AssertEqual(data.output.load(), 84);
     });
 
-    // ============================================================================
     // Park Idle Strategy Tests
-    // ============================================================================
 
     auto test_park_basic = larvae::RegisterTest("QueenThreadPool", "ParkStrategyBasic", []() {
         constexpr size_t kAllocSize = 4 * 1024 * 1024;

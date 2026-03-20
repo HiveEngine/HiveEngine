@@ -4,9 +4,7 @@
 
 namespace
 {
-    // =============================================================================
     // Construction
-    // =============================================================================
 
     auto test1 = larvae::RegisterTest("WaxStringView", "DefaultConstructor", []() {
         wax::StringView sv;
@@ -57,9 +55,7 @@ namespace
         larvae::AssertTrue(sv.IsEmpty());
     });
 
-    // =============================================================================
     // Element Access
-    // =============================================================================
 
     auto test7 = larvae::RegisterTest("WaxStringView", "IndexOperator", []() {
         wax::StringView sv{"Hello"};
@@ -87,9 +83,7 @@ namespace
         larvae::AssertEqual(sv.Back(), 'o');
     });
 
-    // =============================================================================
     // Iterators
-    // =============================================================================
 
     auto test10 = larvae::RegisterTest("WaxStringView", "RangeBasedFor", []() {
         wax::StringView sv{"abc"};
@@ -121,9 +115,7 @@ namespace
         larvae::AssertTrue(it == sv.End());
     });
 
-    // =============================================================================
     // Substring Operations
-    // =============================================================================
 
     auto test12 = larvae::RegisterTest("WaxStringView", "SubstrFromStart", []() {
         wax::StringView sv{"Hello World"};
@@ -169,9 +161,7 @@ namespace
         larvae::AssertEqual(result[4], 'o');
     });
 
-    // =============================================================================
     // Search Operations - Find
-    // =============================================================================
 
     auto test17 = larvae::RegisterTest("WaxStringView", "FindCharFound", []() {
         wax::StringView sv{"Hello World"};
@@ -232,9 +222,7 @@ namespace
         larvae::AssertEqual(sv.RFind('x'), wax::StringView::npos);
     });
 
-    // =============================================================================
     // Search Operations - Contains
-    // =============================================================================
 
     auto test25 = larvae::RegisterTest("WaxStringView", "ContainsChar", []() {
         wax::StringView sv{"Hello World"};
@@ -256,9 +244,7 @@ namespace
         larvae::AssertFalse(sv.Contains("Test"));
     });
 
-    // =============================================================================
     // Search Operations - StartsWith / EndsWith
-    // =============================================================================
 
     auto test27 = larvae::RegisterTest("WaxStringView", "StartsWithChar", []() {
         wax::StringView sv{"Hello"};
@@ -296,9 +282,7 @@ namespace
         larvae::AssertFalse(sv.EndsWith("Worl"));
     });
 
-    // =============================================================================
     // Comparison Operations
-    // =============================================================================
 
     auto test31 = larvae::RegisterTest("WaxStringView", "CompareEqual", []() {
         wax::StringView sv1{"Hello"};
@@ -365,9 +349,7 @@ namespace
         larvae::AssertTrue(sv2 >= sv1);
     });
 
-    // =============================================================================
     // Edge Cases
-    // =============================================================================
 
     auto test39 = larvae::RegisterTest("WaxStringView", "EmptyStringOperations", []() {
         wax::StringView sv{""};

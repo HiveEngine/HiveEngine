@@ -1,7 +1,9 @@
-#include <hive/HiveConfig.h>
+#include <hive/hive_config.h>
 
 #include <comb/default_allocator.h>
 #include <comb/new.h>
+
+#include <nectar/import/gltf_import_job.h>
 
 #include <waggle/app_context.h>
 #include <waggle/engine_runner.h>
@@ -29,6 +31,7 @@
 #include <cstdio>
 #include <filesystem>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace
@@ -89,14 +92,14 @@ namespace
                     return 1;
                 }
 
-                state.m_projectPath = startupProjectPath.generic_string();
+                state.m_projectPath = wax::String{startupProjectPath.generic_string().c_str()};
             }
 
-            const std::string windowTitle = state.m_projectPath.empty() ? std::string{"HiveEngine Launcher"}
-                                                                        : BuildWindowTitle(state.m_projectPath);
+            const wax::String windowTitle = state.m_projectPath.IsEmpty() ? wax::String{"HiveEngine Launcher"}
+                                                                          : BuildWindowTitle(state.m_projectPath);
 
             waggle::EngineConfig config{};
-            config.m_windowTitle = windowTitle.c_str();
+            config.m_windowTitle = windowTitle.CStr();
 #if HIVE_MODE_EDITOR
             config.m_windowWidth = 1920;
             config.m_windowHeight = 1080;
@@ -123,35 +126,36 @@ namespace
                 InitializeProjectHub(s.m_hub);
                 std::vector<forge::DiscoveredProject> hubProjects;
                 for (const auto& p : s.m_hub.m_discoveredProjects)
-                    hubProjects.push_back({p.m_name, p.m_version, p.m_path, p.m_isCurrentDirectory});
+                    hubProjects.push_back({std::string{p.m_name.CStr()}, std::string{p.m_version.CStr()},
+                                           std::string{p.m_path.CStr()}, p.m_isCurrentDirectory});
 
                 auto transitionToEditor = [&ctx, &s](const QString& projectName) {
                     s.m_mainWindow->ShowLoading(projectName);
                     QApplication::processEvents();
 
-                    waggle::CreateWindowAndRenderer(ctx, s.m_windowTitle.c_str(), s.m_windowWidth, s.m_windowHeight);
+                    waggle::CreateWindowAndRenderer(ctx, s.m_windowTitle.CStr(), s.m_windowWidth, s.m_windowHeight);
 
                     s.m_mainWindow->ShowEditor();
                     if (ctx.m_renderContext != nullptr && ctx.m_window != nullptr)
                         s.m_mainWindow->AttachViewport(ctx.m_window, ctx.m_renderContext);
                     s.m_mainWindow->RefreshAll();
-                    if (!s.m_assetsRoot.empty())
-                        s.m_mainWindow->SetAssetsRoot(s.m_assetsRoot.c_str());
+                    if (!s.m_assetsRoot.IsEmpty())
+                        s.m_mainWindow->SetAssetsRoot(s.m_assetsRoot.CStr());
                 };
 
-                if (s.m_projectPath.empty())
+                if (s.m_projectPath.IsEmpty())
                 {
                     s.m_mainWindow->ShowHub(hubProjects);
                 }
                 else
                 {
-                    transitionToEditor(QString::fromStdString(s.m_projectPath));
+                    transitionToEditor(QString::fromUtf8(s.m_projectPath.CStr()));
                 }
 
                 QObject::connect(s.m_mainWindow, &forge::ForgeMainWindow::hubProjectSelected,
                                  [&ctx, &s, transitionToEditor](const QString& path) {
                                      if (OpenProject(ctx, s, std::filesystem::path{path.toStdString()}))
-                                         transitionToEditor(QString::fromStdString(s.m_projectPath));
+                                         transitionToEditor(QString::fromUtf8(s.m_projectPath.CStr()));
                                  });
 
                 QObject::connect(s.m_mainWindow, &forge::ForgeMainWindow::editorCloseRequested,
@@ -170,13 +174,14 @@ namespace
                     s.m_mainWindow, &forge::ForgeMainWindow::hubCreateRequested,
                     [&ctx, &s, transitionToEditor](const QString& name, const QString& dir, const QString& version) {
                         auto& hub = s.m_hub;
-                        CopyStringToBuffer(name.toStdString(), hub.m_createName.data(), hub.m_createName.size());
-                        CopyStringToBuffer(dir.toStdString(), hub.m_createDirectory.data(),
-                                           hub.m_createDirectory.size());
-                        CopyStringToBuffer(version.toStdString(), hub.m_createVersion.data(),
-                                           hub.m_createVersion.size());
+                        CopyStringToBuffer(wax::String{name.toStdString().c_str()}, hub.m_createName.Data(),
+                                           hub.m_createName.Size());
+                        CopyStringToBuffer(wax::String{dir.toStdString().c_str()}, hub.m_createDirectory.Data(),
+                                           hub.m_createDirectory.Size());
+                        CopyStringToBuffer(wax::String{version.toStdString().c_str()}, hub.m_createVersion.Data(),
+                                           hub.m_createVersion.Size());
                         if (CreateProjectFromHub(ctx, s))
-                            transitionToEditor(QString::fromStdString(s.m_projectPath));
+                            transitionToEditor(QString::fromUtf8(s.m_projectPath.CStr()));
                     });
 
                 QObject::connect(
@@ -184,13 +189,43 @@ namespace
                         std::filesystem::path selectedPath{};
                         const auto result = ShowNativePathPicker(NativePathPickerMode::PROJECT_FILE, {}, &selectedPath);
                         if (result == NativePathPickerResult::SUCCESS && OpenProject(ctx, s, selectedPath))
-                            transitionToEditor(QString::fromStdString(s.m_projectPath));
+                            transitionToEditor(QString::fromUtf8(s.m_projectPath.CStr()));
+                    });
+
+                QObject::connect(
+                    s.m_mainWindow, &forge::ForgeMainWindow::gltfImportRequested, [&ctx, &s](const QString& path) {
+                        hive::LogInfo(LOG_LAUNCHER, "gltfImportRequested received: {}", path.toStdString());
+
+                        if (s.m_project == nullptr)
+                            return;
+
+                        auto& alloc = s.m_alloc.Get();
+                        auto& db = s.m_project->Database();
+                        std::string gltfStdPath = path.toStdString();
+
+                        nectar::GltfImportDesc desc{};
+                        desc.m_gltfPath = wax::StringView{gltfStdPath.c_str()};
+                        desc.m_assetsDir = s.m_project->Paths().m_assets.View();
+
+                        auto result = nectar::ExecuteGltfImport(desc, db, alloc);
+
+                        if (result.m_success)
+                        {
+                            hive::LogInfo(LOG_LAUNCHER, "glTF import: {} textures, {} materials, {} meshes",
+                                          result.m_textureCount, result.m_materialCount, result.m_meshCount);
+                        }
+                        else
+                        {
+                            hive::LogError(LOG_LAUNCHER, "glTF import failed: {}", result.m_error.CStr());
+                        }
+
+                        s.m_mainWindow->RefreshAll();
                     });
 
                 s.m_mainWindow->show();
 #endif
 
-                if (!s.m_projectPath.empty() && !OpenProject(ctx, s, std::filesystem::path{s.m_projectPath}))
+                if (!s.m_projectPath.IsEmpty() && !OpenProject(ctx, s, std::filesystem::path{s.m_projectPath.CStr()}))
                 {
                     comb::Delete(alloc, s.m_project);
                     s.m_project = nullptr;
@@ -198,8 +233,8 @@ namespace
                 }
 
 #if HIVE_MODE_EDITOR
-                if (s.m_mainWindow && !s.m_assetsRoot.empty())
-                    s.m_mainWindow->SetAssetsRoot(s.m_assetsRoot.c_str());
+                if (s.m_mainWindow && !s.m_assetsRoot.IsEmpty())
+                    s.m_mainWindow->SetAssetsRoot(s.m_assetsRoot.CStr());
 #endif
 
                 if (s.m_exitAfterSetup)

@@ -45,9 +45,7 @@ namespace
         return alloc.Get();
     }
 
-    // =========================================================================
     // Tests
-    // =========================================================================
 
     auto t1 = larvae::RegisterTest("NectarAssetLoader", "LoadValidData", []() {
         TestAssetLoader loader;

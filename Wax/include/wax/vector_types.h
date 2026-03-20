@@ -9,27 +9,8 @@
 
 #include <wax/containers/vector.h>
 
-/**
- * Type aliases for common Vector + Allocator combinations
- *
- * These aliases provide convenient shorthands for frequently used
- * Vector configurations while still requiring explicit allocator instances.
- *
- * Usage:
- * @code
- *   comb::LinearAllocator alloc{1024 * 1024};
- *
- *   // Using alias (cleaner)
- *   wax::LinearVector<int> vec{alloc};
- *   vec.PushBack(42);
- *
- *   // Equivalent to:
- *   wax::Vector<int> vec2{alloc};
- * @endcode
- *
- * Note: You still need to provide an allocator instance at construction.
- * This is intentional - it ensures explicit control over memory allocation.
- */
+// Type aliases — all resolve to Vector<T> since the allocator is runtime.
+// Kept for readability at call sites (signals intended allocator type).
 
 namespace wax
 {

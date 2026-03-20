@@ -8,9 +8,7 @@ namespace
 {
     using namespace queen;
 
-    // ─────────────────────────────────────────────────────────────
     // Basic Operations
-    // ─────────────────────────────────────────────────────────────
 
     auto test1 = larvae::RegisterTest("QueenComponentMask", "DefaultEmpty", []() {
         comb::LinearAllocator alloc{1024};
@@ -144,9 +142,7 @@ namespace
         larvae::AssertEqual(mask.Count(), size_t{64});
     });
 
-    // ─────────────────────────────────────────────────────────────
     // Logical Operations
-    // ─────────────────────────────────────────────────────────────
 
     auto test10 = larvae::RegisterTest("QueenComponentMask", "Intersects", []() {
         comb::LinearAllocator alloc{1024};
@@ -277,9 +273,7 @@ namespace
         larvae::AssertTrue(mask.Test(63)); // All other bits in block are now set
     });
 
-    // ─────────────────────────────────────────────────────────────
     // Equality
-    // ─────────────────────────────────────────────────────────────
 
     auto test17 = larvae::RegisterTest("QueenComponentMask", "Equality", []() {
         comb::LinearAllocator alloc{1024};
@@ -321,9 +315,7 @@ namespace
         larvae::AssertTrue(a == b);
     });
 
-    // ─────────────────────────────────────────────────────────────
     // First/Last Set Bit
-    // ─────────────────────────────────────────────────────────────
 
     auto test20 = larvae::RegisterTest("QueenComponentMask", "FirstSetBit", []() {
         comb::LinearAllocator alloc{1024};
@@ -361,9 +353,7 @@ namespace
         larvae::AssertEqual(mask.LastSetBit(), static_cast<size_t>(-1));
     });
 
-    // ─────────────────────────────────────────────────────────────
     // Capacity and Reserve
-    // ─────────────────────────────────────────────────────────────
 
     auto test24 = larvae::RegisterTest("QueenComponentMask", "Capacity", []() {
         comb::LinearAllocator alloc{1024};
@@ -393,9 +383,7 @@ namespace
         larvae::AssertTrue(mask.Capacity() >= 200);
     });
 
-    // ─────────────────────────────────────────────────────────────
     // Copy/Move
-    // ─────────────────────────────────────────────────────────────
 
     auto test26 = larvae::RegisterTest("QueenComponentMask", "Copy", []() {
         comb::LinearAllocator alloc{1024};
@@ -435,9 +423,7 @@ namespace
         larvae::AssertEqual(copy.Count(), size_t{2});
     });
 
-    // ─────────────────────────────────────────────────────────────
     // Edge Cases
-    // ─────────────────────────────────────────────────────────────
 
     auto test28 = larvae::RegisterTest("QueenComponentMask", "Bit63", []() {
         comb::LinearAllocator alloc{1024};

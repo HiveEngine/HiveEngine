@@ -77,9 +77,10 @@ namespace hive
         template <typename T>
         [[nodiscard]] LoggerId RegisterLogger(T* obj, void (T::*method)(const LogCategory&, LogSeverity, const char*))
         {
-            Assert(m_count + 1 < m_loggers.size(), "Too many loggers registered");
-            m_loggers[m_count++] = {m_count, LogCallback{obj, method}};
-            return ++m_idCount;
+            Assert(m_count < m_loggers.size(), "Too many loggers registered");
+            LoggerId newId = ++m_idCount;
+            m_loggers[m_count++] = {newId, LogCallback{obj, method}};
+            return newId;
         }
 
     private:

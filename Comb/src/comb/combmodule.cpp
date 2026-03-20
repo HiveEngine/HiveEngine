@@ -1,6 +1,7 @@
+#include <comb/combmodule.h>
+
 #include <hive/core/log.h>
 
-#include <comb/combmodule.h>
 #include <comb/precomp.h>
 
 namespace comb

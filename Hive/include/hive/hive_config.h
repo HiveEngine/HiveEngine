@@ -1,12 +1,8 @@
 #pragma once
 
-// ============================================================================
 // HiveEngine Configuration Header
-// ============================================================================
 
-// ============================================================================
 // Platform Detection (auto-detected)
-// ============================================================================
 
 #if defined(_WIN32) || defined(_WIN64)
 #define HIVE_PLATFORM_WINDOWS 1
@@ -27,9 +23,7 @@
 #define HIVE_PLATFORM_UNKNOWN 1
 #endif
 
-// ============================================================================
 // Compiler Detection (auto-detected)
-// ============================================================================
 
 #if defined(_MSC_VER) && !defined(__clang__)
 #define HIVE_COMPILER_MSVC 1
@@ -49,16 +43,13 @@
 #define HIVE_COMPILER_GCC 0
 #endif
 
-// ============================================================================
 // Build Configuration (set via CMake: -DHIVE_CONFIG_DEBUG=1, etc.)
-// ============================================================================
 // Only ONE of these should be 1.
 //
 // HIVE_CONFIG_DEBUG   - Development builds, all debugging enabled
 // HIVE_CONFIG_RELEASE - Optimized builds with some debugging
 // HIVE_CONFIG_PROFILE - Optimized builds with profiling enabled
 // HIVE_CONFIG_RETAIL  - Final shipping builds, no debugging
-// ============================================================================
 
 #ifndef HIVE_CONFIG_DEBUG
 #define HIVE_CONFIG_DEBUG 0
@@ -82,15 +73,12 @@
 #define HIVE_CONFIG_DEBUG 1
 #endif
 
-// ============================================================================
 // Engine Mode (set via CMake: -DHIVE_MODE_EDITOR=1, etc.)
-// ============================================================================
 // Only ONE of these should be 1.
 //
 // HIVE_MODE_EDITOR   - Editor mode with full tooling
 // HIVE_MODE_GAME     - Game/runtime mode
 // HIVE_MODE_HEADLESS - No graphics, server/CLI mode
-// ============================================================================
 
 #ifndef HIVE_MODE_EDITOR
 #define HIVE_MODE_EDITOR 0
@@ -110,9 +98,7 @@
 #define HIVE_MODE_GAME 1
 #endif
 
-// ============================================================================
 // Feature Toggles (set via CMake: -DHIVE_FEATURE_IMGUI=1, etc.)
-// ============================================================================
 
 // --- Graphics & UI ---
 
@@ -192,9 +178,7 @@
 #endif
 #endif
 
-// ============================================================================
 // Log Level (0=Trace, 1=Debug, 2=Info, 3=Warning, 4=Error, 5=Fatal)
-// ============================================================================
 
 #ifndef HIVE_LOG_LEVEL
 #if HIVE_CONFIG_DEBUG

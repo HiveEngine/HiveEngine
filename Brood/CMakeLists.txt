@@ -15,6 +15,7 @@ function(brood_link_test_target target)
             Queen
             Waggle
             Nectar
+            Drone
     )
 
     foreach(_module IN ITEMS Terra Antennae Swarm)
@@ -35,6 +36,7 @@ endfunction()
 
 add_executable(hive_launcher
     src/hive_launcher.cpp
+    src/launcher/gltf_import_job.cpp
     src/launcher/launcher_platform.cpp
     src/launcher/launcher_scene.cpp
     src/launcher/launcher_project.cpp
@@ -72,6 +74,7 @@ if(HIVE_BUILD_TESTING)
         ${CMAKE_CURRENT_SOURCE_DIR}/../Hive/tests
         ${CMAKE_CURRENT_SOURCE_DIR}/../Comb/tests
         ${CMAKE_CURRENT_SOURCE_DIR}/../Wax/tests
+        ${CMAKE_CURRENT_SOURCE_DIR}/../Drone/tests
         ${CMAKE_CURRENT_SOURCE_DIR}/../Queen/tests
         ${CMAKE_CURRENT_SOURCE_DIR}/../Nectar/tests
         ${CMAKE_CURRENT_SOURCE_DIR}/../Waggle/tests

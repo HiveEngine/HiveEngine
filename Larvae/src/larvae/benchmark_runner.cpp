@@ -9,11 +9,11 @@
 namespace larvae
 {
     BenchmarkRunner::BenchmarkRunner(BenchmarkConfig config)
-        : config_{std::move(config)}
+        : m_config{std::move(config)}
     {
-        if (!config_.capabilities_overridden)
+        if (!m_config.m_capabilitiesOverridden)
         {
-            config_.available_capabilities = DetectBuildCapabilities();
+            m_config.m_availableCapabilities = DetectBuildCapabilities();
         }
     }
 
@@ -25,7 +25,7 @@ namespace larvae
 
         for (const auto& info : benchmarks)
         {
-            const std::string full_name = std::string{info.suite_name} + "." + info.benchmark_name;
+            const std::string full_name = std::string{info.m_suiteName} + "." + info.m_benchmarkName;
             if (MatchesFilter(full_name))
             {
                 filtered_benchmarks.push_back(info);
@@ -37,31 +37,31 @@ namespace larvae
 
     CapabilityMask BenchmarkRunner::GetMissingCapabilities(const BenchmarkInfo& benchmark_info) const
     {
-        return benchmark_info.required_capabilities & ~config_.available_capabilities;
+        return benchmark_info.m_requiredCapabilities & ~m_config.m_availableCapabilities;
     }
 
     std::vector<BenchmarkResult> BenchmarkRunner::RunAll()
     {
         std::vector<BenchmarkResult> results;
-        matched_benchmarks_ = 0;
-        skipped_benchmarks_ = 0;
-        runnable_benchmarks_ = 0;
+        m_matchedBenchmarks = 0;
+        m_skippedBenchmarks = 0;
+        m_runnableBenchmarks = 0;
 
         const std::vector<BenchmarkInfo> benchmarks = CollectMatchingBenchmarks();
-        matched_benchmarks_ = benchmarks.size();
+        m_matchedBenchmarks = benchmarks.size();
 
-        if (config_.list_only)
+        if (m_config.m_listOnly)
         {
             PrintSelection(benchmarks);
             for (const auto& info : benchmarks)
             {
                 if (GetMissingCapabilities(info) != 0)
                 {
-                    ++skipped_benchmarks_;
+                    ++m_skippedBenchmarks;
                 }
                 else
                 {
-                    ++runnable_benchmarks_;
+                    ++m_runnableBenchmarks;
                 }
             }
             return results;
@@ -69,15 +69,15 @@ namespace larvae
 
         for (const auto& info : benchmarks)
         {
-            if (!HasAllCapabilities(config_.available_capabilities, info.required_capabilities))
+            if (!HasAllCapabilities(m_config.m_availableCapabilities, info.m_requiredCapabilities))
             {
-                ++skipped_benchmarks_;
+                ++m_skippedBenchmarks;
                 continue;
             }
 
-            auto result = RunSingle(info.suite_name, info.benchmark_name, info.benchmark_func);
+            auto result = RunSingle(info.m_suiteName, info.m_benchmarkName, info.m_benchmarkFunc);
             results.push_back(result);
-            ++runnable_benchmarks_;
+            ++m_runnableBenchmarks;
         }
 
         return results;
@@ -85,7 +85,7 @@ namespace larvae
 
     bool BenchmarkRunner::MatchesFilter(const std::string& full_name) const
     {
-        const auto& pattern = config_.filter;
+        const auto& pattern = m_config.m_filter;
 
         if (pattern == "*")
         {
@@ -116,14 +116,14 @@ namespace larvae
     void BenchmarkRunner::PrintSelection(const std::vector<BenchmarkInfo>& benchmarks) const
     {
         std::cout << "Listing " << benchmarks.size() << " benchmark(s)\n";
-        std::cout << "Available capabilities: " << FormatCapabilities(config_.available_capabilities) << "\n";
+        std::cout << "Available capabilities: " << FormatCapabilities(m_config.m_availableCapabilities) << "\n";
 
         for (const auto& benchmark : benchmarks)
         {
             const CapabilityMask missing = GetMissingCapabilities(benchmark);
-            std::cout << (missing == 0 ? "[ RUNNABLE ] " : "[ SKIPPED  ] ") << benchmark.suite_name << "."
-                      << benchmark.benchmark_name << " (requires: "
-                      << FormatCapabilities(benchmark.required_capabilities) << ")";
+            std::cout << (missing == 0 ? "[ RUNNABLE ] " : "[ SKIPPED  ] ") << benchmark.m_suiteName << "."
+                      << benchmark.m_benchmarkName << " (requires: "
+                      << FormatCapabilities(benchmark.m_requiredCapabilities) << ")";
             if (missing != 0)
             {
                 std::cout << " (missing: " << FormatCapabilities(missing) << ")";
@@ -135,21 +135,21 @@ namespace larvae
     BenchmarkResult BenchmarkRunner::RunSingle(const char* suite_name, const char* benchmark_name,
                                                std::function<void(BenchmarkState&)> benchmark_func)
     {
-        for (size_t i = 0; i < config_.warmup_runs; ++i)
+        for (size_t i = 0; i < m_config.m_warmupRuns; ++i)
         {
-            BenchmarkState warmup_state{config_.min_iterations};
+            BenchmarkState warmup_state{m_config.m_minIterations};
             benchmark_func(warmup_state);
         }
 
         size_t iterations = DetermineIterations(benchmark_func);
 
         std::vector<std::chrono::nanoseconds> times;
-        times.reserve(config_.repetitions);
+        times.reserve(m_config.m_repetitions);
 
         size_t bytes_processed = 0;
         size_t items_processed = 0;
 
-        for (size_t rep = 0; rep < config_.repetitions; ++rep)
+        for (size_t rep = 0; rep < m_config.m_repetitions; ++rep)
         {
             BenchmarkState state{iterations};
             benchmark_func(state);
@@ -169,24 +169,24 @@ namespace larvae
         auto mean_time = total / times.size();
 
         BenchmarkResult result{};
-        result.suite_name = suite_name;
-        result.benchmark_name = benchmark_name;
-        result.iterations = iterations;
-        result.min_time = min_time;
-        result.max_time = max_time;
-        result.mean_time = mean_time;
-        result.median_time = median_time;
+        result.m_suiteName = suite_name;
+        result.m_benchmarkName = benchmark_name;
+        result.m_iterations = iterations;
+        result.m_minTime = min_time;
+        result.m_maxTime = max_time;
+        result.m_meanTime = mean_time;
+        result.m_medianTime = median_time;
 
         if (bytes_processed > 0)
         {
             double seconds = static_cast<double>(median_time.count()) / 1e9;
-            result.bytes_per_second = static_cast<double>(bytes_processed) / seconds;
+            result.m_bytesPerSecond = static_cast<double>(bytes_processed) / seconds;
         }
 
         if (items_processed > 0)
         {
             double seconds = static_cast<double>(median_time.count()) / 1e9;
-            result.items_per_second = static_cast<double>(items_processed) / seconds;
+            result.m_itemsPerSecond = static_cast<double>(items_processed) / seconds;
         }
 
         return result;
@@ -194,14 +194,14 @@ namespace larvae
 
     size_t BenchmarkRunner::DetermineIterations(std::function<void(BenchmarkState&)> benchmark_func)
     {
-        size_t iterations = config_.min_iterations;
+        size_t iterations = m_config.m_minIterations;
 
         while (true)
         {
             BenchmarkState state{iterations};
             benchmark_func(state);
 
-            if (state.GetElapsed() >= config_.min_time)
+            if (state.GetElapsed() >= m_config.m_minTime)
             {
                 break;
             }
@@ -235,7 +235,7 @@ namespace larvae
 
         for (const auto& result : results)
         {
-            std::string full_name = std::string{result.suite_name} + "/" + result.benchmark_name;
+            std::string full_name = std::string{result.m_suiteName} + "/" + result.m_benchmarkName;
 
             auto format_time = [](std::chrono::nanoseconds ns) -> std::string {
                 double value = static_cast<double>(ns.count());
@@ -258,20 +258,20 @@ namespace larvae
             };
 
             std::cout << std::left << std::setw(40) << full_name << std::right << std::setw(12)
-                      << format_time(result.median_time) << std::setw(12) << format_time(result.min_time)
-                      << std::setw(12) << format_time(result.max_time) << std::setw(14) << result.iterations << '\n';
+                      << format_time(result.m_medianTime) << std::setw(12) << format_time(result.m_minTime)
+                      << std::setw(12) << format_time(result.m_maxTime) << std::setw(14) << result.m_iterations << '\n';
 
-            if (result.bytes_per_second > 0)
+            if (result.m_bytesPerSecond > 0)
             {
-                double mb_per_sec = result.bytes_per_second / (1024 * 1024);
+                double mb_per_sec = result.m_bytesPerSecond / (1024 * 1024);
                 std::cout << std::setw(40) << "" << std::right << "  Throughput: " << std::fixed << std::setprecision(2)
                           << mb_per_sec << " MB/s\n";
             }
 
-            if (result.items_per_second > 0)
+            if (result.m_itemsPerSecond > 0)
             {
                 std::cout << std::setw(40) << "" << std::right << "  Items/sec: " << std::fixed << std::setprecision(0)
-                          << result.items_per_second << '\n';
+                          << result.m_itemsPerSecond << '\n';
             }
         }
 
@@ -281,7 +281,7 @@ namespace larvae
     BenchmarkConfig ParseBenchmarkCommandLine(int argc, char** argv)
     {
         BenchmarkConfig config{};
-        config.available_capabilities = DetectBuildCapabilities();
+        config.m_availableCapabilities = DetectBuildCapabilities();
 
         for (int i = 1; i < argc; ++i)
         {
@@ -289,15 +289,15 @@ namespace larvae
 
             if (arg.starts_with("--benchmark-filter="))
             {
-                config.filter = arg.substr(19);
+                config.m_filter = arg.substr(19);
             }
             else if (arg == "--list")
             {
-                config.list_only = true;
+                config.m_listOnly = true;
             }
             else if (arg == "--fail-on-skip")
             {
-                config.fail_on_skip = true;
+                config.m_failOnSkip = true;
             }
             else if (arg.starts_with("--benchmark-min-time="))
             {
@@ -305,17 +305,17 @@ namespace larvae
                 if (value.ends_with("ms"))
                 {
                     int ms = std::stoi(value.substr(0, value.size() - 2));
-                    config.min_time = std::chrono::milliseconds{ms};
+                    config.m_minTime = std::chrono::milliseconds{ms};
                 }
                 else if (value.ends_with("s"))
                 {
                     int s = std::stoi(value.substr(0, value.size() - 1));
-                    config.min_time = std::chrono::milliseconds{s * 1000};
+                    config.m_minTime = std::chrono::milliseconds{s * 1000};
                 }
             }
             else if (arg.starts_with("--benchmark-repetitions="))
             {
-                config.repetitions = std::stoull(arg.substr(24));
+                config.m_repetitions = std::stoull(arg.substr(24));
             }
             else if (arg.starts_with("--capabilities="))
             {
@@ -323,8 +323,8 @@ namespace larvae
                 const CapabilityMask parsed = ParseCapabilityList(arg.substr(15), &ok);
                 if (ok)
                 {
-                    config.available_capabilities = parsed;
-                    config.capabilities_overridden = true;
+                    config.m_availableCapabilities = parsed;
+                    config.m_capabilitiesOverridden = true;
                 }
             }
         }

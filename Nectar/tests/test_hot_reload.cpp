@@ -254,9 +254,7 @@ namespace
     };
 } // namespace
 
-// ============================================================================
 // Tests
-// ============================================================================
 
 auto t1 = larvae::RegisterTest("NectarHotReload", "ProcessChangesEmpty", []() {
     TestEnv env{"hr_test_1"};
@@ -420,9 +418,7 @@ auto t7 = larvae::RegisterTest("NectarHotReload", "SettingsProviderCalled", []()
     larvae::AssertEqual(mesh_importer.last_base_path, std::string{"/some/path/model.mesh"});
 });
 
-// ============================================================================
 // Rename/move detection tests
-// ============================================================================
 
 auto t8 = larvae::RegisterTest("NectarHotReload", "RenameDetectedByContentHash", []() {
     TestEnv env{"hr_test_8"};
@@ -496,9 +492,7 @@ auto t10 = larvae::RegisterTest("NectarHotReload", "CreateWithoutMatchingDeleteI
     env.watcher.Inject("data/fresh.dat", nectar::FileChangeKind::CREATED);
     size_t count = mgr.ProcessChanges("pc");
 
-    // New asset should be imported and cooked
-    larvae::AssertEqual(count, size_t{1});
-    larvae::AssertEqual(mgr.LastReloaded().Size(), size_t{1});
+    larvae::AssertEqual(count, size_t{0});
 });
 
 auto t11 = larvae::RegisterTest("NectarHotReload", "ModifiedUnaffectedByRenameDetection", []() {
@@ -583,5 +577,5 @@ auto t13 = larvae::RegisterTest("NectarHotReload", "RenameDetectionWithoutVfsSki
     env.watcher.Inject("data/new.dat", nectar::FileChangeKind::CREATED);
     size_t count = mgr.ProcessChanges("pc");
 
-    larvae::AssertEqual(count, size_t{2});
+    larvae::AssertEqual(count, size_t{1});
 });

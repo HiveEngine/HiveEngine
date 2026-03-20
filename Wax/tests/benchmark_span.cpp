@@ -7,9 +7,7 @@
 
 namespace
 {
-    // =============================================================================
     // Wax::Span Benchmarks
-    // =============================================================================
 
     auto bench1 = larvae::RegisterBenchmark("WaxSpan", "Iteration_100", [](larvae::BenchmarkState& state) {
         int data[100];
@@ -27,7 +25,7 @@ namespace
             larvae::DoNotOptimize(sum);
         }
 
-        state.SetItemsProcessed(state.iterations() * 100);
+        state.SetItemsProcessed(state.Iterations() * 100);
     });
 
     auto bench2 = larvae::RegisterBenchmark("WaxSpan", "Iteration_1000", [](larvae::BenchmarkState& state) {
@@ -46,7 +44,7 @@ namespace
             larvae::DoNotOptimize(sum);
         }
 
-        state.SetItemsProcessed(state.iterations() * 1000);
+        state.SetItemsProcessed(state.Iterations() * 1000);
     });
 
     auto bench3 = larvae::RegisterBenchmark("WaxSpan", "RandomAccess_100", [](larvae::BenchmarkState& state) {
@@ -64,7 +62,7 @@ namespace
             }
         }
 
-        state.SetItemsProcessed(state.iterations() * 100);
+        state.SetItemsProcessed(state.Iterations() * 100);
     });
 
     auto bench4 = larvae::RegisterBenchmark("WaxSpan", "RandomAccess_1000", [](larvae::BenchmarkState& state) {
@@ -82,7 +80,7 @@ namespace
             }
         }
 
-        state.SetItemsProcessed(state.iterations() * 1000);
+        state.SetItemsProcessed(state.Iterations() * 1000);
     });
 
     auto bench5 = larvae::RegisterBenchmark("WaxSpan", "Subspan_First", [](larvae::BenchmarkState& state) {
@@ -102,7 +100,7 @@ namespace
             larvae::DoNotOptimize(sum);
         }
 
-        state.SetItemsProcessed(state.iterations() * 100);
+        state.SetItemsProcessed(state.Iterations() * 100);
     });
 
     auto bench6 = larvae::RegisterBenchmark("WaxSpan", "Subspan_Last", [](larvae::BenchmarkState& state) {
@@ -122,7 +120,7 @@ namespace
             larvae::DoNotOptimize(sum);
         }
 
-        state.SetItemsProcessed(state.iterations() * 100);
+        state.SetItemsProcessed(state.Iterations() * 100);
     });
 
     auto bench7 = larvae::RegisterBenchmark("WaxSpan", "Modification_100", [](larvae::BenchmarkState& state) {
@@ -138,7 +136,7 @@ namespace
             larvae::DoNotOptimize(span.Data());
         }
 
-        state.SetItemsProcessed(state.iterations() * 100);
+        state.SetItemsProcessed(state.Iterations() * 100);
     });
 
     auto bench8 = larvae::RegisterBenchmark("WaxSpan", "Modification_1000", [](larvae::BenchmarkState& state) {
@@ -154,7 +152,7 @@ namespace
             larvae::DoNotOptimize(span.Data());
         }
 
-        state.SetItemsProcessed(state.iterations() * 1000);
+        state.SetItemsProcessed(state.Iterations() * 1000);
     });
 
     auto bench9 = larvae::RegisterBenchmark("WaxSpan", "Construction", [](larvae::BenchmarkState& state) {
@@ -166,12 +164,10 @@ namespace
             larvae::DoNotOptimize(span.Data());
         }
 
-        state.SetItemsProcessed(state.iterations());
+        state.SetItemsProcessed(state.Iterations());
     });
 
-    // =============================================================================
     // std::span Benchmarks (for comparison)
-    // =============================================================================
 
     auto bench10 = larvae::RegisterBenchmark("StdSpan", "Iteration_100", [](larvae::BenchmarkState& state) {
         int data[100];
@@ -189,7 +185,7 @@ namespace
             larvae::DoNotOptimize(sum);
         }
 
-        state.SetItemsProcessed(state.iterations() * 100);
+        state.SetItemsProcessed(state.Iterations() * 100);
     });
 
     auto bench11 = larvae::RegisterBenchmark("StdSpan", "Iteration_1000", [](larvae::BenchmarkState& state) {
@@ -208,7 +204,7 @@ namespace
             larvae::DoNotOptimize(sum);
         }
 
-        state.SetItemsProcessed(state.iterations() * 1000);
+        state.SetItemsProcessed(state.Iterations() * 1000);
     });
 
     auto bench12 = larvae::RegisterBenchmark("StdSpan", "RandomAccess_100", [](larvae::BenchmarkState& state) {
@@ -226,7 +222,7 @@ namespace
             }
         }
 
-        state.SetItemsProcessed(state.iterations() * 100);
+        state.SetItemsProcessed(state.Iterations() * 100);
     });
 
     auto bench13 = larvae::RegisterBenchmark("StdSpan", "RandomAccess_1000", [](larvae::BenchmarkState& state) {
@@ -244,7 +240,7 @@ namespace
             }
         }
 
-        state.SetItemsProcessed(state.iterations() * 1000);
+        state.SetItemsProcessed(state.Iterations() * 1000);
     });
 
     auto bench14 = larvae::RegisterBenchmark("StdSpan", "Subspan_First", [](larvae::BenchmarkState& state) {
@@ -264,7 +260,7 @@ namespace
             larvae::DoNotOptimize(sum);
         }
 
-        state.SetItemsProcessed(state.iterations() * 100);
+        state.SetItemsProcessed(state.Iterations() * 100);
     });
 
     auto bench15 = larvae::RegisterBenchmark("StdSpan", "Subspan_Last", [](larvae::BenchmarkState& state) {
@@ -284,7 +280,7 @@ namespace
             larvae::DoNotOptimize(sum);
         }
 
-        state.SetItemsProcessed(state.iterations() * 100);
+        state.SetItemsProcessed(state.Iterations() * 100);
     });
 
     auto bench16 = larvae::RegisterBenchmark("StdSpan", "Modification_100", [](larvae::BenchmarkState& state) {
@@ -300,7 +296,7 @@ namespace
             larvae::DoNotOptimize(span.data());
         }
 
-        state.SetItemsProcessed(state.iterations() * 100);
+        state.SetItemsProcessed(state.Iterations() * 100);
     });
 
     auto bench17 = larvae::RegisterBenchmark("StdSpan", "Modification_1000", [](larvae::BenchmarkState& state) {
@@ -316,7 +312,7 @@ namespace
             larvae::DoNotOptimize(span.data());
         }
 
-        state.SetItemsProcessed(state.iterations() * 1000);
+        state.SetItemsProcessed(state.Iterations() * 1000);
     });
 
     auto bench18 = larvae::RegisterBenchmark("StdSpan", "Construction", [](larvae::BenchmarkState& state) {
@@ -328,6 +324,6 @@ namespace
             larvae::DoNotOptimize(span.data());
         }
 
-        state.SetItemsProcessed(state.iterations());
+        state.SetItemsProcessed(state.Iterations());
     });
 } // namespace

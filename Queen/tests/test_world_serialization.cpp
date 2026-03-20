@@ -10,9 +10,7 @@
 
 namespace
 {
-    // ============================================================
     // Test types
-    // ============================================================
 
     struct Pos
     {
@@ -66,9 +64,7 @@ namespace
         }
     };
 
-    // ============================================================
     // Helpers
-    // ============================================================
 
     bool HasEntityWithPos(queen::World& world, float ex, float ey, float ez)
     {
@@ -106,9 +102,7 @@ namespace
         return result;
     }
 
-    // ============================================================
     // Serialize tests
-    // ============================================================
 
     auto test_serialize_empty = larvae::RegisterTest("QueenWorldSerialization", "SerializeEmpty", []() {
         queen::ComponentRegistry<32> registry;
@@ -176,9 +170,7 @@ namespace
         larvae::AssertTrue(std::strstr(serializer.CStr(), "\"parent\":") != nullptr);
     });
 
-    // ============================================================
     // Roundtrip tests
-    // ============================================================
 
     auto test_roundtrip_empty = larvae::RegisterTest("QueenWorldSerialization", "RoundtripEmpty", []() {
         queen::ComponentRegistry<32> registry;
@@ -291,9 +283,7 @@ namespace
             larvae::AssertEqual(hp->max, int32_t{100});
         });
 
-    // ============================================================
     // Entity remapping tests
-    // ============================================================
 
     auto test_entity_remapping = larvae::RegisterTest("QueenWorldSerialization", "EntityRemapping", []() {
         queen::ComponentRegistry<32> registry;
@@ -339,9 +329,7 @@ namespace
         larvae::AssertTrue(found);
     });
 
-    // ============================================================
     // Hierarchy tests
-    // ============================================================
 
     auto test_hierarchy_preserved = larvae::RegisterTest("QueenWorldSerialization", "HierarchyPreserved", []() {
         queen::ComponentRegistry<32> registry;
@@ -397,9 +385,7 @@ namespace
         larvae::AssertTrue(dst.GetParent(d_leaf) == d_mid);
     });
 
-    // ============================================================
     // Forward-compatibility tests
-    // ============================================================
 
     auto test_unknown_component_skipped =
         larvae::RegisterTest("QueenWorldSerialization", "UnknownComponentSkipped", []() {
@@ -454,9 +440,7 @@ namespace
         larvae::AssertTrue(HasEntityWithPos(dst, 1.f, 2.f, 3.f));    // loaded
     });
 
-    // ============================================================
     // Edge cases
-    // ============================================================
 
     auto test_entity_no_components = larvae::RegisterTest("QueenWorldSerialization", "EntityNoComponents", []() {
         queen::ComponentRegistry<32> registry;

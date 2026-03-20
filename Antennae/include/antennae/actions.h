@@ -34,7 +34,7 @@ namespace antennae
         terra::Key m_key{terra::Key::SPACE};
         terra::MouseButton m_mouseButton{terra::MouseButton::LEFT};
 
-        [[nodiscard]] static DigitalInputBinding FromKey(terra::Key key)
+        [[nodiscard]] static DigitalInputBinding FromKey(terra::Key key) noexcept
         {
             DigitalInputBinding binding{};
             binding.m_type = DigitalInputType::KEY;
@@ -42,7 +42,7 @@ namespace antennae
             return binding;
         }
 
-        [[nodiscard]] static DigitalInputBinding FromMouseButton(terra::MouseButton button)
+        [[nodiscard]] static DigitalInputBinding FromMouseButton(terra::MouseButton button) noexcept
         {
             DigitalInputBinding binding{};
             binding.m_type = DigitalInputType::MOUSE_BUTTON;
@@ -50,12 +50,12 @@ namespace antennae
             return binding;
         }
 
-        [[nodiscard]] bool IsBound() const
+        [[nodiscard]] bool IsBound() const noexcept
         {
             return m_type != DigitalInputType::NONE;
         }
 
-        [[nodiscard]] bool IsDown(const Keyboard& keyboard, const Mouse& mouse) const
+        [[nodiscard]] bool IsDown(const Keyboard& keyboard, const Mouse& mouse) const noexcept
         {
             if (m_type == DigitalInputType::KEY)
             {
@@ -70,7 +70,7 @@ namespace antennae
             return false;
         }
 
-        [[nodiscard]] bool JustPressed(const Keyboard& keyboard, const Mouse& mouse) const
+        [[nodiscard]] bool JustPressed(const Keyboard& keyboard, const Mouse& mouse) const noexcept
         {
             if (m_type == DigitalInputType::KEY)
             {
@@ -85,7 +85,7 @@ namespace antennae
             return false;
         }
 
-        [[nodiscard]] bool JustReleased(const Keyboard& keyboard, const Mouse& mouse) const
+        [[nodiscard]] bool JustReleased(const Keyboard& keyboard, const Mouse& mouse) const noexcept
         {
             if (m_type == DigitalInputType::KEY)
             {
@@ -125,7 +125,7 @@ namespace antennae
             AddBinding(DigitalInputBinding::FromMouseButton(button));
         }
 
-        [[nodiscard]] bool IsDown(const Keyboard& keyboard, const Mouse& mouse) const
+        [[nodiscard]] bool IsDown(const Keyboard& keyboard, const Mouse& mouse) const noexcept
         {
             for (const auto& input : m_inputs)
             {
@@ -138,7 +138,7 @@ namespace antennae
             return false;
         }
 
-        [[nodiscard]] bool JustPressed(const Keyboard& keyboard, const Mouse& mouse) const
+        [[nodiscard]] bool JustPressed(const Keyboard& keyboard, const Mouse& mouse) const noexcept
         {
             for (const auto& input : m_inputs)
             {
@@ -151,7 +151,7 @@ namespace antennae
             return false;
         }
 
-        [[nodiscard]] bool JustReleased(const Keyboard& keyboard, const Mouse& mouse) const
+        [[nodiscard]] bool JustReleased(const Keyboard& keyboard, const Mouse& mouse) const noexcept
         {
             for (const auto& input : m_inputs)
             {
@@ -256,24 +256,24 @@ namespace antennae
         bool m_current[kActionCount]{};
         bool m_previous[kActionCount]{};
 
-        [[nodiscard]] bool IsDown(InputAction action) const
+        [[nodiscard]] bool IsDown(InputAction action) const noexcept
         {
             return m_current[static_cast<size_t>(action)];
         }
 
-        [[nodiscard]] bool IsHeld(InputAction action) const
+        [[nodiscard]] bool IsHeld(InputAction action) const noexcept
         {
             const size_t index = static_cast<size_t>(action);
             return m_current[index] && m_previous[index];
         }
 
-        [[nodiscard]] bool JustPressed(InputAction action) const
+        [[nodiscard]] bool JustPressed(InputAction action) const noexcept
         {
             const size_t index = static_cast<size_t>(action);
             return m_current[index] && !m_previous[index];
         }
 
-        [[nodiscard]] bool JustReleased(InputAction action) const
+        [[nodiscard]] bool JustReleased(InputAction action) const noexcept
         {
             const size_t index = static_cast<size_t>(action);
             return !m_current[index] && m_previous[index];

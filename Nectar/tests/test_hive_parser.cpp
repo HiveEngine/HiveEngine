@@ -14,9 +14,7 @@ namespace
         return alloc.Get();
     }
 
-    // =========================================================================
     // Empty / minimal
-    // =========================================================================
 
     auto t1 = larvae::RegisterTest("NectarHiveParser", "EmptyDocument", []() {
         auto& alloc = GetParserAlloc();
@@ -47,9 +45,7 @@ namespace
         larvae::AssertTrue(sv.Equals("val"));
     });
 
-    // =========================================================================
     // Value types
-    // =========================================================================
 
     auto t5 = larvae::RegisterTest("NectarHiveParser", "StringValue", []() {
         auto& alloc = GetParserAlloc();
@@ -120,9 +116,7 @@ namespace
         larvae::AssertEqual(v->AsStringArray().Size(), size_t{0});
     });
 
-    // =========================================================================
     // Sections
-    // =========================================================================
 
     auto t13 = larvae::RegisterTest("NectarHiveParser", "MultipleSections", []() {
         auto& alloc = GetParserAlloc();
@@ -151,9 +145,7 @@ namespace
         larvae::AssertTrue(result.m_document.GetString("import.platform.mobile", "format").Equals("ASTC4x4"));
     });
 
-    // =========================================================================
     // String escapes
-    // =========================================================================
 
     auto t15 = larvae::RegisterTest("NectarHiveParser", "EscapedQuotes", []() {
         auto& alloc = GetParserAlloc();
@@ -169,9 +161,7 @@ namespace
         larvae::AssertTrue(result.m_document.GetString("s", "val").Equals("line1\nline2"));
     });
 
-    // =========================================================================
     // Whitespace handling
-    // =========================================================================
 
     auto t17 = larvae::RegisterTest("NectarHiveParser", "WhitespaceAroundEquals", []() {
         auto& alloc = GetParserAlloc();
@@ -187,9 +177,7 @@ namespace
         larvae::AssertEqual(result.m_document.GetInt("s", "key"), int64_t{42});
     });
 
-    // =========================================================================
     // Error cases
-    // =========================================================================
 
     auto t19 = larvae::RegisterTest("NectarHiveParser", "ErrorEmptySectionName", []() {
         auto& alloc = GetParserAlloc();
@@ -222,9 +210,7 @@ namespace
         larvae::AssertFalse(result.Success());
     });
 
-    // =========================================================================
     // Convenience getters with fallback
-    // =========================================================================
 
     auto t24 = larvae::RegisterTest("NectarHiveParser", "FallbackOnMissingKey", []() {
         auto& alloc = GetParserAlloc();
@@ -235,9 +221,7 @@ namespace
         larvae::AssertDoubleEqual(result.m_document.GetFloat("s", "missing", 1.5), 1.5);
     });
 
-    // =========================================================================
     // Full .hive example
-    // =========================================================================
 
     auto t25 = larvae::RegisterTest("NectarHiveParser", "FullTextureHive", []() {
         auto& alloc = GetParserAlloc();
@@ -285,9 +269,7 @@ namespace
         larvae::AssertEqual(result.m_document.GetInt("source", "import_version"), int64_t{3});
     });
 
-    // =========================================================================
     // Round-trip
-    // =========================================================================
 
     auto t26 = larvae::RegisterTest("NectarHiveParser", "RoundTrip", []() {
         auto& alloc = GetParserAlloc();

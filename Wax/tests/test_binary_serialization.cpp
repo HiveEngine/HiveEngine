@@ -10,9 +10,7 @@
 namespace
 {
 
-    // ============================================================================
     // ByteSpan Tests
-    // ============================================================================
 
     auto bytespan_default = larvae::RegisterTest("ByteSpan", "DefaultConstruction", []() {
         wax::ByteSpan span;
@@ -87,9 +85,7 @@ namespace
         larvae::AssertEqual(sum, 6u);
     });
 
-    // ============================================================================
     // ByteBuffer Tests
-    // ============================================================================
 
     auto bytebuffer_default = larvae::RegisterTest("ByteBuffer", "DefaultConstruction", []() {
         comb::LinearAllocator alloc{1024};
@@ -157,9 +153,7 @@ namespace
         larvae::AssertEqual(view[1], static_cast<uint8_t>(20));
     });
 
-    // ============================================================================
     // BinaryWriter Tests
-    // ============================================================================
 
     auto writer_int8 = larvae::RegisterTest("BinaryWriter", "WriteInt8", []() {
         comb::LinearAllocator alloc{1024};
@@ -296,9 +290,7 @@ namespace
         larvae::AssertEqual(writer.Size(), 9u);
     });
 
-    // ============================================================================
     // BinaryReader Tests
-    // ============================================================================
 
     auto reader_default = larvae::RegisterTest("BinaryReader", "DefaultConstruction", []() {
         wax::BinaryReader reader;
@@ -503,9 +495,7 @@ namespace
         larvae::AssertEqual(remaining[0], static_cast<uint8_t>(3));
     });
 
-    // ============================================================================
     // Round-trip Tests (Writer -> Reader)
-    // ============================================================================
 
     auto roundtrip_int8 = larvae::RegisterTest("BinarySerialization", "RoundTripInt8", []() {
         comb::LinearAllocator alloc{1024};
@@ -663,9 +653,7 @@ namespace
         larvae::AssertTrue(loaded.z > 3.4f && loaded.z < 3.6f);
     });
 
-    // ============================================================================
     // ByteSpan Additional Tests
-    // ============================================================================
 
     auto bytespan_at = larvae::RegisterTest("ByteSpan", "At", []() {
         uint8_t data[] = {10, 20, 30};
@@ -736,9 +724,7 @@ namespace
         larvae::AssertEqual(span[3], static_cast<uint8_t>(20));
     });
 
-    // ============================================================================
     // ByteBuffer Additional Tests
-    // ============================================================================
 
     auto bytebuffer_append_typed = larvae::RegisterTest("ByteBuffer", "AppendTyped", []() {
         comb::LinearAllocator alloc{1024};
@@ -847,9 +833,7 @@ namespace
         larvae::AssertEqual(buffer[2], static_cast<uint8_t>(30));
     });
 
-    // ============================================================================
     // BinaryWriter Additional Tests
-    // ============================================================================
 
     auto writer_varint_signed = larvae::RegisterTest("BinaryWriter", "WriteVarIntSigned", []() {
         comb::LinearAllocator alloc{1024};
@@ -971,9 +955,7 @@ namespace
         larvae::AssertEqual(reader.Read<uint32_t>(), 0u);
     });
 
-    // ============================================================================
     // BinaryReader Additional Tests
-    // ============================================================================
 
     auto reader_varint_signed = larvae::RegisterTest("BinaryReader", "ReadVarIntSigned", []() {
         // ZigZag: 0 -> 0, 1 -> -1, 2 -> 1, 3 -> -2, 4 -> 2
@@ -1072,9 +1054,7 @@ namespace
         larvae::AssertEqual(value, 0x12345678u);
     });
 
-    // ============================================================================
     // Additional Round-trip Tests
-    // ============================================================================
 
     auto roundtrip_varint_signed = larvae::RegisterTest("BinarySerialization", "RoundTripVarIntSigned", []() {
         comb::LinearAllocator alloc{1024};

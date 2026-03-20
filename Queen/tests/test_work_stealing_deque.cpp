@@ -10,9 +10,7 @@
 
 namespace
 {
-    // ============================================================================
     // CircularBuffer Tests
-    // ============================================================================
 
     auto test1 = larvae::RegisterTest("QueenCircularBuffer", "CreateBuffer", []() {
         comb::LinearAllocator alloc{1024 * 1024};
@@ -74,9 +72,7 @@ namespace
         alloc.Deallocate(grown);
     });
 
-    // ============================================================================
     // WorkStealingDeque Basic Tests
-    // ============================================================================
 
     auto test5 = larvae::RegisterTest("QueenWorkStealingDeque", "CreateDeque", []() {
         comb::LinearAllocator alloc{1024 * 1024};
@@ -243,9 +239,7 @@ namespace
         larvae::AssertEqual(*popped.value(), 30);
     });
 
-    // ============================================================================
     // Concurrent Tests
-    // ============================================================================
 
     auto test15 = larvae::RegisterTest("QueenWorkStealingDeque", "SingleProducerMultipleStealers", []() {
         comb::LinearAllocator alloc{4 * 1024 * 1024};

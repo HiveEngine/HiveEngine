@@ -11,18 +11,18 @@ namespace larvae
 {
     struct TestRunnerConfig
     {
-        std::string filter_pattern;
-        std::string suite_filter;
-        std::string exclude_suite_filter;
-        std::string exclude_filter_pattern;
-        bool verbose = false;
-        bool list_only = false;
-        bool shuffle = false;
-        int repeat_count = 1;
-        bool stop_on_failure = false;
-        bool fail_on_skip = false;
-        CapabilityMask available_capabilities{0};
-        bool capabilities_overridden = false;
+        std::string m_filterPattern;
+        std::string m_suiteFilter;
+        std::string m_excludeSuiteFilter;
+        std::string m_excludeFilterPattern;
+        bool m_verbose = false;
+        bool m_listOnly = false;
+        bool m_shuffle = false;
+        int m_repeatCount = 1;
+        bool m_stopOnFailure = false;
+        bool m_failOnSkip = false;
+        CapabilityMask m_availableCapabilities{0};
+        bool m_capabilitiesOverridden = false;
 
         TestRunnerConfig() = default;
     };
@@ -35,7 +35,7 @@ namespace larvae
         int Run();
         const std::vector<TestResult>& GetResults() const
         {
-            return results_;
+            return m_results;
         }
 
         int GetTotalTests() const;
@@ -53,8 +53,8 @@ namespace larvae
         void PrintSelection(const std::vector<TestInfo>& tests) const;
         void PrintSummary() const;
 
-        TestRunnerConfig config_;
-        std::vector<TestResult> results_;
+        TestRunnerConfig m_config;
+        std::vector<TestResult> m_results;
     };
 
     TestRunnerConfig ParseCommandLine(int argc, char** argv);

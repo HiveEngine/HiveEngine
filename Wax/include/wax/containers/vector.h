@@ -434,8 +434,13 @@ namespace wax
         {
             if (m_size == m_capacity)
             {
+                // value may reference an element in this vector; copy before realloc
+                T valueCopy{value};
                 const size_t newCapacity = m_capacity == 0 ? 8 : m_capacity * 2;
                 Reserve(newCapacity);
+                new (&m_data[m_size]) T(std::move(valueCopy));
+                ++m_size;
+                return;
             }
 
             new (&m_data[m_size]) T(value);
@@ -446,8 +451,12 @@ namespace wax
         {
             if (m_size == m_capacity)
             {
+                T valueCopy{std::move(value)};
                 const size_t newCapacity = m_capacity == 0 ? 8 : m_capacity * 2;
                 Reserve(newCapacity);
+                new (&m_data[m_size]) T(std::move(valueCopy));
+                ++m_size;
+                return;
             }
 
             new (&m_data[m_size]) T(std::move(value));
@@ -475,6 +484,42 @@ namespace wax
             {
                 m_data[m_size].~T();
             }
+        }
+
+        Iterator Erase(Iterator pos)
+        {
+            hive::Assert(pos >= Begin() && pos < End(), "Iterator out of range");
+            size_t index = static_cast<size_t>(pos - Begin());
+
+            if constexpr (std::is_trivially_copyable_v<T>)
+            {
+                std::memmove(&m_data[index], &m_data[index + 1], (m_size - index - 1) * sizeof(T));
+            }
+            else
+            {
+                for (size_t i = index; i + 1 < m_size; ++i)
+                {
+                    m_data[i] = std::move(m_data[i + 1]);
+                }
+                m_data[m_size - 1].~T();
+            }
+
+            --m_size;
+            return pos;
+        }
+
+        Iterator EraseSwapBack(Iterator pos)
+        {
+            hive::Assert(pos >= Begin() && pos < End(), "Iterator out of range");
+            size_t index = static_cast<size_t>(pos - Begin());
+
+            if (index != m_size - 1)
+            {
+                m_data[index] = std::move(m_data[m_size - 1]);
+            }
+
+            PopBack();
+            return pos;
         }
 
         void Resize(size_t newSize)

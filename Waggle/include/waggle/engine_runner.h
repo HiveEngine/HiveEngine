@@ -1,5 +1,8 @@
 #pragma once
 
+#include <drone/frame_pipeline.h>
+#include <drone/job_submitter.h>
+
 #include <waggle/app.h>
 #include <waggle/runtime_context.h>
 
@@ -26,6 +29,7 @@ namespace waggle
         bool m_autoSystems{true};
         bool m_deferWindow{false};
         AppConfig m_app{};
+        drone::JobSubmitter m_jobs{};
     };
 
     struct EngineContext
@@ -34,6 +38,8 @@ namespace waggle
         queen::World* m_world{nullptr};
         terra::WindowContext* m_window{nullptr};
         swarm::RenderContext* m_renderContext{nullptr};
+        drone::FramePipeline* m_framePipeline{nullptr};
+        drone::JobSubmitter m_jobs{};
     };
 
     struct EngineCallbacks

@@ -8,9 +8,7 @@
 namespace
 {
 
-    // =========================================================================
     // Default state
-    // =========================================================================
 
     auto t_default = larvae::RegisterTest("WaggleGameplayModule", "DefaultState", []() {
         waggle::GameplayModule mod;
@@ -19,9 +17,7 @@ namespace
         larvae::AssertEqual(std::strlen(mod.Version()), size_t{0});
     });
 
-    // =========================================================================
     // Load non-existent
-    // =========================================================================
 
     auto t_load_fail = larvae::RegisterTest("WaggleGameplayModule", "LoadNonExistent", []() {
         waggle::GameplayModule mod;
@@ -30,9 +26,7 @@ namespace
         larvae::AssertTrue(std::strlen(mod.GetError()) > 0);
     });
 
-    // =========================================================================
     // Move semantics
-    // =========================================================================
 
     auto t_move_ctor = larvae::RegisterTest("WaggleGameplayModule", "MoveConstructor", []() {
         waggle::GameplayModule mod;

@@ -7,10 +7,11 @@
 #include <wax/containers/string_view.h>
 #include <wax/containers/vector.h>
 
+#include <drone/job_submitter.h>
+
 #include <atomic>
 #include <cstdint>
 #include <mutex>
-#include <thread>
 
 namespace nectar
 {
@@ -73,7 +74,7 @@ namespace nectar
     class NativeFileWatcher final : public IFileWatcher
     {
     public:
-        explicit NativeFileWatcher(comb::DefaultAllocator& alloc);
+        NativeFileWatcher(comb::DefaultAllocator& alloc, drone::JobSubmitter jobs = {});
         ~NativeFileWatcher() override;
 
         NativeFileWatcher(const NativeFileWatcher&) = delete;
@@ -99,8 +100,10 @@ namespace nectar
         void PlatformAddWatch(wax::StringView directory);
         static bool IsDotDirectory(wax::StringView name);
 
+        static void WatcherJob(void* data);
+
         comb::DefaultAllocator* m_alloc;
-        std::thread m_thread;
+        drone::JobSubmitter m_jobs;
         std::atomic<bool> m_running{false};
         std::mutex m_queueMutex;
         wax::Vector<FileChange> m_pendingChanges;

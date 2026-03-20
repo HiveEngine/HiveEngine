@@ -74,6 +74,14 @@ namespace hive
         return sym;
     }
 
+    void* DynamicLibrary::Detach() noexcept
+    {
+        void* handle = m_handle;
+        m_handle = nullptr;
+        m_errorBuf[0] = '\0';
+        return handle;
+    }
+
     bool DynamicLibrary::IsLoaded() const noexcept
     {
         return m_handle != nullptr;

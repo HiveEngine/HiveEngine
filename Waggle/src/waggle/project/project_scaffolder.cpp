@@ -1,18 +1,18 @@
-#include <nectar/project/project_file.h>
+#include <waggle/project/project_scaffolder.h>
 
 #include <queen/reflect/component_registry.h>
 #include <queen/reflect/world_serializer.h>
 #include <queen/world/world.h>
 
+#include <nectar/project/project_file.h>
+
 #include <waggle/components/camera.h>
 #include <waggle/components/lighting.h>
 #include <waggle/components/transform.h>
-#include <waggle/project/project_scaffolder.h>
 
 #include <cctype>
 #include <filesystem>
 #include <fstream>
-#include <string>
 
 namespace
 {
@@ -170,11 +170,11 @@ namespace
         (void)world.Spawn(waggle::Transform{cameraTransform}, waggle::Camera{});
 
         waggle::DirectionalLight sun{};
-        sun.direction = hive::math::Float3{0.35f, -1.0f, 0.15f};
+        sun.m_direction = hive::math::Float3{0.35f, -1.0f, 0.15f};
         (void)world.Spawn(waggle::DirectionalLight{sun});
 
         waggle::AmbientLight ambient{};
-        ambient.color = hive::math::Float3{0.15f, 0.15f, 0.18f};
+        ambient.m_color = hive::math::Float3{0.15f, 0.15f, 0.18f};
         (void)world.Spawn(waggle::AmbientLight{ambient});
 
         queen::WorldSerializer<8192> serializer{};
@@ -389,12 +389,12 @@ namespace waggle
         };
 
         const PresetEntry presetEntries[] = {
-            {"editor", "Editor", "hive_run_editor", "Debug", true, false, true, true, true, true, true, true,
-             true, true},
-            {"game", "Game", "hive_run_game", "Debug", true, false, true, false, false, false, false, false,
-             false, false},
-            {"headless", "Headless", "hive_run_headless", "Debug", false, false, false, false, true, true, true,
-             false, true, false},
+            {"editor", "Editor", "hive_run_editor", "Debug", true, false, true, true, true, true, true, true, true,
+             true},
+            {"game", "Game", "hive_run_game", "Debug", true, false, true, false, false, false, false, false, false,
+             false},
+            {"headless", "Headless", "hive_run_headless", "Debug", false, false, false, false, true, true, true, false,
+             true, false},
         };
 
         bool firstPreset = true;
@@ -412,8 +412,7 @@ namespace waggle
             firstPreset = false;
 
             const wax::String presetName = MakeModePresetName(presetPrefix.View(), entry.m_suffix, alloc);
-            const wax::String displayName =
-                MakeDisplayPresetName(config.m_cmake.m_projectName, entry.m_mode, alloc);
+            const wax::String displayName = MakeDisplayPresetName(config.m_cmake.m_projectName, entry.m_mode, alloc);
 
             out.Append("    {\n");
             out.Append("      \"name\": ");
@@ -486,16 +485,14 @@ namespace waggle
 
             wax::String buildName{alloc, presetName};
             buildName.Append("-build");
-            wax::String buildDisplayName =
-                MakeDisplayPresetName(config.m_cmake.m_projectName, entry.m_mode, alloc);
+            wax::String buildDisplayName = MakeDisplayPresetName(config.m_cmake.m_projectName, entry.m_mode, alloc);
             buildDisplayName.Append(" Build");
             AppendBuildPreset(out, firstBuildPreset, buildName.View(), buildDisplayName.View(), presetName.View(),
                               "hive_launcher");
 
             wax::String runName{alloc, presetName};
             runName.Append("-run");
-            wax::String runDisplayName =
-                MakeDisplayPresetName(config.m_cmake.m_projectName, entry.m_mode, alloc);
+            wax::String runDisplayName = MakeDisplayPresetName(config.m_cmake.m_projectName, entry.m_mode, alloc);
             runDisplayName.Append(" Run");
             AppendBuildPreset(out, firstBuildPreset, runName.View(), runDisplayName.View(), presetName.View(),
                               entry.m_runTarget);
@@ -542,8 +539,7 @@ namespace waggle
             return false;
         }
 
-        const std::filesystem::path root = std::filesystem::path{
-            std::string{config.m_cmake.m_projectRoot.Data(), config.m_cmake.m_projectRoot.Size()}};
+        const std::filesystem::path root{config.m_cmake.m_projectRoot.Data()};
         std::error_code ec;
         std::filesystem::create_directories(root / "src", ec);
         if (ec)
@@ -557,11 +553,8 @@ namespace waggle
         }
         if (config.m_writeDefaultScene && !config.m_defaultSceneRelative.IsEmpty())
         {
-            std::filesystem::create_directories(root / "assets" /
-                                                    std::filesystem::path{std::string{config.m_defaultSceneRelative.Data(),
-                                                                                       config.m_defaultSceneRelative.Size()}}
-                                                        .parent_path(),
-                                                ec);
+            std::filesystem::create_directories(
+                root / "assets" / std::filesystem::path{config.m_defaultSceneRelative.Data()}.parent_path(), ec);
             if (ec)
             {
                 return false;
@@ -625,8 +618,7 @@ namespace waggle
         {
             const wax::String scene = GenerateDefaultScene(alloc);
             const std::filesystem::path scenePath =
-                root / "assets" /
-                std::filesystem::path{std::string{config.m_defaultSceneRelative.Data(), config.m_defaultSceneRelative.Size()}};
+                root / "assets" / std::filesystem::path{config.m_defaultSceneRelative.Data()};
             if (!WriteTextFile(scenePath, scene.View()))
             {
                 return false;

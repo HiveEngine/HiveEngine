@@ -1,4 +1,4 @@
-#include <hive/HiveConfig.h>
+#include <hive/hive_config.h>
 #include <hive/platform/dynamic_library.h>
 
 #include <larvae/larvae.h>
@@ -11,9 +11,7 @@ namespace
 
     using hive::DynamicLibrary;
 
-    // =========================================================================
     // Construction & basic state
-    // =========================================================================
 
     auto t_default = larvae::RegisterTest("HiveDynamicLibrary", "DefaultConstruction", []() {
         DynamicLibrary lib;
@@ -35,9 +33,7 @@ namespace
         larvae::AssertNull(sym);
     });
 
-    // =========================================================================
     // Move semantics
-    // =========================================================================
 
     auto t_move_ctor = larvae::RegisterTest("HiveDynamicLibrary", "MoveConstructor", []() {
         DynamicLibrary lib;
@@ -66,9 +62,7 @@ namespace
         larvae::AssertFalse(lib.IsLoaded());
     });
 
-    // =========================================================================
     // Load system library + symbol lookup
-    // =========================================================================
 
     auto t_load_system = larvae::RegisterTest("HiveDynamicLibrary", "LoadSystemLibrary", []() {
         DynamicLibrary lib;
@@ -93,9 +87,7 @@ namespace
         larvae::AssertNotNull(sym);
     });
 
-    // =========================================================================
     // Unload
-    // =========================================================================
 
     auto t_unload_twice = larvae::RegisterTest("HiveDynamicLibrary", "UnloadTwice", []() {
         DynamicLibrary lib;

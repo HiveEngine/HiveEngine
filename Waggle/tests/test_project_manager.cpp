@@ -61,9 +61,7 @@ namespace
         return (dir.path / "project.hive").generic_string();
     }
 
-    // =========================================================================
     // Open / Close
-    // =========================================================================
 
     auto t_open = larvae::RegisterTest("WaggleProjectManager", "OpenValidProject", []() {
         TempDir dir{"waggle_pm_open"};
@@ -100,9 +98,7 @@ namespace
         larvae::AssertFalse(pm.IsOpen());
     });
 
-    // =========================================================================
     // Cache directories
-    // =========================================================================
 
     auto t_cache_dirs = larvae::RegisterTest("WaggleProjectManager", "CreateCacheDirectories", []() {
         TempDir dir{"waggle_pm_cache"};
@@ -116,9 +112,7 @@ namespace
         larvae::AssertTrue(std::filesystem::exists(dir.path / ".hive-cache" / "cas"));
     });
 
-    // =========================================================================
     // VFS
-    // =========================================================================
 
     auto t_vfs = larvae::RegisterTest("WaggleProjectManager", "VFSMountedCorrectly", []() {
         TempDir dir{"waggle_pm_vfs"};
@@ -137,9 +131,7 @@ namespace
         larvae::AssertFalse(pm.VFS().Exists("nonexistent.txt"));
     });
 
-    // =========================================================================
     // Close and reopen
-    // =========================================================================
 
     auto t_close_reopen = larvae::RegisterTest("WaggleProjectManager", "CloseAndReopen", []() {
         TempDir dir{"waggle_pm_reopen"};
@@ -158,9 +150,7 @@ namespace
         larvae::AssertTrue(pm.IsOpen());
     });
 
-    // =========================================================================
     // Hot reload
-    // =========================================================================
 
     auto t_hot_reload_off = larvae::RegisterTest("WaggleProjectManager", "HotReloadDisabledByDefault", []() {
         TempDir dir{"waggle_pm_hr_off"};

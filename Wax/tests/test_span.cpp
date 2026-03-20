@@ -5,9 +5,7 @@
 
 namespace
 {
-    // =============================================================================
     // Construction and Basic Access
-    // =============================================================================
 
     auto test1 = larvae::RegisterTest("WaxSpan", "DefaultConstructor", []() {
         wax::Span<int> span;
@@ -64,9 +62,7 @@ namespace
         larvae::AssertEqual(span[3], 4);
     });
 
-    // =============================================================================
     // Element Access
-    // =============================================================================
 
     auto test7 = larvae::RegisterTest("WaxSpan", "IndexOperatorRead", []() {
         int data[] = {10, 20, 30, 40};
@@ -127,9 +123,7 @@ namespace
         larvae::AssertEqual(ptr[2], 3);
     });
 
-    // =============================================================================
     // Size Information
-    // =============================================================================
 
     auto test12 = larvae::RegisterTest("WaxSpan", "SizeAndSizeBytes", []() {
         int data[] = {1, 2, 3, 4, 5};
@@ -148,9 +142,7 @@ namespace
         larvae::AssertFalse(nonEmpty.IsEmpty());
     });
 
-    // =============================================================================
     // Iterators and Range-For
-    // =============================================================================
 
     auto test14 = larvae::RegisterTest("WaxSpan", "BeginEndIterators", []() {
         int data[] = {10, 20, 30, 40};
@@ -199,9 +191,7 @@ namespace
         larvae::AssertEqual(data[2], 6);
     });
 
-    // =============================================================================
     // Subspan Operations
-    // =============================================================================
 
     auto test17 = larvae::RegisterTest("WaxSpan", "FirstSubspan", []() {
         int data[] = {1, 2, 3, 4, 5};
@@ -250,9 +240,7 @@ namespace
         larvae::AssertEqual(sub[2], 5);
     });
 
-    // =============================================================================
     // Copy Semantics
-    // =============================================================================
 
     auto test21 = larvae::RegisterTest("WaxSpan", "CopyConstructor", []() {
         int data[] = {1, 2, 3};
@@ -278,9 +266,7 @@ namespace
         larvae::AssertEqual(span2.Data(), data1);
     });
 
-    // =============================================================================
     // Const Correctness
-    // =============================================================================
 
     auto test23 = larvae::RegisterTest("WaxSpan", "ConstSpanReadOnly", []() {
         int data[] = {1, 2, 3};
@@ -307,9 +293,7 @@ namespace
         larvae::AssertEqual(span.Back(), 30);
     });
 
-    // =============================================================================
     // Different Types
-    // =============================================================================
 
     auto test25 = larvae::RegisterTest("WaxSpan", "FloatSpan", []() {
         float data[] = {1.5f, 2.5f, 3.5f};
@@ -334,9 +318,7 @@ namespace
         larvae::AssertEqual(span[2].x, 5);
     });
 
-    // =============================================================================
     // Edge Cases
-    // =============================================================================
 
     auto test27 = larvae::RegisterTest("WaxSpan", "SingleElementSpan", []() {
         int data[] = {42};

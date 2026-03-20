@@ -225,8 +225,8 @@ namespace nectar
 
             if (status == AssetStatus::READY && old != AssetStatus::READY)
                 EmitEvent(AssetEventKind::LOADED, index, m_slots[index].m_generation);
-            else if (status == AssetStatus::Failed && old != AssetStatus::Failed)
-                EmitEvent(AssetEventKind::Failed, index, m_slots[index].m_generation);
+            else if (status == AssetStatus::FAILED && old != AssetStatus::FAILED)
+                EmitEvent(AssetEventKind::FAILED, index, m_slots[index].m_generation);
         }
 
         const AssetErrorInfo* GetError(uint32_t index) const noexcept override

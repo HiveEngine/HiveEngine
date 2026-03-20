@@ -10,6 +10,7 @@
 #include <array>
 #include <cstddef>
 #include <memory>
+#include <utility>
 
 // Memory debugging (zero overhead when disabled)
 #if COMB_MEM_DEBUG
@@ -27,75 +28,8 @@
 
 namespace comb
 {
-    /**
-     * Slab allocator with multiple size classes and free-lists
-     *
-     * Manages multiple "slabs" (pools) of different object sizes.
-     * Each slab is a PoolAllocator for a specific size class.
-     * Allocations are routed to the smallest slab that can fit the request.
-     *
-     * Satisfies the comb::Allocator concept.
-     *
-     * Use cases:
-     * - General-purpose allocation with known size distribution
-     * - Multiple object types with different sizes
-     * - Need fast allocation + deallocation with memory reuse
-     * - Alternative to malloc with better performance
-     *
-     * Memory layout (example with 3 size classes: 32, 64, 128):
-     * ┌──────────────────────────────────────────────────────┐
-     * │ Slab 0 (32B):  [obj][obj][obj]...[obj] + free-list   │
-     * │ Slab 1 (64B):  [obj][obj][obj]...[obj] + free-list   │
-     * │ Slab 2 (128B): [obj][obj][obj]...[obj] + free-list   │
-     * └──────────────────────────────────────────────────────┘
-     *
-     * Each slab operates independently with its own free-list.
-     *
-     * Performance characteristics:
-     * - Allocation: O(1) - find slab O(K) + pop from free-list O(1), K = size classes
-     * - Deallocation: O(1) - push to free-list
-     * - Typical K = 8-16 size classes (small overhead)
-     * - Thread-safe: No (use per-thread or add synchronization)
-     * - Fragmentation: None (pre-allocated slabs)
-     *
-     * Limitations:
-     * - Fixed size classes (set at compile time)
-     * - Fixed capacity per slab
-     * - Returns nullptr when slab exhausted (no hidden allocations)
-     * - Not thread-safe by default
-     *
-     * Size class selection:
-     * - Sizes are rounded up to next power of 2
-     * - Common pattern: 16, 32, 64, 128, 256, 512, 1024, 2048
-     * - Should cover 95% of your allocation sizes
-     *
-     * Example:
-     * @code
-     *   // Create slab allocator with 1000 objects per size class
-     *   // Size classes: 32, 64, 128, 256, 512 bytes
-     *   comb::SlabAllocator<1000, 32, 64, 128, 256, 512> slabs;
-     *
-     *   // Allocate 60 bytes - routed to 64-byte slab
-     *   void* ptr1 = slabs.Allocate(60, 8);
-     *   if (!ptr1) {
-     *       // 64-byte slab exhausted
-     *       return;
-     *   }
-     *
-     *   // Allocate 200 bytes - routed to 256-byte slab
-     *   void* ptr2 = slabs.Allocate(200, 8);
-     *
-     *   // Free memory - returns to appropriate free-list
-     *   slabs.Deallocate(ptr1);  // Returns to 64-byte slab
-     *   slabs.Deallocate(ptr2);  // Returns to 256-byte slab
-     *
-     *   // Memory immediately available for reuse
-     *   void* ptr3 = slabs.Allocate(60, 8);  // Reuses ptr1's slot
-     *
-     *   // Reset all slabs at once
-     *   slabs.Reset();
-     * @endcode
-     */
+    // Slab allocator — multiple PoolAllocators behind different size classes.
+    // Allocations routed to the smallest slab that fits. O(1) alloc/dealloc.
     template <size_t ObjectsPerSlab, size_t... SizeClasses> class SlabAllocator
     {
         static_assert(sizeof...(SizeClasses) > 0, "Must provide at least one size class");
@@ -116,17 +50,17 @@ namespace comb
             size_t used_count{0};
             size_t slot_size{0};
             size_t total_size{0};
-            size_t free_list_offset_{0}; // Track offset for Reset()
-            size_t user_size_{0};        // Track user-visible size (without guard bytes)
+            size_t m_freeListOffset{0}; // Track offset for Reset()
+            size_t m_userSize{0};        // Track user-visible size (without guard bytes)
 
             void Initialize(size_t size, size_t free_list_offset = 0, size_t user_size = 0)
             {
                 slot_size = size;
                 total_size = ObjectsPerSlab * slot_size;
-                free_list_offset_ = free_list_offset;
+                m_freeListOffset = free_list_offset;
 
                 // user_size: raw size class (without debug overhead)
-                user_size_ = (user_size > 0) ? user_size : size;
+                m_userSize = (user_size > 0) ? user_size : size;
 
                 // Allocate memory from OS
                 memory_block = AllocatePages(total_size);
@@ -166,7 +100,7 @@ namespace comb
             void RebuildFreeList()
             {
                 // Use stored offset from Initialize()
-                RebuildFreeList(free_list_offset_);
+                RebuildFreeList(m_freeListOffset);
             }
 
             void* Allocate()
@@ -209,13 +143,13 @@ namespace comb
             size_t GetUsedMemory() const
             {
                 // Return user-visible memory (excluding guard bytes)
-                return used_count * user_size_;
+                return used_count * m_userSize;
             }
 
             size_t GetTotalMemory() const
             {
                 // Return user-visible capacity (excluding guard bytes)
-                return ObjectsPerSlab * user_size_;
+                return ObjectsPerSlab * m_userSize;
             }
 
             size_t GetFreeCount() const
@@ -264,11 +198,11 @@ namespace comb
 
 #if COMB_MEM_DEBUG
             // Create debug tracking objects
-            registry_ = std::make_unique<debug::AllocationRegistry>();
-            history_ = std::make_unique<debug::AllocationHistory>();
+            m_registry = std::make_unique<debug::AllocationRegistry>();
+            m_history = std::make_unique<debug::AllocationHistory>();
 
             // Register with global tracker
-            debug::GlobalMemoryTracker::GetInstance().RegisterAllocator(GetName(), registry_.get());
+            debug::GlobalMemoryTracker::GetInstance().RegisterAllocator(GetName(), m_registry.get());
 #endif
         }
 
@@ -278,16 +212,16 @@ namespace comb
         ~SlabAllocator()
         {
 #if COMB_MEM_DEBUG
-            if (registry_)
+            if (m_registry)
             {
                 // Report leaks before destruction
                 if constexpr (debug::kLeakDetectionEnabled)
                 {
-                    registry_->ReportLeaks(GetName());
+                    m_registry->ReportLeaks(GetName());
                 }
 
                 // Unregister from global tracker
-                debug::GlobalMemoryTracker::GetInstance().UnregisterAllocator(registry_.get());
+                debug::GlobalMemoryTracker::GetInstance().UnregisterAllocator(m_registry.get());
             }
 #endif
 
@@ -306,11 +240,11 @@ namespace comb
         SlabAllocator(SlabAllocator&& other) noexcept
             : slabs_{std::move(other.slabs_)}
 #if COMB_MEM_DEBUG
-            , registry_{std::move(other.registry_)}
-            , history_{std::move(other.history_)}
+            , m_registry{std::move(other.m_registry)}
+            , m_history{std::move(other.m_history)}
 #endif
         {
-            // Note: registry_ and history_ are automatically moved via unique_ptr
+            // Note: m_registry and m_history are automatically moved via unique_ptr
             // No need to update global tracker - it still points to the same registry object
 
             // Invalidate other
@@ -327,16 +261,16 @@ namespace comb
             if (this != &other)
             {
 #if COMB_MEM_DEBUG
-                if (registry_)
+                if (m_registry)
                 {
                     // Report leaks for our current allocations before we destroy them
                     if constexpr (debug::kLeakDetectionEnabled)
                     {
-                        registry_->ReportLeaks(GetName());
+                        m_registry->ReportLeaks(GetName());
                     }
 
                     // Unregister from global tracker
-                    debug::GlobalMemoryTracker::GetInstance().UnregisterAllocator(registry_.get());
+                    debug::GlobalMemoryTracker::GetInstance().UnregisterAllocator(m_registry.get());
                 }
 #endif
 
@@ -351,8 +285,8 @@ namespace comb
 
 #if COMB_MEM_DEBUG
                 // Move the debug tracking objects
-                registry_ = std::move(other.registry_);
-                history_ = std::move(other.history_);
+                m_registry = std::move(other.m_registry);
+                m_history = std::move(other.m_history);
                 // No need to re-register - global tracker still points to same registry object
 #endif
 
@@ -454,9 +388,9 @@ namespace comb
 
 #if COMB_MEM_DEBUG
             // Clear debug tracking registry
-            if (registry_)
+            if (m_registry)
             {
-                registry_->Clear();
+                m_registry->Clear();
             }
 #endif
         }
@@ -464,7 +398,7 @@ namespace comb
         /**
          * Get total bytes currently allocated across all slabs
          */
-        [[nodiscard]] size_t GetUsedMemory() const
+        [[nodiscard]] size_t GetUsedMemory() const noexcept
         {
             size_t total = 0;
             for (const auto& slab : slabs_)
@@ -477,7 +411,7 @@ namespace comb
         /**
          * Get total capacity across all slabs
          */
-        [[nodiscard]] size_t GetTotalMemory() const
+        [[nodiscard]] size_t GetTotalMemory() const noexcept
         {
             size_t total = 0;
             for (const auto& slab : slabs_)
@@ -490,7 +424,7 @@ namespace comb
         /**
          * Get allocator name for debugging
          */
-        [[nodiscard]] const char* GetName() const
+        [[nodiscard]] const char* GetName() const noexcept
         {
             return "SlabAllocator";
         }
@@ -498,7 +432,7 @@ namespace comb
         /**
          * Get number of size classes
          */
-        [[nodiscard]] constexpr size_t GetSlabCount() const
+        [[nodiscard]] constexpr size_t GetSlabCount() const noexcept
         {
             return NumSlabs;
         }
@@ -506,7 +440,7 @@ namespace comb
         /**
          * Get size classes array
          */
-        [[nodiscard]] constexpr auto GetSizeClasses() const
+        [[nodiscard]] constexpr auto GetSizeClasses() const noexcept
         {
             return sizes_;
         }
@@ -514,7 +448,7 @@ namespace comb
         /**
          * Get usage stats for a specific slab
          */
-        [[nodiscard]] size_t GetSlabUsedCount(size_t slab_index) const
+        [[nodiscard]] size_t GetSlabUsedCount(size_t slab_index) const noexcept
         {
             hive::Assert(slab_index < NumSlabs, "Slab index out of range");
             return slabs_[slab_index].used_count;
@@ -523,7 +457,7 @@ namespace comb
         /**
          * Get free count for a specific slab
          */
-        [[nodiscard]] size_t GetSlabFreeCount(size_t slab_index) const
+        [[nodiscard]] size_t GetSlabFreeCount(size_t slab_index) const noexcept
         {
             hive::Assert(slab_index < NumSlabs, "Slab index out of range");
             return slabs_[slab_index].GetFreeCount();
@@ -536,8 +470,8 @@ namespace comb
         void DeallocateDebug(void* ptr);
 
         // Use unique_ptr to enable move semantics (AllocationRegistry contains non-movable mutex)
-        std::unique_ptr<debug::AllocationRegistry> registry_;
-        std::unique_ptr<debug::AllocationHistory> history_;
+        std::unique_ptr<debug::AllocationRegistry> m_registry;
+        std::unique_ptr<debug::AllocationHistory> m_history;
 #endif
     };
 
@@ -545,9 +479,7 @@ namespace comb
     concept ValidSlabAllocator = Allocator<SlabAllocator<N, Sizes...>>;
 
 #if COMB_MEM_DEBUG
-    // ========================================================================
     // Debug Implementation (Template methods - must be in header)
-    // ========================================================================
 
     template <size_t ObjectsPerSlab, size_t... SizeClasses>
     void* SlabAllocator<ObjectsPerSlab, SizeClasses...>::AllocateDebug(size_t size, size_t alignment, const char* tag)
@@ -599,18 +531,18 @@ namespace comb
         info.m_alignment = alignment;
         info.m_timestamp = debug::GetTimestamp();
         info.m_tag = tag;
-        info.m_allocationId = registry_->GetNextAllocationId();
+        info.m_allocationId = m_registry->GetNextAllocationId();
         info.m_threadId = debug::GetThreadId();
 
 #if COMB_MEM_DEBUG_CALLSTACKS
         debug::CaptureCallstack(info.callstack, info.callstackDepth);
 #endif
 
-        registry_->RegisterAllocation(info);
+        m_registry->RegisterAllocation(info);
 
         // 5. Record in history
 #if COMB_MEM_DEBUG_HISTORY
-        history_->RecordAllocation(info);
+        m_history->RecordAllocation(info);
 #endif
 
         return userPtr;
@@ -623,7 +555,7 @@ namespace comb
             return;
 
         // 1. Find allocation info
-        auto* info = registry_->FindAllocation(ptr);
+        auto* info = m_registry->FindAllocation(ptr);
         if (!info)
         {
             hive::LogError(comb::LOG_COMB_ROOT, "[MEM_DEBUG] [{}] Double-free or invalid pointer detected! Address: {}",
@@ -662,11 +594,11 @@ namespace comb
 
         // 4. Record deallocation in history
 #if COMB_MEM_DEBUG_HISTORY
-        history_->RecordDeallocation(ptr, info->m_size);
+        m_history->RecordDeallocation(ptr, info->m_size);
 #endif
 
         // 5. Unregister allocation
-        registry_->UnregisterAllocation(ptr);
+        m_registry->UnregisterAllocation(ptr);
 
         // 6. Return to slab free-list
         // In debug mode, the slab's free-list stores pointers in user data area (after guard)

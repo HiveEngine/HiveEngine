@@ -7,8 +7,7 @@
 #include <wax/containers/vector.h>
 
 #include <queen/command/command_buffer.h>
-
-#include <thread>
+#include <queen/scheduler/worker_context.h>
 
 namespace queen
 {
@@ -65,30 +64,17 @@ namespace queen
     template <comb::Allocator Allocator> class Commands
     {
     public:
-        struct ThreadBuffer
-        {
-            std::thread::id m_threadId;
-            CommandBuffer<Allocator> m_buffer;
-
-            explicit ThreadBuffer(Allocator& alloc)
-                : m_threadId{}
-                , m_buffer{alloc}
-            {
-            }
-
-            ThreadBuffer(std::thread::id id, Allocator& alloc)
-                : m_threadId{id}
-                , m_buffer{alloc}
-            {
-            }
-        };
-
-        explicit Commands(Allocator& allocator, size_t maxThreads = 16)
+        explicit Commands(Allocator& allocator, size_t workerCount = 0)
             : m_allocator{&allocator}
-            , m_threadBuffers{allocator}
-            , m_bufferCount{0}
+            , m_buffers{allocator}
         {
-            m_threadBuffers.Reserve(maxThreads);
+            // Slot 0 = main thread, slots 1..N = workers
+            size_t slotCount = 1 + workerCount;
+            m_buffers.Reserve(slotCount);
+            for (size_t i = 0; i < slotCount; ++i)
+            {
+                m_buffers.EmplaceBack(allocator);
+            }
         }
 
         ~Commands() = default;
@@ -101,45 +87,19 @@ namespace queen
         /**
          * Get the command buffer for the current thread
          *
-         * Creates a new buffer if this is the first access from this thread.
+         * Uses WorkerContext index for O(1) lookup. Slot 0 is reserved for
+         * the main thread, slots 1..N for worker threads.
          *
-         * @return Reference to thread-local CommandBuffer
+         * @return Reference to per-thread CommandBuffer
          */
         [[nodiscard]] CommandBuffer<Allocator>& Get()
         {
-            std::thread::id currentId = std::this_thread::get_id();
-
-            for (size_t i = 0; i < m_bufferCount; ++i)
-            {
-                if (m_threadBuffers[i].m_threadId == currentId)
-                {
-                    return m_threadBuffers[i].m_buffer;
-                }
-            }
-
-            return CreateBuffer(currentId);
+            return m_buffers[SlotIndex()];
         }
 
-        /**
-         * Get the command buffer for the current thread (const version)
-         *
-         * Asserts if no buffer exists for this thread.
-         */
         [[nodiscard]] const CommandBuffer<Allocator>& Get() const
         {
-            std::thread::id currentId = std::this_thread::get_id();
-
-            for (size_t i = 0; i < m_bufferCount; ++i)
-            {
-                if (m_threadBuffers[i].m_threadId == currentId)
-                {
-                    return m_threadBuffers[i].m_buffer;
-                }
-            }
-
-            hive::Assert(false, "No command buffer exists for this thread");
-            // Unreachable, but needed for compilation
-            return m_threadBuffers[0].m_buffer;
+            return m_buffers[SlotIndex()];
         }
 
         /**
@@ -152,56 +112,43 @@ namespace queen
          */
         void FlushAll(World& world)
         {
-            // Apply buffers in deterministic order (index order)
-            for (size_t i = 0; i < m_bufferCount; ++i)
+            for (size_t i = 0; i < m_buffers.Size(); ++i)
             {
-                if (!m_threadBuffers[i].m_buffer.IsEmpty())
+                if (!m_buffers[i].IsEmpty())
                 {
-                    m_threadBuffers[i].m_buffer.Flush(world);
+                    m_buffers[i].Flush(world);
                 }
             }
         }
 
-        /**
-         * Clear all command buffers without applying them
-         */
         void ClearAll()
         {
-            for (size_t i = 0; i < m_bufferCount; ++i)
+            for (size_t i = 0; i < m_buffers.Size(); ++i)
             {
-                m_threadBuffers[i].m_buffer.Clear();
+                m_buffers[i].Clear();
             }
         }
 
-        /**
-         * Get the number of active thread buffers
-         */
         [[nodiscard]] size_t BufferCount() const noexcept
         {
-            return m_bufferCount;
+            return m_buffers.Size();
         }
 
-        /**
-         * Get total command count across all buffers
-         */
         [[nodiscard]] size_t TotalCommandCount() const noexcept
         {
             size_t total = 0;
-            for (size_t i = 0; i < m_bufferCount; ++i)
+            for (size_t i = 0; i < m_buffers.Size(); ++i)
             {
-                total += m_threadBuffers[i].m_buffer.CommandCount();
+                total += m_buffers[i].CommandCount();
             }
             return total;
         }
 
-        /**
-         * Check if all buffers are empty
-         */
         [[nodiscard]] bool IsEmpty() const noexcept
         {
-            for (size_t i = 0; i < m_bufferCount; ++i)
+            for (size_t i = 0; i < m_buffers.Size(); ++i)
             {
-                if (!m_threadBuffers[i].m_buffer.IsEmpty())
+                if (!m_buffers[i].IsEmpty())
                 {
                     return false;
                 }
@@ -209,26 +156,22 @@ namespace queen
             return true;
         }
 
-        /**
-         * Iterate over all buffers (for advanced use)
-         */
         template <typename Func> void ForEach(Func&& func)
         {
-            for (size_t i = 0; i < m_bufferCount; ++i)
+            for (size_t i = 0; i < m_buffers.Size(); ++i)
             {
-                func(m_threadBuffers[i].m_buffer);
+                func(m_buffers[i]);
             }
         }
 
     private:
-        CommandBuffer<Allocator>& CreateBuffer(std::thread::id id)
+        [[nodiscard]] static size_t SlotIndex()
         {
-            m_threadBuffers.EmplaceBack(id, *m_allocator);
-            return m_threadBuffers[m_bufferCount++].m_buffer;
+            size_t idx = WorkerContext::CurrentWorkerIndex();
+            return (idx == WorkerContext::kMainThread) ? 0 : idx + 1;
         }
 
         Allocator* m_allocator;
-        wax::Vector<ThreadBuffer> m_threadBuffers;
-        size_t m_bufferCount;
+        wax::Vector<CommandBuffer<Allocator>> m_buffers;
     };
 } // namespace queen

@@ -1,6 +1,6 @@
-#include <terra/precomp.h>
-
 #include <terra/terralog.h>
+
+#include <terra/precomp.h>
 
 namespace terra
 {

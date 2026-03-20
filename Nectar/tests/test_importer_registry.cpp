@@ -84,7 +84,6 @@ namespace
         }
     };
 
-    // =========================================================================
 
     auto t1 = larvae::RegisterTest("NectarRegistry", "RegisterAndFind", []() {
         auto& alloc = GetRegAlloc();

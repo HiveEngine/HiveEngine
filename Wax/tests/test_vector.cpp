@@ -5,9 +5,7 @@
 namespace
 {
 
-    // =============================================================================
     // Construction and Basic Properties
-    // =============================================================================
 
     auto test1 = larvae::RegisterTest("WaxVector", "DefaultConstruction", []() {
         comb::LinearAllocator alloc{1024};
@@ -54,9 +52,7 @@ namespace
         larvae::AssertEqual(vec[0], 42);
     });
 
-    // =============================================================================
     // Push and Pop Operations
-    // =============================================================================
 
     auto test3 = larvae::RegisterTest("WaxVector", "PushBackSingleElement", []() {
         comb::LinearAllocator alloc{1024};
@@ -124,9 +120,7 @@ namespace
         larvae::AssertTrue(vec.IsEmpty());
     });
 
-    // =============================================================================
     // Element Access
-    // =============================================================================
 
     auto test8 = larvae::RegisterTest("WaxVector", "IndexOperatorRead", []() {
         comb::LinearAllocator alloc{1024};
@@ -203,9 +197,7 @@ namespace
         larvae::AssertEqual(ptr[1], 2);
     });
 
-    // =============================================================================
     // Capacity Management
-    // =============================================================================
 
     auto test13 = larvae::RegisterTest("WaxVector", "ReserveIncreasesCapacity", []() {
         comb::LinearAllocator alloc{1024};
@@ -268,9 +260,7 @@ namespace
         larvae::AssertEqual(vec[2], 3);
     });
 
-    // =============================================================================
     // Resize Operations
-    // =============================================================================
 
     auto test17 = larvae::RegisterTest("WaxVector", "ResizeGrow", []() {
         comb::LinearAllocator alloc{1024};
@@ -316,9 +306,7 @@ namespace
         larvae::AssertEqual(vec[4], 42);
     });
 
-    // =============================================================================
     // Clear Operation
-    // =============================================================================
 
     auto test20 = larvae::RegisterTest("WaxVector", "Clear", []() {
         comb::LinearAllocator alloc{1024};
@@ -336,9 +324,7 @@ namespace
         larvae::AssertEqual(vec.Capacity(), old_capacity); // Capacity unchanged
     });
 
-    // =============================================================================
     // EmplaceBack
-    // =============================================================================
 
     auto test21 = larvae::RegisterTest("WaxVector", "EmplaceBackPrimitive", []() {
         comb::LinearAllocator alloc{1024};
@@ -366,9 +352,7 @@ namespace
         larvae::AssertEqual(vec[0].y, 20);
     });
 
-    // =============================================================================
     // Iterators and Range-For
-    // =============================================================================
 
     auto test23 = larvae::RegisterTest("WaxVector", "BeginEndIterators", []() {
         comb::LinearAllocator alloc{1024};
@@ -426,9 +410,7 @@ namespace
         larvae::AssertEqual(vec[2], 6);
     });
 
-    // =============================================================================
     // Move Semantics
-    // =============================================================================
 
     auto test26 = larvae::RegisterTest("WaxVector", "MoveConstructor", []() {
         comb::LinearAllocator alloc{1024};
@@ -470,9 +452,7 @@ namespace
         larvae::AssertEqual(vec1.Size(), 0u);
     });
 
-    // =============================================================================
     // Different Types
-    // =============================================================================
 
     auto test28 = larvae::RegisterTest("WaxVector", "FloatVector", []() {
         comb::LinearAllocator alloc{1024};
@@ -507,9 +487,7 @@ namespace
         larvae::AssertEqual(vec[1].value, 2.5f);
     });
 
-    // =============================================================================
     // Edge Cases
-    // =============================================================================
 
     auto test30 = larvae::RegisterTest("WaxVector", "LargeVector", []() {
         comb::LinearAllocator alloc{1024 * 1024}; // 1MB
@@ -537,9 +515,7 @@ namespace
         larvae::AssertEqual(vec.Size(), 3u);
     });
 
-    // =============================================================================
     // Copy Semantics
-    // =============================================================================
 
     auto test32 = larvae::RegisterTest("WaxVector", "CopyConstructor", []() {
         comb::LinearAllocator alloc{1024};
@@ -589,9 +565,7 @@ namespace
         larvae::AssertTrue(vec2.IsEmpty());
     });
 
-    // =============================================================================
     // Initializer List
-    // =============================================================================
 
     auto test35 = larvae::RegisterTest("WaxVector", "InitializerListWithAllocator", []() {
         comb::LinearAllocator alloc{1024};
@@ -605,9 +579,7 @@ namespace
         larvae::AssertEqual(vec[4], 50);
     });
 
-    // =============================================================================
     // Non-Trivial Types
-    // =============================================================================
 
     struct Tracked
     {

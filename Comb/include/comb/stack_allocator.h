@@ -8,6 +8,7 @@
 
 #include <cstddef>
 #include <memory>
+#include <utility>
 
 // Memory debugging (zero overhead when disabled)
 #if COMB_MEM_DEBUG
@@ -25,80 +26,8 @@
 
 namespace comb
 {
-    /**
-     * Stack allocator with LIFO (Last-In-First-Out) deallocation using markers
-     *
-     * Similar to LinearAllocator but supports scoped deallocations via markers.
-     * Allocates memory sequentially by bumping a pointer forward.
-     * Deallocations are done by restoring to a saved marker position.
-     *
-     * Satisfies the comb::Allocator concept.
-     *
-     * Use cases:
-     * - Scoped temporary allocations (nested function calls)
-     * - Recursive algorithms with cleanup at each level
-     * - Frame temps with multiple Reset points
-     * - Per-scope resource management
-     *
-     * Memory layout:
-     * ┌────────────────────────────────────────────────────────────┐
-     * │ [Alloc 1][Alloc 2][Alloc 3]...[Alloc N]  [Free Space]      │
-     * │  ←──────── Used Memory ────────────→                       │
-     * └────────────────────────────────────────────────────────────┘
-     *  ↑                                   ↑                       ↑
-     *  base                                current (marker)        capacity
-     *
-     * Marker mechanism:
-     * - GetMarker() saves current allocation position
-     * - FreeToMarker(m) restores to saved position
-     * - All allocations after marker are freed
-     *
-     * Performance characteristics:
-     * - Allocation: O(1) - pointer bump (similar to LinearAllocator)
-     * - GetMarker: O(1) - instant (just returns offset)
-     * - FreeToMarker: O(1) - instant (single pointer write)
-     * - Thread-safe: No (use per-thread allocators)
-     * - Fragmentation: None (sequential allocation)
-     *
-     * Limitations:
-     * - Must free in LIFO order using markers
-     * - Individual Deallocate() is no-op (use markers instead)
-     * - Not thread-safe (requires external synchronization)
-     * - Fixed capacity (set at construction)
-     *
-     * Comparison with LinearAllocator:
-     * | Feature          | LinearAllocator | StackAllocator |
-     * |------------------|-----------------|----------------|
-     * | Allocation       | O(1)            | O(1)           |
-     * | Individual free  | No              | No             |
-     * | Scoped free      | No              | Yes (markers)  |
-     * | Reset all        | Yes             | Yes            |
-     * | Use case         | Frame temps     | Scoped temps   |
-     *
-     * Example:
-     * @code
-     *   comb::StackAllocator stack{1024 * 1024};  // 1 MB
-     *
-     *   // Outer scope
-     *   auto marker1 = stack.GetMarker();
-     *   auto* data1 = comb::New<MyData>(stack, args...);
-     *
-     *   {
-     *       // Inner scope
-     *       auto marker2 = stack.GetMarker();
-     *       auto* temp1 = comb::New<TempData>(stack, args...);
-     *       auto* temp2 = comb::New<TempData>(stack, args...);
-     *
-     *       // Use temp1, temp2...
-     *
-     *       stack.FreeToMarker(marker2);  // Free temp1, temp2
-     *   }
-     *
-     *   // data1 still valid here
-     *
-     *   stack.FreeToMarker(marker1);  // Free everything
-     * @endcode
-     */
+    // Stack allocator with LIFO deallocation via markers.
+    // Like LinearAllocator but supports scoped rollback with GetMarker/FreeToMarker.
     class StackAllocator
     {
     public:
@@ -109,38 +38,38 @@ namespace comb
          * @param capacity Size in bytes to allocate from OS
          */
         explicit StackAllocator(size_t capacity)
-            : capacity_{capacity}
-            , current_{0}
+            : m_capacity{capacity}
+            , m_current{0}
         {
             hive::Assert(capacity > 0, "Stack capacity must be > 0");
 
-            memory_block_ = AllocatePages(capacity);
-            hive::Assert(memory_block_ != nullptr, "Failed to allocate stack memory");
+            m_memoryBlock = AllocatePages(capacity);
+            hive::Assert(m_memoryBlock != nullptr, "Failed to allocate stack memory");
 
 #if COMB_MEM_DEBUG
-            registry_ = std::make_unique<debug::AllocationRegistry>();
-            history_ = std::make_unique<debug::AllocationHistory>();
-            release_current_ = 0;
-            debug::GlobalMemoryTracker::GetInstance().RegisterAllocator(GetName(), registry_.get());
+            m_registry = std::make_unique<debug::AllocationRegistry>();
+            m_history = std::make_unique<debug::AllocationHistory>();
+            m_releaseCurrent = 0;
+            debug::GlobalMemoryTracker::GetInstance().RegisterAllocator(GetName(), m_registry.get());
 #endif
         }
 
         ~StackAllocator()
         {
 #if COMB_MEM_DEBUG
-            if (registry_)
+            if (m_registry)
             {
                 if constexpr (debug::kLeakDetectionEnabled)
                 {
-                    registry_->ReportLeaks(GetName());
+                    m_registry->ReportLeaks(GetName());
                 }
-                debug::GlobalMemoryTracker::GetInstance().UnregisterAllocator(registry_.get());
+                debug::GlobalMemoryTracker::GetInstance().UnregisterAllocator(m_registry.get());
             }
 #endif
 
-            if (memory_block_)
+            if (m_memoryBlock)
             {
-                FreePages(memory_block_, capacity_);
+                FreePages(m_memoryBlock, m_capacity);
             }
         }
 
@@ -148,20 +77,20 @@ namespace comb
         StackAllocator& operator=(const StackAllocator&) = delete;
 
         StackAllocator(StackAllocator&& other) noexcept
-            : memory_block_{other.memory_block_}
-            , capacity_{other.capacity_}
-            , current_{other.current_}
+            : m_memoryBlock{other.m_memoryBlock}
+            , m_capacity{other.m_capacity}
+            , m_current{other.m_current}
 #if COMB_MEM_DEBUG
-            , registry_{std::move(other.registry_)}
-            , history_{std::move(other.history_)}
-            , release_current_{other.release_current_}
+            , m_registry{std::move(other.m_registry)}
+            , m_history{std::move(other.m_history)}
+            , m_releaseCurrent{other.m_releaseCurrent}
 #endif
         {
-            other.memory_block_ = nullptr;
-            other.capacity_ = 0;
-            other.current_ = 0;
+            other.m_memoryBlock = nullptr;
+            other.m_capacity = 0;
+            other.m_current = 0;
 #if COMB_MEM_DEBUG
-            other.release_current_ = 0;
+            other.m_releaseCurrent = 0;
 #endif
         }
 
@@ -170,36 +99,36 @@ namespace comb
             if (this != &other)
             {
 #if COMB_MEM_DEBUG
-                if (registry_)
+                if (m_registry)
                 {
                     if constexpr (debug::kLeakDetectionEnabled)
                     {
-                        registry_->ReportLeaks(GetName());
+                        m_registry->ReportLeaks(GetName());
                     }
-                    debug::GlobalMemoryTracker::GetInstance().UnregisterAllocator(registry_.get());
+                    debug::GlobalMemoryTracker::GetInstance().UnregisterAllocator(m_registry.get());
                 }
 #endif
 
-                if (memory_block_)
+                if (m_memoryBlock)
                 {
-                    FreePages(memory_block_, capacity_);
+                    FreePages(m_memoryBlock, m_capacity);
                 }
 
-                memory_block_ = other.memory_block_;
-                capacity_ = other.capacity_;
-                current_ = other.current_;
+                m_memoryBlock = other.m_memoryBlock;
+                m_capacity = other.m_capacity;
+                m_current = other.m_current;
 
 #if COMB_MEM_DEBUG
-                registry_ = std::move(other.registry_);
-                history_ = std::move(other.history_);
-                release_current_ = other.release_current_;
+                m_registry = std::move(other.m_registry);
+                m_history = std::move(other.m_history);
+                m_releaseCurrent = other.m_releaseCurrent;
 #endif
 
-                other.memory_block_ = nullptr;
-                other.capacity_ = 0;
-                other.current_ = 0;
+                other.m_memoryBlock = nullptr;
+                other.m_capacity = 0;
+                other.m_current = 0;
 #if COMB_MEM_DEBUG
-                other.release_current_ = 0;
+                other.m_releaseCurrent = 0;
 #endif
             }
             return *this;
@@ -230,18 +159,18 @@ namespace comb
             hive::Assert(IsPowerOfTwo(alignment), "Alignment must be power of 2");
 
             // Calculate the actual current address
-            const uintptr_t current_addr = reinterpret_cast<uintptr_t>(memory_block_) + current_;
+            const uintptr_t current_addr = reinterpret_cast<uintptr_t>(m_memoryBlock) + m_current;
 
             // Align the address (not just the offset!)
             const uintptr_t aligned_addr = AlignUp(current_addr, alignment);
 
             // Calculate the new offset from base
-            const size_t aligned_current = aligned_addr - reinterpret_cast<uintptr_t>(memory_block_);
-            const size_t padding = aligned_current - current_;
+            const size_t aligned_current = aligned_addr - reinterpret_cast<uintptr_t>(m_memoryBlock);
+            const size_t padding = aligned_current - m_current;
 
             // Check if we have enough space
             const size_t required = padding + size;
-            const size_t remaining = capacity_ - current_;
+            const size_t remaining = m_capacity - m_current;
 
             if (required > remaining)
             {
@@ -249,7 +178,7 @@ namespace comb
             }
 
             // Allocate
-            current_ = aligned_current + size;
+            m_current = aligned_current + size;
             void* result = reinterpret_cast<void*>(aligned_addr);
 #endif
 
@@ -280,9 +209,9 @@ namespace comb
          *
          * @return Marker representing current allocation position
          */
-        [[nodiscard]] Marker GetMarker() const
+        [[nodiscard]] Marker GetMarker() const noexcept
         {
-            return current_;
+            return m_current;
         }
 
         /**
@@ -297,17 +226,17 @@ namespace comb
          */
         void FreeToMarker(Marker marker)
         {
-            hive::Assert(marker <= current_, "Invalid marker (beyond current position)");
-            hive::Assert(marker <= capacity_, "Invalid marker (beyond capacity)");
+            hive::Assert(marker <= m_current, "Invalid marker (beyond current position)");
+            hive::Assert(marker <= m_capacity, "Invalid marker (beyond capacity)");
 
-            current_ = marker;
+            m_current = marker;
 
 #if COMB_MEM_DEBUG
-            if (registry_)
+            if (m_registry)
             {
-                void* markerAddress = static_cast<std::byte*>(memory_block_) + marker;
-                release_current_ = registry_->CalculateBytesUsedUpTo(markerAddress);
-                registry_->ClearAllocationsFrom(markerAddress);
+                void* markerAddress = static_cast<std::byte*>(m_memoryBlock) + marker;
+                m_releaseCurrent = m_registry->CalculateBytesUsedUpTo(markerAddress);
+                m_registry->ClearAllocationsFrom(markerAddress);
             }
 #endif
         }
@@ -318,13 +247,13 @@ namespace comb
          */
         void Reset()
         {
-            current_ = 0;
+            m_current = 0;
 
 #if COMB_MEM_DEBUG
-            release_current_ = 0;
-            if (registry_)
+            m_releaseCurrent = 0;
+            if (m_registry)
             {
-                registry_->Clear();
+                m_registry->Clear();
             }
 #endif
         }
@@ -333,12 +262,12 @@ namespace comb
          * Get number of bytes currently allocated
          * @return Bytes used
          */
-        [[nodiscard]] size_t GetUsedMemory() const
+        [[nodiscard]] size_t GetUsedMemory() const noexcept
         {
 #if COMB_MEM_DEBUG
-            return release_current_;
+            return m_releaseCurrent;
 #else
-            return current_;
+            return m_current;
 #endif
         }
 
@@ -346,16 +275,16 @@ namespace comb
          * Get total capacity of allocator
          * @return Total bytes available
          */
-        [[nodiscard]] size_t GetTotalMemory() const
+        [[nodiscard]] size_t GetTotalMemory() const noexcept
         {
-            return capacity_;
+            return m_capacity;
         }
 
         /**
          * Get allocator name for debugging
          * @return "StackAllocator"
          */
-        [[nodiscard]] const char* GetName() const
+        [[nodiscard]] const char* GetName() const noexcept
         {
             return "StackAllocator";
         }
@@ -364,19 +293,19 @@ namespace comb
          * Get number of free bytes remaining
          * @return Bytes available for allocation
          */
-        [[nodiscard]] size_t GetFreeMemory() const
+        [[nodiscard]] size_t GetFreeMemory() const noexcept
         {
 #if COMB_MEM_DEBUG
-            return capacity_ - release_current_;
+            return m_capacity - m_releaseCurrent;
 #else
-            return capacity_ - current_;
+            return m_capacity - m_current;
 #endif
         }
 
     private:
-        void* memory_block_{nullptr};
-        size_t capacity_{0};
-        size_t current_{0};
+        void* m_memoryBlock{nullptr};
+        size_t m_capacity{0};
+        size_t m_current{0};
 
 #if COMB_MEM_DEBUG
         // Debug tracking (zero overhead when COMB_MEM_DEBUG=0)
@@ -384,20 +313,18 @@ namespace comb
         void DeallocateDebug(void* ptr);
 
         // Use unique_ptr to enable move semantics (AllocationRegistry contains non-movable mutex)
-        std::unique_ptr<debug::AllocationRegistry> registry_;
-        std::unique_ptr<debug::AllocationHistory> history_;
+        std::unique_ptr<debug::AllocationRegistry> m_registry;
+        std::unique_ptr<debug::AllocationHistory> m_history;
 
-        // Virtual "release mode" offset - tracks what current_ would be without guard bytes
-        size_t release_current_{0};
+        // Virtual "release mode" offset - tracks what m_current would be without guard bytes
+        size_t m_releaseCurrent{0};
 #endif
     };
 
     static_assert(Allocator<StackAllocator>, "StackAllocator must satisfy Allocator concept");
 
 #if COMB_MEM_DEBUG
-    // ========================================================================
     // Debug Implementation (Inline methods - must be in header)
-    // ========================================================================
 
     inline void* StackAllocator::AllocateDebug(size_t size, size_t alignment, const char* tag)
     {
@@ -410,15 +337,15 @@ namespace comb
 
         // 2. Align the USER pointer (after front guard), not the raw pointer
         //    Layout: [GUARD_FRONT (4B)][user data (aligned)][GUARD_BACK (4B)]
-        const uintptr_t current_addr = reinterpret_cast<uintptr_t>(memory_block_) + current_;
+        const uintptr_t current_addr = reinterpret_cast<uintptr_t>(m_memoryBlock) + m_current;
         const uintptr_t user_addr_unaligned = current_addr + guardSize;
         const uintptr_t user_addr_aligned = AlignUp(user_addr_unaligned, alignment);
         const uintptr_t raw_addr = user_addr_aligned - guardSize;
 
-        const size_t raw_offset = raw_addr - reinterpret_cast<uintptr_t>(memory_block_);
+        const size_t raw_offset = raw_addr - reinterpret_cast<uintptr_t>(m_memoryBlock);
         const size_t padding = raw_addr - current_addr;
         const size_t required = padding + totalSize;
-        const size_t remaining = capacity_ - current_;
+        const size_t remaining = m_capacity - m_current;
 
         if (required > remaining)
         {
@@ -428,11 +355,11 @@ namespace comb
         }
 
         void* rawPtr = reinterpret_cast<void*>(raw_addr);
-        current_ = raw_offset + totalSize;
+        m_current = raw_offset + totalSize;
 
         // Advance virtual release offset as if we were in release mode (no guard bytes)
-        const size_t release_aligned = AlignUp(release_current_, alignment);
-        release_current_ = release_aligned + size;
+        const size_t release_aligned = AlignUp(m_releaseCurrent, alignment);
+        m_releaseCurrent = release_aligned + size;
 
         // 3. Write guard bytes
         debug::WriteGuard(rawPtr);
@@ -454,18 +381,18 @@ namespace comb
         info.m_alignment = alignment;
         info.m_timestamp = debug::GetTimestamp();
         info.m_tag = tag;
-        info.m_allocationId = registry_->GetNextAllocationId();
+        info.m_allocationId = m_registry->GetNextAllocationId();
         info.m_threadId = debug::GetThreadId();
 
 #if COMB_MEM_DEBUG_CALLSTACKS
         debug::CaptureCallstack(info.callstack, info.callstackDepth);
 #endif
 
-        registry_->RegisterAllocation(info);
+        m_registry->RegisterAllocation(info);
 
         // 6. Record in history
 #if COMB_MEM_DEBUG_HISTORY
-        history_->RecordAllocation(info);
+        m_history->RecordAllocation(info);
 #endif
 
         return userPtr;
@@ -480,7 +407,7 @@ namespace comb
             return;
 
         // 1. Find allocation info
-        auto* info = registry_->FindAllocation(ptr);
+        auto* info = m_registry->FindAllocation(ptr);
         if (!info)
         {
             hive::LogWarning(comb::LOG_COMB_ROOT, "[MEM_DEBUG] [{}] Deallocate called on unknown pointer: {}",
@@ -518,11 +445,11 @@ namespace comb
 
         // 4. Record deallocation in history
 #if COMB_MEM_DEBUG_HISTORY
-        history_->RecordDeallocation(ptr, info->m_size);
+        m_history->RecordDeallocation(ptr, info->m_size);
 #endif
 
         // 5. Unregister allocation
-        registry_->UnregisterAllocation(ptr);
+        m_registry->UnregisterAllocation(ptr);
 
         // NOTE: StackAllocator doesn't actually free individual allocations
         // Memory is only freed on FreeToMarker() or Reset()

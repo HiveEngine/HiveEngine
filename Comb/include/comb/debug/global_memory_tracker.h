@@ -90,9 +90,7 @@ namespace comb::debug
         GlobalMemoryTracker(GlobalMemoryTracker&&) = delete;
         GlobalMemoryTracker& operator=(GlobalMemoryTracker&&) = delete;
 
-        // ========================================================================
         // Allocator Registration
-        // ========================================================================
 
         /**
          * Register an allocator with the global tracker
@@ -157,9 +155,7 @@ namespace comb::debug
                              reinterpret_cast<void*>(registry));
         }
 
-        // ========================================================================
         // Global Statistics
-        // ========================================================================
 
         /**
          * Get engine-wide aggregated statistics
@@ -201,9 +197,7 @@ namespace comb::debug
             return m_allocators.size();
         }
 
-        // ========================================================================
         // Reporting & Visualization
-        // ========================================================================
 
         /**
          * Print all registered allocators and their statistics

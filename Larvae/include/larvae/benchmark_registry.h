@@ -11,10 +11,10 @@ namespace larvae
 {
     struct BenchmarkInfo
     {
-        const char* suite_name;
-        const char* benchmark_name;
-        std::function<void(BenchmarkState&)> benchmark_func;
-        CapabilityMask required_capabilities{0};
+        const char* m_suiteName;
+        const char* m_benchmarkName;
+        std::function<void(BenchmarkState&)> m_benchmarkFunc;
+        CapabilityMask m_requiredCapabilities{0};
     };
 
     class BenchmarkRegistry
@@ -28,17 +28,17 @@ namespace larvae
 
         const std::vector<BenchmarkInfo>& GetBenchmarks() const
         {
-            return benchmarks_;
+            return m_benchmarks;
         }
 
         void Clear()
         {
-            benchmarks_.clear();
+            m_benchmarks.clear();
         }
 
     private:
         BenchmarkRegistry() = default;
-        std::vector<BenchmarkInfo> benchmarks_;
+        std::vector<BenchmarkInfo> m_benchmarks;
     };
 
     class BenchmarkRegistrar

@@ -1,9 +1,10 @@
 #pragma once
 
-#include <hive/HiveConfig.h>
+#include <hive/hive_config.h>
 
 #if HIVE_MODE_EDITOR
 
+#include <wax/containers/string.h>
 #include <wax/containers/string_view.h>
 
 #include <waggle/engine_runner.h>
@@ -11,7 +12,6 @@
 #include <brood/launcher/launcher_types.h>
 #include <filesystem>
 #include <launcher/launcher_platform.h>
-#include <string>
 
 namespace queen
 {
@@ -35,7 +35,7 @@ namespace brood::launcher
     std::filesystem::path CanonicalizePathForComparison(const std::filesystem::path& path);
     bool IsPathWithinDirectory(const std::filesystem::path& path, const std::filesystem::path& directory);
     std::filesystem::path ResolveScenePath(const waggle::ProjectManager& projectManager, wax::StringView relativePath);
-    std::string MakeSceneRelativePath(const waggle::ProjectManager& projectManager,
+    wax::String MakeSceneRelativePath(const waggle::ProjectManager& projectManager,
                                       const std::filesystem::path& scenePath);
 
     void ResetSceneRecoveryPrompt(LauncherState& state);
@@ -43,19 +43,19 @@ namespace brood::launcher
     std::filesystem::path GetSceneRecoveryScenePath(const LauncherState& state);
     std::filesystem::path GetSceneRecoveryMetadataPath(const LauncherState& state);
 
-    bool WriteTextFile(const std::filesystem::path& path, const std::string& content);
-    bool ReadTextFile(const std::filesystem::path& path, std::string* content);
+    bool WriteTextFile(const std::filesystem::path& path, const wax::String& content);
+    bool ReadTextFile(const std::filesystem::path& path, wax::String* content);
 
-    std::string GetSceneRecoverySourceRelative(LauncherState& state);
-    bool WriteSceneRecoveryMetadata(LauncherState& state, const std::string& sceneRelative);
-    bool LoadSceneRecoveryMetadata(LauncherState& state, std::string* sceneRelative);
+    wax::String GetSceneRecoverySourceRelative(LauncherState& state);
+    bool WriteSceneRecoveryMetadata(LauncherState& state, const wax::String& sceneRelative);
+    bool LoadSceneRecoveryMetadata(LauncherState& state, wax::String* sceneRelative);
     void ClearSceneRecoveryArtifacts(LauncherState& state);
     void QueueSceneRecoveryPrompt(LauncherState& state);
 
     std::filesystem::path NormalizeScenePath(const LauncherState& state, std::filesystem::path scenePath,
                                              bool allowImplicitExtension);
     bool ResolveSceneAssetPath(const LauncherState& state, const std::filesystem::path& rawScenePath,
-                               bool requireExisting, std::filesystem::path* resolvedScenePath, std::string* error);
+                               bool requireExisting, std::filesystem::path* resolvedScenePath, wax::String* error);
     std::filesystem::path GetPreferredScenePath(LauncherState& state);
 
     bool PickScenePath(LauncherState& state, NativePathPickerMode mode, std::filesystem::path* selectedPath);
@@ -64,9 +64,9 @@ namespace brood::launcher
     bool SaveEditorSceneToPath(waggle::EngineContext& ctx, LauncherState& state,
                                const std::filesystem::path& rawScenePath);
     bool SaveSceneRecoverySnapshot(waggle::EngineContext& ctx, LauncherState& state);
-    std::string CaptureSceneBackup(queen::World& world, const queen::ComponentRegistry<256>& registry);
+    wax::String CaptureSceneBackup(queen::World& world, const queen::ComponentRegistry<256>& registry);
     bool RestoreSceneBackup(queen::World& world, const queen::ComponentRegistry<256>& registry,
-                            const std::string& backupScene);
+                            const wax::String& backupScene);
     bool LoadEditorScene(waggle::EngineContext& ctx, LauncherState& state, const std::filesystem::path& scenePath);
 
     bool SaveEditorScene(waggle::EngineContext& ctx, LauncherState& state);

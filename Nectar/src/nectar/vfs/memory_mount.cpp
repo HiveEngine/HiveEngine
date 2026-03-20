@@ -1,6 +1,6 @@
-#include <wax/containers/hash_set.h>
-
 #include <nectar/vfs/memory_mount.h>
+
+#include <wax/containers/hash_set.h>
 
 namespace nectar
 {

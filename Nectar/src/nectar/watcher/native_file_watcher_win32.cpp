@@ -1,4 +1,4 @@
-#include <hive/HiveConfig.h>
+#include <hive/hive_config.h>
 
 #include <nectar/watcher/file_watcher.h>
 
@@ -8,6 +8,7 @@
 #define WIN32_LEAN_AND_MEAN
 #endif
 #include <comb/default_allocator.h>
+#include <comb/new.h>
 
 #include <windows.h>
 
@@ -64,8 +65,8 @@ namespace nectar
 
         bool IssueRead(HANDLE hDir, void* buffer, DWORD bufferSize, OVERLAPPED* overlapped)
         {
-            constexpr DWORD kFilter =
-                FILE_NOTIFY_CHANGE_FILE_NAME | FILE_NOTIFY_CHANGE_SIZE | FILE_NOTIFY_CHANGE_LAST_WRITE;
+            constexpr DWORD kFilter = FILE_NOTIFY_CHANGE_FILE_NAME | FILE_NOTIFY_CHANGE_DIR_NAME |
+                                      FILE_NOTIFY_CHANGE_SIZE | FILE_NOTIFY_CHANGE_LAST_WRITE;
 
             BOOL ok = ReadDirectoryChangesW(hDir, buffer, bufferSize, TRUE, kFilter, nullptr, overlapped, nullptr);
             return ok != FALSE;
@@ -74,7 +75,7 @@ namespace nectar
 
     void NativeFileWatcher::PlatformInit()
     {
-        m_platform = new PlatformData{};
+        m_platform = comb::New<PlatformData>(*m_alloc);
         m_platform->watches = wax::Vector<PlatformData::DirWatch*>{*m_alloc};
         m_platform->hCompletionPort = CreateIoCompletionPort(INVALID_HANDLE_VALUE, nullptr, 0, 1);
     }
@@ -94,7 +95,7 @@ namespace nectar
             auto* w = m_platform->watches[i];
             CancelIo(w->hDir);
             CloseHandle(w->hDir);
-            delete w;
+            comb::Delete(*m_alloc, w);
         }
         m_platform->watches.Clear();
 
@@ -103,33 +104,34 @@ namespace nectar
             CloseHandle(m_platform->hCompletionPort);
         }
 
-        delete m_platform;
+        comb::Delete(*m_alloc, m_platform);
         m_platform = nullptr;
     }
 
     void NativeFileWatcher::PlatformAddWatch(wax::StringView directory)
     {
-        std::string dirUtf8{directory.Data(), directory.Size()};
-        int wideLen = MultiByteToWideChar(CP_UTF8, 0, dirUtf8.c_str(), static_cast<int>(dirUtf8.size()), nullptr, 0);
+        wax::String dirUtf8{*m_alloc, directory};
+        int wideLen = MultiByteToWideChar(CP_UTF8, 0, dirUtf8.CStr(), static_cast<int>(dirUtf8.Size()), nullptr, 0);
         if (wideLen <= 0)
         {
             return;
         }
 
-        auto* wideBuf = new wchar_t[static_cast<size_t>(wideLen) + 1];
-        MultiByteToWideChar(CP_UTF8, 0, dirUtf8.c_str(), static_cast<int>(dirUtf8.size()), wideBuf, wideLen);
+        const size_t wideCount = static_cast<size_t>(wideLen) + 1;
+        auto* wideBuf = comb::NewArray<wchar_t>(*m_alloc, wideCount);
+        MultiByteToWideChar(CP_UTF8, 0, dirUtf8.CStr(), static_cast<int>(dirUtf8.Size()), wideBuf, wideLen);
         wideBuf[wideLen] = L'\0';
 
         HANDLE hDir = CreateFileW(wideBuf, FILE_LIST_DIRECTORY, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
                                   nullptr, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OVERLAPPED, nullptr);
-        delete[] wideBuf;
+        comb::DeleteArray(*m_alloc, wideBuf, wideCount);
 
         if (hDir == INVALID_HANDLE_VALUE)
         {
             return;
         }
 
-        auto* watch = new PlatformData::DirWatch{};
+        auto* watch = comb::New<PlatformData::DirWatch>(*m_alloc);
         watch->hDir = hDir;
         watch->dirPath = wax::String{*m_alloc};
         watch->dirPath.Append(directory.Data(), directory.Size());
@@ -148,7 +150,7 @@ namespace nectar
         if (!IssueRead(watch->hDir, watch->buffer, sizeof(watch->buffer), &watch->overlapped))
         {
             CloseHandle(hDir);
-            delete watch;
+            comb::Delete(*m_alloc, watch);
             return;
         }
 

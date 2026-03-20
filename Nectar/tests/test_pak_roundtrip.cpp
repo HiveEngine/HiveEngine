@@ -32,7 +32,6 @@ namespace
         std::remove(TempPakPath());
     }
 
-    // =========================================================================
 
     auto t1 = larvae::RegisterTest("NectarPakRT", "BuildAndReadSingleBlob", []() {
         auto& alloc = GetPakRtAlloc();

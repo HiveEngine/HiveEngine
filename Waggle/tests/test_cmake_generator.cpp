@@ -33,9 +33,7 @@ namespace
         }
     };
 
-    // =========================================================================
     // Generate
-    // =========================================================================
 
     auto t_minimal = larvae::RegisterTest("WaggleCMakeGenerator", "GenerateMinimal", []() {
         auto& alloc = GetAlloc();
@@ -92,9 +90,7 @@ namespace
         larvae::AssertTrue(view.Contains("LINK_ANTENNAE"));
     });
 
-    // =========================================================================
     // WriteToProject
-    // =========================================================================
 
     auto t_write = larvae::RegisterTest("WaggleCMakeGenerator", "WriteToProject", []() {
         TempDir dir{"waggle_cmake_gen"};

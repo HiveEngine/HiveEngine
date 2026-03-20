@@ -24,9 +24,9 @@ namespace nectar
         CookResult Cook(wax::ByteSpan data, const CookContext& ctx) override
         {
             CookResult r;
-            r.success = true;
-            r.cooked_data = wax::ByteBuffer{*ctx.alloc};
-            r.cooked_data.Append(data.Data(), data.Size());
+            r.m_success = true;
+            r.m_cookedData = wax::ByteBuffer{*ctx.m_alloc};
+            r.m_cookedData.Append(data.Data(), data.Size());
             return r;
         }
     };
@@ -45,9 +45,9 @@ namespace nectar
         CookResult Cook(wax::ByteSpan data, const CookContext& ctx) override
         {
             CookResult r;
-            r.success = true;
-            r.cooked_data = wax::ByteBuffer{*ctx.alloc};
-            r.cooked_data.Append(data.Data(), data.Size());
+            r.m_success = true;
+            r.m_cookedData = wax::ByteBuffer{*ctx.m_alloc};
+            r.m_cookedData.Append(data.Data(), data.Size());
             return r;
         }
     };

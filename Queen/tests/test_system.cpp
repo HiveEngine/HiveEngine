@@ -25,9 +25,7 @@ namespace
     {
     };
 
-    // ─────────────────────────────────────────────────────────────
     // SystemId Tests
-    // ─────────────────────────────────────────────────────────────
 
     auto test1 = larvae::RegisterTest("QueenSystem", "SystemIdDefault", []() {
         queen::SystemId id{};
@@ -53,9 +51,7 @@ namespace
         larvae::AssertTrue(id1 < id2);
     });
 
-    // ─────────────────────────────────────────────────────────────
     // AccessDescriptor Tests
-    // ─────────────────────────────────────────────────────────────
 
     auto test4 = larvae::RegisterTest("QueenSystem", "AccessDescriptorEmpty", []() {
         comb::LinearAllocator alloc{65536};
@@ -153,9 +149,7 @@ namespace
         larvae::AssertTrue(access2.ConflictsWith(access1));
     });
 
-    // ─────────────────────────────────────────────────────────────
     // System Registration Tests
-    // ─────────────────────────────────────────────────────────────
 
     auto test13 = larvae::RegisterTest("QueenSystem", "RegisterSystem", []() {
         comb::LinearAllocator alloc{262144};

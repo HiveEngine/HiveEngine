@@ -1,4 +1,7 @@
+#include <comb/buddy_allocator.h>
 #include <comb/linear_allocator.h>
+
+#include <drone/job_system.h>
 
 #include <queen/scheduler/parallel_scheduler.h>
 #include <queen/world/world.h>
@@ -9,7 +12,6 @@
 
 namespace
 {
-    // Test components
     struct Position
     {
         float x, y, z;
@@ -23,34 +25,45 @@ namespace
         int value;
     };
 
-    // ============================================================================
+    struct TestJobSystem
+    {
+        comb::BuddyAllocator m_poolAlloc{2 * 1024 * 1024};
+        drone::JobSystem<comb::BuddyAllocator> m_system{m_poolAlloc, {2, 1024, 1024, 64 * 1024}};
+        drone::JobSubmitter m_submitter{drone::MakeJobSubmitter(m_system)};
+
+        TestJobSystem()
+        {
+            m_system.Start();
+        }
+        ~TestJobSystem()
+        {
+            m_system.Stop();
+        }
+    };
+
     // ParallelScheduler Basic Tests
-    // ============================================================================
 
     auto test1 = larvae::RegisterTest("QueenParallelScheduler", "Creation", []() {
         comb::LinearAllocator alloc{8 * 1024 * 1024};
-        queen::ParallelScheduler<comb::LinearAllocator> scheduler{alloc, 4};
+        TestJobSystem js;
+        queen::ParallelScheduler<comb::LinearAllocator> scheduler{alloc, js.m_submitter};
 
         larvae::AssertTrue(scheduler.NeedsRebuild());
         larvae::AssertFalse(scheduler.HasCycle());
     });
 
-    auto test2 = larvae::RegisterTest("QueenParallelScheduler", "CreationWithExternalPool", []() {
+    auto test2 = larvae::RegisterTest("QueenParallelScheduler", "CreationWithJobSubmitter", []() {
         comb::LinearAllocator alloc{8 * 1024 * 1024};
-        queen::ThreadPool<comb::LinearAllocator> pool{alloc, 4};
-        pool.Start();
-
-        queen::ParallelScheduler<comb::LinearAllocator> scheduler{alloc, pool};
+        TestJobSystem js;
+        queen::ParallelScheduler<comb::LinearAllocator> scheduler{alloc, js.m_submitter};
 
         larvae::AssertTrue(scheduler.NeedsRebuild());
-        larvae::AssertEqual(scheduler.Pool(), &pool);
-
-        pool.Stop();
     });
 
     auto test3 = larvae::RegisterTest("QueenParallelScheduler", "BuildEmptyStorage", []() {
         comb::LinearAllocator alloc{8 * 1024 * 1024};
-        queen::ParallelScheduler<comb::LinearAllocator> scheduler{alloc, 4};
+        TestJobSystem js;
+        queen::ParallelScheduler<comb::LinearAllocator> scheduler{alloc, js.m_submitter};
         queen::SystemStorage<comb::LinearAllocator> storage{alloc};
 
         scheduler.Build(storage);
@@ -62,7 +75,8 @@ namespace
 
     auto test4 = larvae::RegisterTest("QueenParallelScheduler", "RunEmptyWorld", []() {
         comb::LinearAllocator alloc{8 * 1024 * 1024};
-        queen::ParallelScheduler<comb::LinearAllocator> scheduler{alloc, 4};
+        TestJobSystem js;
+        queen::ParallelScheduler<comb::LinearAllocator> scheduler{alloc, js.m_submitter};
         queen::World world{};
         queen::SystemStorage<comb::LinearAllocator> storage{alloc};
 
@@ -72,7 +86,8 @@ namespace
 
     auto test5 = larvae::RegisterTest("QueenParallelScheduler", "SingleSystem", []() {
         comb::LinearAllocator alloc{8 * 1024 * 1024};
-        queen::ParallelScheduler<comb::LinearAllocator> scheduler{alloc, 4};
+        TestJobSystem js;
+        queen::ParallelScheduler<comb::LinearAllocator> scheduler{alloc, js.m_submitter};
         queen::World world{};
         queen::SystemStorage<comb::LinearAllocator> storage{alloc};
 
@@ -90,7 +105,8 @@ namespace
 
     auto test6 = larvae::RegisterTest("QueenParallelScheduler", "IndependentSystemsRunParallel", []() {
         comb::LinearAllocator alloc{16 * 1024 * 1024};
-        queen::ParallelScheduler<comb::LinearAllocator> scheduler{alloc, 4};
+        TestJobSystem js;
+        queen::ParallelScheduler<comb::LinearAllocator> scheduler{alloc, js.m_submitter};
         queen::World world{};
         queen::SystemStorage<comb::LinearAllocator> storage{alloc};
 
@@ -120,7 +136,8 @@ namespace
 
     auto test7 = larvae::RegisterTest("QueenParallelScheduler", "DependentSystemsRunInOrder", []() {
         comb::LinearAllocator alloc{16 * 1024 * 1024};
-        queen::ParallelScheduler<comb::LinearAllocator> scheduler{alloc, 4};
+        TestJobSystem js;
+        queen::ParallelScheduler<comb::LinearAllocator> scheduler{alloc, js.m_submitter};
         queen::World world{};
         queen::SystemStorage<comb::LinearAllocator> storage{alloc};
 
@@ -155,7 +172,8 @@ namespace
 
     auto test8 = larvae::RegisterTest("QueenParallelScheduler", "MultipleRunAllCalls", []() {
         comb::LinearAllocator alloc{8 * 1024 * 1024};
-        queen::ParallelScheduler<comb::LinearAllocator> scheduler{alloc, 4};
+        TestJobSystem js;
+        queen::ParallelScheduler<comb::LinearAllocator> scheduler{alloc, js.m_submitter};
         queen::World world{};
         queen::SystemStorage<comb::LinearAllocator> storage{alloc};
 
@@ -178,7 +196,8 @@ namespace
 
     auto test9 = larvae::RegisterTest("QueenParallelScheduler", "InvalidateAndRebuild", []() {
         comb::LinearAllocator alloc{8 * 1024 * 1024};
-        queen::ParallelScheduler<comb::LinearAllocator> scheduler{alloc, 4};
+        TestJobSystem js;
+        queen::ParallelScheduler<comb::LinearAllocator> scheduler{alloc, js.m_submitter};
         queen::SystemStorage<comb::LinearAllocator> storage{alloc};
 
         storage.Register("System1", [](queen::World&) {}, queen::AccessDescriptor<comb::LinearAllocator>{alloc});
@@ -192,7 +211,8 @@ namespace
 
     auto test10 = larvae::RegisterTest("QueenParallelScheduler", "StressTest", []() {
         comb::LinearAllocator alloc{32 * 1024 * 1024};
-        queen::ParallelScheduler<comb::LinearAllocator> scheduler{alloc, 8};
+        TestJobSystem js;
+        queen::ParallelScheduler<comb::LinearAllocator> scheduler{alloc, js.m_submitter};
         queen::World world{};
         queen::SystemStorage<comb::LinearAllocator> storage{alloc};
 
@@ -215,7 +235,8 @@ namespace
 
     auto test11 = larvae::RegisterTest("QueenParallelScheduler", "DiamondDependency", []() {
         comb::LinearAllocator alloc{16 * 1024 * 1024};
-        queen::ParallelScheduler<comb::LinearAllocator> scheduler{alloc, 4};
+        TestJobSystem js;
+        queen::ParallelScheduler<comb::LinearAllocator> scheduler{alloc, js.m_submitter};
         queen::World world{};
         queen::SystemStorage<comb::LinearAllocator> storage{alloc};
 
@@ -278,7 +299,8 @@ namespace
 
     auto test12 = larvae::RegisterTest("QueenParallelScheduler", "GraphAccessor", []() {
         comb::LinearAllocator alloc{8 * 1024 * 1024};
-        queen::ParallelScheduler<comb::LinearAllocator> scheduler{alloc, 4};
+        TestJobSystem js;
+        queen::ParallelScheduler<comb::LinearAllocator> scheduler{alloc, js.m_submitter};
         queen::SystemStorage<comb::LinearAllocator> storage{alloc};
 
         storage.Register("System1", [](queen::World&) {}, queen::AccessDescriptor<comb::LinearAllocator>{alloc});

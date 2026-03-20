@@ -33,8 +33,8 @@ namespace
                 }
             }
 
-            state.SetBytesProcessed(state.iterations() * sizeof(SmallObject));
-            state.SetItemsProcessed(state.iterations());
+            state.SetBytesProcessed(state.Iterations() * sizeof(SmallObject));
+            state.SetItemsProcessed(state.Iterations());
         });
 
     auto bench2 =
@@ -52,8 +52,8 @@ namespace
                 }
             }
 
-            state.SetBytesProcessed(state.iterations() * sizeof(MediumObject));
-            state.SetItemsProcessed(state.iterations());
+            state.SetBytesProcessed(state.Iterations() * sizeof(MediumObject));
+            state.SetItemsProcessed(state.Iterations());
         });
 
     auto bench3 =
@@ -67,8 +67,8 @@ namespace
                 comb::Delete(pool, obj);
             }
 
-            state.SetBytesProcessed(state.iterations() * sizeof(SmallObject));
-            state.SetItemsProcessed(state.iterations());
+            state.SetBytesProcessed(state.Iterations() * sizeof(SmallObject));
+            state.SetItemsProcessed(state.Iterations());
         });
 
     auto bench4 = larvae::RegisterBenchmark("PoolAllocator", "RapidRecycling", [](larvae::BenchmarkState& state) {
@@ -91,7 +91,7 @@ namespace
             }
         }
 
-        state.SetItemsProcessed(state.iterations() * 20); // 10 allocs + 10 deallocs
+        state.SetItemsProcessed(state.Iterations() * 20); // 10 allocs + 10 deallocs
     });
 
     auto bench5 = larvae::RegisterBenchmark("PoolAllocator", "ResetPerformance", [](larvae::BenchmarkState& state) {
@@ -114,7 +114,7 @@ namespace
             }
         }
 
-        state.SetItemsProcessed(state.iterations());
+        state.SetItemsProcessed(state.Iterations());
     });
 
     auto bench6 = larvae::RegisterBenchmark("malloc", "SmallObjectAllocation", [](larvae::BenchmarkState& state) {
@@ -125,7 +125,7 @@ namespace
             std::free(ptr);
         }
 
-        state.SetBytesProcessed(state.iterations() * sizeof(SmallObject));
-        state.SetItemsProcessed(state.iterations());
+        state.SetBytesProcessed(state.Iterations() * sizeof(SmallObject));
+        state.SetItemsProcessed(state.Iterations());
     });
 } // namespace

@@ -9,6 +9,8 @@
 #include <nectar/core/content_hash.h>
 #include <nectar/pipeline/i_asset_cooker.h>
 
+#include <drone/job_submitter.h>
+
 namespace nectar
 {
     class CookerRegistry;
@@ -37,7 +39,7 @@ namespace nectar
     {
     public:
         CookPipeline(comb::DefaultAllocator& alloc, CookerRegistry& registry, CasStore& cas, AssetDatabase& db,
-                     CookCache& cache);
+                     CookCache& cache, drone::JobSubmitter jobs = {});
 
         /// Cook a batch of assets. Uses TopologicalSortLevels for parallel execution.
         [[nodiscard]] CookOutput CookAll(const CookRequest& request);
@@ -56,6 +58,7 @@ namespace nectar
         void CookAsset(AssetId id, wax::StringView platform, CookOutput& output);
 
         comb::DefaultAllocator* m_alloc;
+        drone::JobSubmitter m_jobs;
         CookerRegistry* m_registry;
         CasStore* m_cas;
         AssetDatabase* m_db;

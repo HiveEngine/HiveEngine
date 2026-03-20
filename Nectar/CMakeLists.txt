@@ -46,6 +46,7 @@ target_link_libraries(Nectar
         Hive
         Comb
         Wax
+        Drone
 )
 
 if(MSVC)

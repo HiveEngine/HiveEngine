@@ -1,14 +1,16 @@
 #include <hive/core/log.h>
 
-#include <comb/new.h>
-
+#include <wax/containers/string.h>
 #include <wax/serialization/binary_reader.h>
 #include <wax/serialization/binary_writer.h>
 #include <wax/serialization/byte_buffer.h>
 
+#include <nectar/assets/mesh_asset.h>
+#include <nectar/assets/texture_asset.h>
 #include <nectar/cas/cas_store.h>
 #include <nectar/core/asset_id.h>
 #include <nectar/database/asset_database.h>
+#include <nectar/database/asset_record.h>
 #include <nectar/io/io_scheduler.h>
 #include <nectar/pipeline/cook_cache.h>
 #include <nectar/pipeline/cook_pipeline.h>
@@ -18,6 +20,7 @@
 #include <nectar/pipeline/i_asset_importer.h>
 #include <nectar/pipeline/import_pipeline.h>
 #include <nectar/pipeline/importer_registry.h>
+#include <nectar/registry/hiveid_file.h>
 #include <nectar/server/asset_server.h>
 #include <nectar/vfs/disk_mount.h>
 #include <nectar/vfs/virtual_filesystem.h>
@@ -34,7 +37,7 @@ namespace
     static const hive::LogCategory LOG_PROJECT{"Waggle.ProjectManager"};
 
     constexpr uint32_t kImportCacheMagic = 0x4244494E;
-    constexpr uint16_t kImportCacheVersion = 1;
+    constexpr uint16_t kImportCacheVersion = 2;
 
     bool LoadImportCache(const char* path, nectar::AssetDatabase& db, comb::DefaultAllocator& alloc)
     {
@@ -60,7 +63,7 @@ namespace
             return false;
 
         uint16_t version{};
-        if (!reader.TryRead(version) || version != kImportCacheVersion)
+        if (!reader.TryRead(version) || (version != kImportCacheVersion && version != 1))
             return false;
 
         reader.Skip(2);
@@ -86,6 +89,10 @@ namespace
 
             uint32_t impVersion = reader.Read<uint32_t>();
 
+            wax::ByteSpan importSourceSpan{};
+            if (version >= 2)
+                importSourceSpan = reader.ReadString();
+
             uint32_t labelCount = reader.Read<uint32_t>();
             for (uint32_t j = 0; j < labelCount; ++j)
                 (void)reader.ReadString();
@@ -98,6 +105,10 @@ namespace
             record.m_type.Append(reinterpret_cast<const char*>(typeSpan.Data()), typeSpan.Size());
             record.m_name = wax::String{alloc};
             record.m_name.Append(reinterpret_cast<const char*>(nameSpan.Data()), nameSpan.Size());
+            record.m_importSource = wax::String{alloc};
+            if (importSourceSpan.Size() > 0)
+                record.m_importSource.Append(reinterpret_cast<const char*>(importSourceSpan.Data()),
+                                             importSourceSpan.Size());
             record.m_contentHash = nectar::ContentHash{chHigh, chLow};
             record.m_intermediateHash = nectar::ContentHash{ihHigh, ihLow};
             record.m_importVersion = impVersion;
@@ -132,6 +143,7 @@ namespace
             writer.Write<uint64_t>(r.m_intermediateHash.High());
             writer.Write<uint64_t>(r.m_intermediateHash.Low());
             writer.Write<uint32_t>(r.m_importVersion);
+            writer.WriteString(r.m_importSource.CStr(), r.m_importSource.Size());
             writer.Write<uint32_t>(0);
         });
 
@@ -151,10 +163,18 @@ namespace waggle
     namespace
     {
         constexpr wax::StringView kDefaultPlatform{"pc", 2};
+
+        template <typename T> void SwapAsset(nectar::AssetServer& server, wax::StringView path, wax::ByteSpan data)
+        {
+            auto handle = server.FindHandle<T>(path);
+            if (!handle.IsNull())
+                server.Reload<T>(handle, data);
+        }
     } // namespace
 
-    ProjectManager::ProjectManager(comb::DefaultAllocator& alloc)
+    ProjectManager::ProjectManager(comb::DefaultAllocator& alloc, drone::JobSubmitter jobs)
         : m_alloc{&alloc}
+        , m_jobs{jobs}
         , m_project{alloc}
         , m_offlineChanges{alloc}
         , m_watcherStatePath{alloc}
@@ -178,58 +198,97 @@ namespace waggle
             return false;
         }
 
-        std::filesystem::path fsPath{std::string{projectHivePath.Data(), projectHivePath.Size()}};
+        std::filesystem::path fsPath{wax::String{projectHivePath}.CStr()};
         auto rootStr = fsPath.parent_path().generic_string();
         wax::StringView rootView{rootStr.c_str(), rootStr.size()};
 
         m_paths = m_project.ResolvePaths(rootView);
 
         std::error_code ec;
-        std::filesystem::create_directories(std::string{m_paths.m_cache.CStr(), m_paths.m_cache.Size()}, ec);
-        std::filesystem::create_directories(std::string{m_paths.m_cas.CStr(), m_paths.m_cas.Size()}, ec);
+        std::filesystem::create_directories(m_paths.m_cache.CStr(), ec);
+        std::filesystem::create_directories(m_paths.m_cas.CStr(), ec);
 
-        m_vfs = comb::New<nectar::VirtualFilesystem>(*m_alloc, *m_alloc);
-        m_assetsMount = comb::New<nectar::DiskMountSource>(*m_alloc, m_paths.m_assets, *m_alloc);
-        m_vfs->Mount("", m_assetsMount);
-        m_casMount = comb::New<nectar::DiskMountSource>(*m_alloc, m_paths.m_cas, *m_alloc);
-        m_vfs->Mount("cas", m_casMount);
+        m_vfs = wax::MakeBox<nectar::VirtualFilesystem>(*m_alloc, *m_alloc);
+        m_assetsMount = wax::MakeBox<nectar::DiskMountSource>(*m_alloc, m_paths.m_assets, *m_alloc);
+        m_vfs->Mount("", m_assetsMount.Get());
+        m_casMount = wax::MakeBox<nectar::DiskMountSource>(*m_alloc, m_paths.m_cas, *m_alloc);
+        m_vfs->Mount("cas", m_casMount.Get());
 
-        m_cas = comb::New<nectar::CasStore>(*m_alloc, *m_alloc, m_paths.m_cas);
-        m_io = comb::New<nectar::IOScheduler>(*m_alloc, *m_vfs, *m_alloc);
-        m_server = comb::New<nectar::AssetServer>(*m_alloc, *m_alloc, *m_vfs, *m_io);
+        m_cas = wax::MakeBox<nectar::CasStore>(*m_alloc, *m_alloc, m_paths.m_cas);
+        m_io = wax::MakeBox<nectar::IOScheduler>(*m_alloc, *m_vfs, *m_alloc, m_jobs);
+        m_server = wax::MakeBox<nectar::AssetServer>(*m_alloc, *m_alloc, *m_vfs, *m_io);
 
-        m_importerRegistry = comb::New<nectar::ImporterRegistry>(*m_alloc, *m_alloc);
-        m_cookerRegistry = comb::New<nectar::CookerRegistry>(*m_alloc, *m_alloc);
+        m_importerRegistry = wax::MakeBox<nectar::ImporterRegistry>(*m_alloc, *m_alloc);
+        m_cookerRegistry = wax::MakeBox<nectar::CookerRegistry>(*m_alloc, *m_alloc);
 
-        m_importDb = comb::New<nectar::AssetDatabase>(*m_alloc, *m_alloc);
+        m_importDb = wax::MakeBox<nectar::AssetDatabase>(*m_alloc, *m_alloc);
         LoadImportCache(m_paths.m_importCache.CStr(), *m_importDb, *m_alloc);
 
+        // Scan .hiveid sidecar files to populate the asset database
+        {
+            std::error_code scanEc;
+            std::filesystem::path assetsPath{m_paths.m_assets.CStr()};
+            if (std::filesystem::exists(assetsPath, scanEc))
+            {
+                for (const auto& entry : std::filesystem::recursive_directory_iterator(assetsPath, scanEc))
+                {
+                    if (!entry.is_regular_file())
+                        continue;
+
+                    auto ext = entry.path().extension().string();
+                    if (ext != ".hiveid")
+                        continue;
+
+                    auto assetFilePath = entry.path();
+                    assetFilePath.replace_extension();
+
+                    auto assetRelative = std::filesystem::relative(assetFilePath, assetsPath, scanEc).generic_string();
+
+                    nectar::HiveIdData hid{};
+                    if (!nectar::ReadHiveId(assetFilePath.string().c_str(), hid, *m_alloc))
+                        continue;
+
+                    if (m_importDb->Contains(hid.m_guid))
+                        continue;
+
+                    nectar::AssetRecord rec{};
+                    rec.m_uuid = hid.m_guid;
+                    rec.m_path = wax::String{*m_alloc, wax::StringView{assetRelative.c_str()}};
+                    rec.m_type = wax::String{*m_alloc, hid.m_type.View()};
+                    rec.m_name = wax::String{*m_alloc, wax::StringView{assetFilePath.stem().string().c_str()}};
+                    rec.m_labels = wax::Vector<wax::String>{*m_alloc};
+                    m_importDb->Insert(static_cast<nectar::AssetRecord&&>(rec));
+                }
+            }
+        }
+
         m_importPipeline =
-            comb::New<nectar::ImportPipeline>(*m_alloc, *m_alloc, *m_importerRegistry, *m_cas, *m_vfs, *m_importDb);
-        m_cookCache = comb::New<nectar::CookCache>(*m_alloc, *m_alloc);
-        m_cookPipeline =
-            comb::New<nectar::CookPipeline>(*m_alloc, *m_alloc, *m_cookerRegistry, *m_cas, *m_importDb, *m_cookCache);
+            wax::MakeBox<nectar::ImportPipeline>(*m_alloc, *m_alloc, *m_importerRegistry, *m_cas, *m_vfs, *m_importDb);
+        m_cookCache = wax::MakeBox<nectar::CookCache>(*m_alloc, *m_alloc);
+        m_cookPipeline = wax::MakeBox<nectar::CookPipeline>(*m_alloc, *m_alloc, *m_cookerRegistry, *m_cas, *m_importDb,
+                                                            *m_cookCache, m_jobs);
 
         if (config.m_enableHotReload)
         {
-            m_nativeWatcher = comb::New<nectar::NativeFileWatcher>(*m_alloc, *m_alloc);
-            m_watcher = m_nativeWatcher;
-            m_hotReload = comb::New<nectar::HotReloadManager>(*m_alloc, *m_alloc, *m_watcher, *m_importDb,
-                                                              *m_importPipeline, *m_cookPipeline, m_vfs);
+            m_nativeWatcher = wax::MakeBox<nectar::NativeFileWatcher>(*m_alloc, *m_alloc, m_jobs);
+            m_watcher = m_nativeWatcher.Get();
+            m_hotReload = wax::MakeBox<nectar::HotReloadManager>(*m_alloc, *m_alloc, *m_watcher, *m_importDb,
+                                                                 *m_importPipeline, *m_cookPipeline, m_vfs.Get());
             m_hotReload->SetBaseDirectory(m_paths.m_assets.View());
             m_hotReload->WatchDirectory(m_paths.m_assets.View());
             m_hotReload->SetImportSettingsProvider(
                 [](nectar::AssetId, wax::StringView vfsPath, nectar::HiveDocument& settings, void* ud) {
                     auto* self = static_cast<ProjectManager*>(ud);
-                    std::string pathStr{vfsPath.Data(), vfsPath.Size()};
-                    auto parentDir = std::filesystem::path{pathStr}.parent_path().generic_string();
+                    wax::String pathStr{vfsPath};
+                    auto parentDir = std::filesystem::path{pathStr.CStr()}.parent_path().generic_string();
                     if (!parentDir.empty())
                     {
-                        std::string fullDir{self->m_paths.m_assets.Data(), self->m_paths.m_assets.Size()};
-                        fullDir += "/" + parentDir + "/";
-                        settings.SetValue(
-                            "import", "base_path",
-                            nectar::HiveValue::MakeString(*self->m_alloc, {fullDir.c_str(), fullDir.size()}));
+                        wax::String fullDir{self->m_paths.m_assets.View()};
+                        fullDir.Append("/");
+                        fullDir.Append(parentDir.c_str(), parentDir.size());
+                        fullDir.Append("/");
+                        settings.SetValue("import", "base_path",
+                                          nectar::HiveValue::MakeString(*self->m_alloc, fullDir.View()));
                     }
                 },
                 this);
@@ -252,44 +311,31 @@ namespace waggle
         if (!m_open)
             return;
 
-        if (m_io != nullptr)
+        if (m_io)
             m_io->Shutdown();
 
         SaveImportCache();
 
-        if (m_nativeWatcher != nullptr && m_watcherStatePath.Size() > 0)
+        // .hiveid files are written at import time; no centralized registry to save
+
+        if (m_nativeWatcher && m_watcherStatePath.Size() > 0)
             m_nativeWatcher->SaveState(m_watcherStatePath.View());
 
-        comb::Delete(*m_alloc, m_hotReload);
-        comb::Delete(*m_alloc, m_watcher);
-        comb::Delete(*m_alloc, m_cookPipeline);
-        comb::Delete(*m_alloc, m_cookCache);
-        comb::Delete(*m_alloc, m_importPipeline);
-        comb::Delete(*m_alloc, m_importDb);
-        comb::Delete(*m_alloc, m_cookerRegistry);
-        comb::Delete(*m_alloc, m_importerRegistry);
-        comb::Delete(*m_alloc, m_server);
-        comb::Delete(*m_alloc, m_io);
-        comb::Delete(*m_alloc, m_cas);
-        comb::Delete(*m_alloc, m_casMount);
-        comb::Delete(*m_alloc, m_assetsMount);
-        comb::Delete(*m_alloc, m_vfs);
-
-        m_hotReload = nullptr;
-        m_nativeWatcher = nullptr;
+        m_hotReload.Reset();
+        m_nativeWatcher.Reset();
         m_watcher = nullptr;
-        m_cookPipeline = nullptr;
-        m_cookCache = nullptr;
-        m_importPipeline = nullptr;
-        m_importDb = nullptr;
-        m_cookerRegistry = nullptr;
-        m_importerRegistry = nullptr;
-        m_server = nullptr;
-        m_io = nullptr;
-        m_cas = nullptr;
-        m_casMount = nullptr;
-        m_assetsMount = nullptr;
-        m_vfs = nullptr;
+        m_cookPipeline.Reset();
+        m_cookCache.Reset();
+        m_importPipeline.Reset();
+        m_importDb.Reset();
+        m_cookerRegistry.Reset();
+        m_importerRegistry.Reset();
+        m_server.Reset();
+        m_io.Reset();
+        m_cas.Reset();
+        m_casMount.Reset();
+        m_assetsMount.Reset();
+        m_vfs.Reset();
 
         m_open = false;
     }
@@ -361,7 +407,7 @@ namespace waggle
 
     nectar::HotReloadManager* ProjectManager::HotReload() noexcept
     {
-        return m_hotReload;
+        return m_hotReload.Get();
     }
 
     nectar::IFileWatcher* ProjectManager::Watcher() noexcept
@@ -371,7 +417,7 @@ namespace waggle
 
     void ProjectManager::SaveImportCache()
     {
-        if (m_importDb == nullptr || !m_open)
+        if (m_importDb.IsNull() || !m_open)
             return;
 
         if (SaveImportCacheToDisk(m_paths.m_importCache.CStr(), *m_importDb, *m_alloc))
@@ -382,18 +428,45 @@ namespace waggle
 
     void ProjectManager::Update()
     {
-        if (m_server != nullptr)
+        if (m_server)
             m_server->Update();
 
-        if (m_hotReload != nullptr)
+        if (m_hotReload)
         {
-            if (m_offlineChanges.Size() > 0 && m_nativeWatcher != nullptr)
+            if (m_offlineChanges.Size() > 0 && m_nativeWatcher)
             {
                 for (size_t i = 0; i < m_offlineChanges.Size(); ++i)
                     m_nativeWatcher->EnqueueChange(m_offlineChanges[i].m_path.View(), m_offlineChanges[i].m_kind);
                 m_offlineChanges.Clear();
             }
             m_lastReloadCount = static_cast<uint32_t>(m_hotReload->ProcessChanges(kDefaultPlatform));
+
+            if (m_lastReloadCount > 0 && m_server)
+            {
+                const auto& reloaded = m_hotReload->LastReloaded();
+                for (size_t i = 0; i < reloaded.Size(); ++i)
+                {
+                    auto* record = m_importDb->FindByUuid(reloaded[i]);
+                    if (!record)
+                        continue;
+
+                    const auto* cacheEntry = m_cookCache->Find(reloaded[i], kDefaultPlatform);
+                    if (!cacheEntry)
+                        continue;
+
+                    auto cookedBlob = m_cas->Load(cacheEntry->m_cookedHash);
+                    if (cookedBlob.Size() == 0)
+                        continue;
+
+                    auto blobSpan = cookedBlob.View();
+                    if (record->m_type.View().Equals(wax::StringView{"Texture", 7}))
+                        SwapAsset<nectar::TextureAsset>(*m_server, record->m_path.View(), blobSpan);
+                    else if (record->m_type.View().Equals(wax::StringView{"Mesh", 4}))
+                        SwapAsset<nectar::MeshAsset>(*m_server, record->m_path.View(), blobSpan);
+
+                    hive::LogInfo(LOG_PROJECT, "Swapped asset: {} ({})", record->m_path.CStr(), record->m_type.CStr());
+                }
+            }
         }
         else
         {

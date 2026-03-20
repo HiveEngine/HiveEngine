@@ -65,9 +65,7 @@ namespace queen
         }
     };
 
-    // ─────────────────────────────────────────────────────────────
     // Change Filter Wrappers (Compile-Time DSL)
-    // ─────────────────────────────────────────────────────────────
 
     /**
      * Added<T> - Filter for entities where component T was recently added
@@ -173,9 +171,7 @@ namespace queen
         }
     };
 
-    // ─────────────────────────────────────────────────────────────
     // Change Filter Type Traits
-    // ─────────────────────────────────────────────────────────────
 
     namespace detail
     {

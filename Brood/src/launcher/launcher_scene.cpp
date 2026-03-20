@@ -4,6 +4,9 @@
 
 #include <hive/core/log.h>
 
+#include <wax/containers/string.h>
+#include <wax/containers/vector.h>
+
 #include <queen/reflect/component_registry.h>
 #include <queen/reflect/world_deserializer.h>
 #include <queen/reflect/world_serializer.h>
@@ -15,6 +18,7 @@
 
 #include <waggle/components/camera.h>
 #include <waggle/components/lighting.h>
+#include <waggle/components/mesh_reference.h>
 #include <waggle/components/name.h>
 #include <waggle/components/transform.h>
 #include <waggle/project/project_manager.h>
@@ -25,7 +29,6 @@
 
 #include <cstdio>
 #include <memory>
-#include <vector>
 
 namespace brood::launcher
 {
@@ -43,6 +46,8 @@ namespace brood::launcher
             registry.Register<waggle::AmbientLight>();
         if (!registry.Contains<waggle::Name>())
             registry.Register<waggle::Name>();
+        if (!registry.Contains<waggle::MeshReference>())
+            registry.Register<waggle::MeshReference>();
     }
 
     void ResetSceneEditorState(LauncherState& state)
@@ -50,15 +55,15 @@ namespace brood::launcher
         state.m_selection.Clear();
         state.m_undo = std::make_unique<forge::UndoStack>();
         state.m_pendingEditorAction = PendingEditorAction::NONE;
-        state.m_pendingScenePath.clear();
+        state.m_pendingScenePath.Clear();
         state.m_openUnsavedScenePopup = false;
-        state.m_scenePromptError.clear();
+        state.m_scenePromptError.Clear();
     }
 
     void ClearWorldEntities(queen::World& world)
     {
-        std::vector<queen::Entity> roots;
-        roots.reserve(world.EntityCount());
+        wax::Vector<queen::Entity> roots;
+        roots.Reserve(world.EntityCount());
 
         world.ForEachArchetype([&](auto& archetype) {
             for (uint32_t row = 0; row < archetype.EntityCount(); ++row)
@@ -66,7 +71,7 @@ namespace brood::launcher
                 const queen::Entity entity = archetype.GetEntity(row);
                 if (world.GetParent(entity).IsNull())
                 {
-                    roots.push_back(entity);
+                    roots.PushBack(entity);
                 }
             }
         });
@@ -79,11 +84,11 @@ namespace brood::launcher
             }
         }
 
-        std::vector<queen::Entity> leftovers;
+        wax::Vector<queen::Entity> leftovers;
         world.ForEachArchetype([&](auto& archetype) {
             for (uint32_t row = 0; row < archetype.EntityCount(); ++row)
             {
-                leftovers.push_back(archetype.GetEntity(row));
+                leftovers.PushBack(archetype.GetEntity(row));
             }
         });
 
@@ -139,8 +144,8 @@ namespace brood::launcher
             return false;
         }
 
-        const std::string relativeString = relative.generic_string();
-        return !relativeString.empty() && relativeString != ".." && !relativeString.starts_with("../");
+        const wax::String relativeString{relative.generic_string().c_str()};
+        return !relativeString.IsEmpty() && relativeString != ".." && !relativeString.StartsWith("../");
     }
 
     std::filesystem::path ResolveScenePath(const waggle::ProjectManager& projectManager, wax::StringView relativePath)
@@ -150,11 +155,10 @@ namespace brood::launcher
             return {};
         }
 
-        return std::filesystem::path{projectManager.Paths().m_assets.CStr()} /
-               std::string{relativePath.Data(), relativePath.Size()};
+        return std::filesystem::path{projectManager.Paths().m_assets.CStr()} / wax::String{relativePath}.CStr();
     }
 
-    std::string MakeSceneRelativePath(const waggle::ProjectManager& projectManager,
+    wax::String MakeSceneRelativePath(const waggle::ProjectManager& projectManager,
                                       const std::filesystem::path& scenePath)
     {
         std::error_code ec;
@@ -162,21 +166,21 @@ namespace brood::launcher
             std::filesystem::relative(scenePath, std::filesystem::path{projectManager.Paths().m_assets.CStr()}, ec);
         if (ec)
         {
-            return scenePath.generic_string();
+            return wax::String{scenePath.generic_string().c_str()};
         }
 
-        const std::string value = relative.generic_string();
-        if (value.empty() || value.starts_with(".."))
+        const wax::String value{relative.generic_string().c_str()};
+        if (value.IsEmpty() || value.StartsWith(".."))
         {
-            return scenePath.generic_string();
+            return wax::String{scenePath.generic_string().c_str()};
         }
         return value;
     }
 
     void ResetSceneRecoveryPrompt(LauncherState& state)
     {
-        state.m_recoverySceneRelative.clear();
-        state.m_recoveryPromptError.clear();
+        state.m_recoverySceneRelative.Clear();
+        state.m_recoveryPromptError.Clear();
         state.m_openRecoveryScenePopup = false;
     }
 
@@ -195,7 +199,7 @@ namespace brood::launcher
         return GetSceneRecoveryDirectory(state) / "autosave.hive";
     }
 
-    bool WriteTextFile(const std::filesystem::path& path, const std::string& content)
+    bool WriteTextFile(const std::filesystem::path& path, const wax::String& content)
     {
         FILE* file = nullptr;
 #ifdef _MSC_VER
@@ -208,12 +212,12 @@ namespace brood::launcher
             return false;
         }
 
-        const size_t written = std::fwrite(content.data(), 1, content.size(), file);
+        const size_t written = std::fwrite(content.Data(), 1, content.Size(), file);
         std::fclose(file);
-        return written == content.size();
+        return written == content.Size();
     }
 
-    bool ReadTextFile(const std::filesystem::path& path, std::string* content)
+    bool ReadTextFile(const std::filesystem::path& path, wax::String* content)
     {
         FILE* file = nullptr;
 #ifdef _MSC_VER
@@ -239,21 +243,23 @@ namespace brood::launcher
             return false;
         }
 
-        std::vector<char> buffer(static_cast<size_t>(fileSize) + 1, '\0');
-        const size_t bytesRead = std::fread(buffer.data(), 1, static_cast<size_t>(fileSize), file);
+        wax::Vector<char> buffer;
+        buffer.Resize(static_cast<size_t>(fileSize) + 1);
+        buffer[static_cast<size_t>(fileSize)] = '\0';
+        const size_t bytesRead = std::fread(buffer.Data(), 1, static_cast<size_t>(fileSize), file);
         std::fclose(file);
         if (bytesRead != static_cast<size_t>(fileSize))
         {
             return false;
         }
 
-        *content = std::string{buffer.data(), bytesRead};
+        *content = wax::String{wax::StringView{buffer.Data(), bytesRead}};
         return true;
     }
 
-    std::string GetSceneRecoverySourceRelative(LauncherState& state)
+    wax::String GetSceneRecoverySourceRelative(LauncherState& state)
     {
-        if (!state.m_currentSceneRelative.empty())
+        if (!state.m_currentSceneRelative.IsEmpty())
         {
             return state.m_currentSceneRelative;
         }
@@ -264,9 +270,9 @@ namespace brood::launcher
         }
 
         std::filesystem::path preferredScenePath{};
-        if (!state.m_currentScenePath.empty())
+        if (!state.m_currentScenePath.IsEmpty())
         {
-            preferredScenePath = std::filesystem::path{state.m_currentScenePath};
+            preferredScenePath = std::filesystem::path{state.m_currentScenePath.CStr()};
         }
         else
         {
@@ -278,19 +284,19 @@ namespace brood::launcher
         return MakeSceneRelativePath(*state.m_project, preferredScenePath);
     }
 
-    bool WriteSceneRecoveryMetadata(LauncherState& state, const std::string& sceneRelative)
+    bool WriteSceneRecoveryMetadata(LauncherState& state, const wax::String& sceneRelative)
     {
         auto& alloc = state.m_alloc.Get();
         nectar::HiveDocument document{alloc};
         document.SetValue("recovery", "scene",
-                          nectar::HiveValue::MakeString(alloc, {sceneRelative.c_str(), sceneRelative.size()}));
+                          nectar::HiveValue::MakeString(alloc, {sceneRelative.CStr(), sceneRelative.Size()}));
         const wax::String content = nectar::HiveWriter::Write(document, alloc);
-        return WriteTextFile(GetSceneRecoveryMetadataPath(state), std::string{content.CStr(), content.Size()});
+        return WriteTextFile(GetSceneRecoveryMetadataPath(state), content);
     }
 
-    bool LoadSceneRecoveryMetadata(LauncherState& state, std::string* sceneRelative)
+    bool LoadSceneRecoveryMetadata(LauncherState& state, wax::String* sceneRelative)
     {
-        std::string content{};
+        wax::String content{};
         if (!ReadTextFile(GetSceneRecoveryMetadataPath(state), &content))
         {
             return false;
@@ -298,7 +304,7 @@ namespace brood::launcher
 
         auto& alloc = state.m_alloc.Get();
         const nectar::HiveParseResult parseResult =
-            nectar::HiveParser::Parse(wax::StringView{content.c_str(), content.size()}, alloc);
+            nectar::HiveParser::Parse(wax::StringView{content.CStr(), content.Size()}, alloc);
         if (!parseResult.Success())
         {
             return false;
@@ -310,7 +316,7 @@ namespace brood::launcher
             return false;
         }
 
-        *sceneRelative = std::string{recoveryScene.Data(), recoveryScene.Size()};
+        *sceneRelative = wax::String{recoveryScene};
         return true;
     }
 
@@ -340,7 +346,7 @@ namespace brood::launcher
             return;
         }
 
-        std::string sceneRelative{};
+        wax::String sceneRelative{};
         if (!LoadSceneRecoveryMetadata(state, &sceneRelative))
         {
             ClearSceneRecoveryArtifacts(state);
@@ -348,7 +354,7 @@ namespace brood::launcher
         }
 
         state.m_recoverySceneRelative = sceneRelative;
-        state.m_recoveryPromptError.clear();
+        state.m_recoveryPromptError.Clear();
         state.m_openRecoveryScenePopup = true;
     }
 
@@ -375,7 +381,7 @@ namespace brood::launcher
     }
 
     bool ResolveSceneAssetPath(const LauncherState& state, const std::filesystem::path& rawScenePath,
-                               bool requireExisting, std::filesystem::path* resolvedScenePath, std::string* error)
+                               bool requireExisting, std::filesystem::path* resolvedScenePath, wax::String* error)
     {
         if (state.m_project == nullptr)
         {
@@ -446,9 +452,9 @@ namespace brood::launcher
 
     std::filesystem::path GetPreferredScenePath(LauncherState& state)
     {
-        if (!state.m_currentScenePath.empty())
+        if (!state.m_currentScenePath.IsEmpty())
         {
-            return std::filesystem::path{state.m_currentScenePath};
+            return std::filesystem::path{state.m_currentScenePath.CStr()};
         }
 
         const wax::StringView startupScene = state.m_project->Project().StartupSceneRelative();
@@ -499,10 +505,11 @@ namespace brood::launcher
                               const std::filesystem::path& rawScenePath)
     {
         std::filesystem::path scenePath{};
-        std::string error{};
+        wax::String error{};
         if (!ResolveSceneAssetPath(state, rawScenePath, true, &scenePath, &error))
         {
-            hive::LogWarning(LOG_LAUNCHER, "Failed to open scene '{}': {}", rawScenePath.generic_string(), error);
+            hive::LogWarning(LOG_LAUNCHER, "Failed to open scene '{}': {}", rawScenePath.generic_string(),
+                             error.CStr());
             return false;
         }
 
@@ -519,10 +526,11 @@ namespace brood::launcher
                                const std::filesystem::path& rawScenePath)
     {
         std::filesystem::path scenePath{};
-        std::string error{};
+        wax::String error{};
         if (!ResolveSceneAssetPath(state, rawScenePath, false, &scenePath, &error))
         {
-            hive::LogWarning(LOG_LAUNCHER, "Failed to save scene '{}': {}", rawScenePath.generic_string(), error);
+            hive::LogWarning(LOG_LAUNCHER, "Failed to save scene '{}': {}", rawScenePath.generic_string(),
+                             error.CStr());
             return false;
         }
 
@@ -535,18 +543,18 @@ namespace brood::launcher
             return false;
         }
 
-        const std::string scenePathString = scenePath.generic_string();
-        if (!forge::SaveScene(*ctx.m_world, state.m_componentRegistry, scenePathString.c_str()))
+        const wax::String scenePathGeneric{scenePath.generic_string().c_str()};
+        if (!forge::SaveScene(*ctx.m_world, state.m_componentRegistry, scenePathGeneric.CStr()))
         {
             return false;
         }
 
-        state.m_currentScenePath = scenePathString;
+        state.m_currentScenePath = scenePathGeneric;
         state.m_currentSceneRelative = MakeSceneRelativePath(*state.m_project, scenePath);
         state.m_sceneAutosaveElapsedSeconds = 0.0;
         state.m_sceneDirty = false;
         ClearSceneRecoveryArtifacts(state);
-        hive::LogInfo(LOG_LAUNCHER, "Scene saved: {}", scenePathString);
+        hive::LogInfo(LOG_LAUNCHER, "Scene saved: {}", scenePathGeneric.CStr());
         return true;
     }
 
@@ -557,8 +565,8 @@ namespace brood::launcher
             return false;
         }
 
-        const std::string sceneRelative = GetSceneRecoverySourceRelative(state);
-        if (sceneRelative.empty())
+        const wax::String sceneRelative = GetSceneRecoverySourceRelative(state);
+        if (sceneRelative.IsEmpty())
         {
             return false;
         }
@@ -574,8 +582,8 @@ namespace brood::launcher
         }
 
         const std::filesystem::path recoveryScenePath = GetSceneRecoveryScenePath(state);
-        const std::string recoveryScenePathString = recoveryScenePath.generic_string();
-        if (!forge::SaveScene(*ctx.m_world, state.m_componentRegistry, recoveryScenePathString.c_str()))
+        const wax::String recoveryScenePathString{recoveryScenePath.generic_string().c_str()};
+        if (!forge::SaveScene(*ctx.m_world, state.m_componentRegistry, recoveryScenePathString.CStr()))
         {
             return false;
         }
@@ -587,11 +595,11 @@ namespace brood::launcher
             return false;
         }
 
-        hive::LogInfo(LOG_LAUNCHER, "Scene autosaved for recovery: {}", sceneRelative);
+        hive::LogInfo(LOG_LAUNCHER, "Scene autosaved for recovery: {}", sceneRelative.CStr());
         return true;
     }
 
-    std::string CaptureSceneBackup(queen::World& world, const queen::ComponentRegistry<256>& registry)
+    wax::String CaptureSceneBackup(queen::World& world, const queen::ComponentRegistry<256>& registry)
     {
         queen::DynamicWorldSerializer serializer{};
         const auto result = serializer.Serialize(world, registry);
@@ -604,14 +612,14 @@ namespace brood::launcher
     }
 
     bool RestoreSceneBackup(queen::World& world, const queen::ComponentRegistry<256>& registry,
-                            const std::string& backupScene)
+                            const wax::String& backupScene)
     {
-        if (backupScene.empty())
+        if (backupScene.IsEmpty())
         {
             return false;
         }
 
-        const auto result = queen::WorldDeserializer::Deserialize(world, registry, backupScene.c_str());
+        const auto result = queen::WorldDeserializer::Deserialize(world, registry, backupScene.CStr());
         return result.m_success;
     }
 
@@ -631,18 +639,18 @@ namespace brood::launcher
 
         // The first startup-scene load happens before the editor owns a scene. Taking a
         // serialized backup there is unnecessary and can walk non-scene bootstrap state.
-        const bool hasPreviousScene = !state.m_currentScenePath.empty() || !state.m_currentSceneRelative.empty();
-        const std::string previousSceneBackup =
-            hasPreviousScene ? CaptureSceneBackup(*ctx.m_world, state.m_componentRegistry) : std::string{};
-        const std::string previousScenePath = state.m_currentScenePath;
-        const std::string previousSceneRelative = state.m_currentSceneRelative;
+        const bool hasPreviousScene = !state.m_currentScenePath.IsEmpty() || !state.m_currentSceneRelative.IsEmpty();
+        const wax::String previousSceneBackup =
+            hasPreviousScene ? CaptureSceneBackup(*ctx.m_world, state.m_componentRegistry) : wax::String{};
+        const wax::String previousScenePath = state.m_currentScenePath;
+        const wax::String previousSceneRelative = state.m_currentSceneRelative;
         const bool previousSceneDirty = state.m_sceneDirty;
 
         ClearWorldEntities(*ctx.m_world);
         ResetSceneEditorState(state);
 
-        const std::string scenePathString = scenePath.generic_string();
-        if (!forge::LoadScene(*ctx.m_world, state.m_componentRegistry, scenePathString.c_str()))
+        const wax::String scenePathString{scenePath.generic_string().c_str()};
+        if (!forge::LoadScene(*ctx.m_world, state.m_componentRegistry, scenePathString.CStr()))
         {
             if (hasPreviousScene && RestoreSceneBackup(*ctx.m_world, state.m_componentRegistry, previousSceneBackup))
             {
@@ -651,12 +659,12 @@ namespace brood::launcher
                 state.m_sceneDirty = previousSceneDirty;
                 hive::LogWarning(LOG_LAUNCHER, "Scene load failed; restored the previous scene state.");
             }
-            else if (hasPreviousScene && !previousSceneBackup.empty())
+            else if (hasPreviousScene && !previousSceneBackup.IsEmpty())
             {
                 hive::LogWarning(LOG_LAUNCHER,
                                  "Scene load failed and the previous scene backup could not be restored.");
             }
-            hive::LogWarning(LOG_LAUNCHER, "Failed to load scene: {}", scenePathString);
+            hive::LogWarning(LOG_LAUNCHER, "Failed to load scene: {}", scenePathString.CStr());
             return false;
         }
 
@@ -669,8 +677,8 @@ namespace brood::launcher
 
     [[maybe_unused]] bool RestoreSceneRecovery(waggle::EngineContext& ctx, LauncherState& state)
     {
-        const std::string recoveredSceneRelative = state.m_recoverySceneRelative;
-        if (recoveredSceneRelative.empty())
+        const wax::String recoveredSceneRelative = state.m_recoverySceneRelative;
+        if (recoveredSceneRelative.IsEmpty())
         {
             return false;
         }
@@ -682,8 +690,8 @@ namespace brood::launcher
         }
 
         const std::filesystem::path restoredScenePath =
-            NormalizeScenePath(state, std::filesystem::path{recoveredSceneRelative}, false);
-        state.m_currentScenePath = restoredScenePath.generic_string();
+            NormalizeScenePath(state, std::filesystem::path{recoveredSceneRelative.CStr()}, false);
+        state.m_currentScenePath = wax::String{restoredScenePath.generic_string().c_str()};
         state.m_currentSceneRelative = recoveredSceneRelative;
         state.m_sceneAutosaveElapsedSeconds = 0.0;
         state.m_sceneDirty = true;
@@ -766,10 +774,10 @@ namespace brood::launcher
         ClearWorldEntities(*ctx.m_world);
         ResetSceneEditorState(state);
         const std::filesystem::path scenePath = GetPreferredScenePath(state);
-        state.m_currentScenePath = scenePath.generic_string();
+        state.m_currentScenePath = wax::String{scenePath.generic_string().c_str()};
         state.m_currentSceneRelative = MakeSceneRelativePath(*state.m_project, scenePath);
         state.m_sceneDirty = true;
-        hive::LogInfo(LOG_LAUNCHER, "New scene initialized at {}", state.m_currentScenePath);
+        hive::LogInfo(LOG_LAUNCHER, "New scene initialized at {}", state.m_currentScenePath.CStr());
     }
 
     [[maybe_unused]] const char* DescribePendingEditorAction(PendingEditorAction action) noexcept
@@ -794,9 +802,9 @@ namespace brood::launcher
     void ExecutePendingEditorAction(waggle::EngineContext& ctx, LauncherState& state)
     {
         const PendingEditorAction action = state.m_pendingEditorAction;
-        const std::filesystem::path pendingScenePath = state.m_pendingScenePath;
+        const std::filesystem::path pendingScenePath{state.m_pendingScenePath.CStr()};
         state.m_pendingEditorAction = PendingEditorAction::NONE;
-        state.m_pendingScenePath.clear();
+        state.m_pendingScenePath.Clear();
 
         switch (action)
         {
@@ -820,7 +828,7 @@ namespace brood::launcher
     void RequestPendingEditorAction(waggle::EngineContext& ctx, LauncherState& state, PendingEditorAction action,
                                     const std::filesystem::path& pendingScenePath)
     {
-        state.m_pendingScenePath = pendingScenePath.generic_string();
+        state.m_pendingScenePath = wax::String{pendingScenePath.generic_string().c_str()};
 
         if (!state.m_sceneDirty)
         {
@@ -830,7 +838,7 @@ namespace brood::launcher
         }
 
         state.m_pendingEditorAction = action;
-        state.m_scenePromptError.clear();
+        state.m_scenePromptError.Clear();
         state.m_openUnsavedScenePopup = true;
     }
 

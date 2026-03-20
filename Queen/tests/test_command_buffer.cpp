@@ -27,9 +27,7 @@ namespace
     {
     };
 
-    // ─────────────────────────────────────────────────────────────────────────
     // Basic CommandBuffer Tests
-    // ─────────────────────────────────────────────────────────────────────────
 
     auto test1 = larvae::RegisterTest("QueenCommandBuffer", "Creation", []() {
         comb::LinearAllocator alloc{65536};
@@ -120,9 +118,7 @@ namespace
         larvae::AssertTrue(cmd.IsEmpty());
     });
 
-    // ─────────────────────────────────────────────────────────────────────────
     // Flush Tests - Spawn
-    // ─────────────────────────────────────────────────────────────────────────
 
     auto test9 = larvae::RegisterTest("QueenCommandBuffer", "FlushSpawnEmpty", []() {
         comb::LinearAllocator alloc{131072};
@@ -207,9 +203,7 @@ namespace
         larvae::AssertEqual(world.Get<Position>(e3)->x, 3.0f);
     });
 
-    // ─────────────────────────────────────────────────────────────────────────
     // Flush Tests - Despawn
-    // ─────────────────────────────────────────────────────────────────────────
 
     auto test13 = larvae::RegisterTest("QueenCommandBuffer", "FlushDespawn", []() {
         comb::LinearAllocator alloc{131072};
@@ -250,9 +244,7 @@ namespace
         larvae::AssertEqual(world.EntityCount(), size_t{1});
     });
 
-    // ─────────────────────────────────────────────────────────────────────────
     // Flush Tests - Add Component
-    // ─────────────────────────────────────────────────────────────────────────
 
     auto test15 = larvae::RegisterTest("QueenCommandBuffer", "FlushAddComponent", []() {
         comb::LinearAllocator alloc{131072};
@@ -290,9 +282,7 @@ namespace
         larvae::AssertEqual(world.Get<Position>(e)->y, 6.0f);
     });
 
-    // ─────────────────────────────────────────────────────────────────────────
     // Flush Tests - Remove Component
-    // ─────────────────────────────────────────────────────────────────────────
 
     auto test17 = larvae::RegisterTest("QueenCommandBuffer", "FlushRemoveComponent", []() {
         comb::LinearAllocator alloc{131072};
@@ -330,9 +320,7 @@ namespace
         larvae::AssertFalse(world.Has<Velocity>(e));
     });
 
-    // ─────────────────────────────────────────────────────────────────────────
     // Flush Tests - Set Component
-    // ─────────────────────────────────────────────────────────────────────────
 
     auto test19 = larvae::RegisterTest("QueenCommandBuffer", "FlushSetExisting", []() {
         comb::LinearAllocator alloc{131072};
@@ -366,9 +354,7 @@ namespace
         larvae::AssertEqual(world.Get<Velocity>(e)->dx, 0.1f);
     });
 
-    // ─────────────────────────────────────────────────────────────────────────
     // Integration Tests - Query + CommandBuffer
-    // ─────────────────────────────────────────────────────────────────────────
 
     auto test21 = larvae::RegisterTest("QueenCommandBuffer", "DespawnDuringQuery", []() {
         comb::LinearAllocator alloc{262144};
@@ -436,9 +422,7 @@ namespace
         larvae::AssertEqual(world.Get<Velocity>(e2)->dx, 2.0f);
     });
 
-    // ─────────────────────────────────────────────────────────────────────────
     // Edge Cases
-    // ─────────────────────────────────────────────────────────────────────────
 
     auto test24 = larvae::RegisterTest("QueenCommandBuffer", "FlushEmpty", []() {
         comb::LinearAllocator alloc{131072};

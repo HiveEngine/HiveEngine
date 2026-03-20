@@ -43,11 +43,11 @@ namespace larvae
     } // namespace
 
     TestRunner::TestRunner(const TestRunnerConfig& config)
-        : config_{config}
+        : m_config{config}
     {
-        if (!config_.capabilities_overridden)
+        if (!m_config.m_capabilitiesOverridden)
         {
-            config_.available_capabilities = DetectBuildCapabilities();
+            m_config.m_availableCapabilities = DetectBuildCapabilities();
         }
     }
 
@@ -70,12 +70,12 @@ namespace larvae
 
     CapabilityMask TestRunner::GetMissingCapabilities(const TestInfo& test_info) const
     {
-        return test_info.required_capabilities & ~config_.available_capabilities;
+        return test_info.m_requiredCapabilities & ~m_config.m_availableCapabilities;
     }
 
     int TestRunner::Run()
     {
-        results_.clear();
+        m_results.clear();
 
         const auto& tests = TestRegistry::GetInstance().GetTests();
         if (tests.empty())
@@ -91,7 +91,7 @@ namespace larvae
             return 0;
         }
 
-        if (config_.list_only)
+        if (m_config.m_listOnly)
         {
             PrintSelection(filtered_tests);
 
@@ -104,10 +104,10 @@ namespace larvae
                     break;
                 }
             }
-            return config_.fail_on_skip && has_missing_capabilities ? 1 : 0;
+            return m_config.m_failOnSkip && has_missing_capabilities ? 1 : 0;
         }
 
-        if (config_.shuffle)
+        if (m_config.m_shuffle)
         {
             std::random_device rd;
             std::mt19937 g{rd()};
@@ -118,39 +118,39 @@ namespace larvae
 
         std::string current_suite;
 
-        for (int repeat = 0; repeat < config_.repeat_count; ++repeat)
+        for (int repeat = 0; repeat < m_config.m_repeatCount; ++repeat)
         {
-            if (config_.repeat_count > 1)
+            if (m_config.m_repeatCount > 1)
             {
-                std::cout << "\n[----------] Iteration " << (repeat + 1) << " of " << config_.repeat_count << "\n";
+                std::cout << "\n[----------] Iteration " << (repeat + 1) << " of " << m_config.m_repeatCount << "\n";
             }
 
             for (const auto& test : filtered_tests)
             {
-                if (test.suite_name != current_suite)
+                if (test.m_suiteName != current_suite)
                 {
                     if (!current_suite.empty())
                     {
                         std::cout << "\n";
                     }
-                    current_suite = test.suite_name;
+                    current_suite = test.m_suiteName;
                     std::cout << "[----------] Running tests from " << current_suite << "\n";
                 }
 
-                if (!HasAllCapabilities(config_.available_capabilities, test.required_capabilities))
+                if (!HasAllCapabilities(m_config.m_availableCapabilities, test.m_requiredCapabilities))
                 {
                     const CapabilityMask missing = GetMissingCapabilities(test);
                     TestResult skipped = MakeSkippedResult(test, missing);
-                    results_.push_back(skipped);
+                    m_results.push_back(skipped);
                     std::cout << "[ SKIPPED  ] " << test.GetFullName() << " (missing capabilities: "
                               << FormatCapabilities(missing) << ")\n";
                     continue;
                 }
 
                 TestResult result = RunTest(test);
-                results_.push_back(result);
+                m_results.push_back(result);
 
-                if (config_.stop_on_failure && result.status == TestStatus::Failed)
+                if (m_config.m_stopOnFailure && result.m_status == TestStatus::FAILED)
                 {
                     std::cout << "\n[==========] Stopped due to failure\n";
                     PrintSummary();
@@ -162,14 +162,14 @@ namespace larvae
         std::cout << "\n";
         PrintSummary();
 
-        return GetFailedTests() > 0 || (config_.fail_on_skip && GetSkippedTests() > 0) ? 1 : 0;
+        return GetFailedTests() > 0 || (m_config.m_failOnSkip && GetSkippedTests() > 0) ? 1 : 0;
     }
 
     TestResult TestRunner::RunTest(const TestInfo& test_info) const
     {
         TestResult result;
-        result.suite_name = test_info.suite_name;
-        result.test_name = test_info.test_name;
+        result.m_suiteName = test_info.m_suiteName;
+        result.m_testName = test_info.m_testName;
 
         std::cout << "[   RUN    ] " << test_info.GetFullName() << "\n";
 
@@ -194,7 +194,7 @@ namespace larvae
             return true; // Return true to prevent abort and continue test execution
         });
 
-        test_info.func();
+        test_info.m_func();
 
         // Restore default handler
         SetAssertionFailureHandler(nullptr);
@@ -203,29 +203,29 @@ namespace larvae
 
         if (test_failed)
         {
-            result.status = TestStatus::Failed;
-            result.error_message = assertion_error;
+            result.m_status = TestStatus::FAILED;
+            result.m_errorMessage = assertion_error;
         }
         else
         {
-            result.status = TestStatus::Passed;
+            result.m_status = TestStatus::PASSED;
         }
 
         auto end_time = std::chrono::high_resolution_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time);
-        result.duration_ms = static_cast<double>(duration.count()) / 1000.0;
+        result.m_durationMs = static_cast<double>(duration.count()) / 1000.0;
 
-        if (result.status == TestStatus::Passed)
+        if (result.m_status == TestStatus::PASSED)
         {
-            std::cout << "[    OK    ] " << test_info.GetFullName() << " (" << result.duration_ms << " ms)\n";
+            std::cout << "[    OK    ] " << test_info.GetFullName() << " (" << result.m_durationMs << " ms)\n";
         }
         else
         {
-            std::cout << "[  FAILED  ] " << test_info.GetFullName() << " (" << result.duration_ms << " ms)\n";
+            std::cout << "[  FAILED  ] " << test_info.GetFullName() << " (" << result.m_durationMs << " ms)\n";
 
-            if (config_.verbose)
+            if (m_config.m_verbose)
             {
-                std::cout << result.error_message << "\n";
+                std::cout << result.m_errorMessage << "\n";
             }
         }
 
@@ -235,40 +235,40 @@ namespace larvae
     TestResult TestRunner::MakeSkippedResult(const TestInfo& test_info, CapabilityMask missing_capabilities) const
     {
         TestResult result;
-        result.suite_name = test_info.suite_name;
-        result.test_name = test_info.test_name;
-        result.status = TestStatus::Skipped;
-        result.error_message = "Missing capabilities: " + FormatCapabilities(missing_capabilities);
-        result.duration_ms = 0.0;
+        result.m_suiteName = test_info.m_suiteName;
+        result.m_testName = test_info.m_testName;
+        result.m_status = TestStatus::SKIPPED;
+        result.m_errorMessage = "Missing capabilities: " + FormatCapabilities(missing_capabilities);
+        result.m_durationMs = 0.0;
         return result;
     }
 
     bool TestRunner::MatchesFilter(const TestInfo& test_info) const
     {
-        if (!config_.suite_filter.empty())
+        if (!m_config.m_suiteFilter.empty())
         {
-            if (test_info.suite_name != config_.suite_filter)
+            if (test_info.m_suiteName != m_config.m_suiteFilter)
             {
                 return false;
             }
         }
 
-        if (!config_.exclude_suite_filter.empty() && test_info.suite_name == config_.exclude_suite_filter)
+        if (!m_config.m_excludeSuiteFilter.empty() && test_info.m_suiteName == m_config.m_excludeSuiteFilter)
         {
             return false;
         }
 
-        if (!config_.filter_pattern.empty())
+        if (!m_config.m_filterPattern.empty())
         {
-            if (!MatchesPattern(test_info.GetFullName(), config_.filter_pattern))
+            if (!MatchesPattern(test_info.GetFullName(), m_config.m_filterPattern))
             {
                 return false;
             }
         }
 
-        if (!config_.exclude_filter_pattern.empty())
+        if (!m_config.m_excludeFilterPattern.empty())
         {
-            if (MatchesPattern(test_info.GetFullName(), config_.exclude_filter_pattern))
+            if (MatchesPattern(test_info.GetFullName(), m_config.m_excludeFilterPattern))
             {
                 return false;
             }
@@ -280,13 +280,13 @@ namespace larvae
     void TestRunner::PrintSelection(const std::vector<TestInfo>& tests) const
     {
         std::cout << "Listing " << tests.size() << " test(s)\n";
-        std::cout << "Available capabilities: " << FormatCapabilities(config_.available_capabilities) << "\n";
+        std::cout << "Available capabilities: " << FormatCapabilities(m_config.m_availableCapabilities) << "\n";
 
         for (const auto& test : tests)
         {
             const CapabilityMask missing = GetMissingCapabilities(test);
             std::cout << (missing == 0 ? "[ RUNNABLE ] " : "[ SKIPPED  ] ") << test.GetFullName()
-                      << " (requires: " << FormatCapabilities(test.required_capabilities) << ")";
+                      << " (requires: " << FormatCapabilities(test.m_requiredCapabilities) << ")";
             if (missing != 0)
             {
                 std::cout << " (missing: " << FormatCapabilities(missing) << ")";
@@ -305,15 +305,15 @@ namespace larvae
             std::cout << "[  FAILED  ] " << GetFailedTests() << " test(s)\n";
             std::cout << "\nFailed tests:\n";
 
-            for (const auto& result : results_)
+            for (const auto& result : m_results)
             {
-                if (result.status == TestStatus::Failed)
+                if (result.m_status == TestStatus::FAILED)
                 {
-                    std::cout << "  " << result.suite_name << "." << result.test_name << "\n";
+                    std::cout << "  " << result.m_suiteName << "." << result.m_testName << "\n";
 
-                    if (!result.error_message.empty())
+                    if (!result.m_errorMessage.empty())
                     {
-                        std::istringstream iss{result.error_message};
+                        std::istringstream iss{result.m_errorMessage};
                         std::string line;
                         while (std::getline(iss, line))
                         {
@@ -332,15 +332,15 @@ namespace larvae
 
     int TestRunner::GetTotalTests() const
     {
-        return static_cast<int>(results_.size());
+        return static_cast<int>(m_results.size());
     }
 
     int TestRunner::GetPassedTests() const
     {
         int count = 0;
-        for (const auto& result : results_)
+        for (const auto& result : m_results)
         {
-            if (result.status == TestStatus::Passed)
+            if (result.m_status == TestStatus::PASSED)
                 ++count;
         }
         return count;
@@ -349,9 +349,9 @@ namespace larvae
     int TestRunner::GetFailedTests() const
     {
         int count = 0;
-        for (const auto& result : results_)
+        for (const auto& result : m_results)
         {
-            if (result.status == TestStatus::Failed)
+            if (result.m_status == TestStatus::FAILED)
                 ++count;
         }
         return count;
@@ -360,9 +360,9 @@ namespace larvae
     int TestRunner::GetSkippedTests() const
     {
         int count = 0;
-        for (const auto& result : results_)
+        for (const auto& result : m_results)
         {
-            if (result.status == TestStatus::Skipped)
+            if (result.m_status == TestStatus::SKIPPED)
                 ++count;
         }
         return count;
@@ -371,9 +371,9 @@ namespace larvae
     double TestRunner::GetTotalTime() const
     {
         double total = 0.0;
-        for (const auto& result : results_)
+        for (const auto& result : m_results)
         {
-            total += result.duration_ms;
+            total += result.m_durationMs;
         }
         return total;
     }
@@ -381,7 +381,7 @@ namespace larvae
     TestRunnerConfig ParseCommandLine(int argc, char** argv)
     {
         TestRunnerConfig config;
-        config.available_capabilities = DetectBuildCapabilities();
+        config.m_availableCapabilities = DetectBuildCapabilities();
 
         for (int i = 1; i < argc; ++i)
         {
@@ -389,43 +389,43 @@ namespace larvae
 
             if (arg == "--verbose" || arg == "-v")
             {
-                config.verbose = true;
+                config.m_verbose = true;
             }
             else if (arg == "--shuffle")
             {
-                config.shuffle = true;
+                config.m_shuffle = true;
             }
             else if (arg == "--list")
             {
-                config.list_only = true;
+                config.m_listOnly = true;
             }
             else if (arg == "--stop-on-failure")
             {
-                config.stop_on_failure = true;
+                config.m_stopOnFailure = true;
             }
             else if (arg == "--fail-on-skip")
             {
-                config.fail_on_skip = true;
+                config.m_failOnSkip = true;
             }
             else if (arg.starts_with("--filter="))
             {
-                config.filter_pattern = arg.substr(9);
+                config.m_filterPattern = arg.substr(9);
             }
             else if (arg.starts_with("--suite="))
             {
-                config.suite_filter = arg.substr(8);
+                config.m_suiteFilter = arg.substr(8);
             }
             else if (arg.starts_with("--exclude-suite="))
             {
-                config.exclude_suite_filter = arg.substr(16);
+                config.m_excludeSuiteFilter = arg.substr(16);
             }
             else if (arg.starts_with("--repeat="))
             {
-                config.repeat_count = std::stoi(arg.substr(9));
+                config.m_repeatCount = std::stoi(arg.substr(9));
             }
             else if (arg.starts_with("--exclude-filter="))
             {
-                config.exclude_filter_pattern = arg.substr(17);
+                config.m_excludeFilterPattern = arg.substr(17);
             }
             else if (arg.starts_with("--capabilities="))
             {
@@ -433,8 +433,8 @@ namespace larvae
                 const CapabilityMask parsed = ParseCapabilityList(arg.substr(15), &ok);
                 if (ok)
                 {
-                    config.available_capabilities = parsed;
-                    config.capabilities_overridden = true;
+                    config.m_availableCapabilities = parsed;
+                    config.m_capabilitiesOverridden = true;
                 }
             }
         }

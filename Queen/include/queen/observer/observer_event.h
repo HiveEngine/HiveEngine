@@ -115,9 +115,7 @@ namespace queen
         static constexpr TypeId componentId = TypeIdOf<T>();
     };
 
-    // ─────────────────────────────────────────────────────────────────
     // Trigger type detection concepts
-    // ─────────────────────────────────────────────────────────────────
 
     namespace detail
     {
@@ -170,9 +168,7 @@ namespace queen
     template <typename T>
     concept ObserverTrigger = IsOnAddTrigger<T> || IsOnRemoveTrigger<T> || IsOnSetTrigger<T>;
 
-    // ─────────────────────────────────────────────────────────────────
     // Trigger type enumeration (for runtime identification)
-    // ─────────────────────────────────────────────────────────────────
 
     /**
      * Runtime identifier for trigger types
@@ -213,9 +209,7 @@ namespace queen
         return T::componentId;
     }
 
-    // ─────────────────────────────────────────────────────────────────
     // Observer key for storage lookup
-    // ─────────────────────────────────────────────────────────────────
 
     /**
      * Composite key for observer lookup

@@ -29,9 +29,7 @@ namespace
     {
     };
 
-    // ─────────────────────────────────────────────────────────────
     // QueryDescriptor basic construction
-    // ─────────────────────────────────────────────────────────────
 
     auto test1 = larvae::RegisterTest("QueenQueryDescriptor", "EmptyDescriptor", []() {
         queen::PersistentAllocator alloc{65536};
@@ -89,9 +87,7 @@ namespace
         larvae::AssertFalse(desc.HasOptional());
     });
 
-    // ─────────────────────────────────────────────────────────────
     // Optional terms
-    // ─────────────────────────────────────────────────────────────
 
     auto test5 = larvae::RegisterTest("QueenQueryDescriptor", "OptionalTerms", []() {
         queen::PersistentAllocator alloc{65536};
@@ -107,9 +103,7 @@ namespace
         larvae::AssertTrue(desc.HasOptional());
     });
 
-    // ─────────────────────────────────────────────────────────────
     // MatchesArchetype tests
-    // ─────────────────────────────────────────────────────────────
 
     auto test6 = larvae::RegisterTest("QueenQueryDescriptor", "MatchesArchetypeWithRequired", []() {
         queen::PersistentAllocator alloc{262144};
@@ -212,9 +206,7 @@ namespace
         larvae::AssertTrue(desc.MatchesArchetype(*arch_without_health));
     });
 
-    // ─────────────────────────────────────────────────────────────
     // FindMatchingArchetypes tests
-    // ─────────────────────────────────────────────────────────────
 
     auto test11 = larvae::RegisterTest("QueenQueryDescriptor", "FindMatchingArchetypes", []() {
         queen::PersistentAllocator alloc{524288};
@@ -283,9 +275,7 @@ namespace
         world.Despawn(e1);
     });
 
-    // ─────────────────────────────────────────────────────────────
     // Data access extraction
-    // ─────────────────────────────────────────────────────────────
 
     auto test14 = larvae::RegisterTest("QueenQueryDescriptor", "DataAccessExtraction", []() {
         queen::PersistentAllocator alloc{65536};
@@ -306,9 +296,7 @@ namespace
         larvae::AssertTrue(data_terms[2].IsOptional());
     });
 
-    // ─────────────────────────────────────────────────────────────
     // Getters tests
-    // ─────────────────────────────────────────────────────────────
 
     auto test15 = larvae::RegisterTest("QueenQueryDescriptor", "GetterMethods", []() {
         queen::PersistentAllocator alloc{65536};
@@ -330,9 +318,7 @@ namespace
         larvae::AssertEqual(optional[0], queen::TypeIdOf<Health>());
     });
 
-    // ─────────────────────────────────────────────────────────────
     // Finalize multiple times
-    // ─────────────────────────────────────────────────────────────
 
     auto test16 = larvae::RegisterTest("QueenQueryDescriptor", "FinalizeMultipleTimes", []() {
         queen::PersistentAllocator alloc{65536};

@@ -51,9 +51,7 @@
 namespace comb::debug
 {
 
-    // ============================================================================
     // High-Resolution Timestamp
-    // ============================================================================
 
     /**
      * Get high-resolution timestamp (monotonic, nanoseconds)
@@ -126,9 +124,7 @@ namespace comb::debug
     }
 #endif
 
-    // ============================================================================
     // Thread ID
-    // ============================================================================
 
     /**
      * Get current thread ID (cross-platform)
@@ -157,19 +153,17 @@ namespace comb::debug
 #endif
     }
 
-    // ============================================================================
     // Callstack Capture (Optional, Expensive)
-    // ============================================================================
 
 #if COMB_MEM_DEBUG_CALLSTACKS
 
     /**
      * Capture callstack (platform-specific)
      *
-     * Captures up to MaxCallstackDepth (16) frames.
+     * Captures up to maxCallstackDepth (16) frames.
      * Skips the first frame (this function itself).
      *
-     * @param frames Output array (must have space for MaxCallstackDepth)
+     * @param frames Output array (must have space for maxCallstackDepth)
      * @param depth Output: actual number of frames captured
      *
      * Performance: VERY SLOW
@@ -183,11 +177,11 @@ namespace comb::debug
 #if HIVE_PLATFORM_WINDOWS
         // Windows: CaptureStackBackTrace (fast, kernel32.dll)
         // Skip 1 frame (this function)
-        depth = static_cast<uint32_t>(CaptureStackBackTrace(1, MaxCallstackDepth, frames, nullptr));
+        depth = static_cast<uint32_t>(CaptureStackBackTrace(1, maxCallstackDepth, frames, nullptr));
 
 #elif HIVE_PLATFORM_LINUX || HIVE_PLATFORM_MACOS
         // POSIX: backtrace (requires linking with -rdynamic for symbols)
-        int count = backtrace(frames, MaxCallstackDepth);
+        int count = backtrace(frames, maxCallstackDepth);
         depth = count > 0 ? static_cast<uint32_t>(count) : 0;
 
         // Skip first frame (this function)
@@ -221,9 +215,7 @@ namespace comb::debug
 
 #endif // COMB_MEM_DEBUG_CALLSTACKS
 
-    // ============================================================================
     // Utility: Format Time Duration
-    // ============================================================================
 
     /**
      * Format timestamp difference as human-readable string

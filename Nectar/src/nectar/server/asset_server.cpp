@@ -63,7 +63,7 @@ namespace nectar
                 IAssetStorage* storage = *found;
                 if (!completions[i].m_success)
                 {
-                    storage->SetStatus(pending->m_slotIndex, AssetStatus::Failed);
+                    storage->SetStatus(pending->m_slotIndex, AssetStatus::FAILED);
                     storage->SetError(pending->m_slotIndex,
                                       AssetErrorInfo{AssetError::FILE_NOT_FOUND, wax::String{*m_allocator}});
                 }
@@ -83,7 +83,7 @@ namespace nectar
                     }
                     else
                     {
-                        storage->SetStatus(pending->m_slotIndex, AssetStatus::Failed);
+                        storage->SetStatus(pending->m_slotIndex, AssetStatus::FAILED);
                         storage->SetError(pending->m_slotIndex,
                                           AssetErrorInfo{AssetError::LOAD_FAILED, wax::String{*m_allocator}});
                     }

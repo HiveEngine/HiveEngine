@@ -12,9 +12,7 @@ namespace
         float x, y, z;
     };
 
-    // ─────────────────────────────────────────────────────────────
     // Parent Component Tests
-    // ─────────────────────────────────────────────────────────────
 
     auto test_hierarchy_1 = larvae::RegisterTest("QueenHierarchy", "ParentComponentConstruction", []() {
         queen::Parent p1;
@@ -40,9 +38,7 @@ namespace
         larvae::AssertTrue(p1 != p3);
     });
 
-    // ─────────────────────────────────────────────────────────────
     // Children Component Tests
-    // ─────────────────────────────────────────────────────────────
 
     auto test_hierarchy_3 = larvae::RegisterTest("QueenHierarchy", "ChildrenComponentAddRemove", []() {
         comb::BuddyAllocator alloc{1024 * 1024};
@@ -98,9 +94,7 @@ namespace
         larvae::AssertEqual(count, size_t{3});
     });
 
-    // ─────────────────────────────────────────────────────────────
     // World Hierarchy Basic Tests
-    // ─────────────────────────────────────────────────────────────
 
     auto test_hierarchy_5 = larvae::RegisterTest("QueenHierarchy", "SetParentBasic", []() {
         queen::World world;
@@ -159,9 +153,7 @@ namespace
         larvae::AssertTrue(parent.IsNull());
     });
 
-    // ─────────────────────────────────────────────────────────────
     // Reparenting Tests
-    // ─────────────────────────────────────────────────────────────
 
     auto test_hierarchy_9 = larvae::RegisterTest("QueenHierarchy", "ReparentRemovesFromOldParent", []() {
         queen::World world;
@@ -181,9 +173,7 @@ namespace
         larvae::AssertTrue(world.GetParent(child) == parent2);
     });
 
-    // ─────────────────────────────────────────────────────────────
     // ForEachChild Tests
-    // ─────────────────────────────────────────────────────────────
 
     auto test_hierarchy_10 = larvae::RegisterTest("QueenHierarchy", "ForEachChildIteratesAll", []() {
         queen::World world;
@@ -214,9 +204,7 @@ namespace
         larvae::AssertEqual(count, size_t{0});
     });
 
-    // ─────────────────────────────────────────────────────────────
     // Hierarchy Traversal Tests
-    // ─────────────────────────────────────────────────────────────
 
     auto test_hierarchy_12 = larvae::RegisterTest("QueenHierarchy", "ForEachDescendantIteratesAll", []() {
         queen::World world;
@@ -293,9 +281,7 @@ namespace
         larvae::AssertEqual(world.GetDepth(grandchild), 2u);
     });
 
-    // ─────────────────────────────────────────────────────────────
     // Despawn Tests
-    // ─────────────────────────────────────────────────────────────
 
     auto test_hierarchy_16 = larvae::RegisterTest("QueenHierarchy", "DespawnChildRemovesFromParent", []() {
         queen::World world;
@@ -371,9 +357,7 @@ namespace
         larvae::AssertEqual(world.ChildCount(root), size_t{1});
     });
 
-    // ─────────────────────────────────────────────────────────────
     // Edge Cases
-    // ─────────────────────────────────────────────────────────────
 
     auto test_hierarchy_19 = larvae::RegisterTest("QueenHierarchy", "DeepHierarchyTraversal", []() {
         queen::World world;

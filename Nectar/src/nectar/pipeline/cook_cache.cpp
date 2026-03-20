@@ -1,5 +1,6 @@
 #include <nectar/pipeline/cook_cache.h>
 
+#include <comb/new.h>
 #include <cstring>
 
 namespace nectar
@@ -22,7 +23,7 @@ namespace nectar
         bool heap = false;
         if (bufSize > sizeof(stackBuf))
         {
-            buf = new uint8_t[bufSize];
+            buf = comb::NewArray<uint8_t>(comb::GetDefaultAllocator(), bufSize);
             heap = true;
         }
 
@@ -53,7 +54,7 @@ namespace nectar
 
         auto result = ContentHash::FromData(buf, offset);
         if (heap)
-            delete[] buf;
+            comb::DeleteArray(comb::GetDefaultAllocator(), buf, bufSize);
         return result;
     }
 

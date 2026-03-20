@@ -10,9 +10,7 @@ namespace
     using hive::Clock;
     using hive::FrameClock;
 
-    // =========================================================================
     // Clock basics
-    // =========================================================================
 
     auto t_now = larvae::RegisterTest("Clock", "Now_returns_valid_time", []() {
         auto a = Clock::Now();
@@ -43,9 +41,7 @@ namespace
     auto t_seconds_f_zero =
         larvae::RegisterTest("Clock", "SecondsF_zero", []() { larvae::AssertTrue(Clock::SecondsF(0) == 0.f); });
 
-    // =========================================================================
     // FrameClock
-    // =========================================================================
 
     auto t_frame_initial = larvae::RegisterTest("Clock", "FrameClock_initial_state", []() {
         FrameClock fc;

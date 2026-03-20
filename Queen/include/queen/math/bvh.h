@@ -13,13 +13,13 @@
 #include <cfloat>
 #include <cstdint>
 
-namespace hive::math
+namespace queen::math
 {
     struct BVHNode
     {
-        Float3 m_aabbMin;
+        hive::math::Float3 m_aabbMin;
         uint32_t m_left;
-        Float3 m_aabbMax;
+        hive::math::Float3 m_aabbMax;
         uint32_t m_count;
     };
     static_assert(sizeof(BVHNode) == 32);
@@ -44,11 +44,11 @@ namespace hive::math
 
         struct SAHBin
         {
-            AABB m_bounds{{FLT_MAX, FLT_MAX, FLT_MAX}, {-FLT_MAX, -FLT_MAX, -FLT_MAX}};
+            hive::math::AABB m_bounds{{FLT_MAX, FLT_MAX, FLT_MAX}, {-FLT_MAX, -FLT_MAX, -FLT_MAX}};
             uint32_t m_count{0};
         };
 
-        [[nodiscard]] inline float SurfaceArea(const AABB& box)
+        [[nodiscard]] inline float SurfaceArea(const hive::math::AABB& box)
         {
             const float dx = box.m_max.m_x - box.m_min.m_x;
             const float dy = box.m_max.m_y - box.m_min.m_y;
@@ -56,39 +56,44 @@ namespace hive::math
             return 2.f * (dx * dy + dy * dz + dz * dx);
         }
 
-        [[nodiscard]] inline AABB Union(const AABB& a, const AABB& b)
+        [[nodiscard]] inline hive::math::AABB Union(const hive::math::AABB& a, const hive::math::AABB& b)
         {
+            using hive::math::Min;
+            using hive::math::Max;
             return {{Min(a.m_min.m_x, b.m_min.m_x), Min(a.m_min.m_y, b.m_min.m_y), Min(a.m_min.m_z, b.m_min.m_z)},
                     {Max(a.m_max.m_x, b.m_max.m_x), Max(a.m_max.m_y, b.m_max.m_y), Max(a.m_max.m_z, b.m_max.m_z)}};
         }
 
-        [[nodiscard]] inline AABB FattenAABB(const AABB& box, float margin)
+        [[nodiscard]] inline hive::math::AABB FattenAABB(const hive::math::AABB& box, float margin)
         {
             return {{box.m_min.m_x - margin, box.m_min.m_y - margin, box.m_min.m_z - margin},
                     {box.m_max.m_x + margin, box.m_max.m_y + margin, box.m_max.m_z + margin}};
         }
 
-        [[nodiscard]] inline bool Contains(const AABB& outer, const AABB& inner)
+        [[nodiscard]] inline bool Contains(const hive::math::AABB& outer, const hive::math::AABB& inner)
         {
             return inner.m_min.m_x >= outer.m_min.m_x && inner.m_min.m_y >= outer.m_min.m_y &&
                    inner.m_min.m_z >= outer.m_min.m_z && inner.m_max.m_x <= outer.m_max.m_x &&
                    inner.m_max.m_y <= outer.m_max.m_y && inner.m_max.m_z <= outer.m_max.m_z;
         }
 
-        [[nodiscard]] inline Float3 Center(const AABB& box)
+        [[nodiscard]] inline hive::math::Float3 Center(const hive::math::AABB& box)
         {
             return {(box.m_min.m_x + box.m_max.m_x) * 0.5f, (box.m_min.m_y + box.m_max.m_y) * 0.5f,
                     (box.m_min.m_z + box.m_max.m_z) * 0.5f};
         }
 
-        [[nodiscard]] inline bool AABBOverlaps(const AABB& a, const AABB& b)
+        [[nodiscard]] inline bool AABBOverlaps(const hive::math::AABB& a, const hive::math::AABB& b)
         {
             return a.m_min.m_x <= b.m_max.m_x && a.m_max.m_x >= b.m_min.m_x && a.m_min.m_y <= b.m_max.m_y &&
                    a.m_max.m_y >= b.m_min.m_y && a.m_min.m_z <= b.m_max.m_z && a.m_max.m_z >= b.m_min.m_z;
         }
 
-        [[nodiscard]] inline bool RayAABB(Float3 origin, Float3 invDir, float maxT, const AABB& box)
+        [[nodiscard]] inline bool RayAABB(hive::math::Float3 origin, hive::math::Float3 invDir, float maxT,
+                                          const hive::math::AABB& box)
         {
+            using hive::math::Min;
+            using hive::math::Max;
             float t1 = (box.m_min.m_x - origin.m_x) * invDir.m_x;
             float t2 = (box.m_max.m_x - origin.m_x) * invDir.m_x;
             float tMin = Min(t1, t2);
@@ -110,6 +115,10 @@ namespace hive::math
 
     template <comb::Allocator Allocator> class BVH
     {
+        using Float3 = hive::math::Float3;
+        using AABB = hive::math::AABB;
+        using Frustum = hive::math::Frustum;
+
     public:
         explicit BVH(Allocator& alloc)
             : m_nodes{alloc}
@@ -239,7 +248,7 @@ namespace hive::math
                 const BVHNode& node = m_nodes[nodeIndex];
                 const AABB box{node.m_aabbMin, node.m_aabbMax};
 
-                if (!IsVisible(frustum, box))
+                if (!hive::math::IsVisible(frustum, box))
                 {
                     continue;
                 }
@@ -249,7 +258,7 @@ namespace hive::math
                     for (uint32_t i = 0; i < node.m_count; ++i)
                     {
                         const uint32_t itemIndex = m_items[node.m_left + i];
-                        if (IsVisible(frustum, m_itemAabbs[itemIndex]))
+                        if (hive::math::IsVisible(frustum, m_itemAabbs[itemIndex]))
                         {
                             cb(itemIndex);
                         }
@@ -266,6 +275,9 @@ namespace hive::math
 
         template <typename Callback> void QueryRay(Float3 origin, Float3 direction, float maxT, Callback&& cb) const
         {
+            using hive::math::Abs;
+            using hive::math::kEpsilon;
+
             if (m_root == detail::kInvalidNode)
             {
                 return;
@@ -429,6 +441,8 @@ namespace hive::math
 
         void UpdateLeafBounds(uint32_t nodeIndex)
         {
+            using hive::math::Min;
+            using hive::math::Max;
             BVHNode& node = m_nodes[nodeIndex];
             hive::Assert(node.m_count > 0, "UpdateLeafBounds called on internal node");
 
@@ -448,6 +462,10 @@ namespace hive::math
 
         void Subdivide(uint32_t nodeIndex)
         {
+            using hive::math::Min;
+            using hive::math::Max;
+            using hive::math::kEpsilon;
+
             const BVHNode& node = m_nodes[nodeIndex];
             if (node.m_count <= detail::kMaxLeafItems)
             {
@@ -742,6 +760,8 @@ namespace hive::math
 
         void RefitAncestors(uint32_t nodeIndex)
         {
+            using hive::math::Min;
+            using hive::math::Max;
             uint32_t index = nodeIndex;
             while (index != detail::kInvalidNode)
             {
@@ -764,6 +784,8 @@ namespace hive::math
 
         [[nodiscard]] AABB RefitNode(uint32_t nodeIndex)
         {
+            using hive::math::Min;
+            using hive::math::Max;
             BVHNode& node = m_nodes[nodeIndex];
             if (node.m_count > 0)
             {
@@ -804,4 +826,4 @@ namespace hive::math
     };
 
     using BuddyBVH = BVH<comb::BuddyAllocator>;
-} // namespace hive::math
+} // namespace queen::math

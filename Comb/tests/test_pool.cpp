@@ -293,18 +293,14 @@ namespace
         comb::Delete(pool, new2);
     });
 
-    // =============================================================================
     // Concept Satisfaction
-    // =============================================================================
 
     auto test18 = larvae::RegisterTest("PoolAllocator", "ConceptSatisfaction", []() {
         larvae::AssertTrue((comb::Allocator<comb::PoolAllocator<TestObject>>));
         larvae::AssertTrue((comb::Allocator<comb::PoolAllocator<LargeObject>>));
     });
 
-    // =============================================================================
     // Alignment
-    // =============================================================================
 
     auto test19 = larvae::RegisterTest("PoolAllocator", "MultipleAllocationsAreUsable", []() {
         // In debug mode, guard bytes may offset the user pointer, so we test
@@ -346,9 +342,7 @@ namespace
         }
     });
 
-    // =============================================================================
     // Move Semantics
-    // =============================================================================
 
     auto test21 = larvae::RegisterTest("PoolAllocator", "MoveConstructorTransfersOwnership", []() {
         comb::PoolAllocator<TestObject> pool1{10};
@@ -392,9 +386,7 @@ namespace
         larvae::AssertEqual(pool1.GetUsedCount(), 0u);
     });
 
-    // =============================================================================
     // GetUsedMemory
-    // =============================================================================
 
     auto test24 = larvae::RegisterTest("PoolAllocator", "GetUsedMemoryTracksCorrectly", []() {
         comb::PoolAllocator<TestObject> pool{10};

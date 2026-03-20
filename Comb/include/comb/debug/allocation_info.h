@@ -41,9 +41,7 @@ namespace comb::debug
      */
     struct AllocationInfo
     {
-        // ========================================================================
         // Core Information (Always Present)
-        // ========================================================================
 
         void* m_address{nullptr};
         size_t m_size{0};
@@ -68,9 +66,7 @@ namespace comb::debug
         uint32_t m_allocationId{0};
         uint32_t m_threadId{0};
 
-        // ========================================================================
         // Optional: Callstack (Platform-Specific)
-        // ========================================================================
 
 #if COMB_MEM_DEBUG_CALLSTACKS
         /**
@@ -78,7 +74,7 @@ namespace comb::debug
          * Platform-specific pointers (return addresses)
          * Size: 16 pointers * 8 bytes = 128 bytes
          */
-        void* callstack[MaxCallstackDepth]{};
+        void* callstack[maxCallstackDepth]{};
 
         /**
          * Actual number of frames captured (0-16)
@@ -86,9 +82,7 @@ namespace comb::debug
         uint32_t callstackDepth{0};
 #endif
 
-        // ========================================================================
         // Methods
-        // ========================================================================
 
         /**
          * Check if this allocation info is valid

@@ -11,7 +11,7 @@ namespace
                 value += 1;
                 larvae::DoNotOptimize(value);
             }
-            state.SetItemsProcessed(state.iterations());
+            state.SetItemsProcessed(state.Iterations());
         });
 
     auto bench_window = larvae::RegisterBenchmarkWithCapabilities(
@@ -23,6 +23,6 @@ namespace
                 value += 2;
                 larvae::DoNotOptimize(value);
             }
-            state.SetItemsProcessed(state.iterations());
+            state.SetItemsProcessed(state.Iterations());
         });
 } // namespace

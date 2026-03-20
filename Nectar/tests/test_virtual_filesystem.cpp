@@ -16,9 +16,7 @@ namespace
         return alloc.Get();
     }
 
-    // =========================================================================
     // Basic mount + read
-    // =========================================================================
 
     auto t1 = larvae::RegisterTest("NectarVFS", "MountAndRead", []() {
         auto& alloc = GetVfsAlloc();
@@ -54,9 +52,7 @@ namespace
         larvae::AssertEqual(buf.Size(), size_t{0});
     });
 
-    // =========================================================================
     // Exists / Stat
-    // =========================================================================
 
     auto t4 = larvae::RegisterTest("NectarVFS", "ExistsTrue", []() {
         auto& alloc = GetVfsAlloc();
@@ -88,9 +84,7 @@ namespace
         larvae::AssertEqual(info.m_size, size_t{64});
     });
 
-    // =========================================================================
     // Priority overlay
-    // =========================================================================
 
     auto t7 = larvae::RegisterTest("NectarVFS", "PriorityHigherWins", []() {
         auto& alloc = GetVfsAlloc();
@@ -131,9 +125,7 @@ namespace
         larvae::AssertEqual(buf.Size(), std::strlen(data));
     });
 
-    // =========================================================================
     // Nested mount points
-    // =========================================================================
 
     auto t9 = larvae::RegisterTest("NectarVFS", "NestedMountPoints", []() {
         auto& alloc = GetVfsAlloc();
@@ -153,9 +145,7 @@ namespace
         larvae::AssertFalse(vfs.Exists("assets/textures/sword.glb"));
     });
 
-    // =========================================================================
     // Unmount
-    // =========================================================================
 
     auto t10 = larvae::RegisterTest("NectarVFS", "UnmountRemovesSource", []() {
         auto& alloc = GetVfsAlloc();
@@ -179,9 +169,7 @@ namespace
         larvae::AssertEqual(vfs.MountCount(), size_t{0});
     });
 
-    // =========================================================================
     // Path normalization
-    // =========================================================================
 
     auto t12 = larvae::RegisterTest("NectarVFS", "PathNormalization", []() {
         auto& alloc = GetVfsAlloc();
@@ -206,9 +194,7 @@ namespace
         larvae::AssertTrue(vfs.Exists("deep/nested/file.txt"));
     });
 
-    // =========================================================================
     // Partial prefix no match
-    // =========================================================================
 
     auto t14 = larvae::RegisterTest("NectarVFS", "PartialPrefixNoMatch", []() {
         auto& alloc = GetVfsAlloc();
@@ -222,9 +208,7 @@ namespace
         larvae::AssertFalse(vfs.Exists("assets2/data.txt"));
     });
 
-    // =========================================================================
     // ListDirectory
-    // =========================================================================
 
     auto t15 = larvae::RegisterTest("NectarVFS", "ListDirectoryMerge", []() {
         auto& alloc = GetVfsAlloc();

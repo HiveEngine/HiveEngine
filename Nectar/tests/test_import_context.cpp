@@ -25,9 +25,7 @@ namespace
         return nectar::AssetId::FromBytes(bytes);
     }
 
-    // =========================================================================
     // ImportContext
-    // =========================================================================
 
     auto t1 = larvae::RegisterTest("NectarImportContext", "DeclareHardDep", []() {
         auto& alloc = GetImportAlloc();
@@ -102,9 +100,7 @@ namespace
         larvae::AssertTrue(ctx.GetCurrentAsset() == MakeId(42));
     });
 
-    // =========================================================================
     // Mock AssetImporter
-    // =========================================================================
 
     struct TestImportAsset
     {

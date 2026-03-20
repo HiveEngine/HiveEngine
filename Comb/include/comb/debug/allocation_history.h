@@ -95,9 +95,7 @@ namespace comb::debug
         AllocationHistory(AllocationHistory&&) noexcept = delete;
         AllocationHistory& operator=(AllocationHistory&&) noexcept = delete;
 
-        // ========================================================================
         // Recording API
-        // ========================================================================
 
         /**
          * Record an allocation event
@@ -146,9 +144,7 @@ namespace comb::debug
             AddEntry(entry);
         }
 
-        // ========================================================================
         // Query API
-        // ========================================================================
 
         /**
          * Get number of entries in history (0 to COMB_MEM_DEBUG_HISTORY_SIZE)
@@ -187,9 +183,7 @@ namespace comb::debug
             m_writeIndex = 0;
         }
 
-        // ========================================================================
         // Dump API
-        // ========================================================================
 
         /**
          * Dump history to log

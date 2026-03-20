@@ -1,5 +1,7 @@
-#include <hive/HiveConfig.h>
+#include <hive/hive_config.h>
 #include <hive/core/log.h>
+
+#include <wax/containers/string.h>
 
 #include <nectar/mesh/gltf_importer.h>
 #include <nectar/texture/texture_importer.h>
@@ -13,12 +15,11 @@
 #include <launcher/launcher_platform.h>
 #include <launcher/launcher_project.h>
 #include <launcher/launcher_scene.h>
-#include <string>
 
 namespace brood::launcher
 {
 
-    static std::string ResolveGameplayDllPath(const std::string& projectRoot)
+    static wax::String ResolveGameplayDllPath(const wax::String& projectRoot)
     {
 #if HIVE_PLATFORM_WINDOWS
         constexpr const char* kDllName = "gameplay.dll";
@@ -41,15 +42,15 @@ namespace brood::launcher
         std::error_code ec;
 
         auto configPath = projectRoot + "/.hive/modules/" + kConfig + "/" + kDllName;
-        if (std::filesystem::exists(configPath, ec) && !ec)
+        if (std::filesystem::exists(std::filesystem::path{configPath.CStr()}, ec) && !ec)
             return configPath;
 
         auto basePath = projectRoot + "/.hive/modules/" + kDllName;
-        if (std::filesystem::exists(basePath, ec) && !ec)
+        if (std::filesystem::exists(std::filesystem::path{basePath.CStr()}, ec) && !ec)
             return basePath;
 
         auto rootPath = projectRoot + "/" + kDllName;
-        if (std::filesystem::exists(rootPath, ec) && !ec)
+        if (std::filesystem::exists(std::filesystem::path{rootPath.CStr()}, ec) && !ec)
             return rootPath;
 
         return {};
@@ -57,21 +58,20 @@ namespace brood::launcher
 
     void TryLoadGameplayModule(waggle::EngineContext& ctx, LauncherState& state)
     {
-        const auto root = std::string{state.m_project->Paths().m_root.CStr(), state.m_project->Paths().m_root.Size()};
+        const wax::String root{state.m_project->Paths().m_root};
 
 #if HIVE_MODE_EDITOR
-        state.m_assetsRoot =
-            std::string{state.m_project->Paths().m_assets.CStr(), state.m_project->Paths().m_assets.Size()};
+        state.m_assetsRoot = state.m_project->Paths().m_assets;
 #endif
 
-        const std::string dllPath = ResolveGameplayDllPath(root);
-        if (dllPath.empty())
+        const wax::String dllPath = ResolveGameplayDllPath(root);
+        if (dllPath.IsEmpty())
         {
-            hive::LogInfo(LOG_LAUNCHER, "No gameplay DLL found for project at {}", root);
+            hive::LogInfo(LOG_LAUNCHER, "No gameplay DLL found for project at {}", root.CStr());
             return;
         }
 
-        if (state.m_gameplay.Load(dllPath.c_str()))
+        if (state.m_gameplay.Load(dllPath.CStr()))
         {
             if (!state.m_gameplay.Register(*ctx.m_world))
             {
@@ -108,18 +108,18 @@ namespace brood::launcher
             return false;
         }
 
-        const std::string projectPath = resolvedPath.generic_string();
+        const wax::String projectPath{resolvedPath.generic_string().c_str()};
         const waggle::ProjectConfig projectConfig{
             .m_enableHotReload = HIVE_FEATURE_HOT_RELOAD != 0,
             .m_watcherIntervalMs = 500,
         };
 
-        if (!state.m_project->Open({projectPath.c_str(), projectPath.size()}, projectConfig))
+        if (!state.m_project->Open({projectPath.CStr(), projectPath.Size()}, projectConfig))
         {
 #if HIVE_MODE_EDITOR
             SetHubStatus(state.m_hub, true, "Failed to open the selected project.");
 #endif
-            hive::LogError(LOG_LAUNCHER, "Failed to open project: {}", projectPath);
+            hive::LogError(LOG_LAUNCHER, "Failed to open project: {}", projectPath.CStr());
             return false;
         }
 
@@ -133,21 +133,21 @@ namespace brood::launcher
         state.m_project->RegisterImporter(&s_textureImporter);
 
         const auto& project = state.m_project->Project();
-        hive::LogInfo(LOG_LAUNCHER, "Project '{}' v{}", std::string{project.Name().Data(), project.Name().Size()},
-                      std::string{project.Version().Data(), project.Version().Size()});
+        hive::LogInfo(LOG_LAUNCHER, "Project '{}' v{}", std::string_view{project.Name().Data(), project.Name().Size()},
+                      std::string_view{project.Version().Data(), project.Version().Size()});
 
         ctx.m_world->InsertResource(waggle::ProjectContext{state.m_project});
 
         if (ctx.m_window != nullptr)
         {
-            const std::string windowTitle = BuildWindowTitle(projectPath);
-            terra::SetWindowTitle(ctx.m_window, windowTitle.c_str());
+            const wax::String windowTitle = BuildWindowTitle(projectPath);
+            terra::SetWindowTitle(ctx.m_window, windowTitle.CStr());
         }
 
 #if HIVE_MODE_EDITOR
         ResetSceneEditorState(state);
-        state.m_currentScenePath.clear();
-        state.m_currentSceneRelative.clear();
+        state.m_currentScenePath.Clear();
+        state.m_currentSceneRelative.Clear();
 
         const wax::StringView startupScene = state.m_project->Project().StartupSceneRelative();
         if (!startupScene.IsEmpty())
@@ -178,16 +178,16 @@ namespace brood::launcher
     bool CreateProjectFromHub(waggle::EngineContext& ctx, LauncherState& state)
     {
         ProjectHubState& hub = state.m_hub;
-        const std::string projectName = TrimmedCopy(hub.m_createName.data());
+        const wax::String projectName = TrimmedCopy(hub.m_createName.Data());
         if (!IsProjectNameValid(projectName))
         {
             SetHubStatus(hub, true, "Project name must use only letters, numbers, '_' or '-'.");
             return false;
         }
 
-        const std::string version = TrimmedCopy(hub.m_createVersion.data()).empty()
-                                        ? std::string{"0.1.0"}
-                                        : TrimmedCopy(hub.m_createVersion.data());
+        const wax::String version = TrimmedCopy(hub.m_createVersion.Data()).IsEmpty()
+                                        ? wax::String{"0.1.0"}
+                                        : TrimmedCopy(hub.m_createVersion.Data());
         if (hub.m_engineRoot.empty())
         {
             SetHubStatus(hub, true,
@@ -227,21 +227,21 @@ namespace brood::launcher
         }
 
         const bool wantsGraphics = hub.m_supportEditor || hub.m_supportGame;
-        const std::string engineRoot = hub.m_engineRoot.generic_string();
-        const std::string targetRootString = targetRoot.generic_string();
-        const std::string presetBase = GetPresetBase(hub.m_toolchain);
-        const std::string runtimeBackend = wantsGraphics ? "vulkan" : "";
+        const wax::String engineRoot{hub.m_engineRoot.generic_string().c_str()};
+        const wax::String targetRootString{targetRoot.generic_string().c_str()};
+        const wax::String presetBase{GetPresetBase(hub.m_toolchain)};
+        const wax::String runtimeBackend{wantsGraphics ? "vulkan" : ""};
 
         waggle::ProjectScaffoldConfig scaffoldConfig{};
-        scaffoldConfig.m_cmake.m_projectName = {projectName.c_str(), projectName.size()};
-        scaffoldConfig.m_cmake.m_projectRoot = {targetRootString.c_str(), targetRootString.size()};
-        scaffoldConfig.m_cmake.m_enginePath = {engineRoot.c_str(), engineRoot.size()};
+        scaffoldConfig.m_cmake.m_projectName = {projectName.CStr(), projectName.Size()};
+        scaffoldConfig.m_cmake.m_projectRoot = {targetRootString.CStr(), targetRootString.Size()};
+        scaffoldConfig.m_cmake.m_enginePath = {engineRoot.CStr(), engineRoot.Size()};
         scaffoldConfig.m_cmake.m_linkSwarm = wantsGraphics;
         scaffoldConfig.m_cmake.m_linkTerra = wantsGraphics;
         scaffoldConfig.m_cmake.m_linkAntennae = wantsGraphics;
-        scaffoldConfig.m_projectVersion = {version.c_str(), version.size()};
-        scaffoldConfig.m_runtimeBackend = {runtimeBackend.c_str(), runtimeBackend.size()};
-        scaffoldConfig.m_presetBase = {presetBase.c_str(), presetBase.size()};
+        scaffoldConfig.m_projectVersion = {version.CStr(), version.Size()};
+        scaffoldConfig.m_runtimeBackend = {runtimeBackend.CStr(), runtimeBackend.Size()};
+        scaffoldConfig.m_presetBase = {presetBase.CStr(), presetBase.Size()};
         scaffoldConfig.m_supportEditor = hub.m_supportEditor;
         scaffoldConfig.m_supportGame = hub.m_supportGame;
         scaffoldConfig.m_supportHeadless = hub.m_supportHeadless;
@@ -253,8 +253,8 @@ namespace brood::launcher
         }
 
         RefreshProjectHub(hub);
-        CopyStringToBuffer((targetRoot / "project.hive").generic_string(), hub.m_openPath.data(),
-                           hub.m_openPath.size());
+        CopyStringToBuffer(wax::String{(targetRoot / "project.hive").generic_string().c_str()}, hub.m_openPath.Data(),
+                           hub.m_openPath.Size());
 
         return OpenProject(ctx, state, targetRoot / "project.hive");
     }

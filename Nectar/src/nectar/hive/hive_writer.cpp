@@ -1,6 +1,6 @@
-#include <wax/containers/vector.h>
-
 #include <nectar/hive/hive_writer.h>
+
+#include <wax/containers/vector.h>
 
 namespace nectar
 {

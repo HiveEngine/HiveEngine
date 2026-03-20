@@ -29,7 +29,7 @@ namespace comb::debug
     {
         if (depth == 0 || frames == nullptr)
         {
-            hive::LogInfo(comb::LogCombRoot, "    (no callstack available)");
+            hive::LogInfo(comb::LOG_COMB_ROOT, "    (no callstack available)");
             return;
         }
 
@@ -49,7 +49,7 @@ namespace comb::debug
 
             if (!SymInitialize(process, nullptr, TRUE))
             {
-                hive::LogWarning(comb::LogCombRoot, "[MEM_DEBUG] Failed to initialize symbol handler (error: {})",
+                hive::LogWarning(comb::LOG_COMB_ROOT, "[MEM_DEBUG] Failed to initialize symbol handler (error: {})",
                                  GetLastError());
                 return;
             }
@@ -83,19 +83,19 @@ namespace comb::debug
                 if (SymGetLineFromAddr64(process, address, &lineDisplacement, &line))
                 {
                     // Symbol + file + line
-                    hive::LogInfo(comb::LogCombRoot, "      #{}: {} ({}:{})", i, symbol->Name, line.FileName,
+                    hive::LogInfo(comb::LOG_COMB_ROOT, "      #{}: {} ({}:{})", i, symbol->Name, line.FileName,
                                   line.LineNumber);
                 }
                 else
                 {
                     // Symbol only (no line info)
-                    hive::LogInfo(comb::LogCombRoot, "      #{}: {} +{} bytes", i, symbol->Name, displacement);
+                    hive::LogInfo(comb::LOG_COMB_ROOT, "      #{}: {} +{} bytes", i, symbol->Name, displacement);
                 }
             }
             else
             {
                 // No symbol found
-                hive::LogInfo(comb::LogCombRoot, "      #{}: 0x{:016X} (no symbol)", i, address);
+                hive::LogInfo(comb::LOG_COMB_ROOT, "      #{}: 0x{:016X} (no symbol)", i, address);
             }
         }
 
@@ -109,7 +109,7 @@ namespace comb::debug
         char** symbols = backtrace_symbols(const_cast<void**>(frames), depth);
         if (symbols == nullptr)
         {
-            hive::LogWarning(comb::LogCombRoot, "[MEM_DEBUG] Failed to resolve callstack symbols");
+            hive::LogWarning(comb::LOG_COMB_ROOT, "[MEM_DEBUG] Failed to resolve callstack symbols");
             return;
         }
 
@@ -148,13 +148,13 @@ namespace comb::debug
                 if (status == 0 && demangled)
                 {
                     // Demangled successfully
-                    hive::LogInfo(comb::LogCombRoot, "      #{}: {}", i, demangled);
+                    hive::LogInfo(comb::LOG_COMB_ROOT, "      #{}: {}", i, demangled);
                     free(demangled);
                 }
                 else
                 {
                     // Demangling failed, use mangled name
-                    hive::LogInfo(comb::LogCombRoot, "      #{}: {}", i, mangled_name);
+                    hive::LogInfo(comb::LOG_COMB_ROOT, "      #{}: {}", i, mangled_name);
                 }
 
                 *offset_begin = '+'; // Restore for next iteration
@@ -162,7 +162,7 @@ namespace comb::debug
             else
             {
                 // No function name, print raw symbol
-                hive::LogInfo(comb::LogCombRoot, "      #{}: {}", i, symbols[i]);
+                hive::LogInfo(comb::LOG_COMB_ROOT, "      #{}: {}", i, symbols[i]);
             }
         }
 

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <comb/buddy_allocator.h>
+#include <comb/chained_buddy_allocator.h>
 #include <comb/thread_safe_allocator.h>
 
 #include <cstdio>
@@ -8,17 +8,9 @@
 
 namespace comb
 {
-    /**
-     * Default allocator type used by containers when no allocator is specified
-     *
-     * ThreadSafeAllocator<BuddyAllocator> provides:
-     * - General-purpose allocation (BuddyAllocator)
-     * - Thread safety via mutex (ThreadSafeAllocator wrapper)
-     *
-     * For performance-critical code, prefer explicit allocators (LinearAllocator
-     * for frame data, PoolAllocator for fixed-size objects, etc.)
-     */
-    using DefaultAllocator = ThreadSafeAllocator<BuddyAllocator>;
+    // Default allocator: ThreadSafeAllocator<ChainedBuddyAllocator>.
+    // Growable general-purpose allocator with mutex-protected access.
+    using DefaultAllocator = ThreadSafeAllocator<ChainedBuddyAllocator>;
 
     // Forward declaration
     class ModuleAllocator;
@@ -117,8 +109,16 @@ namespace comb
     public:
         ModuleAllocator(const char* name, size_t capacity)
             : m_name{name}
-            , m_buddy{capacity, name}
-            , m_allocator{m_buddy}
+            , m_chained{capacity, capacity, name}
+            , m_allocator{m_chained}
+        {
+            ModuleRegistry::GetInstance().Register(m_name, this);
+        }
+
+        ModuleAllocator(const char* name, size_t blockSize, size_t hardCap)
+            : m_name{name}
+            , m_chained{blockSize, hardCap, name}
+            , m_allocator{m_chained}
         {
             ModuleRegistry::GetInstance().Register(m_name, this);
         }
@@ -142,9 +142,9 @@ namespace comb
             return m_allocator;
         }
 
-        [[nodiscard]] BuddyAllocator& GetUnderlying() noexcept
+        [[nodiscard]] ChainedBuddyAllocator& GetUnderlying() noexcept
         {
-            return m_buddy;
+            return m_chained;
         }
         [[nodiscard]] const char* GetName() const noexcept
         {
@@ -162,7 +162,7 @@ namespace comb
 
     private:
         const char* m_name;
-        BuddyAllocator m_buddy;
+        ChainedBuddyAllocator m_chained;
         DefaultAllocator m_allocator;
     };
 
@@ -207,7 +207,7 @@ namespace comb
      */
     inline DefaultAllocator& GetDefaultAllocator()
     {
-        static ModuleAllocator s_global{"Global", 32 * 1024 * 1024}; // 32 MB
+        static ModuleAllocator s_global{"Global", 32 * 1024 * 1024, 1024 * 1024 * 1024}; // 32 MB blocks, 1 GB cap
         return s_global.Get();
     }
 

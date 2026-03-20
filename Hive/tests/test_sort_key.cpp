@@ -7,9 +7,7 @@ namespace
 
     using namespace hive::sort_key;
 
-    // =========================================================================
     // QuantizeDepth
-    // =========================================================================
 
     auto t_quantize_at_near = larvae::RegisterTest("SortKey", "QuantizeAtNear",
                                                    []() { larvae::AssertEqual(QuantizeDepth(0.1f, 0.1f, 100.f), 0u); });
@@ -29,9 +27,7 @@ namespace
     auto t_quantize_clamps_above = larvae::RegisterTest(
         "SortKey", "QuantizeClampsAbove", []() { larvae::AssertEqual(QuantizeDepth(500.f, 0.1f, 100.f), kDepthMax); });
 
-    // =========================================================================
     // Encode / Extract round-trip
-    // =========================================================================
 
     auto t_encode_opaque_roundtrip = larvae::RegisterTest("SortKey", "EncodeOpaqueRoundtrip", []() {
         uint64_t key = EncodeOpaque(3, 2, 1234, 5678, 123456);
@@ -53,9 +49,7 @@ namespace
         larvae::AssertEqual(ExtractDepth(key), kDepthMax - 1000);
     });
 
-    // =========================================================================
     // Ordering
-    // =========================================================================
 
     auto t_opaque_front_to_back = larvae::RegisterTest("SortKey", "OpaqueFrontToBack", []() {
         uint64_t near_key = EncodeOpaque(0, 0, 0, 0, 100);

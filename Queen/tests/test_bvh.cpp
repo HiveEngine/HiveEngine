@@ -1,4 +1,5 @@
-#include <hive/math/bvh.h>
+#include <queen/math/bvh.h>
+
 #include <hive/math/transforms.h>
 
 #include <comb/buddy_allocator.h>
@@ -8,6 +9,7 @@
 namespace
 {
 
+    using namespace queen::math;
     using namespace hive::math;
 
     constexpr size_t kAllocSize = 1024 * 1024;
@@ -24,11 +26,9 @@ namespace
         return ExtractFrustum(proj * view);
     }
 
-    // =========================================================================
     // Build
-    // =========================================================================
 
-    auto t_build_empty = larvae::RegisterTest("HiveBVH", "BuildEmpty", []() {
+    auto t_build_empty = larvae::RegisterTest("QueenBVH", "BuildEmpty", []() {
         comb::BuddyAllocator alloc{kAllocSize};
         BVH<comb::BuddyAllocator> bvh{alloc};
 
@@ -37,7 +37,7 @@ namespace
         larvae::AssertEqual(bvh.ItemCount(), 0u);
     });
 
-    auto t_build_single = larvae::RegisterTest("HiveBVH", "BuildSingle", []() {
+    auto t_build_single = larvae::RegisterTest("QueenBVH", "BuildSingle", []() {
         comb::BuddyAllocator alloc{kAllocSize};
         BVH<comb::BuddyAllocator> bvh{alloc};
 
@@ -53,7 +53,7 @@ namespace
         larvae::AssertEqual(found, 1u);
     });
 
-    auto t_build_multiple = larvae::RegisterTest("HiveBVH", "BuildMultiple", []() {
+    auto t_build_multiple = larvae::RegisterTest("QueenBVH", "BuildMultiple", []() {
         comb::BuddyAllocator alloc{kAllocSize};
         BVH<comb::BuddyAllocator> bvh{alloc};
 
@@ -67,11 +67,9 @@ namespace
         larvae::AssertTrue(bvh.NodeCount() <= N * 2 - 1);
     });
 
-    // =========================================================================
     // Frustum culling
-    // =========================================================================
 
-    auto t_frustum_all = larvae::RegisterTest("HiveBVH", "FrustumCullAll", []() {
+    auto t_frustum_all = larvae::RegisterTest("QueenBVH", "FrustumCullAll", []() {
         comb::BuddyAllocator alloc{kAllocSize};
         BVH<comb::BuddyAllocator> bvh{alloc};
 
@@ -91,7 +89,7 @@ namespace
         larvae::AssertEqual(found, N);
     });
 
-    auto t_frustum_none = larvae::RegisterTest("HiveBVH", "FrustumCullNone", []() {
+    auto t_frustum_none = larvae::RegisterTest("QueenBVH", "FrustumCullNone", []() {
         comb::BuddyAllocator alloc{kAllocSize};
         BVH<comb::BuddyAllocator> bvh{alloc};
 
@@ -107,7 +105,7 @@ namespace
         larvae::AssertEqual(found, 0u);
     });
 
-    auto t_frustum_partial = larvae::RegisterTest("HiveBVH", "FrustumCullPartial", []() {
+    auto t_frustum_partial = larvae::RegisterTest("QueenBVH", "FrustumCullPartial", []() {
         comb::BuddyAllocator alloc{kAllocSize};
         BVH<comb::BuddyAllocator> bvh{alloc};
 
@@ -124,11 +122,9 @@ namespace
         larvae::AssertTrue(found < N);
     });
 
-    // =========================================================================
     // Dynamic insert
-    // =========================================================================
 
-    auto t_insert_single = larvae::RegisterTest("HiveBVH", "InsertSingle", []() {
+    auto t_insert_single = larvae::RegisterTest("QueenBVH", "InsertSingle", []() {
         comb::BuddyAllocator alloc{kAllocSize};
         BVH<comb::BuddyAllocator> bvh{alloc};
 
@@ -143,7 +139,7 @@ namespace
         larvae::AssertEqual(found, 1u);
     });
 
-    auto t_insert_multiple = larvae::RegisterTest("HiveBVH", "InsertMultiple", []() {
+    auto t_insert_multiple = larvae::RegisterTest("QueenBVH", "InsertMultiple", []() {
         comb::BuddyAllocator alloc{kAllocSize};
         BVH<comb::BuddyAllocator> bvh{alloc};
 
@@ -159,11 +155,9 @@ namespace
         larvae::AssertEqual(found, N);
     });
 
-    // =========================================================================
     // Remove
-    // =========================================================================
 
-    auto t_remove = larvae::RegisterTest("HiveBVH", "Remove", []() {
+    auto t_remove = larvae::RegisterTest("QueenBVH", "Remove", []() {
         comb::BuddyAllocator alloc{kAllocSize};
         BVH<comb::BuddyAllocator> bvh{alloc};
 
@@ -180,11 +174,9 @@ namespace
         larvae::AssertEqual(found, 3u);
     });
 
-    // =========================================================================
     // Update
-    // =========================================================================
 
-    auto t_update_stays_fat = larvae::RegisterTest("HiveBVH", "UpdateStaysInFatAABB", []() {
+    auto t_update_stays_fat = larvae::RegisterTest("QueenBVH", "UpdateStaysInFatAABB", []() {
         comb::BuddyAllocator alloc{kAllocSize};
         BVH<comb::BuddyAllocator> bvh{alloc};
 
@@ -194,7 +186,7 @@ namespace
         larvae::AssertTrue(!restructured);
     });
 
-    auto t_update_exceeds_fat = larvae::RegisterTest("HiveBVH", "UpdateExceedsFatAABB", []() {
+    auto t_update_exceeds_fat = larvae::RegisterTest("QueenBVH", "UpdateExceedsFatAABB", []() {
         comb::BuddyAllocator alloc{kAllocSize};
         BVH<comb::BuddyAllocator> bvh{alloc};
 
@@ -210,11 +202,9 @@ namespace
         larvae::AssertEqual(found, 1u);
     });
 
-    // =========================================================================
     // Raycast
-    // =========================================================================
 
-    auto t_query_ray = larvae::RegisterTest("HiveBVH", "QueryRay", []() {
+    auto t_query_ray = larvae::RegisterTest("QueenBVH", "QueryRay", []() {
         comb::BuddyAllocator alloc{kAllocSize};
         BVH<comb::BuddyAllocator> bvh{alloc};
 
@@ -230,11 +220,9 @@ namespace
         larvae::AssertEqual(found, 1u);
     });
 
-    // =========================================================================
     // AABB overlap
-    // =========================================================================
 
-    auto t_query_aabb = larvae::RegisterTest("HiveBVH", "QueryAABBOverlap", []() {
+    auto t_query_aabb = larvae::RegisterTest("QueenBVH", "QueryAABBOverlap", []() {
         comb::BuddyAllocator alloc{kAllocSize};
         BVH<comb::BuddyAllocator> bvh{alloc};
 
@@ -248,11 +236,9 @@ namespace
         larvae::AssertEqual(found, 2u);
     });
 
-    // =========================================================================
     // Build + dynamic insert mix
-    // =========================================================================
 
-    auto t_build_then_insert = larvae::RegisterTest("HiveBVH", "BuildThenInsert", []() {
+    auto t_build_then_insert = larvae::RegisterTest("QueenBVH", "BuildThenInsert", []() {
         comb::BuddyAllocator alloc{kAllocSize};
         BVH<comb::BuddyAllocator> bvh{alloc};
 
@@ -270,11 +256,9 @@ namespace
         larvae::AssertEqual(found, 5u);
     });
 
-    // =========================================================================
     // Refit
-    // =========================================================================
 
-    auto t_refit = larvae::RegisterTest("HiveBVH", "Refit", []() {
+    auto t_refit = larvae::RegisterTest("QueenBVH", "Refit", []() {
         comb::BuddyAllocator alloc{kAllocSize};
         BVH<comb::BuddyAllocator> bvh{alloc};
 
@@ -301,11 +285,9 @@ namespace
         larvae::AssertEqual(found, 0u);
     });
 
-    // =========================================================================
     // Clear
-    // =========================================================================
 
-    auto t_clear = larvae::RegisterTest("HiveBVH", "Clear", []() {
+    auto t_clear = larvae::RegisterTest("QueenBVH", "Clear", []() {
         comb::BuddyAllocator alloc{kAllocSize};
         BVH<comb::BuddyAllocator> bvh{alloc};
 

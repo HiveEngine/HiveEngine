@@ -67,7 +67,6 @@ namespace
         }
     };
 
-    // =========================================================================
 
     auto t1 = larvae::RegisterTest("NectarCookReg", "RegisterAndFind", []() {
         auto& alloc = GetCookRegAlloc();

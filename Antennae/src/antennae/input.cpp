@@ -1,9 +1,10 @@
+#include <antennae/input.h>
+
 #include <queen/world/world.h>
 
 #include <terra/terra.h>
 
 #include <antennae/actions.h>
-#include <antennae/input.h>
 #include <antennae/keyboard.h>
 #include <antennae/mouse.h>
 
@@ -66,7 +67,7 @@ namespace antennae
         terra::Key::TAB,
         terra::Key::BACKSPACE,
         terra::Key::INSERT,
-        terra::Key::Delete,
+        terra::Key::DELETE_KEY,
         terra::Key::RIGHT,
         terra::Key::LEFT,
         terra::Key::DOWN,
@@ -110,41 +111,41 @@ namespace antennae
 
     void UpdateKeyboard(Keyboard& keyboard, const terra::InputState* input)
     {
-        std::memcpy(keyboard.previous, keyboard.current, sizeof(keyboard.current));
+        std::memcpy(keyboard.m_previous, keyboard.m_current, sizeof(keyboard.m_current));
         for (terra::Key key : kPolledKeys)
         {
-            keyboard.current[static_cast<int>(key)] = terra::IsKeyDown(input, key);
+            keyboard.m_current[static_cast<int>(key)] = terra::IsKeyDown(input, key);
         }
     }
 
     void UpdateMouse(Mouse& mouse, const terra::InputState* input)
     {
-        std::memcpy(mouse.prev_buttons, mouse.buttons, sizeof(mouse.buttons));
+        std::memcpy(mouse.m_prevButtons, mouse.m_buttons, sizeof(mouse.m_buttons));
 
         const float newX = terra::GetMouseX(input);
         const float newY = terra::GetMouseY(input);
 
-        if (mouse.first_update)
+        if (mouse.m_firstUpdate)
         {
-            mouse.dx = 0.0f;
-            mouse.dy = 0.0f;
-            mouse.first_update = false;
+            mouse.m_dx = 0.0f;
+            mouse.m_dy = 0.0f;
+            mouse.m_firstUpdate = false;
         }
         else
         {
-            mouse.dx = terra::GetMouseDeltaX(input);
-            mouse.dy = terra::GetMouseDeltaY(input);
+            mouse.m_dx = terra::GetMouseDeltaX(input);
+            mouse.m_dy = terra::GetMouseDeltaY(input);
         }
-        mouse.x = newX;
-        mouse.y = newY;
+        mouse.m_x = newX;
+        mouse.m_y = newY;
 
         for (terra::MouseButton btn : kPolledButtons)
         {
-            mouse.buttons[static_cast<int>(btn)] = terra::IsMouseButtonDown(input, btn);
+            mouse.m_buttons[static_cast<int>(btn)] = terra::IsMouseButtonDown(input, btn);
         }
 
-        mouse.scroll_x = terra::GetScrollDeltaX(input);
-        mouse.scroll_y = terra::GetScrollDeltaY(input);
+        mouse.m_scrollX = terra::GetScrollDeltaX(input);
+        mouse.m_scrollY = terra::GetScrollDeltaY(input);
     }
 
     void UpdateInput(queen::World& world, terra::WindowContext* window)

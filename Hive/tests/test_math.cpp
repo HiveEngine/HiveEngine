@@ -16,9 +16,7 @@ namespace
         return std::fabs(a - b) < kTol;
     }
 
-    // =========================================================================
     // Float3 basics
-    // =========================================================================
 
     auto t_f3_add = larvae::RegisterTest("Math", "Float3_Add", []() {
         Float3 a{1.f, 2.f, 3.f};
@@ -96,9 +94,7 @@ namespace
         larvae::AssertTrue(Near(r.m_z, 15.f));
     });
 
-    // =========================================================================
     // Mat4 basics
-    // =========================================================================
 
     auto t_m4_identity = larvae::RegisterTest("Math", "Mat4_Identity", []() {
         Mat4 identity = Mat4::Identity();
@@ -146,9 +142,7 @@ namespace
                 larvae::AssertTrue(Near(identity.m_m[col][row], col == row ? 1.f : 0.f));
     });
 
-    // =========================================================================
     // Transforms
-    // =========================================================================
 
     auto t_translation = larvae::RegisterTest("Math", "Translation", []() {
         Mat4 transform = Translation({1.f, 2.f, 3.f});
@@ -199,9 +193,7 @@ namespace
         larvae::AssertTrue(Near(result.m_z, 3.f));
     });
 
-    // =========================================================================
     // Quaternion
-    // =========================================================================
 
     auto t_quat_identity = larvae::RegisterTest("Math", "Quat_Identity", []() {
         Quat quat{0.f, 0.f, 0.f, 1.f};
@@ -236,9 +228,7 @@ namespace
         larvae::AssertTrue(Near(result.m_x, 0.7071f) || Near(result.m_x, std::cos(Radians(45.f))));
     });
 
-    // =========================================================================
     // Float2
-    // =========================================================================
 
     auto t_f2_ops = larvae::RegisterTest("Math", "Float2_Ops", []() {
         Float2 a{1.f, 2.f};
@@ -251,9 +241,7 @@ namespace
         larvae::AssertTrue(Near(Length(Float2{3.f, 4.f}), 5.f));
     });
 
-    // =========================================================================
     // Float4
-    // =========================================================================
 
     auto t_f4_ops = larvae::RegisterTest("Math", "Float4_Ops", []() {
         Float4 a{1.f, 2.f, 3.f, 4.f};
@@ -265,9 +253,7 @@ namespace
         larvae::AssertTrue(Near(Dot(a, b), 70.f));
     });
 
-    // =========================================================================
     // Determinism: same operations produce identical results
-    // =========================================================================
 
     auto t_determinism = larvae::RegisterTest("Math", "Determinism", []() {
         auto compute = []() {
@@ -288,9 +274,7 @@ namespace
         larvae::AssertEqual(r1.m_w, r2.m_w);
     });
 
-    // =========================================================================
     // Constants
-    // =========================================================================
 
     auto t_constants = larvae::RegisterTest("Math", "Constants", []() {
         larvae::AssertTrue(Near(Radians(180.f), kPi));

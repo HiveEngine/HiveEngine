@@ -18,9 +18,9 @@ namespace larvae
         BenchmarkRunner runner{config};
         auto results = runner.RunAll();
 
-        if (config.list_only)
+        if (config.m_listOnly)
         {
-            return config.fail_on_skip && runner.GetSkippedBenchmarks() > 0 ? 1 : 0;
+            return config.m_failOnSkip && runner.GetSkippedBenchmarks() > 0 ? 1 : 0;
         }
 
         PrintBenchmarkResults(results);
@@ -35,7 +35,7 @@ namespace larvae
             return 1;
         }
 
-        if (config.fail_on_skip && runner.GetSkippedBenchmarks() > 0)
+        if (config.m_failOnSkip && runner.GetSkippedBenchmarks() > 0)
         {
             return 1;
         }

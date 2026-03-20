@@ -1,9 +1,10 @@
+#include <nectar/vfs/virtual_filesystem.h>
+
 #include <hive/profiling/profiler.h>
 
 #include <wax/containers/hash_set.h>
 
 #include <nectar/vfs/path.h>
-#include <nectar/vfs/virtual_filesystem.h>
 
 namespace nectar
 {

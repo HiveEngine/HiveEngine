@@ -63,11 +63,11 @@ namespace larvae
         CapabilityMask mask = ToMask(Capability::HEADLESS);
 
 #if defined(HIVE_FEATURE_GLFW) && HIVE_FEATURE_GLFW
-        mask |= Capability::WINDOW;
+        mask |= ToMask(Capability::WINDOW);
 #endif
 
 #if (defined(HIVE_FEATURE_VULKAN) && HIVE_FEATURE_VULKAN) || (defined(HIVE_FEATURE_D3D12) && HIVE_FEATURE_D3D12)
-        mask |= Capability::RENDER;
+        mask |= ToMask(Capability::RENDER);
 #endif
 
         return mask;

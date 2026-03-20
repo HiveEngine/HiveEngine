@@ -13,13 +13,13 @@ namespace terra
     };
     struct NativeWindow
     {
-        wl_display* wlDisplay_{nullptr};
-        wl_surface* wlSurface_{nullptr};
+        wl_display* m_wlDisplay{nullptr};
+        wl_surface* m_wlSurface{nullptr};
 
-        Display* x11Display_{nullptr};
-        Window x11Window_{0};
+        Display* m_x11Display{nullptr};
+        Window m_x11Window{0};
 
-        NativeWindowType type_{NativeWindowType::WAYLAND};
+        NativeWindowType m_type{NativeWindowType::WAYLAND};
     };
 } // namespace terra
 #elif defined(TERRA_NATIVE_WIN32)

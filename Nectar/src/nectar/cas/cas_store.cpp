@@ -1,6 +1,8 @@
+#include <nectar/cas/cas_store.h>
+
 #include <hive/profiling/profiler.h>
 
-#include <nectar/cas/cas_store.h>
+#include <wax/containers/string.h>
 
 #include <cstdio>
 #include <filesystem>
@@ -25,7 +27,7 @@ namespace nectar
         wax::String path{*m_alloc};
         BuildBlobPath(hash, path);
 
-        auto parent = std::filesystem::path{std::string{path.CStr()}}.parent_path();
+        auto parent = std::filesystem::path{path.CStr()}.parent_path();
         EnsureDirectoryExists(wax::StringView{parent.string().c_str()});
 
         FILE* file = std::fopen(path.CStr(), "wb");
@@ -102,6 +104,7 @@ namespace nectar
     void CasStore::EnsureDirectoryExists(wax::StringView dirPath) const
     {
         std::error_code ec;
-        std::filesystem::create_directories(std::string{dirPath.Data(), dirPath.Size()}, ec);
+        wax::String dir{dirPath};
+        std::filesystem::create_directories(dir.CStr(), ec);
     }
 } // namespace nectar

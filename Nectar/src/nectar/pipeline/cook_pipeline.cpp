@@ -1,24 +1,24 @@
+#include <nectar/pipeline/cook_pipeline.h>
+
 #include <hive/profiling/profiler.h>
 
 #include <wax/containers/hash_set.h>
+#include <wax/containers/vector.h>
 
 #include <nectar/cas/cas_store.h>
 #include <nectar/database/asset_database.h>
 #include <nectar/database/dependency_graph.h>
 #include <nectar/pipeline/cook_cache.h>
-#include <nectar/pipeline/cook_pipeline.h>
 #include <nectar/pipeline/cooker_registry.h>
 
-#include <atomic>
 #include <mutex>
-#include <thread>
-#include <vector>
 
 namespace nectar
 {
     CookPipeline::CookPipeline(comb::DefaultAllocator& alloc, CookerRegistry& registry, CasStore& cas,
-                               AssetDatabase& db, CookCache& cache)
+                               AssetDatabase& db, CookCache& cache, drone::JobSubmitter jobs)
         : m_alloc{&alloc}
+        , m_jobs{jobs}
         , m_registry{&registry}
         , m_cas{&cas}
         , m_db{&db}
@@ -160,55 +160,44 @@ namespace nectar
                                  CookOutput& output)
     {
         HIVE_PROFILE_SCOPE_N("CookPipeline::CookLevel");
-        if (workerCount <= 1 || level.Size() <= 1)
+        if (workerCount <= 1 || level.Size() <= 1 || !m_jobs.IsValid())
         {
             for (size_t i = 0; i < level.Size(); ++i)
                 CookAsset(level[i], platform, output);
             return;
         }
 
-        std::atomic<size_t> nextIndex{0};
         std::mutex outputMutex;
 
-        // Each worker accumulates locally, then merges
-        auto worker = [&]() {
-            size_t localCooked = 0;
-            size_t localSkipped = 0;
-            size_t localFailed = 0;
-            wax::Vector<AssetId> localFailedAssets{*m_alloc};
-
-            while (true)
-            {
-                size_t idx = nextIndex.fetch_add(1);
-                if (idx >= level.Size())
-                    break;
-
-                CookOutput localOut{};
-                localOut.m_failedAssets = wax::Vector<AssetId>{*m_alloc};
-                CookAsset(level[idx], platform, localOut);
-
-                localCooked += localOut.m_cooked;
-                localSkipped += localOut.m_skipped;
-                localFailed += localOut.m_failed;
-                for (size_t i = 0; i < localOut.m_failedAssets.Size(); ++i)
-                    localFailedAssets.PushBack(localOut.m_failedAssets[i]);
-            }
-
-            std::lock_guard lock{outputMutex};
-            output.m_cooked += localCooked;
-            output.m_skipped += localSkipped;
-            output.m_failed += localFailed;
-            for (size_t i = 0; i < localFailedAssets.Size(); ++i)
-                output.m_failedAssets.PushBack(localFailedAssets[i]);
+        struct CookCtx
+        {
+            CookPipeline* m_self;
+            const wax::Vector<AssetId>* m_level;
+            wax::StringView m_platform;
+            CookOutput* m_output;
+            std::mutex* m_mutex;
+            comb::DefaultAllocator* m_alloc;
         };
 
-        size_t actual = workerCount < level.Size() ? workerCount : level.Size();
-        std::vector<std::thread> threads;
-        threads.reserve(actual);
-        for (size_t i = 0; i < actual; ++i)
-            threads.emplace_back(worker);
-        for (auto& t : threads)
-            t.join();
+        CookCtx ctx{this, &level, platform, &output, &outputMutex, m_alloc};
+
+        m_jobs.ParallelFor(
+            0, level.Size(),
+            [](size_t i, void* data) {
+                auto& c = *static_cast<CookCtx*>(data);
+
+                CookOutput localOut{};
+                localOut.m_failedAssets = wax::Vector<AssetId>{*c.m_alloc};
+                c.m_self->CookAsset((*c.m_level)[i], c.m_platform, localOut);
+
+                std::lock_guard lock{*c.m_mutex};
+                c.m_output->m_cooked += localOut.m_cooked;
+                c.m_output->m_skipped += localOut.m_skipped;
+                c.m_output->m_failed += localOut.m_failed;
+                for (size_t j = 0; j < localOut.m_failedAssets.Size(); ++j)
+                    c.m_output->m_failedAssets.PushBack(localOut.m_failedAssets[j]);
+            },
+            &ctx);
     }
 
     ContentHash CookPipeline::ComputeCookKey(AssetId id, wax::StringView platform)

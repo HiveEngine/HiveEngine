@@ -14,9 +14,7 @@ namespace
         return alloc.Get();
     }
 
-    // =========================================================================
     // Basic writing
-    // =========================================================================
 
     auto t1 = larvae::RegisterTest("NectarHiveWriter", "EmptyDocument", []() {
         auto& alloc = GetWriterAlloc();
@@ -84,9 +82,7 @@ namespace
         larvae::AssertTrue(text.View().Contains("list = []"));
     });
 
-    // =========================================================================
     // Section ordering
-    // =========================================================================
 
     auto t8 = larvae::RegisterTest("NectarHiveWriter", "SectionsSortedAlphabetically", []() {
         auto& alloc = GetWriterAlloc();
@@ -109,9 +105,7 @@ namespace
         larvae::AssertTrue(pos_im < pos_ta);
     });
 
-    // =========================================================================
     // Escape handling
-    // =========================================================================
 
     auto t9 = larvae::RegisterTest("NectarHiveWriter", "EscapesQuotesInStrings", []() {
         auto& alloc = GetWriterAlloc();
@@ -122,9 +116,7 @@ namespace
         larvae::AssertTrue(text.View().Contains("say \\\"hi\\\""));
     });
 
-    // =========================================================================
     // Round-trip consistency
-    // =========================================================================
 
     auto t10 = larvae::RegisterTest("NectarHiveWriter", "RoundTripPreservesAllTypes", []() {
         auto& alloc = GetWriterAlloc();

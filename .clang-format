@@ -20,22 +20,24 @@ IncludeCategories:
     Priority: 2
   - Regex: '^<wax/.*>'
     Priority: 3
-  - Regex: '^<queen/.*>'
+  - Regex: '^<drone/.*>'
     Priority: 4
-  - Regex: '^<nectar/.*>'
+  - Regex: '^<queen/.*>'
     Priority: 5
-  - Regex: '^<waggle/.*>'
+  - Regex: '^<nectar/.*>'
     Priority: 6
-  - Regex: '^<swarm/.*>'
+  - Regex: '^<waggle/.*>'
     Priority: 7
-  - Regex: '^<terra/.*>'
+  - Regex: '^<swarm/.*>'
     Priority: 8
-  - Regex: '^<forge/.*>'
+  - Regex: '^<terra/.*>'
     Priority: 9
-  - Regex: '^<antennae/.*>'
+  - Regex: '^<forge/.*>'
     Priority: 10
-  - Regex: '^<larvae/.*>'
+  - Regex: '^<antennae/.*>'
     Priority: 11
+  - Regex: '^<larvae/.*>'
+    Priority: 12
   - Regex: '^<Q[A-Z].*>'
     Priority: 15
   - Regex: 'imgui\.h'

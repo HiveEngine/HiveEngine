@@ -67,9 +67,7 @@ namespace
         }
     }
 
-    // =========================================================================
     // Basic operations
-    // =========================================================================
 
     auto t1 = larvae::RegisterTest("NectarDiskMount", "ReadExistingFile", []() {
         auto& alloc = GetDiskAlloc();

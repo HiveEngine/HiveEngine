@@ -33,8 +33,8 @@ namespace
                 }
             }
 
-            state.SetBytesProcessed(state.iterations() * 64);
-            state.SetItemsProcessed(state.iterations());
+            state.SetBytesProcessed(state.Iterations() * 64);
+            state.SetItemsProcessed(state.Iterations());
         });
 
     auto bench2 =
@@ -52,8 +52,8 @@ namespace
                 }
             }
 
-            state.SetBytesProcessed(state.iterations() * 256);
-            state.SetItemsProcessed(state.iterations());
+            state.SetBytesProcessed(state.Iterations() * 256);
+            state.SetItemsProcessed(state.Iterations());
         });
 
     auto bench3 =
@@ -71,8 +71,8 @@ namespace
                 }
             }
 
-            state.SetBytesProcessed(state.iterations() * 4_KB);
-            state.SetItemsProcessed(state.iterations());
+            state.SetBytesProcessed(state.Iterations() * 4_KB);
+            state.SetItemsProcessed(state.Iterations());
         });
 
     auto bench4 =
@@ -86,8 +86,8 @@ namespace
                 allocator.Deallocate(ptr);
             }
 
-            state.SetBytesProcessed(state.iterations() * 128);
-            state.SetItemsProcessed(state.iterations());
+            state.SetBytesProcessed(state.Iterations() * 128);
+            state.SetItemsProcessed(state.Iterations());
         });
 
     auto bench5 = larvae::RegisterBenchmark("BuddyAllocator", "RapidRecycling", [](larvae::BenchmarkState& state) {
@@ -103,7 +103,7 @@ namespace
             }
         }
 
-        state.SetItemsProcessed(state.iterations() * 10);
+        state.SetItemsProcessed(state.Iterations() * 10);
     });
 
     auto bench6 =
@@ -126,7 +126,7 @@ namespace
                 }
             }
 
-            state.SetItemsProcessed(state.iterations());
+            state.SetItemsProcessed(state.Iterations());
         });
 
     auto bench7 = larvae::RegisterBenchmark("BuddyAllocator", "CoalescingPattern", [](larvae::BenchmarkState& state) {
@@ -145,7 +145,7 @@ namespace
             allocator.Deallocate(ptr2);
         }
 
-        state.SetItemsProcessed(state.iterations() * 2);
+        state.SetItemsProcessed(state.Iterations() * 2);
     });
 
     auto bench8 = larvae::RegisterBenchmark("BuddyAllocator", "SplittingOverhead", [](larvae::BenchmarkState& state) {
@@ -163,7 +163,7 @@ namespace
             }
         }
 
-        state.SetItemsProcessed(state.iterations());
+        state.SetItemsProcessed(state.Iterations());
     });
 
     auto bench9 =
@@ -192,7 +192,7 @@ namespace
                 allocator.Deallocate(p4);
             }
 
-            state.SetItemsProcessed(state.iterations() * 4);
+            state.SetItemsProcessed(state.Iterations() * 4);
         });
 
     auto bench10 = larvae::RegisterBenchmark("malloc", "MixedSizeAllocations", [](larvae::BenchmarkState& state) {
@@ -226,7 +226,7 @@ namespace
             free(p);
         }
 
-        state.SetItemsProcessed(state.iterations());
+        state.SetItemsProcessed(state.Iterations());
     });
 
     auto bench11 = larvae::RegisterBenchmark("malloc", "AllocationAndDeallocation", [](larvae::BenchmarkState& state) {
@@ -237,7 +237,7 @@ namespace
             free(ptr);
         }
 
-        state.SetItemsProcessed(state.iterations());
+        state.SetItemsProcessed(state.Iterations());
     });
 
     auto bench12 = larvae::RegisterBenchmark("BuddyAllocator", "PowerOfTwoSizes", [](larvae::BenchmarkState& state) {
@@ -260,7 +260,7 @@ namespace
             }
         }
 
-        state.SetItemsProcessed(state.iterations());
+        state.SetItemsProcessed(state.Iterations());
     });
 
     auto bench13 = larvae::RegisterBenchmark("BuddyAllocator", "UnalignedSizes", [](larvae::BenchmarkState& state) {
@@ -283,6 +283,6 @@ namespace
             }
         }
 
-        state.SetItemsProcessed(state.iterations());
+        state.SetItemsProcessed(state.Iterations());
     });
 } // namespace

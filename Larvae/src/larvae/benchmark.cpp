@@ -3,43 +3,43 @@
 namespace larvae
 {
     BenchmarkState::BenchmarkState(size_t initial_iterations)
-        : iterations_{initial_iterations}
+        : m_iterations{initial_iterations}
     {
     }
 
     bool BenchmarkState::KeepRunning()
     {
-        if (current_iteration_ == 0)
+        if (m_currentIteration == 0)
         {
             StartTiming();
         }
 
-        if (current_iteration_ >= iterations_)
+        if (m_currentIteration >= m_iterations)
         {
             StopTiming();
             return false;
         }
 
-        ++current_iteration_;
+        ++m_currentIteration;
         return true;
     }
 
     void BenchmarkState::StartTiming()
     {
-        if (!is_timing_)
+        if (!m_isTiming)
         {
-            start_time_ = std::chrono::high_resolution_clock::now();
-            is_timing_ = true;
+            m_startTime = std::chrono::high_resolution_clock::now();
+            m_isTiming = true;
         }
     }
 
     void BenchmarkState::StopTiming()
     {
-        if (is_timing_)
+        if (m_isTiming)
         {
             auto end_time = std::chrono::high_resolution_clock::now();
-            elapsed_ = std::chrono::duration_cast<std::chrono::nanoseconds>(end_time - start_time_);
-            is_timing_ = false;
+            m_elapsed = std::chrono::duration_cast<std::chrono::nanoseconds>(end_time - m_startTime);
+            m_isTiming = false;
         }
     }
 } // namespace larvae

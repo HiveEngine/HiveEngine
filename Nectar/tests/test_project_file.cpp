@@ -33,9 +33,7 @@ namespace
         }
     };
 
-    // =========================================================================
     // Parsing
-    // =========================================================================
 
     auto t_minimal = larvae::RegisterTest("NectarProjectFile", "ParseMinimalProject", []() {
         auto& alloc = GetAlloc();
@@ -102,9 +100,7 @@ namespace
         larvae::AssertTrue(!result.m_success);
     });
 
-    // =========================================================================
     // Create + Serialize round-trip
-    // =========================================================================
 
     auto t_roundtrip = larvae::RegisterTest("NectarProjectFile", "CreateAndSerialize", []() {
         auto& alloc = GetAlloc();
@@ -134,9 +130,7 @@ namespace
         larvae::AssertTrue(pf2.StartupSceneRelative().Equals("scenes/intro.hscene"));
     });
 
-    // =========================================================================
     // ResolvePaths
-    // =========================================================================
 
     auto t_resolve = larvae::RegisterTest("NectarProjectFile", "ResolvePaths", []() {
         auto& alloc = GetAlloc();
@@ -178,9 +172,7 @@ namespace
         larvae::AssertTrue(paths.m_assets.View().Equals("C:/Users/dev/project/assets"));
     });
 
-    // =========================================================================
     // Default values
-    // =========================================================================
 
     auto t_defaults = larvae::RegisterTest("NectarProjectFile", "DefaultValues", []() {
         auto& alloc = GetAlloc();
@@ -198,9 +190,7 @@ namespace
         larvae::AssertTrue(pf.Backend().IsEmpty());
     });
 
-    // =========================================================================
     // Disk I/O
-    // =========================================================================
 
     auto t_disk = larvae::RegisterTest("NectarProjectFile", "SaveAndLoadFromDisk", []() {
         auto& alloc = GetAlloc();
@@ -230,9 +220,7 @@ namespace
         larvae::AssertTrue(pf2.StartupSceneRelative().Equals("scenes/main.hscene"));
     });
 
-    // =========================================================================
     // Custom sections preserved
-    // =========================================================================
 
     auto t_custom_sections = larvae::RegisterTest("NectarProjectFile", "CustomSectionsPreserved", []() {
         auto& alloc = GetAlloc();

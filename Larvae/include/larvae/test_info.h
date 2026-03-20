@@ -10,16 +10,16 @@ namespace larvae
 {
     struct TestInfo
     {
-        std::string suite_name;
-        std::string test_name;
-        std::function<void()> func;
-        const char* file;
-        std::uint_least32_t line;
-        CapabilityMask required_capabilities{0};
+        std::string m_suiteName;
+        std::string m_testName;
+        std::function<void()> m_func;
+        const char* m_file;
+        std::uint_least32_t m_line;
+        CapabilityMask m_requiredCapabilities{0};
 
         [[nodiscard]] std::string GetFullName() const
         {
-            return suite_name + "." + test_name;
+            return m_suiteName + "." + m_testName;
         }
     };
 } // namespace larvae

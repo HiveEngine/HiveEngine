@@ -123,9 +123,7 @@ namespace
         }
     };
 
-    // =========================================================================
     // ScanOutdated
-    // =========================================================================
 
     auto t1 = larvae::RegisterTest("NectarVersionScan", "ScanOutdatedEmptyDb", []() {
         auto& alloc = GetVScanAlloc();
@@ -180,9 +178,7 @@ namespace
         larvae::AssertEqual(out.Size(), size_t{1});
     });
 
-    // =========================================================================
     // ReimportOutdated
-    // =========================================================================
 
     auto t5 = larvae::RegisterTest("NectarVersionScan", "ReimportOutdatedSuccess", []() {
         auto& alloc = GetVScanAlloc();
@@ -227,9 +223,7 @@ namespace
         larvae::AssertEqual(count, size_t{0});
     });
 
-    // =========================================================================
     // AssetBlobHeader
-    // =========================================================================
 
     auto t7 = larvae::RegisterTest("NectarVersionScan", "BlobHeaderWriteRead", []() {
         auto& alloc = GetVScanAlloc();

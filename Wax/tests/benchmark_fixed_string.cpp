@@ -7,9 +7,7 @@
 
 namespace
 {
-    // =============================================================================
     // Wax::FixedString Benchmarks
-    // =============================================================================
 
     auto bench1 =
         larvae::RegisterBenchmark("WaxFixedString", "ConstructSmallString", [](larvae::BenchmarkState& state) {
@@ -19,7 +17,7 @@ namespace
                 larvae::DoNotOptimize(str.Data());
             }
 
-            state.SetItemsProcessed(state.iterations());
+            state.SetItemsProcessed(state.Iterations());
         });
 
     auto bench2 =
@@ -30,7 +28,7 @@ namespace
                 larvae::DoNotOptimize(str.Data());
             }
 
-            state.SetItemsProcessed(state.iterations());
+            state.SetItemsProcessed(state.Iterations());
         });
 
     auto bench3 = larvae::RegisterBenchmark("WaxFixedString", "AppendChars", [](larvae::BenchmarkState& state) {
@@ -44,7 +42,7 @@ namespace
             larvae::DoNotOptimize(str.Data());
         }
 
-        state.SetItemsProcessed(state.iterations() * 20);
+        state.SetItemsProcessed(state.Iterations() * 20);
     });
 
     auto bench4 = larvae::RegisterBenchmark("WaxFixedString", "AppendStrings", [](larvae::BenchmarkState& state) {
@@ -57,7 +55,7 @@ namespace
             larvae::DoNotOptimize(str.Data());
         }
 
-        state.SetItemsProcessed(state.iterations() * 3);
+        state.SetItemsProcessed(state.Iterations() * 3);
     });
 
     auto bench5 = larvae::RegisterBenchmark("WaxFixedString", "FindChar", [](larvae::BenchmarkState& state) {
@@ -69,7 +67,7 @@ namespace
             larvae::DoNotOptimize(pos);
         }
 
-        state.SetItemsProcessed(state.iterations());
+        state.SetItemsProcessed(state.Iterations());
     });
 
     auto bench6 = larvae::RegisterBenchmark("WaxFixedString", "FindSubstring", [](larvae::BenchmarkState& state) {
@@ -81,7 +79,7 @@ namespace
             larvae::DoNotOptimize(pos);
         }
 
-        state.SetItemsProcessed(state.iterations());
+        state.SetItemsProcessed(state.Iterations());
     });
 
     auto bench7 = larvae::RegisterBenchmark("WaxFixedString", "Compare", [](larvae::BenchmarkState& state) {
@@ -94,7 +92,7 @@ namespace
             larvae::DoNotOptimize(result);
         }
 
-        state.SetItemsProcessed(state.iterations());
+        state.SetItemsProcessed(state.Iterations());
     });
 
     auto bench8 = larvae::RegisterBenchmark("WaxFixedString", "Copy", [](larvae::BenchmarkState& state) {
@@ -106,7 +104,7 @@ namespace
             larvae::DoNotOptimize(copy.Data());
         }
 
-        state.SetItemsProcessed(state.iterations());
+        state.SetItemsProcessed(state.Iterations());
     });
 
     auto bench9 = larvae::RegisterBenchmark("WaxFixedString", "Resize", [](larvae::BenchmarkState& state) {
@@ -117,7 +115,7 @@ namespace
             larvae::DoNotOptimize(str.Data());
         }
 
-        state.SetItemsProcessed(state.iterations());
+        state.SetItemsProcessed(state.Iterations());
     });
 
     auto bench10 = larvae::RegisterBenchmark("WaxFixedString", "Clear", [](larvae::BenchmarkState& state) {
@@ -128,7 +126,7 @@ namespace
             larvae::DoNotOptimize(str.Data());
         }
 
-        state.SetItemsProcessed(state.iterations());
+        state.SetItemsProcessed(state.Iterations());
     });
 
     auto bench11 = larvae::RegisterBenchmark("WaxFixedString", "ToStringView", [](larvae::BenchmarkState& state) {
@@ -140,7 +138,7 @@ namespace
             larvae::DoNotOptimize(sv.Data());
         }
 
-        state.SetItemsProcessed(state.iterations());
+        state.SetItemsProcessed(state.Iterations());
     });
 
     auto bench12 = larvae::RegisterBenchmark("WaxFixedString", "Iteration", [](larvae::BenchmarkState& state) {
@@ -159,12 +157,10 @@ namespace
             larvae::DoNotOptimize(count);
         }
 
-        state.SetItemsProcessed(state.iterations() * str.Size());
+        state.SetItemsProcessed(state.Iterations() * str.Size());
     });
 
-    // =============================================================================
     // Comparison: FixedString vs std::string (small strings)
-    // =============================================================================
 
     auto bench13 =
         larvae::RegisterBenchmark("StdStringSmall", "ConstructSmallString", [](larvae::BenchmarkState& state) {
@@ -174,7 +170,7 @@ namespace
                 larvae::DoNotOptimize(str.data());
             }
 
-            state.SetItemsProcessed(state.iterations());
+            state.SetItemsProcessed(state.Iterations());
         });
 
     auto bench14 = larvae::RegisterBenchmark("StdStringSmall", "AppendChars", [](larvae::BenchmarkState& state) {
@@ -188,7 +184,7 @@ namespace
             larvae::DoNotOptimize(str.data());
         }
 
-        state.SetItemsProcessed(state.iterations() * 20);
+        state.SetItemsProcessed(state.Iterations() * 20);
     });
 
     auto bench15 = larvae::RegisterBenchmark("StdStringSmall", "Copy", [](larvae::BenchmarkState& state) {
@@ -200,7 +196,7 @@ namespace
             larvae::DoNotOptimize(copy.data());
         }
 
-        state.SetItemsProcessed(state.iterations());
+        state.SetItemsProcessed(state.Iterations());
     });
 
     auto bench16 = larvae::RegisterBenchmark("StdStringSmall", "Compare", [](larvae::BenchmarkState& state) {
@@ -213,6 +209,6 @@ namespace
             larvae::DoNotOptimize(result);
         }
 
-        state.SetItemsProcessed(state.iterations());
+        state.SetItemsProcessed(state.Iterations());
     });
 } // namespace

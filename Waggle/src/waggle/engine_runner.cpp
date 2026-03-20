@@ -26,9 +26,12 @@ namespace
             : m_config{config}
             , m_callbacks{callbacks}
             , m_app{config.m_app}
+            , m_framePipeline{config.m_jobs}
         {
             m_context.m_app = &m_app;
             m_context.m_world = &m_app.GetWorld();
+            m_context.m_jobs = config.m_jobs;
+            m_context.m_framePipeline = config.m_jobs.IsValid() ? &m_framePipeline : nullptr;
             m_app.GetWorld().InsertResource(waggle::RuntimeContext{config.m_mode});
 
             terra::SetWindowTitle(m_windowContext, config.m_windowTitle);
@@ -109,8 +112,9 @@ namespace
 
             m_windowSystemInitialized = true;
 
-            m_windowContext = terra::CreateWindowContext(m_config.m_windowTitle, static_cast<int>(m_config.m_windowWidth),
-                                              static_cast<int>(m_config.m_windowHeight));
+            m_windowContext =
+                terra::CreateWindowContext(m_config.m_windowTitle, static_cast<int>(m_config.m_windowWidth),
+                                           static_cast<int>(m_config.m_windowHeight));
 
             if (m_windowContext == nullptr)
             {
@@ -328,12 +332,13 @@ namespace
         const waggle::EngineCallbacks& m_callbacks;
         hive::ModuleRegistry m_moduleRegistry{};
         waggle::App m_app;
+        drone::FramePipeline m_framePipeline;
         waggle::EngineContext m_context{};
         bool m_modulesInitialized{false};
         bool m_setupCompleted{false};
         bool m_shutdownCallbackInvoked{false};
 
-        terra::WindowContext *m_windowContext{nullptr};
+        terra::WindowContext* m_windowContext{nullptr};
         bool m_windowSystemInitialized{false};
         bool m_windowInitialized{false};
 

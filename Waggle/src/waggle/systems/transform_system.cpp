@@ -1,3 +1,5 @@
+#include <waggle/systems/transform_system.h>
+
 #include <hive/math/math.h>
 
 #include <queen/hierarchy/parent.h>
@@ -5,7 +7,6 @@
 #include <queen/world/world.h>
 
 #include <waggle/components/transform.h>
-#include <waggle/systems/transform_system.h>
 #include <waggle/time.h>
 
 using namespace hive::math;

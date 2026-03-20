@@ -199,9 +199,7 @@ namespace queen
             return m_buffers[m_current].IsEmpty();
         }
 
-        // ─────────────────────────────────────────────────────────────
         // Iteration (reads both buffers: previous first, then current)
-        // ─────────────────────────────────────────────────────────────
 
         /**
          * Iterator for reading events from both buffers
@@ -264,9 +262,7 @@ namespace queen
             return EventIterator{this, TotalCount()};
         }
 
-        // ─────────────────────────────────────────────────────────────
         // Direct buffer access (for advanced use)
-        // ─────────────────────────────────────────────────────────────
 
         /**
          * Get read-only access to current frame's events

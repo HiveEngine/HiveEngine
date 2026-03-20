@@ -8,41 +8,7 @@
 
 namespace wax
 {
-    /**
-     * Non-owning view over binary data
-     *
-     * ByteSpan provides a lightweight reference to an existing byte buffer
-     * without owning the data. It's similar to std::span<const uint8_t> but
-     * with additional utilities for reading structured data.
-     *
-     * Performance characteristics:
-     * - Storage: 16 bytes (pointer + size) on 64-bit systems
-     * - Access: O(1) - direct pointer arithmetic
-     * - Construction: O(1) - just stores pointer and size
-     * - Copy: O(1) - trivially copyable
-     * - Bounds check: O(1) in debug, zero overhead in release
-     *
-     * Limitations:
-     * - Non-owning (caller must ensure data stays alive)
-     * - Read-only (cannot modify underlying data)
-     * - No memory management
-     * - Dangling pointer risk if source is destroyed
-     *
-     * Use cases:
-     * - Reading binary file contents without copying
-     * - Parsing structured data from byte streams
-     * - Passing binary data to functions
-     * - Sub-ranges of existing buffers
-     *
-     * Example:
-     * @code
-     *   void ProcessData(wax::ByteSpan data) {
-     *       uint32_t magic = data.Read<uint32_t>(0);
-     *       uint32_t version = data.Read<uint32_t>(4);
-     *       auto payload = data.Subspan(8, data.Size() - 8);
-     *   }
-     * @endcode
-     */
+    // Non-owning, read-only view over binary data (const uint8_t* + size).
     class ByteSpan
     {
     public:

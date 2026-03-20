@@ -1,8 +1,9 @@
+#include <comb/linear_allocator.h>
+
 #include <hive/core/assert.h>
 #include <hive/core/log.h>
 
 #include <comb/combmodule.h>
-#include <comb/linear_allocator.h>
 #include <comb/platform.h>
 #include <comb/precomp.h>
 #include <comb/utils.h>
@@ -19,12 +20,10 @@ namespace comb
         hive::Assert(m_base != nullptr, "Failed to allocate memory for LinearAllocator");
 
 #if COMB_MEM_DEBUG
-        // Create debug tracking objects
         m_registry = std::make_unique<debug::AllocationRegistry>();
         m_history = std::make_unique<debug::AllocationHistory>();
-        m_releaseCurrent = m_base; // Initialize virtual release pointer
+        m_releaseCurrent = m_base;
 
-        // Register with global tracker
         debug::GlobalMemoryTracker::GetInstance().RegisterAllocator(GetName(), m_registry.get(), false);
 #endif
     }
@@ -34,12 +33,7 @@ namespace comb
 #if COMB_MEM_DEBUG
         if (m_registry)
         {
-            // NOTE: LinearAllocator doesn't support individual deallocation
-            // Having "leaks" at destruction is NORMAL and EXPECTED behavior
-            // Users should call Reset() if they want to verify no leaks, but it's not required
-            // We DON'T report leaks here because it would be too noisy for normal usage
-
-            // Unregister from global tracker
+            // LinearAllocator has no individual deallocation  leaks at destruction are expected
             debug::GlobalMemoryTracker::GetInstance().UnregisterAllocator(m_registry.get());
         }
 #endif
@@ -172,7 +166,7 @@ namespace comb
 #endif
     }
 
-    void* LinearAllocator::GetMarker() const
+    void* LinearAllocator::GetMarker() const noexcept
     {
         return m_current;
     }
@@ -202,7 +196,7 @@ namespace comb
 #endif
     }
 
-    size_t LinearAllocator::GetUsedMemory() const
+    size_t LinearAllocator::GetUsedMemory() const noexcept
     {
 #if COMB_MEM_DEBUG
         // In debug mode, return virtual release pointer offset
@@ -214,20 +208,18 @@ namespace comb
 #endif
     }
 
-    size_t LinearAllocator::GetTotalMemory() const
+    size_t LinearAllocator::GetTotalMemory() const noexcept
     {
         return m_capacity;
     }
 
-    const char* LinearAllocator::GetName() const
+    const char* LinearAllocator::GetName() const noexcept
     {
         return "LinearAllocator";
     }
 
 #if COMB_MEM_DEBUG
-    // ========================================================================
     // Debug Implementation (Only compiled when COMB_MEM_DEBUG=1)
-    // ========================================================================
 
     void* LinearAllocator::AllocateDebug(size_t size, size_t alignment, const char* tag)
     {

@@ -10,9 +10,7 @@ namespace
     using hive::RadixSort;
     using hive::SortItem;
 
-    // =========================================================================
     // Edge cases
-    // =========================================================================
 
     auto t_empty = larvae::RegisterTest("RadixSort", "Empty", []() {
         SortItem<int> data[1]{};
@@ -29,9 +27,7 @@ namespace
         larvae::AssertEqual(data[0].value, 1);
     });
 
-    // =========================================================================
     // Small arrays (insertion sort path)
-    // =========================================================================
 
     auto t_small_sorted = larvae::RegisterTest("RadixSort", "SmallAlreadySorted", []() {
         SortItem<int> data[5]{{1, 10}, {2, 20}, {3, 30}, {4, 40}, {5, 50}};
@@ -60,9 +56,7 @@ namespace
             larvae::AssertEqual(data[i].value, static_cast<int>(i));
     });
 
-    // =========================================================================
     // Large arrays (radix sort path)
-    // =========================================================================
 
     auto t_large_reverse = larvae::RegisterTest("RadixSort", "LargeReverse", []() {
         constexpr uint32_t N = 200;

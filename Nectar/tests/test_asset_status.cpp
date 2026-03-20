@@ -11,8 +11,8 @@ namespace
         larvae::AssertNotEqual(static_cast<uint8_t>(nectar::AssetStatus::LOADING),
                                static_cast<uint8_t>(nectar::AssetStatus::READY));
         larvae::AssertNotEqual(static_cast<uint8_t>(nectar::AssetStatus::READY),
-                               static_cast<uint8_t>(nectar::AssetStatus::Failed));
-        larvae::AssertNotEqual(static_cast<uint8_t>(nectar::AssetStatus::Failed),
+                               static_cast<uint8_t>(nectar::AssetStatus::FAILED));
+        larvae::AssertNotEqual(static_cast<uint8_t>(nectar::AssetStatus::FAILED),
                                static_cast<uint8_t>(nectar::AssetStatus::UNLOADED));
     });
 

@@ -12,6 +12,6 @@ namespace larvae
                                               std::function<void(BenchmarkState&)> benchmark_func,
                                               CapabilityMask required_capabilities)
     {
-        benchmarks_.push_back({suite_name, benchmark_name, std::move(benchmark_func), required_capabilities});
+        m_benchmarks.push_back({suite_name, benchmark_name, std::move(benchmark_func), required_capabilities});
     }
 } // namespace larvae
