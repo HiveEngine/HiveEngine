@@ -18,6 +18,7 @@
 #include <forge/console_panel.h>
 #include <forge/hierarchy_panel.h>
 #include <forge/inspector_panel.h>
+#include <forge/progress_overlay.h>
 #include <forge/project_hub.h>
 #include <forge/selection.h>
 #include <forge/toolbar.h>
@@ -447,5 +448,29 @@ namespace forge
                 hive::LogWarning(LOG_FORGE, "Unsupported asset drop: {}", path.toStdString());
             }
         });
+    }
+    void ForgeMainWindow::ShowProgress(const QString& title)
+    {
+        if (!m_progressOverlay)
+            m_progressOverlay = new ProgressOverlay{this};
+        m_progressOverlay->Show(title);
+    }
+
+    void ForgeMainWindow::ProgressSetStep(const QString& step)
+    {
+        if (m_progressOverlay)
+            m_progressOverlay->SetStep(step);
+    }
+
+    void ForgeMainWindow::ProgressSetProgress(int current, int total)
+    {
+        if (m_progressOverlay)
+            m_progressOverlay->SetProgress(current, total);
+    }
+
+    void ForgeMainWindow::HideProgress()
+    {
+        if (m_progressOverlay)
+            m_progressOverlay->Hide();
     }
 } // namespace forge

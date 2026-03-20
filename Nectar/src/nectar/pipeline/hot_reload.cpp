@@ -78,6 +78,13 @@ namespace nectar
         return result;
     }
 
+    void HotReloadManager::DrainPending()
+    {
+        wax::Vector<FileChange> discarded{*m_alloc};
+        m_watcher->Poll(discarded);
+        m_drainCount = 2;
+    }
+
     size_t HotReloadManager::ProcessChanges(wax::StringView platform)
     {
         HIVE_PROFILE_SCOPE_N("HotReload::ProcessChanges");
@@ -85,6 +92,12 @@ namespace nectar
 
         wax::Vector<FileChange> changes{*m_alloc};
         m_watcher->Poll(changes);
+
+        if (m_drainCount > 0)
+        {
+            --m_drainCount;
+            return 0;
+        }
 
         if (changes.Size() == 0)
             return 0;
@@ -108,13 +121,6 @@ namespace nectar
                 {
                     wax::StringView suffix{normalized.Data() + normalized.Size() - 7, 7};
                     if (suffix == wax::StringView{".hiveid", 7})
-                        continue;
-                }
-
-                // Skip directories (no extension)
-                {
-                    std::filesystem::path p{normalized.CStr()};
-                    if (!p.has_extension())
                         continue;
                 }
 

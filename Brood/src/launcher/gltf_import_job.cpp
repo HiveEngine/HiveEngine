@@ -87,8 +87,12 @@ namespace nectar
     }
 
     GltfImportResult ExecuteGltfImport(const GltfImportDesc& desc, AssetDatabase& db, comb::DefaultAllocator& alloc,
-                                       ImportPipeline* pipeline)
+                                       ImportPipeline* pipeline, GltfProgressFn progress, void* progressUserData)
     {
+        auto report = [&](const char* step, uint32_t cur, uint32_t tot) {
+            if (progress)
+                progress(step, cur, tot, progressUserData);
+        };
         GltfImportResult result{};
         std::error_code ec;
 
@@ -158,6 +162,7 @@ namespace nectar
             }
 
             ++result.m_textureCount;
+            report("Copying textures", result.m_textureCount, 0);
         }
 
         hive::LogInfo(LOG_IMPORT, "Textures copied: {}", result.m_textureCount);
@@ -185,6 +190,7 @@ namespace nectar
             comb::ModuleAllocator importAlloc{"GltfMeshImport", 256 * 1024 * 1024};
             ImportContext ctx{importAlloc.Get(), db, meshAssetId};
 
+            report("Importing mesh", 0, 1);
             hive::LogInfo(LOG_IMPORT, "Importing mesh...");
             auto meshResult = importer.Import(meshSpan, settings, ctx);
             hive::LogInfo(LOG_IMPORT, "Mesh import done: success={}", meshResult.m_success);
@@ -313,6 +319,7 @@ namespace nectar
             }
 
             ++result.m_materialCount;
+            report("Saving materials", result.m_materialCount, static_cast<uint32_t>(materials.Size()));
         }
 
         result.m_success = true;
