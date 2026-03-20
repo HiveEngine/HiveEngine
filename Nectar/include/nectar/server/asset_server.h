@@ -199,6 +199,21 @@ namespace nectar
 
         // -- Hot reload --
 
+        /// Look up a cached handle by path. Returns null handle if not loaded.
+        template <typename T> [[nodiscard]] wax::Handle<T> FindHandle(wax::StringView path) const
+        {
+            nectar::TypeId tid = nectar::TypeIdOf<T>();
+            PathKey key{tid, wax::String{*m_allocator}};
+            key.m_path.Append(path.Data(), path.Size());
+            auto* cached = m_pathCache.Find(key);
+            if (!cached)
+                return wax::Handle<T>::Invalid();
+            auto* storage = FindStorage<T>();
+            if (!storage || !storage->IsHandleValid(cached->m_index, cached->m_generation))
+                return wax::Handle<T>::Invalid();
+            return wax::Handle<T>{cached->m_index, cached->m_generation};
+        }
+
         template <typename T> bool Reload(wax::Handle<T> handle, wax::ByteSpan newData)
         {
             HIVE_PROFILE_SCOPE_N("AssetServer::Reload");
@@ -327,7 +342,7 @@ namespace nectar
             auto handle = storage.AllocateSlot();
             if (handle.IsNull())
                 return StrongHandle<T>{};
-            storage.SetStatus(handle.m_index, AssetStatus::Failed);
+            storage.SetStatus(handle.m_index, AssetStatus::FAILED);
             storage.SetError(handle.m_index, AssetErrorInfo{AssetError::NO_LOADER, wax::String{}});
             storage.IncrementRef(handle.m_index);
             m_pathCache.Insert(static_cast<PathKey&&>(key), ErasedHandle{handle.m_index, handle.m_generation});
@@ -354,7 +369,7 @@ namespace nectar
         auto buffer = ReadFile(path);
         if (buffer.Size() == 0)
         {
-            storage.SetStatus(handle.m_index, AssetStatus::Failed);
+            storage.SetStatus(handle.m_index, AssetStatus::FAILED);
             storage.SetError(handle.m_index, AssetErrorInfo{AssetError::FILE_NOT_FOUND, wax::String{}});
             storage.IncrementRef(handle.m_index);
             m_pathCache.Insert(static_cast<PathKey&&>(key), ErasedHandle{handle.m_index, handle.m_generation});
@@ -364,7 +379,7 @@ namespace nectar
         T* asset = storage.GetLoader()->Load(buffer.View(), *m_allocator);
         if (!asset)
         {
-            storage.SetStatus(handle.m_index, AssetStatus::Failed);
+            storage.SetStatus(handle.m_index, AssetStatus::FAILED);
             storage.SetError(handle.m_index, AssetErrorInfo{AssetError::LOAD_FAILED, wax::String{}});
             storage.IncrementRef(handle.m_index);
             m_pathCache.Insert(static_cast<PathKey&&>(key), ErasedHandle{handle.m_index, handle.m_generation});
@@ -403,7 +418,7 @@ namespace nectar
             auto handle = storage.AllocateSlot();
             if (handle.IsNull())
                 return StrongHandle<T>{};
-            storage.SetStatus(handle.m_index, AssetStatus::Failed);
+            storage.SetStatus(handle.m_index, AssetStatus::FAILED);
             storage.SetError(handle.m_index, AssetErrorInfo{AssetError::NO_LOADER, wax::String{}});
             storage.IncrementRef(handle.m_index);
             m_pathCache.Insert(static_cast<PathKey&&>(key), ErasedHandle{handle.m_index, handle.m_generation});
@@ -419,7 +434,7 @@ namespace nectar
         T* asset = storage.GetLoader()->Load(data, *m_allocator);
         if (!asset)
         {
-            storage.SetStatus(handle.m_index, AssetStatus::Failed);
+            storage.SetStatus(handle.m_index, AssetStatus::FAILED);
             storage.SetError(handle.m_index, AssetErrorInfo{AssetError::LOAD_FAILED, wax::String{}});
             storage.IncrementRef(handle.m_index);
             m_pathCache.Insert(static_cast<PathKey&&>(key), ErasedHandle{handle.m_index, handle.m_generation});

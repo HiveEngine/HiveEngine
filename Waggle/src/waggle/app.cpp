@@ -1,7 +1,8 @@
+#include <waggle/app.h>
+
 #include <hive/core/clock.h>
 #include <hive/profiling/profiler.h>
 
-#include <waggle/app.h>
 #include <waggle/time.h>
 
 #include <algorithm>

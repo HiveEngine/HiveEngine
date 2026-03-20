@@ -36,9 +36,7 @@ namespace
         return r;
     }
 
-    // =========================================================================
     // Insert / Find
-    // =========================================================================
 
     auto t1 = larvae::RegisterTest("NectarAssetDB", "InsertAndFindByUuid", []() {
         auto& alloc = GetDbAlloc();
@@ -76,9 +74,7 @@ namespace
         larvae::AssertNull(found);
     });
 
-    // =========================================================================
     // Duplicates rejected
-    // =========================================================================
 
     auto t5 = larvae::RegisterTest("NectarAssetDB", "DuplicateUuidRejected", []() {
         auto& alloc = GetDbAlloc();
@@ -96,9 +92,7 @@ namespace
         larvae::AssertEqual(db.Count(), size_t{1});
     });
 
-    // =========================================================================
     // Remove
-    // =========================================================================
 
     auto t7 = larvae::RegisterTest("NectarAssetDB", "Remove", []() {
         auto& alloc = GetDbAlloc();
@@ -116,9 +110,7 @@ namespace
         larvae::AssertFalse(db.Remove(MakeId(99)));
     });
 
-    // =========================================================================
     // Update
-    // =========================================================================
 
     auto t9 = larvae::RegisterTest("NectarAssetDB", "Update", []() {
         auto& alloc = GetDbAlloc();
@@ -140,9 +132,7 @@ namespace
         larvae::AssertFalse(db.Update(MakeId(99), MakeRecord(99, "x", "T", "x")));
     });
 
-    // =========================================================================
     // Queries
-    // =========================================================================
 
     auto t11 = larvae::RegisterTest("NectarAssetDB", "FindByType", []() {
         auto& alloc = GetDbAlloc();
@@ -174,9 +164,7 @@ namespace
         larvae::AssertEqual(results.Size(), size_t{1});
     });
 
-    // =========================================================================
     // Contains
-    // =========================================================================
 
     auto t13 = larvae::RegisterTest("NectarAssetDB", "Contains", []() {
         auto& alloc = GetDbAlloc();
@@ -189,9 +177,7 @@ namespace
         larvae::AssertFalse(db.ContainsPath("b.png"));
     });
 
-    // =========================================================================
     // DependencyGraph integration
-    // =========================================================================
 
     auto t14 = larvae::RegisterTest("NectarAssetDB", "DepGraphIntegration", []() {
         auto& alloc = GetDbAlloc();
@@ -220,9 +206,7 @@ namespace
         larvae::AssertFalse(db.GetDependencyGraph().HasEdge(MakeId(1), MakeId(2)));
     });
 
-    // =========================================================================
     // Empty database
-    // =========================================================================
 
     auto t16 = larvae::RegisterTest("NectarAssetDB", "EmptyDatabaseQueries", []() {
         auto& alloc = GetDbAlloc();

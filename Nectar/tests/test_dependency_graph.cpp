@@ -24,9 +24,7 @@ namespace
         return nectar::AssetId::FromBytes(bytes);
     }
 
-    // =========================================================================
     // Construction
-    // =========================================================================
 
     auto t1 = larvae::RegisterTest("NectarDepGraph", "EmptyGraph", []() {
         auto& alloc = GetGraphAlloc();
@@ -98,9 +96,7 @@ namespace
         larvae::AssertFalse(graph.HasEdge(b, c));
     });
 
-    // =========================================================================
     // Direct queries
-    // =========================================================================
 
     auto t8 = larvae::RegisterTest("NectarDepGraph", "GetDependencies", []() {
         auto& alloc = GetGraphAlloc();
@@ -150,9 +146,7 @@ namespace
         larvae::AssertEqual(dependents.Size(), size_t{2});
     });
 
-    // =========================================================================
     // Transitive queries
-    // =========================================================================
 
     auto t11 = larvae::RegisterTest("NectarDepGraph", "TransitiveDependenciesChain", []() {
         auto& alloc = GetGraphAlloc();
@@ -220,9 +214,7 @@ namespace
         larvae::AssertEqual(deps.Size(), size_t{1}); // only b
     });
 
-    // =========================================================================
     // Cycle detection
-    // =========================================================================
 
     auto t15 = larvae::RegisterTest("NectarDepGraph", "SimpleCycleRejected", []() {
         auto& alloc = GetGraphAlloc();
@@ -265,9 +257,7 @@ namespace
         larvae::AssertFalse(graph.HasCycle());
     });
 
-    // =========================================================================
     // Topological sort
-    // =========================================================================
 
     auto t19 = larvae::RegisterTest("NectarDepGraph", "TopologicalSortChain", []() {
         auto& alloc = GetGraphAlloc();
@@ -356,9 +346,7 @@ namespace
         larvae::AssertEqual(order.Size(), size_t{0});
     });
 
-    // =========================================================================
     // Stats
-    // =========================================================================
 
     auto t23 = larvae::RegisterTest("NectarDepGraph", "HasNode", []() {
         auto& alloc = GetGraphAlloc();
@@ -385,9 +373,7 @@ namespace
         larvae::AssertEqual(graph.NodeCount(), size_t{3});
     });
 
-    // =========================================================================
     // TopologicalSortLevels
-    // =========================================================================
 
     auto t25b = larvae::RegisterTest("NectarDepGraph", "LevelsSingleNode", []() {
         auto& alloc = GetGraphAlloc();

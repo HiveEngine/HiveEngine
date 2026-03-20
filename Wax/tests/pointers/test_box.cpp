@@ -29,9 +29,7 @@ namespace
     int TestStruct::construct_count = 0;
     int TestStruct::destruct_count = 0;
 
-    // =============================================================================
     // Construction
-    // =============================================================================
 
     auto test1 = larvae::RegisterTest("WaxBox", "DefaultConstructor", []() {
         wax::Box<int, comb::LinearAllocator> box;
@@ -65,9 +63,7 @@ namespace
         larvae::AssertEqual(TestStruct::destruct_count, 1);
     });
 
-    // =============================================================================
     // Move Semantics
-    // =============================================================================
 
     auto test4 = larvae::RegisterTest("WaxBox", "MoveConstructor", []() {
         comb::LinearAllocator alloc{1024};
@@ -92,9 +88,7 @@ namespace
         larvae::AssertEqual(*box2, 42);
     });
 
-    // =============================================================================
     // Dereference
-    // =============================================================================
 
     auto test6 = larvae::RegisterTest("WaxBox", "DereferenceOperator", []() {
         comb::LinearAllocator alloc{1024};
@@ -128,9 +122,7 @@ namespace
         larvae::AssertEqual(*ptr, 42);
     });
 
-    // =============================================================================
     // Bool Conversion
-    // =============================================================================
 
     auto test9 = larvae::RegisterTest("WaxBox", "BoolConversionValid", []() {
         comb::LinearAllocator alloc{1024};
@@ -160,9 +152,7 @@ namespace
         }
     });
 
-    // =============================================================================
     // Release and Reset
-    // =============================================================================
 
     auto test11 = larvae::RegisterTest("WaxBox", "Release", []() {
         comb::LinearAllocator alloc{1024};
@@ -203,9 +193,7 @@ namespace
         larvae::AssertEqual(*box, 99);
     });
 
-    // =============================================================================
     // RAII Lifetime
-    // =============================================================================
 
     auto test14 = larvae::RegisterTest("WaxBox", "AutomaticDestruction", []() {
         comb::LinearAllocator alloc{1024};
@@ -238,9 +226,7 @@ namespace
         larvae::AssertEqual(TestStruct::destruct_count, 3);
     });
 
-    // =============================================================================
     // Comparison
-    // =============================================================================
 
     auto test16 = larvae::RegisterTest("WaxBox", "CompareEqual", []() {
         comb::LinearAllocator alloc{1024};

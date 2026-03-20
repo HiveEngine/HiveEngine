@@ -1,6 +1,6 @@
 #pragma once
 
-#include <hive/HiveConfig.h>
+#include <hive/hive_config.h>
 
 #if HIVE_FEATURE_PROFILER
 

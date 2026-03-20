@@ -45,7 +45,7 @@ namespace brood::launcher
         return std::filesystem::exists(path / "CMakeLists.txt") && std::filesystem::exists(path / "HiveFeatures.json");
     }
 
-    std::string GetEnvironmentValue(const char* name)
+    wax::String GetEnvironmentValue(const char* name)
     {
 #if HIVE_PLATFORM_WINDOWS
         char* value = nullptr;
@@ -55,21 +55,21 @@ namespace brood::launcher
             return {};
         }
 
-        std::string result{value};
+        wax::String result{value};
         std::free(value);
         return result;
 #else
         const char* value = std::getenv(name);
-        return value != nullptr ? std::string{value} : std::string{};
+        return value != nullptr ? wax::String{value} : wax::String{};
 #endif
     }
 
     std::filesystem::path FindEngineRoot()
     {
-        const std::string enginePath = GetEnvironmentValue("HIVE_ENGINE_DIR");
-        if (!enginePath.empty())
+        const wax::String enginePath = GetEnvironmentValue("HIVE_ENGINE_DIR");
+        if (!enginePath.IsEmpty())
         {
-            const std::filesystem::path root{enginePath};
+            const std::filesystem::path root{enginePath.CStr()};
             if (IsEngineRoot(root))
             {
                 return root;
@@ -98,23 +98,23 @@ namespace brood::launcher
     std::filesystem::path GetHomeDirectory()
     {
 #if HIVE_PLATFORM_WINDOWS
-        const std::string userProfile = GetEnvironmentValue("USERPROFILE");
-        if (!userProfile.empty())
+        const wax::String userProfile = GetEnvironmentValue("USERPROFILE");
+        if (!userProfile.IsEmpty())
         {
-            return std::filesystem::path{userProfile};
+            return std::filesystem::path{userProfile.CStr()};
         }
 
-        const std::string homeDrive = GetEnvironmentValue("HOMEDRIVE");
-        const std::string homePath = GetEnvironmentValue("HOMEPATH");
-        if (!homeDrive.empty() && !homePath.empty())
+        const wax::String homeDrive = GetEnvironmentValue("HOMEDRIVE");
+        const wax::String homePath = GetEnvironmentValue("HOMEPATH");
+        if (!homeDrive.IsEmpty() && !homePath.IsEmpty())
         {
-            return std::filesystem::path{homeDrive + homePath};
+            return std::filesystem::path{(homeDrive + homePath).CStr()};
         }
 #else
-        const std::string home = GetEnvironmentValue("HOME");
-        if (!home.empty())
+        const wax::String home = GetEnvironmentValue("HOME");
+        if (!home.IsEmpty())
         {
-            return std::filesystem::path{home};
+            return std::filesystem::path{home.CStr()};
         }
 #endif
 
@@ -138,47 +138,58 @@ namespace brood::launcher
 #endif
     }
 
-    void CopyStringToBuffer(const std::string& value, char* buffer, size_t bufferSize)
+    void CopyStringToBuffer(const wax::String& value, char* buffer, size_t bufferSize)
     {
         if (bufferSize == 0)
         {
             return;
         }
 
-        const size_t copyLength = (std::min)(bufferSize - 1, value.size());
+        const size_t copyLength = (std::min)(bufferSize - 1, value.Size());
         if (copyLength > 0)
         {
-            std::memcpy(buffer, value.data(), copyLength);
+            std::memcpy(buffer, value.Data(), copyLength);
         }
         buffer[copyLength] = '\0';
     }
 
-    std::string TrimmedCopy(const char* input)
+    wax::String TrimmedCopy(const char* input)
     {
         if (input == nullptr)
         {
             return {};
         }
 
-        std::string value{input};
-        const auto first = value.find_first_not_of(" \t\r\n");
-        if (first == std::string::npos)
+        wax::StringView view{input};
+        size_t first = 0;
+        while (first < view.Size() &&
+               (view[first] == ' ' || view[first] == '\t' || view[first] == '\r' || view[first] == '\n'))
+        {
+            ++first;
+        }
+
+        if (first == view.Size())
         {
             return {};
         }
 
-        const auto last = value.find_last_not_of(" \t\r\n");
-        return value.substr(first, last - first + 1);
+        size_t last = view.Size() - 1;
+        while (last > first && (view[last] == ' ' || view[last] == '\t' || view[last] == '\r' || view[last] == '\n'))
+        {
+            --last;
+        }
+
+        return wax::String{view.Substr(first, last - first + 1)};
     }
 
-    bool IsProjectNameValid(const std::string& name)
+    bool IsProjectNameValid(const wax::String& name)
     {
-        if (name.empty())
+        if (name.IsEmpty())
         {
             return false;
         }
 
-        for (const char ch : name)
+        for (const char ch : name.View())
         {
             const bool isAlphaNum = (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || (ch >= '0' && ch <= '9');
             if (!isAlphaNum && ch != '_' && ch != '-')
@@ -190,19 +201,19 @@ namespace brood::launcher
         return true;
     }
 
-    bool TryLoadProjectSummary(const std::filesystem::path& path, std::string* name, std::string* version)
+    bool TryLoadProjectSummary(const std::filesystem::path& path, wax::String* name, wax::String* version)
     {
         comb::ModuleAllocator tmpAlloc{"TmpProjectSummary", size_t{4} * 1024 * 1024};
         nectar::ProjectFile projectFile{tmpAlloc.Get()};
-        const std::string projectPath = path.generic_string();
-        auto loadResult = projectFile.LoadFromDisk({projectPath.c_str(), projectPath.size()});
+        const wax::String projectPath{path.generic_string().c_str()};
+        auto loadResult = projectFile.LoadFromDisk({projectPath.CStr(), projectPath.Size()});
         if (!loadResult.m_success)
         {
             return false;
         }
 
-        name->assign(projectFile.Name().Data(), projectFile.Name().Size());
-        version->assign(projectFile.Version().Data(), projectFile.Version().Size());
+        *name = wax::String{projectFile.Name()};
+        *version = wax::String{projectFile.Version()};
         return true;
     }
 
@@ -215,23 +226,23 @@ namespace brood::launcher
 #endif
     }
 
-    std::vector<LauncherDiscoveredProject> DiscoverProjects(const std::filesystem::path& engineRoot)
+    wax::Vector<LauncherDiscoveredProject> DiscoverProjects(const std::filesystem::path& engineRoot)
     {
-        std::vector<LauncherDiscoveredProject> projects;
+        wax::Vector<LauncherDiscoveredProject> projects;
 
         std::error_code ec;
         const std::filesystem::path currentProject = std::filesystem::current_path(ec) / "project.hive";
         if (!ec && std::filesystem::exists(currentProject))
         {
             LauncherDiscoveredProject summary{};
-            summary.m_path = currentProject.generic_string();
+            summary.m_path = wax::String{currentProject.generic_string().c_str()};
             summary.m_isCurrentDirectory = true;
             if (!TryLoadProjectSummary(currentProject, &summary.m_name, &summary.m_version))
             {
-                summary.m_name = currentProject.parent_path().filename().string();
+                summary.m_name = wax::String{currentProject.parent_path().filename().string().c_str()};
                 summary.m_version = "Unknown version";
             }
-            projects.push_back(summary);
+            projects.PushBack(std::move(summary));
         }
 
         if (!engineRoot.empty())
@@ -247,17 +258,17 @@ namespace brood::launcher
                 }
 
                 LauncherDiscoveredProject summary{};
-                summary.m_path = projectFile.generic_string();
+                summary.m_path = wax::String{projectFile.generic_string().c_str()};
                 if (!TryLoadProjectSummary(projectFile, &summary.m_name, &summary.m_version))
                 {
-                    summary.m_name = it->path().filename().string();
+                    summary.m_name = wax::String{it->path().filename().string().c_str()};
                     summary.m_version = "Unknown version";
                 }
-                projects.push_back(summary);
+                projects.PushBack(std::move(summary));
             }
         }
 
-        std::sort(projects.begin(), projects.end(),
+        std::sort(projects.Begin(), projects.End(),
                   [](const LauncherDiscoveredProject& lhs, const LauncherDiscoveredProject& rhs) {
                       if (lhs.m_isCurrentDirectory != rhs.m_isCurrentDirectory)
                       {
@@ -269,7 +280,7 @@ namespace brood::launcher
         return projects;
     }
 
-    void SetHubStatus(ProjectHubState& hub, bool isError, const std::string& message)
+    void SetHubStatus(ProjectHubState& hub, bool isError, const wax::String& message)
     {
         hub.m_statusIsError = isError;
         hub.m_statusMessage = message;
@@ -288,42 +299,43 @@ namespace brood::launcher
         const std::filesystem::path defaultDirectory = GetDefaultProjectsDirectory();
         if (!defaultDirectory.empty())
         {
-            CopyStringToBuffer(defaultDirectory.generic_string(), hub.m_createDirectory.data(),
-                               hub.m_createDirectory.size());
+            CopyStringToBuffer(wax::String{defaultDirectory.generic_string().c_str()}, hub.m_createDirectory.Data(),
+                               hub.m_createDirectory.Size());
         }
 
-        CopyStringToBuffer("MyGame", hub.m_createName.data(), hub.m_createName.size());
-        CopyStringToBuffer("0.1.0", hub.m_createVersion.data(), hub.m_createVersion.size());
+        CopyStringToBuffer("MyGame", hub.m_createName.Data(), hub.m_createName.Size());
+        CopyStringToBuffer("0.1.0", hub.m_createVersion.Data(), hub.m_createVersion.Size());
 
         std::error_code ec;
         const std::filesystem::path currentProject = std::filesystem::current_path(ec) / "project.hive";
         if (!ec && std::filesystem::exists(currentProject))
         {
-            CopyStringToBuffer(currentProject.generic_string(), hub.m_openPath.data(), hub.m_openPath.size());
+            CopyStringToBuffer(wax::String{currentProject.generic_string().c_str()}, hub.m_openPath.Data(),
+                               hub.m_openPath.Size());
         }
     }
 
-    std::filesystem::path BuildCreateTargetPath(const ProjectHubState& hub, const std::string& projectName)
+    std::filesystem::path BuildCreateTargetPath(const ProjectHubState& hub, const wax::String& projectName)
     {
-        const std::string createDirectory = TrimmedCopy(hub.m_createDirectory.data());
-        if (createDirectory.empty() || projectName.empty())
+        const wax::String createDirectory = TrimmedCopy(hub.m_createDirectory.Data());
+        if (createDirectory.IsEmpty() || projectName.IsEmpty())
         {
             return {};
         }
 
-        return std::filesystem::path{createDirectory} / projectName;
+        return std::filesystem::path{createDirectory.CStr()} / projectName.CStr();
     }
 
     [[maybe_unused]] std::filesystem::path GetPickerSeedDirectory(const char* rawPath)
     {
-        const std::string value = TrimmedCopy(rawPath);
-        if (value.empty())
+        const wax::String value = TrimmedCopy(rawPath);
+        if (value.IsEmpty())
         {
             return {};
         }
 
         std::error_code ec;
-        const std::filesystem::path candidate{value};
+        const std::filesystem::path candidate{value.CStr()};
         if (std::filesystem::exists(candidate, ec) && !ec)
         {
             if (std::filesystem::is_directory(candidate, ec) && !ec)
@@ -388,46 +400,49 @@ namespace brood::launcher
 #endif // HIVE_PLATFORM_WINDOWS
 
 #if !HIVE_PLATFORM_WINDOWS
-    std::string QuoteShellArgument(const std::string& value)
+    wax::String QuoteShellArgument(const wax::String& value)
     {
-        std::string escaped{"'"};
-        for (const char ch : value)
+        wax::String escaped{"'"};
+        for (size_t i = 0; i < value.Size(); ++i)
         {
+            const char ch = value[i];
             if (ch == '\'')
             {
-                escaped += "'\"'\"'";
+                escaped.Append("'\"'\"'");
             }
             else
             {
-                escaped.push_back(ch);
+                escaped.Append(ch);
             }
         }
-        escaped.push_back('\'');
+        escaped.Append('\'');
         return escaped;
     }
 
-    bool RunShellDialogCommand(const std::string& command, std::string* output)
+    bool RunShellDialogCommand(const wax::String& command, wax::String* output)
     {
-        FILE* pipe = popen(command.c_str(), "r");
+        FILE* pipe = popen(command.CStr(), "r");
         if (pipe == nullptr)
         {
             return false;
         }
 
-        std::string result;
+        wax::String result;
         char buffer[512];
         while (std::fgets(buffer, static_cast<int>(sizeof(buffer)), pipe) != nullptr)
         {
-            result += buffer;
+            result.Append(buffer);
         }
 
         const int status = pclose(pipe);
-        while (!result.empty() && (result.back() == '\n' || result.back() == '\r'))
+        size_t end = result.Size();
+        while (end > 0 && (result[end - 1] == '\n' || result[end - 1] == '\r'))
         {
-            result.pop_back();
+            --end;
         }
+        result = wax::String{result.View().Substr(0, end)};
 
-        if (status != 0 || result.empty())
+        if (status != 0 || result.IsEmpty())
         {
             return false;
         }
@@ -539,8 +554,8 @@ namespace brood::launcher
         CoTaskMemFree(rawPath);
         return NativePathPickerResult::SUCCESS;
 #else
-        std::string title = "Select Hive Project";
-        std::string filter = "*.hive|Hive Project";
+        wax::String title = "Select Hive Project";
+        wax::String filter = "*.hive|Hive Project";
         if (mode == NativePathPickerMode::DIRECTORY)
         {
             title = "Select Project Directory";
@@ -556,39 +571,39 @@ namespace brood::launcher
             filter = "*.hscene|Hive Scene";
         }
 
-        const std::string seed = (seedPath.empty() ? GetHomeDirectory() : seedPath).generic_string();
+        const wax::String seed{(seedPath.empty() ? GetHomeDirectory() : seedPath).generic_string().c_str()};
 
-        std::string selected{};
-        std::string zenityCommand = "zenity --file-selection ";
+        wax::String selected{};
+        wax::String zenityCommand = "zenity --file-selection ";
         if (mode == NativePathPickerMode::DIRECTORY)
         {
-            zenityCommand += "--directory ";
+            zenityCommand.Append("--directory ");
         }
         else if (mode == NativePathPickerMode::SCENE_FILE_SAVE)
         {
-            zenityCommand += "--save --confirm-overwrite ";
+            zenityCommand.Append("--save --confirm-overwrite ");
         }
-        zenityCommand += "--title=" + QuoteShellArgument(title) + " ";
-        if (!seed.empty())
+        zenityCommand.Append("--title=" + QuoteShellArgument(title) + " ");
+        if (!seed.IsEmpty())
         {
-            zenityCommand += "--filename=" + QuoteShellArgument(seed) + " ";
+            zenityCommand.Append("--filename=" + QuoteShellArgument(seed) + " ");
         }
         if (mode == NativePathPickerMode::PROJECT_FILE)
         {
-            zenityCommand += "--file-filter=" + QuoteShellArgument("Hive Project | project.hive *.hive") + " ";
+            zenityCommand.Append("--file-filter=" + QuoteShellArgument("Hive Project | project.hive *.hive") + " ");
         }
         else if (mode == NativePathPickerMode::SCENE_FILE_OPEN || mode == NativePathPickerMode::SCENE_FILE_SAVE)
         {
-            zenityCommand += "--file-filter=" + QuoteShellArgument("Hive Scene | *.hscene") + " ";
+            zenityCommand.Append("--file-filter=" + QuoteShellArgument("Hive Scene | *.hscene") + " ");
         }
 
         if (RunShellDialogCommand(zenityCommand, &selected))
         {
-            *selectedPath = std::filesystem::path{selected};
+            *selectedPath = std::filesystem::path{selected.CStr()};
             return NativePathPickerResult::SUCCESS;
         }
 
-        std::string kdialogCommand;
+        wax::String kdialogCommand;
         if (mode == NativePathPickerMode::DIRECTORY)
         {
             kdialogCommand = "kdialog --getexistingdirectory " + QuoteShellArgument(seed);
@@ -603,7 +618,7 @@ namespace brood::launcher
         }
         if (RunShellDialogCommand(kdialogCommand, &selected))
         {
-            *selectedPath = std::filesystem::path{selected};
+            *selectedPath = std::filesystem::path{selected.CStr()};
             return NativePathPickerResult::SUCCESS;
         }
 
@@ -611,15 +626,15 @@ namespace brood::launcher
 #endif
     }
 
-    [[maybe_unused]] std::string CompactPathForUi(const std::string& value, size_t maxChars)
+    [[maybe_unused]] wax::String CompactPathForUi(const wax::String& value, size_t maxChars)
     {
-        if (value.size() <= maxChars || maxChars < 8)
+        if (value.Size() <= maxChars || maxChars < 8)
         {
             return value;
         }
 
         const size_t tailChars = maxChars - 3;
-        return "..." + value.substr(value.size() - tailChars);
+        return wax::String{"..."} + wax::String{value.View().Substr(value.Size() - tailChars)};
     }
 
     [[maybe_unused]] bool PickPathIntoBuffer(ProjectHubState& hub, NativePathPickerMode mode,
@@ -631,7 +646,7 @@ namespace brood::launcher
         switch (result)
         {
             case NativePathPickerResult::SUCCESS:
-                CopyStringToBuffer(selectedPath.generic_string(), buffer, bufferSize);
+                CopyStringToBuffer(wax::String{selectedPath.generic_string().c_str()}, buffer, bufferSize);
                 return true;
 
             case NativePathPickerResult::FAILED:
@@ -678,21 +693,21 @@ namespace brood::launcher
         return true;
     }
 
-    std::string BuildWindowTitle(const std::string& projectPath)
+    wax::String BuildWindowTitle(const wax::String& projectPath)
     {
-        std::string windowTitle = "HiveEngine";
+        wax::String windowTitle = "HiveEngine";
         comb::ModuleAllocator tmpAlloc{"TmpProjectParse", size_t{4} * 1024 * 1024};
         nectar::ProjectFile projectFile{tmpAlloc.Get()};
-        auto loadResult = projectFile.LoadFromDisk({projectPath.c_str(), projectPath.size()});
+        auto loadResult = projectFile.LoadFromDisk({projectPath.CStr(), projectPath.Size()});
         if (loadResult.m_success && projectFile.Name().Size() > 0)
         {
-            windowTitle += " - ";
-            windowTitle.append(projectFile.Name().Data(), projectFile.Name().Size());
+            windowTitle.Append(" - ");
+            windowTitle.Append(projectFile.Name().Data(), projectFile.Name().Size());
         }
         else
         {
-            windowTitle += " - ";
-            windowTitle += std::filesystem::path{projectPath}.parent_path().filename().string();
+            windowTitle.Append(" - ");
+            windowTitle.Append(std::filesystem::path{projectPath.CStr()}.parent_path().filename().string().c_str());
         }
 
         return windowTitle;

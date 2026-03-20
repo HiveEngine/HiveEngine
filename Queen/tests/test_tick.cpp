@@ -4,9 +4,7 @@
 
 namespace
 {
-    // ============================================================================
     // Tick Basic Tests
-    // ============================================================================
 
     auto test1 = larvae::RegisterTest("QueenTick", "DefaultConstruction", []() {
         queen::Tick tick;
@@ -45,9 +43,7 @@ namespace
         larvae::AssertEqual(tick.m_value, uint32_t{6});
     });
 
-    // ============================================================================
     // Tick Comparison Tests
-    // ============================================================================
 
     auto test6 = larvae::RegisterTest("QueenTick", "IsNewerThanBasic", []() {
         queen::Tick newer{100};
@@ -120,9 +116,7 @@ namespace
         larvae::AssertEqual(tick.m_value, uint32_t{100});
     });
 
-    // ============================================================================
     // ComponentTicks Tests
-    // ============================================================================
 
     auto test14 = larvae::RegisterTest("QueenComponentTicks", "DefaultConstruction", []() {
         queen::ComponentTicks ticks;
@@ -217,9 +211,7 @@ namespace
         larvae::AssertTrue(ticks.WasChanged(queen::Tick{12}));
     });
 
-    // ============================================================================
     // Constexpr Tests
-    // ============================================================================
 
     auto test23 = larvae::RegisterTest("QueenTick", "ConstexprOperations", []() {
         // Verify all operations are constexpr-capable

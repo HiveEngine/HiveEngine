@@ -11,15 +11,15 @@ namespace larvae
 {
     struct BenchmarkConfig
     {
-        std::string filter{"*"};
-        size_t min_iterations{10};
-        size_t warmup_runs{3};
-        std::chrono::milliseconds min_time{100};
-        size_t repetitions{5};
-        bool list_only = false;
-        bool fail_on_skip = false;
-        CapabilityMask available_capabilities{0};
-        bool capabilities_overridden = false;
+        std::string m_filter{"*"};
+        size_t m_minIterations{10};
+        size_t m_warmupRuns{3};
+        std::chrono::milliseconds m_minTime{100};
+        size_t m_repetitions{5};
+        bool m_listOnly = false;
+        bool m_failOnSkip = false;
+        CapabilityMask m_availableCapabilities{0};
+        bool m_capabilitiesOverridden = false;
     };
 
     class BenchmarkRunner
@@ -30,15 +30,15 @@ namespace larvae
         std::vector<BenchmarkResult> RunAll();
         [[nodiscard]] size_t GetMatchedBenchmarks() const
         {
-            return matched_benchmarks_;
+            return m_matchedBenchmarks;
         }
         [[nodiscard]] size_t GetSkippedBenchmarks() const
         {
-            return skipped_benchmarks_;
+            return m_skippedBenchmarks;
         }
         [[nodiscard]] size_t GetRunnableBenchmarks() const
         {
-            return runnable_benchmarks_;
+            return m_runnableBenchmarks;
         }
 
     private:
@@ -51,10 +51,10 @@ namespace larvae
 
         size_t DetermineIterations(std::function<void(BenchmarkState&)> benchmark_func);
 
-        BenchmarkConfig config_;
-        size_t matched_benchmarks_{0};
-        size_t skipped_benchmarks_{0};
-        size_t runnable_benchmarks_{0};
+        BenchmarkConfig m_config;
+        size_t m_matchedBenchmarks{0};
+        size_t m_skippedBenchmarks{0};
+        size_t m_runnableBenchmarks{0};
     };
 
     void PrintBenchmarkResults(const std::vector<BenchmarkResult>& results);

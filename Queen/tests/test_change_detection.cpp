@@ -24,9 +24,7 @@ namespace
         int current, max;
     };
 
-    // ─────────────────────────────────────────────────────────────
     // Tick Basic Tests
-    // ─────────────────────────────────────────────────────────────
 
     auto test1 = larvae::RegisterTest("QueenChangeDetection", "TickConstruction", []() {
         queen::Tick tick{};
@@ -76,9 +74,7 @@ namespace
         larvae::AssertFalse(t1 != t2);
     });
 
-    // ─────────────────────────────────────────────────────────────
     // ComponentTicks Basic Tests
-    // ─────────────────────────────────────────────────────────────
 
     auto test6 = larvae::RegisterTest("QueenChangeDetection", "ComponentTicksConstruction", []() {
         queen::ComponentTicks ticks{};
@@ -139,9 +135,7 @@ namespace
         larvae::AssertFalse(ticks2.WasAddedOrChanged(queen::Tick{20})); // Neither
     });
 
-    // ─────────────────────────────────────────────────────────────
     // World Tick Tests
-    // ─────────────────────────────────────────────────────────────
 
     auto test13 = larvae::RegisterTest("QueenChangeDetection", "WorldInitialTick", []() {
         comb::LinearAllocator alloc{262144};
@@ -175,9 +169,7 @@ namespace
         larvae::AssertEqual(world.CurrentTick().m_value, initial_tick + 2);
     });
 
-    // ─────────────────────────────────────────────────────────────
     // Change Filter Term Tests
-    // ─────────────────────────────────────────────────────────────
 
     auto test16 = larvae::RegisterTest("QueenChangeDetection", "ChangeFilterTermAdded", []() {
         auto filter = queen::ChangeFilterTerm::Create<Position>(queen::ChangeFilterMode::ADDED);
@@ -204,9 +196,7 @@ namespace
         larvae::AssertFalse(filter.Matches(ticks, queen::Tick{20}));
     });
 
-    // ─────────────────────────────────────────────────────────────
     // Added/Changed DSL Type Tests
-    // ─────────────────────────────────────────────────────────────
 
     auto test18 = larvae::RegisterTest("QueenChangeDetection", "AddedTypeTraits", []() {
         larvae::AssertEqual(queen::Added<Position>::typeId, queen::TypeIdOf<Position>());
@@ -229,9 +219,7 @@ namespace
         larvae::AssertFalse(queen::detail::isChangeFilterV<Position>);
     });
 
-    // ─────────────────────────────────────────────────────────────
     // Column Ticks Tests
-    // ─────────────────────────────────────────────────────────────
 
     auto test21 = larvae::RegisterTest("QueenChangeDetection", "ColumnStoresTicks", []() {
         comb::LinearAllocator alloc{262144};
@@ -307,9 +295,7 @@ namespace
         larvae::AssertEqual(column.GetTicks(0).m_added.m_value, uint32_t{0});
     });
 
-    // ─────────────────────────────────────────────────────────────
     // System Last Run Tick Tests
-    // ─────────────────────────────────────────────────────────────
 
     auto test26 = larvae::RegisterTest("QueenChangeDetection", "SystemDescriptorLastRunTickInitiallyZero", []() {
         comb::LinearAllocator alloc{262144};
@@ -392,9 +378,7 @@ namespace
         larvae::AssertEqual(desc->LastRunTick().m_value, tick_before);
     });
 
-    // ─────────────────────────────────────────────────────────────
     // Mut<T> Wrapper Tests
-    // ─────────────────────────────────────────────────────────────
 
     auto test30 = larvae::RegisterTest("QueenChangeDetection", "MutDefaultConstruction", []() {
         queen::Mut<Position> mut;
@@ -504,9 +488,7 @@ namespace
         static_assert(std::is_same_v<queen::detail::UnwrapMutT<Position>, Position>);
     });
 
-    // ─────────────────────────────────────────────────────────────
     // Query with Change Filters Tests
-    // ─────────────────────────────────────────────────────────────
 
     auto test39 = larvae::RegisterTest("QueenChangeDetection", "QueryWithAddedFilter", []() {
         comb::LinearAllocator alloc{262144};

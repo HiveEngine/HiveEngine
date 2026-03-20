@@ -14,6 +14,7 @@ namespace nectar
     class AssetDatabase;
     class ImportPipeline;
     class CookPipeline;
+    class VirtualFilesystem;
     class HiveDocument;
 
     /// Callback to provide per-asset import settings during hot reload.
@@ -27,7 +28,7 @@ namespace nectar
     {
     public:
         HotReloadManager(comb::DefaultAllocator& alloc, IFileWatcher& watcher, AssetDatabase& db,
-                         ImportPipeline& importPipe, CookPipeline& cookPipe);
+                         ImportPipeline& importPipe, CookPipeline& cookPipe, VirtualFilesystem* vfs = nullptr);
 
         /// Watch a source directory for changes.
         void WatchDirectory(wax::StringView dir);
@@ -52,9 +53,12 @@ namespace nectar
         AssetDatabase* m_db;
         ImportPipeline* m_importPipe;
         CookPipeline* m_cookPipe;
+        VirtualFilesystem* m_vfs;
         wax::Vector<AssetId> m_lastReloaded;
         wax::String m_baseDir;
         ImportSettingsProvider m_settingsFn{nullptr};
         void* m_settingsUserData{nullptr};
+
+        [[nodiscard]] wax::String ToVfsPath(wax::StringView absPath) const;
     };
 } // namespace nectar

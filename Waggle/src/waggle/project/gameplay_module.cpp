@@ -1,9 +1,9 @@
+#include <waggle/project/gameplay_module.h>
+
 #include <hive/core/log.h>
 #include <hive/project/gameplay_api.h>
 
 #include <queen/world/world.h>
-
-#include <waggle/project/gameplay_module.h>
 
 #include <cstdio>
 #include <cstring>
@@ -14,7 +14,7 @@ namespace
 
     static const hive::LogCategory LOG_GAMEPLAY{"Waggle.GameplayModule"};
 
-    void CopyError(std::array<char, 256>& buffer, const char* message)
+    void CopyError(wax::Array<char, 256>& buffer, const char* message)
     {
         if (message == nullptr)
         {
@@ -22,21 +22,22 @@ namespace
             return;
         }
 
-        std::snprintf(buffer.data(), buffer.size(), "%s", message);
+        std::snprintf(buffer.Data(), buffer.Size(), "%s", message);
     }
 
-    void SetCompatibilityError(std::array<char, 256>& buffer, const char* dllPath, uint32_t actualVersion)
+    void SetCompatibilityError(wax::Array<char, 256>& buffer, const char* dllPath, uint32_t actualVersion)
     {
-        std::snprintf(buffer.data(), buffer.size(),
+        std::snprintf(buffer.Data(), buffer.Size(),
                       "Gameplay module '%s' uses API %u but the engine requires API %u. Rebuild the project module.",
                       dllPath != nullptr ? dllPath : "<unknown>", actualVersion, HIVE_GAMEPLAY_API_VERSION);
     }
 
-    void SetBuildSignatureError(std::array<char, 256>& buffer, const char* dllPath)
+    void SetBuildSignatureError(wax::Array<char, 256>& buffer, const char* dllPath)
     {
-        std::snprintf(buffer.data(), buffer.size(),
-                      "Gameplay module '%s' was built against a different engine configuration. Rebuild the project module.",
-                      dllPath != nullptr ? dllPath : "<unknown>");
+        std::snprintf(
+            buffer.Data(), buffer.Size(),
+            "Gameplay module '%s' was built against a different engine configuration. Rebuild the project module.",
+            dllPath != nullptr ? dllPath : "<unknown>");
     }
 
 } // namespace
@@ -100,7 +101,7 @@ namespace waggle
         if (!m_lib.Load(dllPath))
         {
             CopyError(m_errorBuf, m_lib.GetError());
-            hive::LogError(LOG_GAMEPLAY, "Failed to load gameplay DLL: {}", m_errorBuf.data());
+            hive::LogError(LOG_GAMEPLAY, "Failed to load gameplay DLL: {}", m_errorBuf.Data());
             return false;
         }
 
@@ -108,7 +109,7 @@ namespace waggle
         if (m_registerFn == nullptr)
         {
             CopyError(m_errorBuf, "DLL missing required symbol HiveGameplayRegister");
-            hive::LogError(LOG_GAMEPLAY, "{}", m_errorBuf.data());
+            hive::LogError(LOG_GAMEPLAY, "{}", m_errorBuf.Data());
             m_lib.Unload();
             m_registerFn = nullptr;
             m_unregisterFn = nullptr;
@@ -122,9 +123,8 @@ namespace waggle
         m_apiVersionFn = m_lib.GetFunction<GameplayApiVersionFn>("HiveGameplayApiVersion");
         if (m_apiVersionFn == nullptr)
         {
-            CopyError(m_errorBuf,
-                      "DLL missing required symbol HiveGameplayApiVersion. Rebuild the project module.");
-            hive::LogError(LOG_GAMEPLAY, "{}", m_errorBuf.data());
+            CopyError(m_errorBuf, "DLL missing required symbol HiveGameplayApiVersion. Rebuild the project module.");
+            hive::LogError(LOG_GAMEPLAY, "{}", m_errorBuf.Data());
             m_lib.Unload();
             m_registerFn = nullptr;
             m_unregisterFn = nullptr;
@@ -138,7 +138,7 @@ namespace waggle
         if (apiVersion != HIVE_GAMEPLAY_API_VERSION)
         {
             SetCompatibilityError(m_errorBuf, dllPath, apiVersion);
-            hive::LogError(LOG_GAMEPLAY, "{}", m_errorBuf.data());
+            hive::LogError(LOG_GAMEPLAY, "{}", m_errorBuf.Data());
             m_lib.Unload();
             m_registerFn = nullptr;
             m_unregisterFn = nullptr;
@@ -153,7 +153,7 @@ namespace waggle
         {
             CopyError(m_errorBuf,
                       "DLL missing required symbol HiveGameplayBuildSignature. Rebuild the project module.");
-            hive::LogError(LOG_GAMEPLAY, "{}", m_errorBuf.data());
+            hive::LogError(LOG_GAMEPLAY, "{}", m_errorBuf.Data());
             m_lib.Unload();
             m_registerFn = nullptr;
             m_unregisterFn = nullptr;
@@ -167,7 +167,7 @@ namespace waggle
         if (buildSignature == nullptr || std::strcmp(buildSignature, HIVE_GAMEPLAY_BUILD_SIGNATURE) != 0)
         {
             SetBuildSignatureError(m_errorBuf, dllPath);
-            hive::LogError(LOG_GAMEPLAY, "{}", m_errorBuf.data());
+            hive::LogError(LOG_GAMEPLAY, "{}", m_errorBuf.Data());
             m_lib.Unload();
             m_registerFn = nullptr;
             m_unregisterFn = nullptr;
@@ -258,7 +258,7 @@ namespace waggle
     {
         if (m_errorBuf[0] != '\0')
         {
-            return m_errorBuf.data();
+            return m_errorBuf.Data();
         }
 
         return m_lib.GetError();

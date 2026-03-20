@@ -9,9 +9,7 @@
 namespace
 {
 
-    // =========================================================================
     // Construction
-    // =========================================================================
 
     auto t_default_config = larvae::RegisterTest("Waggle", "App_default_config_inserts_resources", []() {
         waggle::App app;
@@ -59,9 +57,7 @@ namespace
         larvae::AssertTrue(fi->m_alpha == 0.f);
     });
 
-    // =========================================================================
     // Tick behavior
-    // =========================================================================
 
     auto t_first_tick_returns_zero = larvae::RegisterTest("Waggle", "First_Tick_returns_zero", []() {
         waggle::App app;
@@ -111,9 +107,7 @@ namespace
         larvae::AssertEqual(time->m_tick, total_steps);
     });
 
-    // =========================================================================
     // RequestStop
-    // =========================================================================
 
     auto t_running_default = larvae::RegisterTest("Waggle", "IsRunning_default_true", []() {
         waggle::App app;
@@ -126,9 +120,7 @@ namespace
         larvae::AssertTrue(!app.IsRunning());
     });
 
-    // =========================================================================
     // Max substeps clamping
-    // =========================================================================
 
     auto t_m_maxSubsteps = larvae::RegisterTest("Waggle", "Max_substeps_clamped", []() {
         waggle::AppConfig cfg;
@@ -144,9 +136,7 @@ namespace
         larvae::AssertTrue(steps <= 2);
     });
 
-    // =========================================================================
     // Alpha interpolation
-    // =========================================================================
 
     auto t_alpha_range = larvae::RegisterTest("Waggle", "Alpha_in_0_1_range", []() {
         waggle::App app;

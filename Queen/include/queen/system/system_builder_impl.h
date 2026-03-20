@@ -9,9 +9,7 @@
 
 namespace queen
 {
-    // ================================
     // SystemBuilder<Allocator, Terms...> implementations
-    // ================================
 
     template <comb::Allocator Allocator, typename... Terms>
     template <typename F>
@@ -159,9 +157,7 @@ namespace queen
         return m_descriptor->Id();
     }
 
-    // ================================
     // SystemBuilder<Allocator> (no terms) implementations
-    // ================================
 
     template <comb::Allocator Allocator>
     template <typename R, typename F>

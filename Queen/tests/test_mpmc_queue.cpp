@@ -10,9 +10,7 @@
 
 namespace
 {
-    // ============================================================================
     // Basic Construction Tests
-    // ============================================================================
 
     auto test1 = larvae::RegisterTest("QueenMPMCQueue", "Creation", []() {
         comb::LinearAllocator alloc{1024 * 1024};
@@ -42,9 +40,7 @@ namespace
         larvae::AssertEqual(q5.Capacity(), size_t{1});
     });
 
-    // ============================================================================
     // Single-Thread Push/Pop Tests
-    // ============================================================================
 
     auto test3 = larvae::RegisterTest("QueenMPMCQueue", "PushAndPopSingle", []() {
         comb::LinearAllocator alloc{1024 * 1024};
@@ -154,9 +150,7 @@ namespace
         larvae::AssertTrue(queue.IsEmpty());
     });
 
-    // ============================================================================
     // Struct Element Tests
-    // ============================================================================
 
     auto test10 = larvae::RegisterTest("QueenMPMCQueue", "WithStructType", []() {
         struct Data
@@ -180,9 +174,7 @@ namespace
         larvae::AssertEqual(r2.value().x, 100);
     });
 
-    // ============================================================================
     // Multi-Thread Tests
-    // ============================================================================
 
     auto test11 = larvae::RegisterTest("QueenMPMCQueue", "SingleProducerSingleConsumer", []() {
         comb::LinearAllocator alloc{4 * 1024 * 1024};
@@ -371,9 +363,7 @@ namespace
         larvae::AssertEqual(total_consumed.load(), kTotalItems);
     });
 
-    // ============================================================================
     // Stress Tests
-    // ============================================================================
 
     auto test15 = larvae::RegisterTest("QueenMPMCQueue", "StressSmallQueue", []() {
         comb::LinearAllocator alloc{4 * 1024 * 1024};

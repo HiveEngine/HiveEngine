@@ -27,9 +27,7 @@ namespace
     {
     };
 
-    // ─────────────────────────────────────────────────────────────
     // Basic Query tests
-    // ─────────────────────────────────────────────────────────────
 
     auto test1 = larvae::RegisterTest("QueenQuery", "EmptyQuery", []() {
         queen::World world{};
@@ -73,9 +71,7 @@ namespace
         world.Despawn(e3);
     });
 
-    // ─────────────────────────────────────────────────────────────
     // Each iteration tests
-    // ─────────────────────────────────────────────────────────────
 
     auto test4 = larvae::RegisterTest("QueenQuery", "EachReadOnly", []() {
         queen::World world{};
@@ -136,9 +132,7 @@ namespace
         world.Despawn(e2);
     });
 
-    // ─────────────────────────────────────────────────────────────
     // Filter tests
-    // ─────────────────────────────────────────────────────────────
 
     auto test7 = larvae::RegisterTest("QueenQuery", "WithFilter", []() {
         queen::World world{};
@@ -178,9 +172,7 @@ namespace
         world.Despawn(e3);
     });
 
-    // ─────────────────────────────────────────────────────────────
     // Optional tests
-    // ─────────────────────────────────────────────────────────────
 
     auto test9 = larvae::RegisterTest("QueenQuery", "MaybeOptional", []() {
         queen::World world{};
@@ -212,9 +204,7 @@ namespace
         world.Despawn(e2);
     });
 
-    // ─────────────────────────────────────────────────────────────
     // Multiple archetypes tests
-    // ─────────────────────────────────────────────────────────────
 
     auto test10 = larvae::RegisterTest("QueenQuery", "MultipleArchetypes", []() {
         queen::World world{};
@@ -234,9 +224,7 @@ namespace
         larvae::AssertEqual(sum, 6.0f);
     });
 
-    // ─────────────────────────────────────────────────────────────
     // Complex query tests
-    // ─────────────────────────────────────────────────────────────
 
     auto test11 = larvae::RegisterTest("QueenQuery", "ComplexQuery", []() {
         queen::World world{};
@@ -280,9 +268,7 @@ namespace
         world.Despawn(e2);
     });
 
-    // ─────────────────────────────────────────────────────────────
     // World::Query builder tests
-    // ─────────────────────────────────────────────────────────────
 
     auto test13 = larvae::RegisterTest("QueenQuery", "WorldQueryBuilder", []() {
         queen::World world{};

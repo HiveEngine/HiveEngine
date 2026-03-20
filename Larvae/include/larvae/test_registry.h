@@ -15,16 +15,16 @@ namespace larvae
         bool Register(TestInfo&& test_info);
         const std::vector<TestInfo>& GetTests() const
         {
-            return tests_;
+            return m_tests;
         }
         void Clear()
         {
-            tests_.clear();
+            m_tests.clear();
         }
 
     private:
         TestRegistry() = default;
-        std::vector<TestInfo> tests_;
+        std::vector<TestInfo> m_tests;
     };
 
     // Auto-registers tests at static initialization time

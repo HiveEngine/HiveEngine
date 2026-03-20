@@ -29,9 +29,7 @@ namespace
         float dx, dy, dz;
     };
 
-    // ─────────────────────────────────────────────────────────────
     // Observer Event Type Tests
-    // ─────────────────────────────────────────────────────────────
 
     auto test_observer_1 = larvae::RegisterTest("QueenObserver", "OnAddTriggerTypeDetection", []() {
         static_assert(queen::IsOnAddTrigger<queen::OnAdd<Health>>);
@@ -80,9 +78,7 @@ namespace
         larvae::AssertEqual(queen::GetTriggerComponentId<queen::OnSet<Position>>(), position_id);
     });
 
-    // ─────────────────────────────────────────────────────────────
     // ObserverKey Tests
-    // ─────────────────────────────────────────────────────────────
 
     auto test_observer_7 = larvae::RegisterTest("QueenObserver", "ObserverKeyCreation", []() {
         queen::ObserverKey key1 = queen::ObserverKey::Of<queen::OnAdd<Health>>();
@@ -123,9 +119,7 @@ namespace
         larvae::AssertNotEqual(hasher(key1), hasher(key3));
     });
 
-    // ─────────────────────────────────────────────────────────────
     // Observer Tests
-    // ─────────────────────────────────────────────────────────────
 
     auto test_observer_10 = larvae::RegisterTest("QueenObserver", "ObserverConstruction", []() {
         comb::BuddyAllocator alloc{1024 * 1024};
@@ -168,9 +162,7 @@ namespace
         larvae::AssertEqual(key.m_componentId, queen::TypeIdOf<Position>());
     });
 
-    // ─────────────────────────────────────────────────────────────
     // ObserverStorage Tests
-    // ─────────────────────────────────────────────────────────────
 
     auto test_observer_13 = larvae::RegisterTest("QueenObserver", "StorageConstruction", []() {
         comb::BuddyAllocator alloc{1024 * 1024};
@@ -634,9 +626,7 @@ namespace
         larvae::AssertEqual(call_count, 1);
     });
 
-    // ─────────────────────────────────────────────────────────────
     // Observer With<T>() Filter Tests
-    // ─────────────────────────────────────────────────────────────
 
     auto test_with_filter_matches = larvae::RegisterTest("QueenObserver", "WithFilterMatchingEntity", []() {
         queen::World world{};

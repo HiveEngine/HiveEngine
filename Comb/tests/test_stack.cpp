@@ -16,16 +16,12 @@ namespace
         return mb * 1024 * 1024;
     }
 
-    // =============================================================================
     // Concept Satisfaction
-    // =============================================================================
 
     auto test1 = larvae::RegisterTest("StackAllocator", "ConceptSatisfaction",
                                       []() { larvae::AssertTrue((comb::Allocator<comb::StackAllocator>)); });
 
-    // =============================================================================
     // Basic Functionality
-    // =============================================================================
 
     auto test2 = larvae::RegisterTest("StackAllocator", "ConstructorInitializesCorrectly", []() {
         comb::StackAllocator allocator{1024};
@@ -74,9 +70,7 @@ namespace
         larvae::AssertEqual(allocator.GetUsedMemory(), 192u);
     });
 
-    // =============================================================================
     // Alignment
-    // =============================================================================
 
     auto test6 = larvae::RegisterTest("StackAllocator", "AllocateRespectsAlignment", []() {
         comb::StackAllocator allocator{1024};
@@ -116,9 +110,7 @@ namespace
         larvae::AssertEqual(reinterpret_cast<uintptr_t>(ptr) % 128, 0u);
     });
 
-    // =============================================================================
     // Out of Memory
-    // =============================================================================
 
     auto test9 = larvae::RegisterTest("StackAllocator", "AllocateReturnsNullWhenOutOfMemory", []() {
         comb::StackAllocator allocator{80};
@@ -140,9 +132,7 @@ namespace
         larvae::AssertEqual(allocator.GetUsedMemory(), 0u);
     });
 
-    // =============================================================================
     // Markers
-    // =============================================================================
 
     auto test11 = larvae::RegisterTest("StackAllocator", "GetMarkerReturnsCurrentPosition", []() {
         comb::StackAllocator allocator{1024};
@@ -242,9 +232,7 @@ namespace
         larvae::AssertEqual(allocator.GetUsedMemory(), 0u);
     });
 
-    // =============================================================================
     // Reset
-    // =============================================================================
 
     auto test16 = larvae::RegisterTest("StackAllocator", "ResetFreesAllMemory", []() {
         comb::StackAllocator allocator{1024};
@@ -279,9 +267,7 @@ namespace
         larvae::AssertEqual(ptr2, ptr4);
     });
 
-    // =============================================================================
     // Deallocate (No-Op)
-    // =============================================================================
 
     auto test18 = larvae::RegisterTest("StackAllocator", "DeallocateIsNoOp", []() {
         comb::StackAllocator allocator{1024};
@@ -305,9 +291,7 @@ namespace
         larvae::AssertTrue(true);
     });
 
-    // =============================================================================
     // Memory Access
-    // =============================================================================
 
     auto test20 = larvae::RegisterTest("StackAllocator", "AllocatedMemoryIsWritable", []() {
         comb::StackAllocator allocator{1024};
@@ -341,9 +325,7 @@ namespace
         larvae::AssertEqual(bytes2[99], static_cast<unsigned char>(0xBB));
     });
 
-    // =============================================================================
     // New/Delete
-    // =============================================================================
 
     auto test22 = larvae::RegisterTest("StackAllocator", "NewConstructsObject", []() {
         comb::StackAllocator allocator{1024};
@@ -390,9 +372,7 @@ namespace
         larvae::AssertTrue(destroyed);
     });
 
-    // =============================================================================
     // GetFreeMemory
-    // =============================================================================
 
     auto test24 = larvae::RegisterTest("StackAllocator", "GetFreeMemoryReflectsUsage", []() {
         comb::StackAllocator allocator{1024};
@@ -422,9 +402,7 @@ namespace
         larvae::AssertEqual(allocator.GetFreeMemory(), 824u);
     });
 
-    // =============================================================================
     // Move Semantics
-    // =============================================================================
 
     auto test26 = larvae::RegisterTest("StackAllocator", "MoveConstructorTransfersOwnership", []() {
         comb::StackAllocator allocator1{1024};
@@ -460,9 +438,7 @@ namespace
         larvae::AssertEqual(allocator1.GetUsedMemory(), 0u);
     });
 
-    // =============================================================================
     // Performance
-    // =============================================================================
 
     auto test29 = larvae::RegisterTest("StackAllocator", "ManySmallAllocations", []() {
         comb::StackAllocator allocator{1_MB};

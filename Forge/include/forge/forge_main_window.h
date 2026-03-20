@@ -23,6 +23,7 @@ namespace queen
 namespace forge
 {
     class AssetBrowserPanel;
+    class ConsolePanel;
     class EditorSelection;
     class EditorToolbar;
     class HierarchyPanel;
@@ -62,6 +63,7 @@ namespace forge
         void hubCreateRequested(const QString& name, const QString& dir, const QString& version);
         void hubBrowseRequested();
         void editorCloseRequested();
+        void gltfImportRequested(const QString& path);
 
     private:
         void CreateMenus();
@@ -76,6 +78,7 @@ namespace forge
         HierarchyPanel* m_hierarchy{};
         InspectorPanel* m_inspector{};
         AssetBrowserPanel* m_assetBrowser{};
+        ConsolePanel* m_console{};
         VulkanViewportWidget* m_viewport{};
         EditorToolbar* m_toolbar{};
         ProjectHub* m_hub{};

@@ -11,7 +11,7 @@ namespace nectar
         LOADED,   // asset became Ready
         UNLOADED, // asset was garbage collected
         RELOADED, // asset was hot-reloaded with new data
-        Failed,   // loading failed
+        FAILED,   // loading failed
     };
 
     template <typename T> struct AssetEvent

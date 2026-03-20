@@ -15,9 +15,7 @@ namespace
         return alloc.Get();
     }
 
-    // =========================================================================
     // Read / Exists / Stat
-    // =========================================================================
 
     auto t1 = larvae::RegisterTest("NectarMemoryMount", "AddAndRead", []() {
         auto& alloc = GetMemMountAlloc();
@@ -73,9 +71,7 @@ namespace
         larvae::AssertEqual(info.m_size, size_t{0});
     });
 
-    // =========================================================================
     // Remove
-    // =========================================================================
 
     auto t7 = larvae::RegisterTest("NectarMemoryMount", "RemoveFile", []() {
         auto& alloc = GetMemMountAlloc();
@@ -92,9 +88,7 @@ namespace
         larvae::AssertFalse(mount.RemoveFile("a.txt"));
     });
 
-    // =========================================================================
     // Overwrite
-    // =========================================================================
 
     auto t9 = larvae::RegisterTest("NectarMemoryMount", "OverwriteFile", []() {
         auto& alloc = GetMemMountAlloc();
@@ -110,9 +104,7 @@ namespace
         larvae::AssertTrue(std::memcmp(buf.Data(), v2, 8) == 0);
     });
 
-    // =========================================================================
     // ListDirectory
-    // =========================================================================
 
     auto t10 = larvae::RegisterTest("NectarMemoryMount", "ListDirectory", []() {
         auto& alloc = GetMemMountAlloc();

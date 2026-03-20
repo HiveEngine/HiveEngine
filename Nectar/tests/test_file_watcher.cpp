@@ -64,7 +64,6 @@ namespace
         }
     };
 
-    // =========================================================================
 
     auto t1 = larvae::RegisterTest("NectarFileWatcher", "WatchAddsDirectory", []() {
         auto& alloc = GetFwAlloc();

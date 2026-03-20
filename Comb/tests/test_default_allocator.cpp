@@ -15,20 +15,16 @@ namespace
         return mb * 1024 * 1024;
     }
 
-    // =============================================================================
     // DefaultAllocator Concept
-    // =============================================================================
 
     auto test1 = larvae::RegisterTest("DefaultAllocator", "ConceptSatisfaction",
                                       []() { larvae::AssertTrue((comb::Allocator<comb::DefaultAllocator>)); });
 
-    // =============================================================================
     // DefaultAllocator Basic Usage
-    // =============================================================================
 
     auto test2 = larvae::RegisterTest("DefaultAllocator", "BasicAllocation", []() {
-        comb::BuddyAllocator buddy{1_MB};
-        comb::DefaultAllocator alloc{buddy};
+        comb::ChainedBuddyAllocator chained{1_MB, 1_MB};
+        comb::DefaultAllocator alloc{chained};
 
         void* ptr = alloc.Allocate(64, 8);
         larvae::AssertNotNull(ptr);
@@ -39,8 +35,8 @@ namespace
     });
 
     auto test3 = larvae::RegisterTest("DefaultAllocator", "NewDeleteWorks", []() {
-        comb::BuddyAllocator buddy{1_MB};
-        comb::DefaultAllocator alloc{buddy};
+        comb::ChainedBuddyAllocator chained{1_MB, 1_MB};
+        comb::DefaultAllocator alloc{chained};
 
         struct TestObj
         {
@@ -62,9 +58,7 @@ namespace
         larvae::AssertEqual(alloc.GetUsedMemory(), 0u);
     });
 
-    // =============================================================================
     // GetDefaultAllocator (Singleton)
-    // =============================================================================
 
     auto test4 = larvae::RegisterTest("DefaultAllocator", "GetDefaultAllocatorReturnsSameInstance", []() {
         comb::DefaultAllocator& alloc1 = comb::GetDefaultAllocator();
@@ -102,9 +96,7 @@ namespace
 #endif
     });
 
-    // =============================================================================
     // ModuleAllocator
-    // =============================================================================
 
     auto test7 = larvae::RegisterTest("ModuleAllocator", "ConstructionAndBasicUsage", []() {
         comb::ModuleAllocator module{"TestModule", 1_MB};
@@ -127,13 +119,13 @@ namespace
         larvae::AssertEqual(module.GetUsedMemory(), 0u);
     });
 
-    auto test9 = larvae::RegisterTest("ModuleAllocator", "GetUnderlyingReturnsBuddyAllocator", []() {
+    auto test9 = larvae::RegisterTest("ModuleAllocator", "GetUnderlyingReturnsChainedBuddyAllocator", []() {
         comb::ModuleAllocator module{"TestModule", 1_MB};
 
-        comb::BuddyAllocator& buddy = module.GetUnderlying();
+        comb::ChainedBuddyAllocator& chained = module.GetUnderlying();
 
-        larvae::AssertEqual(buddy.GetTotalMemory(), 1_MB);
-        larvae::AssertStringEqual(buddy.GetName(), "TestModule");
+        larvae::AssertEqual(chained.GetTotalMemory(), 1_MB);
+        larvae::AssertStringEqual(chained.GetName(), "TestModule");
     });
 
     auto test10 = larvae::RegisterTest("ModuleAllocator", "ConstGetReturnsConstRef", []() {
@@ -156,9 +148,7 @@ namespace
 #endif
     });
 
-    // =============================================================================
     // ModuleRegistry
-    // =============================================================================
 
     auto test11 = larvae::RegisterTest("ModuleRegistry", "ModuleRegistersOnConstruction", []() {
         size_t countBefore = comb::ModuleRegistry::GetInstance().GetCount();

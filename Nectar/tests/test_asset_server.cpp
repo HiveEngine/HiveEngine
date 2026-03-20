@@ -76,9 +76,7 @@ namespace
         return wax::ByteSpan{buf, sizeof(float)};
     }
 
-    // =========================================================================
     // Registration
-    // =========================================================================
 
     auto t1 = larvae::RegisterTest("NectarAssetServer", "RegisterLoader", []() {
         auto& alloc = GetServerTestAlloc();
@@ -89,9 +87,7 @@ namespace
         larvae::AssertTrue(true);
     });
 
-    // =========================================================================
     // LoadFromMemory
-    // =========================================================================
 
     auto t2 = larvae::RegisterTest("NectarAssetServer", "LoadFromMemoryValid", []() {
         auto& alloc = GetServerTestAlloc();
@@ -122,9 +118,7 @@ namespace
         larvae::AssertEqual(asset->value, 123);
     });
 
-    // =========================================================================
     // Status
-    // =========================================================================
 
     auto t4 = larvae::RegisterTest("NectarAssetServer", "StatusIsReady", []() {
         auto& alloc = GetServerTestAlloc();
@@ -148,9 +142,7 @@ namespace
                             static_cast<uint8_t>(nectar::AssetStatus::NOT_LOADED));
     });
 
-    // =========================================================================
     // Dedup (same path)
-    // =========================================================================
 
     auto t6 = larvae::RegisterTest("NectarAssetServer", "LoadSamePathReturnsSameHandle", []() {
         auto& alloc = GetServerTestAlloc();
@@ -182,9 +174,7 @@ namespace
         larvae::AssertFalse(h1.Raw() == h2.Raw());
     });
 
-    // =========================================================================
     // Failed loads
-    // =========================================================================
 
     auto t8 = larvae::RegisterTest("NectarAssetServer", "LoadFailedStatus", []() {
         auto& alloc = GetServerTestAlloc();
@@ -199,7 +189,7 @@ namespace
         auto handle = server.LoadFromMemory<ServerTestAsset>("fail_test", data);
         larvae::AssertFalse(handle.IsNull());
         larvae::AssertEqual(static_cast<uint8_t>(server.GetStatus(handle)),
-                            static_cast<uint8_t>(nectar::AssetStatus::Failed));
+                            static_cast<uint8_t>(nectar::AssetStatus::FAILED));
     });
 
     auto t9 = larvae::RegisterTest("NectarAssetServer", "GetFailedReturnsPlaceholder", []() {
@@ -234,9 +224,7 @@ namespace
         larvae::AssertEqual(got->value, -99);
     });
 
-    // =========================================================================
     // No loader
-    // =========================================================================
 
     auto t11 = larvae::RegisterTest("NectarAssetServer", "LoadNoLoaderFails", []() {
         auto& alloc = GetServerTestAlloc();
@@ -249,16 +237,14 @@ namespace
         auto handle = server.LoadFromMemory<ServerTestAsset>("no_loader", data);
         larvae::AssertFalse(handle.IsNull());
         larvae::AssertEqual(static_cast<uint8_t>(server.GetStatus(handle)),
-                            static_cast<uint8_t>(nectar::AssetStatus::Failed));
+                            static_cast<uint8_t>(nectar::AssetStatus::FAILED));
 
         auto* err = server.GetError(handle);
         larvae::AssertNotNull(err);
         larvae::AssertEqual(static_cast<uint8_t>(err->m_code), static_cast<uint8_t>(nectar::AssetError::NO_LOADER));
     });
 
-    // =========================================================================
     // Placeholder
-    // =========================================================================
 
     auto t12 = larvae::RegisterTest("NectarAssetServer", "PlaceholderRegistration", []() {
         auto& alloc = GetServerTestAlloc();
@@ -276,9 +262,7 @@ namespace
         larvae::AssertEqual(got->value, 666);
     });
 
-    // =========================================================================
     // Ref counting through AssetServer
-    // =========================================================================
 
     auto t13 = larvae::RegisterTest("NectarAssetServer", "MultipleStrongHandlesKeepAlive", []() {
         auto& alloc = GetServerTestAlloc();
@@ -307,9 +291,7 @@ namespace
         larvae::AssertFalse(locked.IsNull());
     });
 
-    // =========================================================================
     // Weak handle Lock
-    // =========================================================================
 
     auto t14 = larvae::RegisterTest("NectarAssetServer", "WeakLockWhileAlive", []() {
         auto& alloc = GetServerTestAlloc();
@@ -358,9 +340,7 @@ namespace
         larvae::AssertTrue(locked.IsNull());
     });
 
-    // =========================================================================
     // Update / GC
-    // =========================================================================
 
     auto t17 = larvae::RegisterTest("NectarAssetServer", "UpdateCollectsZeroRefAssets", []() {
         auto& alloc = GetServerTestAlloc();
@@ -395,9 +375,7 @@ namespace
         larvae::AssertTrue(server.IsReady(h));
     });
 
-    // =========================================================================
     // Multi-type support
-    // =========================================================================
 
     auto t19 = larvae::RegisterTest("NectarAssetServer", "MultiTypeSupport", []() {
         auto& alloc = GetServerTestAlloc();
@@ -427,9 +405,7 @@ namespace
         larvae::AssertFloatEqual(a2->x, 3.14f);
     });
 
-    // =========================================================================
     // Release
-    // =========================================================================
 
     auto t20 = larvae::RegisterTest("NectarAssetServer", "ExplicitRelease", []() {
         auto& alloc = GetServerTestAlloc();

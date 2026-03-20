@@ -116,8 +116,7 @@ namespace queen
      *
      *   // Update (sequential or parallel)
      *   world.Update();           // Sequential
-     *   world.UpdateParallel();   // Parallel with auto-detected workers
-     *   world.UpdateParallel(4);  // Parallel with 4 workers
+     *   world.UpdateParallel(jobs);  // Parallel via Drone job system
      * @endcode
      */
     class World
@@ -435,9 +434,7 @@ namespace queen
                 callback(types[i]);
         }
 
-        // ─────────────────────────────────────────────────────────────
         // Resources (global singletons)
-        // ─────────────────────────────────────────────────────────────
 
         template <typename T> void InsertResource(T&& resource)
         {
@@ -532,9 +529,7 @@ namespace queen
             return m_resources.Count();
         }
 
-        // ─────────────────────────────────────────────────────────────
         // Allocator Access
-        // ─────────────────────────────────────────────────────────────
 
         [[nodiscard]] WorldAllocators& GetAllocators() noexcept
         {
@@ -588,9 +583,7 @@ namespace queen
             return m_componentIndex;
         }
 
-        // ─────────────────────────────────────────────────────────────
         // Queries
-        // ─────────────────────────────────────────────────────────────
 
         /**
          * Create a query to iterate over entities matching the given terms
@@ -652,9 +645,7 @@ namespace queen
             query.EachWithEntity(std::forward<F>(func));
         }
 
-        // ─────────────────────────────────────────────────────────────
         // Systems
-        // ─────────────────────────────────────────────────────────────
 
         /**
          * Register a new system with query-based iteration
@@ -725,9 +716,9 @@ namespace queen
          *
          * Same as UpdateParallel() but without HIVE_PROFILE_FRAME.
          *
-         * @param worker_count Number of worker threads (0 = auto-detect)
+         * @param jobs Drone job submitter for parallel execution
          */
-        void AdvanceParallel(size_t workerCount = 0)
+        void AdvanceParallel(drone::JobSubmitter jobs)
         {
             HIVE_PROFILE_SCOPE_N("World::AdvanceParallel");
             IncrementTick();
@@ -737,8 +728,7 @@ namespace queen
             {
                 void* mem = m_allocators.Persistent().Allocate(sizeof(ParallelScheduler<PersistentAllocator>),
                                                                alignof(ParallelScheduler<PersistentAllocator>));
-                m_parallelScheduler =
-                    new (mem) ParallelScheduler<PersistentAllocator>{m_allocators.Persistent(), workerCount};
+                m_parallelScheduler = new (mem) ParallelScheduler<PersistentAllocator>{m_allocators.Persistent(), jobs};
             }
 
             m_parallelScheduler->RunAll(*this, m_systems);
@@ -770,11 +760,11 @@ namespace queen
          * Creates the parallel scheduler on first call.
          * Thread allocators are reset after each system batch.
          *
-         * @param worker_count Number of worker threads (0 = auto-detect)
+         * @param jobs Drone job submitter for parallel execution
          */
-        void UpdateParallel(size_t workerCount = 0)
+        void UpdateParallel(drone::JobSubmitter jobs)
         {
-            AdvanceParallel(workerCount);
+            AdvanceParallel(jobs);
             HIVE_PROFILE_FRAME;
         }
 
@@ -834,9 +824,7 @@ namespace queen
             return m_commands;
         }
 
-        // ─────────────────────────────────────────────────────────────
         // Events
-        // ─────────────────────────────────────────────────────────────
 
         [[nodiscard]] Events<PersistentAllocator>& GetEvents() noexcept
         {
@@ -881,9 +869,7 @@ namespace queen
             return m_events.template Reader<E>();
         }
 
-        // ─────────────────────────────────────────────────────────────
         // Observers
-        // ─────────────────────────────────────────────────────────────
 
         /**
          * Register an observer for structural changes
@@ -931,9 +917,7 @@ namespace queen
             return m_observers.ObserverCount();
         }
 
-        // ─────────────────────────────────────────────────────────────
         // Hierarchy
-        // ─────────────────────────────────────────────────────────────
 
         /**
          * Set the parent of an entity
@@ -1222,9 +1206,7 @@ namespace queen
             Despawn(entity);
         }
 
-        // ─────────────────────────────────────────────────────────────
         // Change Detection
-        // ─────────────────────────────────────────────────────────────
 
         /**
          * Get the current world tick
@@ -1475,9 +1457,7 @@ namespace queen
         return builder.Build();
     }
 
-    // ─────────────────────────────────────────────────────────────
     // CommandBuffer::Flush implementation (here to avoid circular dependency)
-    // ─────────────────────────────────────────────────────────────
 
     template <comb::Allocator Allocator> void CommandBuffer<Allocator>::Flush(World& world)
     {

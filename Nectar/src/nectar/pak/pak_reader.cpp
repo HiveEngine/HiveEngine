@@ -1,11 +1,19 @@
+#include <nectar/pak/pak_reader.h>
+
 #include <hive/profiling/profiler.h>
 
 #include <nectar/pak/compression.h>
 #include <nectar/pak/crc32.h>
-#include <nectar/pak/pak_reader.h>
 
+#include <cstdio>
 #include <cstring>
 #include <memory>
+
+#ifdef _WIN32
+#define hive_fseek64(f, off, origin) _fseeki64((f), static_cast<__int64>(off), (origin))
+#else
+#define hive_fseek64(f, off, origin) fseeko((f), static_cast<off_t>(off), (origin))
+#endif
 
 namespace nectar
 {
@@ -55,7 +63,7 @@ namespace nectar
         }
 
         // Read TOC
-        if (std::fseek(file, static_cast<long>(header.m_tocOffset), SEEK_SET) != 0)
+        if (hive_fseek64(file, header.m_tocOffset, SEEK_SET) != 0)
         {
             std::fclose(file);
             return nullptr;
@@ -179,7 +187,7 @@ namespace nectar
             wax::ByteBuffer compressed{alloc};
             compressed.Resize(be.m_compressedSize);
 
-            std::fseek(m_file, static_cast<long>(be.m_fileOffset), SEEK_SET);
+            hive_fseek64(m_file, be.m_fileOffset, SEEK_SET);
             size_t read = std::fread(compressed.Data(), 1, be.m_compressedSize, m_file);
             if (read != be.m_compressedSize)
             {

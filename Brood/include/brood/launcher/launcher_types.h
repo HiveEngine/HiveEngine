@@ -1,6 +1,6 @@
 #pragma once
 
-#include <hive/HiveConfig.h>
+#include <hive/hive_config.h>
 #include <hive/core/log.h>
 
 #include <comb/default_allocator.h>
@@ -17,12 +17,13 @@
 #include <forge/undo.h>
 #endif
 
-#include <array>
+#include <wax/containers/array.h>
+#include <wax/containers/string.h>
+#include <wax/containers/vector.h>
+
 #include <cstdint>
 #include <filesystem>
 #include <memory>
-#include <string>
-#include <vector>
 
 namespace brood::launcher
 {
@@ -72,9 +73,9 @@ namespace brood::launcher
 
     struct LauncherDiscoveredProject
     {
-        std::string m_name;
-        std::string m_version;
-        std::string m_path;
+        wax::String m_name;
+        wax::String m_version;
+        wax::String m_path;
         bool m_isCurrentDirectory{false};
     };
 
@@ -88,13 +89,13 @@ namespace brood::launcher
             LauncherToolchainPreset::LLVM
 #endif
         };
-        std::array<char, kPathBufferSize> m_openPath{};
-        std::array<char, kPathBufferSize> m_createDirectory{};
-        std::array<char, kNameBufferSize> m_createName{};
-        std::array<char, kVersionBufferSize> m_createVersion{};
+        wax::Array<char, kPathBufferSize> m_openPath{};
+        wax::Array<char, kPathBufferSize> m_createDirectory{};
+        wax::Array<char, kNameBufferSize> m_createName{};
+        wax::Array<char, kVersionBufferSize> m_createVersion{};
         std::filesystem::path m_engineRoot{};
-        std::vector<LauncherDiscoveredProject> m_discoveredProjects;
-        std::string m_statusMessage;
+        wax::Vector<LauncherDiscoveredProject> m_discoveredProjects;
+        wax::String m_statusMessage;
         bool m_statusIsError{false};
         bool m_supportEditor{true};
         bool m_supportGame{true};
@@ -116,8 +117,8 @@ namespace brood::launcher
         comb::ModuleAllocator m_alloc{"Launcher", size_t{1024} * 1024 * 1024};
         waggle::ProjectManager* m_project{nullptr};
         waggle::GameplayModule m_gameplay;
-        std::string m_projectPath;
-        std::string m_windowTitle{"Forge Editor"};
+        wax::String m_projectPath;
+        wax::String m_windowTitle{"Forge Editor"};
         uint32_t m_windowWidth{1920};
         uint32_t m_windowHeight{1080};
         bool m_exitAfterSetup{false};
@@ -130,14 +131,14 @@ namespace brood::launcher
         forge::GizmoState m_gizmo;
         forge::PlayState m_playState{forge::PlayState::EDITING};
         queen::ComponentRegistry<256> m_componentRegistry;
-        std::string m_assetsRoot;
-        std::string m_currentSceneRelative;
-        std::string m_currentScenePath;
-        std::string m_scenePromptError;
+        wax::String m_assetsRoot;
+        wax::String m_currentSceneRelative;
+        wax::String m_currentScenePath;
+        wax::String m_scenePromptError;
         PendingEditorAction m_pendingEditorAction{PendingEditorAction::NONE};
-        std::string m_pendingScenePath;
-        std::string m_recoverySceneRelative;
-        std::string m_recoveryPromptError;
+        wax::String m_pendingScenePath;
+        wax::String m_recoverySceneRelative;
+        wax::String m_recoveryPromptError;
         double m_sceneAutosaveElapsedSeconds{0.0};
         bool m_sceneDirty{false};
         bool m_openUnsavedScenePopup{false};

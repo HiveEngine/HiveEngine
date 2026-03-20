@@ -1,9 +1,10 @@
 #pragma once
 
-#include <array>
-#include <cstdint>
-
 #include <hive/platform/dynamic_library.h>
+
+#include <wax/containers/array.h>
+
+#include <cstdint>
 
 namespace queen
 {
@@ -50,6 +51,6 @@ namespace waggle
         GameplayApiVersionFn m_apiVersionFn{nullptr};
         GameplayBuildSignatureFn m_buildSignatureFn{nullptr};
         bool m_registered{false};
-        std::array<char, 256> m_errorBuf{};
+        wax::Array<char, 256> m_errorBuf{};
     };
 } // namespace waggle

@@ -2,6 +2,8 @@
 
 #include <hive/core/assert.h>
 
+#include <wax/containers/string.h>
+
 #include <queen/core/entity.h>
 #include <queen/reflect/component_reflector.h>
 #include <queen/reflect/enum_reflection.h>
@@ -9,7 +11,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
-#include <string>
 #include <utility>
 
 namespace queen
@@ -91,32 +92,34 @@ namespace queen
         public:
             void Reset() noexcept
             {
-                m_buf.clear();
+                m_buf.Clear();
             }
 
             void Put(char c)
             {
-                m_buf.push_back(c);
+                m_buf.Append(c);
             }
 
             void WriteRaw(const char* s)
             {
                 if (s != nullptr)
                 {
-                    m_buf.append(s);
+                    m_buf.Append(s);
                 }
             }
 
-            void Terminate() noexcept {}
+            void Terminate() noexcept
+            {
+            }
 
             [[nodiscard]] const char* CStr() const noexcept
             {
-                return m_buf.c_str();
+                return m_buf.CStr();
             }
 
             [[nodiscard]] size_t Size() const noexcept
             {
-                return m_buf.size();
+                return m_buf.Size();
             }
 
             [[nodiscard]] bool Success() const noexcept
@@ -129,18 +132,18 @@ namespace queen
                 return false;
             }
 
-            [[nodiscard]] const std::string& String() const noexcept
+            [[nodiscard]] const wax::String& String() const noexcept
             {
                 return m_buf;
             }
 
-            [[nodiscard]] std::string TakeString() noexcept
+            [[nodiscard]] wax::String TakeString() noexcept
             {
                 return std::move(m_buf);
             }
 
         private:
-            std::string m_buf{};
+            wax::String m_buf{};
         };
 
         template <typename Writer> class JsonSerializerCore
@@ -459,19 +462,20 @@ namespace queen
         };
     } // namespace detail
 
-    template <size_t BufSize = 4096> class JsonSerializer : public detail::JsonSerializerCore<detail::FixedTextWriter<BufSize>>
+    template <size_t BufSize = 4096>
+    class JsonSerializer : public detail::JsonSerializerCore<detail::FixedTextWriter<BufSize>>
     {
     };
 
     class DynamicJsonSerializer : public detail::JsonSerializerCore<detail::DynamicTextWriter>
     {
     public:
-        [[nodiscard]] const std::string& String() const noexcept
+        [[nodiscard]] const wax::String& String() const noexcept
         {
             return this->WriterRef().String();
         }
 
-        [[nodiscard]] std::string TakeString() noexcept
+        [[nodiscard]] wax::String TakeString() noexcept
         {
             return this->WriterRef().TakeString();
         }

@@ -41,6 +41,7 @@ Bee-themed modules:
 - `Queen`: ECS
 - `Comb`: allocators
 - `Wax`: containers, pointers, serialization
+- `Drone`: job system, threading, coroutines
 - `Larvae`: test framework
 - `Hive`: core utilities
 - `Nectar`: assets
@@ -146,7 +147,8 @@ Module block order is enforced by `.clang-format`:
 1. `hive`
 2. `comb`
 3. `wax`
-4. `queen`
+4. `drone`
+5. `queen`
 5. `nectar`
 6. `waggle`
 7. `swarm`
@@ -225,6 +227,36 @@ Typical signature:
 
 ---
 
+## Standard Library Policy
+
+Engine runtime code (Queen, Nectar, Waggle, Terra, Swarm, Antennae) must use `wax::` types
+instead of standard library containers and strings:
+
+| std type | wax replacement | Header |
+|----------|-----------------|--------|
+| `std::string` | `wax::String` | `<wax/containers/string.h>` |
+| `std::string_view` | `wax::StringView` | `<wax/containers/string_view.h>` |
+| `std::vector` | `wax::Vector` | `<wax/containers/vector.h>` |
+| `std::array` | `wax::Array` | `<wax/containers/array.h>` |
+| `std::unordered_map` | `wax::HashMap` | `<wax/containers/hash_map.h>` |
+| `std::unordered_set` | `wax::HashSet` | `<wax/containers/hash_set.h>` |
+| `std::unique_ptr` | `wax::Box` | `<wax/pointers/box.h>` |
+| `std::shared_ptr` | `wax::Rc` (single-thread) / `wax::Arc` (multi-thread) | `<wax/pointers/rc.h>` / `<wax/pointers/arc.h>` |
+| `std::span` | `wax::Span` | `<wax/containers/span.h>` |
+
+Allowed exceptions:
+
+- `std::string_view` in `constexpr` / `consteval` contexts.
+- Transient `std::string` forced by external APIs (`std::filesystem`, tinyobj, cgltf).
+- Types with no wax equivalent: `std::pair`, `std::tuple`, `std::optional`, `std::variant`.
+- System primitives: `std::atomic`, `std::thread`, `std::mutex`.
+
+Tool and editor modules (Forge, Brood, Larvae) are exempt since their allocations do not
+occur during gameplay. Hive and Comb are also exempt since they sit below Wax in the
+dependency chain and cannot depend on it.
+
+---
+
 ## Memory
 
 No raw `new` or `delete` in engine code. Allocate through `comb`.
@@ -249,6 +281,28 @@ Typical allocator usage:
 | `BuddyAllocator`   | Persistent      | Long-lived allocations                |
 | `PoolAllocator`    | Persistent      | Fixed-size high churn objects         |
 | `DefaultAllocator` | Global fallback | Only when ownership is truly implicit |
+
+---
+
+## Threading
+
+All parallel work flows through the Drone module's `JobSystem`. See `Drone/THREADING.md`
+for the full API reference.
+
+Rules:
+
+- **Never create `std::thread`** in engine runtime code. Submit jobs to Drone.
+- **Never share an allocator across threads** unless it is a `ThreadSafeAllocator` or
+  the per-worker scratch (`WorkerScratch()`).
+- **Use `Arc<T>`** for cross-thread shared ownership. `Rc<T>` is single-threaded only.
+- **Use `drone::Priority`** to classify work: `HIGH` for gameplay-critical (ECS systems),
+  `NORMAL` for throughput work (cooking), `LOW` for background work (IO, GC).
+- **Keep jobs short.** A job blocking for >1ms degrades pool throughput. Use `ReadAsync`
+  or `ScheduleOn` with coroutines for IO instead.
+- **Prefer `co_await`** over `Counter::Wait()` in async pipelines to avoid blocking workers.
+- **Use `QueryEachLocked()`** when iterating ECS queries from parallel systems.
+- **Coroutine frames** are allocated from a global slab allocator (`drone::GetCoroutineAllocator()`).
+  Do not use `operator new` for coroutine-heavy code paths — use `drone::Task<T>`.
 
 ---
 
@@ -283,6 +337,27 @@ class Vector
 ```
 
 Use `if constexpr` for compile-time branching where it materially simplifies specialization paths.
+
+---
+
+## Comments
+
+Comments explain **why**, never **what**. If a comment restates the code, delete it.
+
+Allowed:
+- Constraints, invariants, or contracts not obvious from the signature.
+- Rationale behind a non-obvious choice.
+- ASCII memory layout diagrams when they clarify a data structure.
+
+Forbidden:
+- Restating code: `m_size = 0; // reset size`
+- Trivial doxygen: `/// Returns the size` on `Size()`.
+- AI-style template docstrings (Performance characteristics / Limitations / Use cases / Example sections).
+  Two or three `//` lines before a class are enough.
+- Decorative separator lines (`// ═════`, `// ─────`, `// =====`). Use blank lines to separate sections.
+- Trailing comments that restate the field name: `float m_dt; // delta time in seconds`
+- Numbered step-by-step comments (`// 1. Pop`, `// 2. Add guard`).
+- Identical comments repeated across multiple methods — document the behavior once at the class level.
 
 ---
 

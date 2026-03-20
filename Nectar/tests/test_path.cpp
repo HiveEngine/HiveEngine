@@ -13,9 +13,7 @@ namespace
         return alloc.Get();
     }
 
-    // =========================================================================
     // NormalizePath
-    // =========================================================================
 
     auto t1 = larvae::RegisterTest("NectarPath", "ForwardSlashUnchanged", []() {
         auto& alloc = GetPathAlloc();
@@ -89,9 +87,7 @@ namespace
         larvae::AssertTrue(r.View().Equals("a/b/c/d"));
     });
 
-    // =========================================================================
     // PathParent / PathFilename / PathExtension
-    // =========================================================================
 
     auto t13 = larvae::RegisterTest("NectarPath", "PathParent", []() {
         auto p = nectar::PathParent("textures/hero.png");

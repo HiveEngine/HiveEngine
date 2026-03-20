@@ -8,39 +8,8 @@
 
 namespace wax
 {
-    /**
-     * Fixed-size array with bounds checking in debug builds
-     *
-     * Stack-allocated array wrapper that provides:
-     * - Bounds checking in debug mode (zero overhead in release)
-     * - Iterator support (begin/end for range-for loops)
-     * - Size and data access methods
-     * - Drop-in replacement for std::array
-     *
-     * Performance characteristics:
-     * - Storage: Stack-allocated (zero heap allocation)
-     * - Access: O(1) - direct array indexing
-     * - Iterator: O(1) - pointer arithmetic
-     * - Size: O(1) - compile-time constant
-     * - Bounds check: O(1) in debug, zero overhead in release
-     *
-     * Limitations:
-     * - Fixed size at compile time (cannot grow/shrink)
-     * - Stack-allocated only (cannot be too large)
-     * - Size must be > 0 (use Span<T> for dynamic-size views)
-     *
-     * Example:
-     * @code
-     *   wax::Array<int, 4> arr = {1, 2, 3, 4};
-     *
-     *   for (int val : arr) {
-     *       // ...
-     *   }
-     *
-     *   arr[0] = 10;  // Bounds-checked in debug
-     *   int x = arr.At(1);  // Always bounds-checked
-     * @endcode
-     */
+    // Fixed-size array with bounds checking in debug builds.
+    // Drop-in replacement for std::array with Assert/Check semantics.
     template <typename T, size_t N> struct Array
     {
         static_assert(N > 0, "Array size must be greater than zero");
@@ -113,7 +82,7 @@ namespace wax
 
         [[nodiscard]] constexpr bool IsEmpty() const noexcept
         {
-            return false; // Array is never empty (N > 0)
+            return false;
         }
 
         [[nodiscard]] constexpr Iterator Begin() noexcept

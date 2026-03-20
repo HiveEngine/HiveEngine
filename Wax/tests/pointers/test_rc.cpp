@@ -29,9 +29,7 @@ namespace
     int TestStruct::construct_count = 0;
     int TestStruct::destruct_count = 0;
 
-    // =============================================================================
     // Construction
-    // =============================================================================
 
     auto test1 = larvae::RegisterTest("WaxRc", "DefaultConstructor", []() {
         wax::Rc<int, comb::LinearAllocator> rc;
@@ -63,9 +61,7 @@ namespace
         larvae::AssertEqual(rc.GetRefCount(), 1u);
     });
 
-    // =============================================================================
     // Copy Semantics (Ref Counting)
-    // =============================================================================
 
     auto test4 = larvae::RegisterTest("WaxRc", "CopyConstructor", []() {
         comb::LinearAllocator alloc{1024};
@@ -109,9 +105,7 @@ namespace
         larvae::AssertEqual(rc4.GetRefCount(), 4u);
     });
 
-    // =============================================================================
     // Move Semantics
-    // =============================================================================
 
     auto test7 = larvae::RegisterTest("WaxRc", "MoveConstructor", []() {
         comb::LinearAllocator alloc{1024};
@@ -138,9 +132,7 @@ namespace
         larvae::AssertEqual(rc2.GetRefCount(), 1u);
     });
 
-    // =============================================================================
     // Dereference
-    // =============================================================================
 
     auto test9 = larvae::RegisterTest("WaxRc", "DereferenceOperator", []() {
         comb::LinearAllocator alloc{1024};
@@ -174,9 +166,7 @@ namespace
         larvae::AssertEqual(*ptr, 42);
     });
 
-    // =============================================================================
     // Bool Conversion
-    // =============================================================================
 
     auto test12 = larvae::RegisterTest("WaxRc", "BoolConversionValid", []() {
         comb::LinearAllocator alloc{1024};
@@ -206,9 +196,7 @@ namespace
         }
     });
 
-    // =============================================================================
     // Reset
-    // =============================================================================
 
     auto test14 = larvae::RegisterTest("WaxRc", "Reset", []() {
         comb::LinearAllocator alloc{1024};
@@ -241,9 +229,7 @@ namespace
         larvae::AssertEqual(TestStruct::destruct_count, 1); // Now destroyed
     });
 
-    // =============================================================================
     // Unique Check
-    // =============================================================================
 
     auto test16 = larvae::RegisterTest("WaxRc", "IsUnique", []() {
         comb::LinearAllocator alloc{1024};
@@ -259,9 +245,7 @@ namespace
         larvae::AssertTrue(rc1.IsUnique());
     });
 
-    // =============================================================================
     // RAII Lifetime
-    // =============================================================================
 
     auto test17 = larvae::RegisterTest("WaxRc", "AutomaticDestruction", []() {
         comb::LinearAllocator alloc{1024};
@@ -311,9 +295,7 @@ namespace
         larvae::AssertEqual(TestStruct::destruct_count, 1);
     });
 
-    // =============================================================================
     // Comparison
-    // =============================================================================
 
     auto test20 = larvae::RegisterTest("WaxRc", "CompareEqual", []() {
         comb::LinearAllocator alloc{1024};
@@ -346,9 +328,7 @@ namespace
         larvae::AssertFalse(rc2 != nullptr);
     });
 
-    // =============================================================================
     // Stress Test
-    // =============================================================================
 
     auto test23 = larvae::RegisterTest("WaxRc", "ManyReferences", []() {
         comb::LinearAllocator alloc{1024};

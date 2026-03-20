@@ -38,9 +38,9 @@ namespace
     auto t_runner_skips_missing_capabilities =
         larvae::RegisterTest("LarvaeCapabilities", "runner_skips_missing_capabilities", []() {
             larvae::TestRunnerConfig config;
-            config.suite_filter = "LarvaeCapabilitiesSkip";
-            config.available_capabilities = larvae::ToMask(larvae::Capability::HEADLESS);
-            config.capabilities_overridden = true;
+            config.m_suiteFilter = "LarvaeCapabilitiesSkip";
+            config.m_availableCapabilities = larvae::ToMask(larvae::Capability::HEADLESS);
+            config.m_capabilitiesOverridden = true;
 
             larvae::TestRunner runner{config};
             const int result = runner.Run();
@@ -55,10 +55,10 @@ namespace
     auto t_runner_fail_on_skip_returns_non_zero =
         larvae::RegisterTest("LarvaeCapabilities", "runner_fail_on_skip_returns_non_zero", []() {
             larvae::TestRunnerConfig config;
-            config.suite_filter = "LarvaeCapabilitiesSkip";
-            config.fail_on_skip = true;
-            config.available_capabilities = larvae::ToMask(larvae::Capability::HEADLESS);
-            config.capabilities_overridden = true;
+            config.m_suiteFilter = "LarvaeCapabilitiesSkip";
+            config.m_failOnSkip = true;
+            config.m_availableCapabilities = larvae::ToMask(larvae::Capability::HEADLESS);
+            config.m_capabilitiesOverridden = true;
 
             larvae::TestRunner runner{config};
             const int result = runner.Run();
@@ -75,8 +75,8 @@ namespace
             char* argv[] = {arg0, arg1, arg2};
 
             const larvae::TestRunnerConfig config = larvae::ParseCommandLine(static_cast<int>(std::size(argv)), argv);
-            larvae::AssertTrue(config.capabilities_overridden);
-            larvae::AssertEqual(config.available_capabilities, larvae::CapabilityMask{0});
+            larvae::AssertTrue(config.m_capabilitiesOverridden);
+            larvae::AssertEqual(config.m_availableCapabilities, larvae::CapabilityMask{0});
 
             larvae::TestRunner runner{config};
             const int result = runner.Run();
@@ -93,8 +93,8 @@ namespace
             char* argv[] = {arg0, arg1, arg2};
 
             const larvae::TestRunnerConfig config = larvae::ParseCommandLine(static_cast<int>(std::size(argv)), argv);
-            larvae::AssertTrue(config.list_only);
-            larvae::AssertTrue(config.fail_on_skip);
+            larvae::AssertTrue(config.m_listOnly);
+            larvae::AssertTrue(config.m_failOnSkip);
         });
 
     auto t_parse_command_line_exclusions =
@@ -105,8 +105,8 @@ namespace
             char* argv[] = {arg0, arg1, arg2};
 
             const larvae::TestRunnerConfig config = larvae::ParseCommandLine(static_cast<int>(std::size(argv)), argv);
-            larvae::AssertStringEqual(config.exclude_suite_filter, "LarvaeCapabilitiesSkip");
-            larvae::AssertStringEqual(config.exclude_filter_pattern, "*benchmark*");
+            larvae::AssertStringEqual(config.m_excludeSuiteFilter, "LarvaeCapabilitiesSkip");
+            larvae::AssertStringEqual(config.m_excludeFilterPattern, "*benchmark*");
         });
 
     auto t_benchmark_runner_filters_missing_capabilities =
@@ -130,19 +130,19 @@ namespace
                                        larvae::ToMask(larvae::Capability::WINDOW));
 
             larvae::BenchmarkConfig config;
-            config.filter = "LarvaeCapabilitiesBenchmark*";
-            config.min_iterations = 1;
-            config.warmup_runs = 0;
-            config.repetitions = 1;
-            config.min_time = std::chrono::milliseconds{0};
-            config.available_capabilities = larvae::ToMask(larvae::Capability::HEADLESS);
-            config.capabilities_overridden = true;
+            config.m_filter = "LarvaeCapabilitiesBenchmark*";
+            config.m_minIterations = 1;
+            config.m_warmupRuns = 0;
+            config.m_repetitions = 1;
+            config.m_minTime = std::chrono::milliseconds{0};
+            config.m_availableCapabilities = larvae::ToMask(larvae::Capability::HEADLESS);
+            config.m_capabilitiesOverridden = true;
 
             const std::vector<larvae::BenchmarkResult> results = larvae::BenchmarkRunner{config}.RunAll();
 
             larvae::AssertEqual(results.size(), size_t{1});
-            larvae::AssertStringEqual(results.front().suite_name, "LarvaeCapabilitiesBenchmark");
-            larvae::AssertStringEqual(results.front().benchmark_name, "headless_only");
+            larvae::AssertStringEqual(results.front().m_suiteName, "LarvaeCapabilitiesBenchmark");
+            larvae::AssertStringEqual(results.front().m_benchmarkName, "headless_only");
         });
 
     auto t_benchmark_list_only_tracks_skips =
@@ -159,11 +159,11 @@ namespace
                                        larvae::ToMask(larvae::Capability::WINDOW));
 
             larvae::BenchmarkConfig config;
-            config.filter = "LarvaeCapabilitiesBenchmark*";
-            config.list_only = true;
-            config.fail_on_skip = true;
-            config.available_capabilities = larvae::ToMask(larvae::Capability::HEADLESS);
-            config.capabilities_overridden = true;
+            config.m_filter = "LarvaeCapabilitiesBenchmark*";
+            config.m_listOnly = true;
+            config.m_failOnSkip = true;
+            config.m_availableCapabilities = larvae::ToMask(larvae::Capability::HEADLESS);
+            config.m_capabilitiesOverridden = true;
 
             larvae::BenchmarkRunner runner{config};
             const std::vector<larvae::BenchmarkResult> results = runner.RunAll();
@@ -195,8 +195,8 @@ namespace
             const larvae::BenchmarkConfig config =
                 larvae::ParseBenchmarkCommandLine(static_cast<int>(std::size(argv)), argv);
 
-            larvae::AssertTrue(config.capabilities_overridden);
-            larvae::AssertEqual(config.available_capabilities, larvae::CapabilityMask{0});
+            larvae::AssertTrue(config.m_capabilitiesOverridden);
+            larvae::AssertEqual(config.m_availableCapabilities, larvae::CapabilityMask{0});
             larvae::AssertTrue(larvae::BenchmarkRunner{config}.RunAll().empty());
         });
 
@@ -210,7 +210,7 @@ namespace
             const larvae::BenchmarkConfig config =
                 larvae::ParseBenchmarkCommandLine(static_cast<int>(std::size(argv)), argv);
 
-            larvae::AssertTrue(config.list_only);
-            larvae::AssertTrue(config.fail_on_skip);
+            larvae::AssertTrue(config.m_listOnly);
+            larvae::AssertTrue(config.m_failOnSkip);
         });
 } // namespace

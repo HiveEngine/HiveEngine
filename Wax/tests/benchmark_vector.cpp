@@ -6,9 +6,7 @@
 
 namespace
 {
-    // =============================================================================
     // Wax::Vector Benchmarks
-    // =============================================================================
 
     auto bench1 = larvae::RegisterBenchmark("WaxVector", "PushBack_100", [](larvae::BenchmarkState& state) {
         comb::LinearAllocator alloc{1024 * 1024};
@@ -24,7 +22,7 @@ namespace
             larvae::DoNotOptimize(vec.Data());
         }
 
-        state.SetItemsProcessed(state.iterations() * 100);
+        state.SetItemsProcessed(state.Iterations() * 100);
     });
 
     auto bench2 = larvae::RegisterBenchmark("WaxVector", "PushBack_1000", [](larvae::BenchmarkState& state) {
@@ -41,7 +39,7 @@ namespace
             larvae::DoNotOptimize(vec.Data());
         }
 
-        state.SetItemsProcessed(state.iterations() * 1000);
+        state.SetItemsProcessed(state.Iterations() * 1000);
     });
 
     auto bench3 = larvae::RegisterBenchmark("WaxVector", "PushBackReserved_1000", [](larvae::BenchmarkState& state) {
@@ -59,7 +57,7 @@ namespace
             larvae::DoNotOptimize(vec.Data());
         }
 
-        state.SetItemsProcessed(state.iterations() * 1000);
+        state.SetItemsProcessed(state.Iterations() * 1000);
     });
 
     auto bench4 = larvae::RegisterBenchmark("WaxVector", "Iteration_1000", [](larvae::BenchmarkState& state) {
@@ -80,7 +78,7 @@ namespace
             larvae::DoNotOptimize(sum);
         }
 
-        state.SetItemsProcessed(state.iterations() * 1000);
+        state.SetItemsProcessed(state.Iterations() * 1000);
     });
 
     auto bench5 = larvae::RegisterBenchmark("WaxVector", "RandomAccess_1000", [](larvae::BenchmarkState& state) {
@@ -100,7 +98,7 @@ namespace
             }
         }
 
-        state.SetItemsProcessed(state.iterations() * 1000);
+        state.SetItemsProcessed(state.Iterations() * 1000);
     });
 
     auto bench6 = larvae::RegisterBenchmark("WaxVector", "Modification_1000", [](larvae::BenchmarkState& state) {
@@ -117,7 +115,7 @@ namespace
             larvae::DoNotOptimize(vec.Data());
         }
 
-        state.SetItemsProcessed(state.iterations() * 1000);
+        state.SetItemsProcessed(state.Iterations() * 1000);
     });
 
     auto bench7 = larvae::RegisterBenchmark("WaxVector", "EmplaceBack_1000", [](larvae::BenchmarkState& state) {
@@ -134,7 +132,7 @@ namespace
             larvae::DoNotOptimize(vec.Data());
         }
 
-        state.SetItemsProcessed(state.iterations() * 1000);
+        state.SetItemsProcessed(state.Iterations() * 1000);
     });
 
     auto bench8 = larvae::RegisterBenchmark("WaxVector", "PopBack_1000", [](larvae::BenchmarkState& state) {
@@ -157,7 +155,7 @@ namespace
             larvae::DoNotOptimize(vec.Data());
         }
 
-        state.SetItemsProcessed(state.iterations() * 1000);
+        state.SetItemsProcessed(state.Iterations() * 1000);
     });
 
     auto bench9 = larvae::RegisterBenchmark("WaxVector", "Resize_1000", [](larvae::BenchmarkState& state) {
@@ -171,12 +169,10 @@ namespace
             larvae::DoNotOptimize(vec.Data());
         }
 
-        state.SetItemsProcessed(state.iterations() * 1000);
+        state.SetItemsProcessed(state.Iterations() * 1000);
     });
 
-    // =============================================================================
     // std::vector Benchmarks (for comparison)
-    // =============================================================================
 
     auto bench10 = larvae::RegisterBenchmark("StdVector", "PushBack_100", [](larvae::BenchmarkState& state) {
         while (state.KeepRunning())
@@ -189,7 +185,7 @@ namespace
             larvae::DoNotOptimize(vec.data());
         }
 
-        state.SetItemsProcessed(state.iterations() * 100);
+        state.SetItemsProcessed(state.Iterations() * 100);
     });
 
     auto bench11 = larvae::RegisterBenchmark("StdVector", "PushBack_1000", [](larvae::BenchmarkState& state) {
@@ -203,7 +199,7 @@ namespace
             larvae::DoNotOptimize(vec.data());
         }
 
-        state.SetItemsProcessed(state.iterations() * 1000);
+        state.SetItemsProcessed(state.Iterations() * 1000);
     });
 
     auto bench12 = larvae::RegisterBenchmark("StdVector", "PushBackReserved_1000", [](larvae::BenchmarkState& state) {
@@ -218,7 +214,7 @@ namespace
             larvae::DoNotOptimize(vec.data());
         }
 
-        state.SetItemsProcessed(state.iterations() * 1000);
+        state.SetItemsProcessed(state.Iterations() * 1000);
     });
 
     auto bench13 = larvae::RegisterBenchmark("StdVector", "Iteration_1000", [](larvae::BenchmarkState& state) {
@@ -238,7 +234,7 @@ namespace
             larvae::DoNotOptimize(sum);
         }
 
-        state.SetItemsProcessed(state.iterations() * 1000);
+        state.SetItemsProcessed(state.Iterations() * 1000);
     });
 
     auto bench14 = larvae::RegisterBenchmark("StdVector", "RandomAccess_1000", [](larvae::BenchmarkState& state) {
@@ -257,7 +253,7 @@ namespace
             }
         }
 
-        state.SetItemsProcessed(state.iterations() * 1000);
+        state.SetItemsProcessed(state.Iterations() * 1000);
     });
 
     auto bench15 = larvae::RegisterBenchmark("StdVector", "Modification_1000", [](larvae::BenchmarkState& state) {
@@ -273,7 +269,7 @@ namespace
             larvae::DoNotOptimize(vec.data());
         }
 
-        state.SetItemsProcessed(state.iterations() * 1000);
+        state.SetItemsProcessed(state.Iterations() * 1000);
     });
 
     auto bench16 = larvae::RegisterBenchmark("StdVector", "EmplaceBack_1000", [](larvae::BenchmarkState& state) {
@@ -287,7 +283,7 @@ namespace
             larvae::DoNotOptimize(vec.data());
         }
 
-        state.SetItemsProcessed(state.iterations() * 1000);
+        state.SetItemsProcessed(state.Iterations() * 1000);
     });
 
     auto bench17 = larvae::RegisterBenchmark("StdVector", "PopBack_1000", [](larvae::BenchmarkState& state) {
@@ -307,7 +303,7 @@ namespace
             larvae::DoNotOptimize(vec.data());
         }
 
-        state.SetItemsProcessed(state.iterations() * 1000);
+        state.SetItemsProcessed(state.Iterations() * 1000);
     });
 
     auto bench18 = larvae::RegisterBenchmark("StdVector", "Resize_1000", [](larvae::BenchmarkState& state) {
@@ -318,6 +314,6 @@ namespace
             larvae::DoNotOptimize(vec.data());
         }
 
-        state.SetItemsProcessed(state.iterations() * 1000);
+        state.SetItemsProcessed(state.Iterations() * 1000);
     });
 } // namespace

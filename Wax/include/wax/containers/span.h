@@ -8,46 +8,8 @@
 
 namespace wax
 {
-    /**
-     * Non-owning view over a contiguous sequence of elements
-     *
-     * Span provides a lightweight reference to an existing array without
-     * owning the data. It's essentially a pointer + size with bounds checking.
-     *
-     * Performance characteristics:
-     * - Storage: 16 bytes (pointer + size) on 64-bit systems
-     * - Access: O(1) - direct pointer arithmetic
-     * - Construction: O(1) - just stores pointer and size
-     * - Copy: O(1) - trivially copyable
-     * - Bounds check: O(1) in debug, zero overhead in release
-     *
-     * Limitations:
-     * - Non-owning (caller must ensure data stays alive)
-     * - No memory management (just a view)
-     * - Cannot grow/shrink (fixed at construction)
-     * - Dangling pointer risk (if source data is destroyed)
-     *
-     * Use cases:
-     * - Function parameters (avoid copying arrays)
-     * - View into Vector, Array, or C arrays
-     * - Sub-ranges of existing data
-     * - Interop with C APIs (Data() returns raw pointer)
-     *
-     * Example:
-     * @code
-     *   void ProcessData(wax::Span<const int> data) {
-     *       for (int val : data) {
-     *           // ...
-     *       }
-     *   }
-     *
-     *   wax::Array<int, 100> arr = {};
-     *   ProcessData(arr);  // Implicit conversion
-     *
-     *   int raw_array[50] = {};
-     *   ProcessData(raw_array);  // Works with C arrays
-     * @endcode
-     */
+    // Non-owning view over a contiguous sequence of elements (pointer + size).
+    // Caller must ensure the referenced data outlives the Span.
     template <typename T> class Span
     {
     public:

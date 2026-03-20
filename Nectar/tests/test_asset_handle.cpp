@@ -40,9 +40,7 @@ namespace
         return alloc.Get();
     }
 
-    // =========================================================================
     // WeakHandle
-    // =========================================================================
 
     auto t1 = larvae::RegisterTest("NectarAssetHandle", "WeakDefaultIsNull", []() {
         nectar::WeakHandle<int> w{};
@@ -61,9 +59,7 @@ namespace
         larvae::AssertFalse(a != b);
     });
 
-    // =========================================================================
     // StrongHandle — null handles
-    // =========================================================================
 
     auto t4 = larvae::RegisterTest("NectarAssetHandle", "StrongDefaultIsNull", []() {
         nectar::StrongHandle<int> h{};
@@ -85,9 +81,7 @@ namespace
         larvae::AssertTrue(b.IsNull());
     });
 
-    // =========================================================================
     // StrongHandle — RAII ref counting (needs AssetServer)
-    // =========================================================================
 
     auto t7 = larvae::RegisterTest("NectarAssetHandle", "CopyIncrementsRefCount", []() {
         auto& alloc = GetHandleTestAlloc();

@@ -23,9 +23,7 @@ namespace
     {
     };
 
-    // ─────────────────────────────────────────────────────────────
     // Term struct tests
-    // ─────────────────────────────────────────────────────────────
 
     auto test1 = larvae::RegisterTest("QueenQueryTerm", "TermCreate", []() {
         queen::Term term = queen::Term::Create<Position>();
@@ -89,9 +87,7 @@ namespace
         larvae::AssertFalse(none.HasDataAccess());
     });
 
-    // ─────────────────────────────────────────────────────────────
     // Read<T> wrapper tests
-    // ─────────────────────────────────────────────────────────────
 
     auto test7 = larvae::RegisterTest("QueenQueryTerm", "ReadWrapper", []() {
         using ReadPos = queen::Read<Position>;
@@ -106,9 +102,7 @@ namespace
         larvae::AssertTrue(term.IsReadOnly());
     });
 
-    // ─────────────────────────────────────────────────────────────
     // Write<T> wrapper tests
-    // ─────────────────────────────────────────────────────────────
 
     auto test8 = larvae::RegisterTest("QueenQueryTerm", "WriteWrapper", []() {
         using WriteVel = queen::Write<Velocity>;
@@ -122,9 +116,7 @@ namespace
         larvae::AssertTrue(term.HasDataAccess());
     });
 
-    // ─────────────────────────────────────────────────────────────
     // With<T> wrapper tests
-    // ─────────────────────────────────────────────────────────────
 
     auto test9 = larvae::RegisterTest("QueenQueryTerm", "WithWrapper", []() {
         using WithPlayer = queen::With<Player>;
@@ -138,9 +130,7 @@ namespace
         larvae::AssertFalse(term.HasDataAccess());
     });
 
-    // ─────────────────────────────────────────────────────────────
     // Without<T> wrapper tests
-    // ─────────────────────────────────────────────────────────────
 
     auto test10 = larvae::RegisterTest("QueenQueryTerm", "WithoutWrapper", []() {
         using WithoutDead = queen::Without<Dead>;
@@ -154,9 +144,7 @@ namespace
         larvae::AssertFalse(term.HasDataAccess());
     });
 
-    // ─────────────────────────────────────────────────────────────
     // Maybe<T> wrapper tests
-    // ─────────────────────────────────────────────────────────────
 
     auto test11 = larvae::RegisterTest("QueenQueryTerm", "MaybeWrapper", []() {
         using MaybeHealth = queen::Maybe<Health>;
@@ -183,9 +171,7 @@ namespace
         larvae::AssertTrue(term.IsWritable());
     });
 
-    // ─────────────────────────────────────────────────────────────
     // Type traits tests
-    // ─────────────────────────────────────────────────────────────
 
     auto test13 = larvae::RegisterTest("QueenQueryTerm", "IsQueryTermTrait", []() {
         larvae::AssertTrue(queen::detail::isQueryTermV<queen::Read<Position>>);
@@ -218,9 +204,7 @@ namespace
         larvae::AssertFalse(queen::detail::isOptionalTermV<queen::Without<Dead>>);
     });
 
-    // ─────────────────────────────────────────────────────────────
     // Constexpr tests
-    // ─────────────────────────────────────────────────────────────
 
     auto test16 = larvae::RegisterTest("QueenQueryTerm", "ConstexprTermCreation", []() {
         constexpr queen::Term term = queen::Term::Create<Position>();
@@ -249,9 +233,7 @@ namespace
         larvae::AssertTrue(without_term.IsValid());
     });
 
-    // ─────────────────────────────────────────────────────────────
     // ComponentType extraction tests
-    // ─────────────────────────────────────────────────────────────
 
     auto test18 = larvae::RegisterTest("QueenQueryTerm", "ComponentTypeExtraction", []() {
         using PosRead = queen::Read<Position>;

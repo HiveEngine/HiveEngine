@@ -1,10 +1,11 @@
+#include <nectar/watcher/file_watcher.h>
+
 #include <hive/profiling/profiler.h>
 
-#include <nectar/watcher/file_watcher.h>
+#include <wax/containers/string.h>
 
 #include <chrono>
 #include <filesystem>
-#include <string>
 #include <system_error>
 
 namespace nectar
@@ -51,6 +52,13 @@ namespace nectar
         wax::String dir{*m_alloc};
         dir.Append(directory.Data(), directory.Size());
         m_watchedDirs.PushBack(static_cast<wax::String&&>(dir));
+    }
+
+    void PollingFileWatcher::Baseline()
+    {
+        wax::Vector<FileChange> discarded{*m_alloc};
+        ScanDirectories(discarded);
+        m_lastPollTime = GetCurrentTimeMs();
     }
 
     void PollingFileWatcher::Poll(wax::Vector<FileChange>& changes)
@@ -112,44 +120,54 @@ namespace nectar
     void PollingFileWatcher::ScanDirectory(wax::StringView dir, wax::Vector<FileChange>& changes)
     {
         std::error_code error;
-        const auto it = std::filesystem::recursive_directory_iterator(
-            std::filesystem::path{std::string{dir.Data(), dir.Size()}}, error);
+        wax::String dirStr{dir};
+        auto it = std::filesystem::recursive_directory_iterator(std::filesystem::path{dirStr.CStr()}, error);
         if (error)
         {
             return;
         }
 
-        for (const auto& entry : it)
+        for (auto dirIt = std::filesystem::begin(it); dirIt != std::filesystem::end(it); ++dirIt)
         {
-            if (!entry.is_regular_file())
+            if (dirIt->is_directory())
+            {
+                auto dirName = dirIt->path().filename().string();
+                if (!dirName.empty() && dirName[0] == '.')
+                {
+                    dirIt.disable_recursion_pending();
+                }
+                continue;
+            }
+
+            if (!dirIt->is_regular_file())
             {
                 continue;
             }
 
-            std::string pathStr = entry.path().string();
-            for (char& c : pathStr)
+            const auto& entry = *dirIt;
+
+            auto stdPathStr = entry.path().string();
+            wax::String pathStr{stdPathStr.c_str()};
+            for (size_t ci = 0; ci < pathStr.Size(); ++ci)
             {
-                if (c == '\\')
+                if (pathStr[ci] == '\\')
                 {
-                    c = '/';
+                    pathStr[ci] = '/';
                 }
             }
 
             const FileSnapshot snapshot = GetFileSnapshot(entry.path());
 
-            wax::String key{*m_alloc};
-            key.Append(pathStr.c_str(), pathStr.size());
-
-            auto* existing = m_knownFiles.Find(key);
+            auto* existing = m_knownFiles.Find(pathStr);
             if (existing == nullptr)
             {
                 wax::String insertKey{*m_alloc};
-                insertKey.Append(pathStr.c_str(), pathStr.size());
+                insertKey.Append(pathStr.CStr(), pathStr.Size());
                 m_knownFiles.Insert(static_cast<wax::String&&>(insertKey), snapshot);
 
                 FileChange change{};
                 change.m_path = wax::String{*m_alloc};
-                change.m_path.Append(pathStr.c_str(), pathStr.size());
+                change.m_path.Append(pathStr.CStr(), pathStr.Size());
                 change.m_kind = FileChangeKind::CREATED;
                 changes.PushBack(static_cast<FileChange&&>(change));
             }
@@ -159,7 +177,7 @@ namespace nectar
 
                 FileChange change{};
                 change.m_path = wax::String{*m_alloc};
-                change.m_path.Append(pathStr.c_str(), pathStr.size());
+                change.m_path.Append(pathStr.CStr(), pathStr.Size());
                 change.m_kind = FileChangeKind::MODIFIED;
                 changes.PushBack(static_cast<FileChange&&>(change));
             }

@@ -1,7 +1,8 @@
 #include <waggle/project/cmake_generator.h>
 
+#include <wax/containers/string.h>
+
 #include <fstream>
-#include <string>
 
 namespace waggle
 {
@@ -96,11 +97,10 @@ namespace waggle
     {
         auto content = Generate(config, alloc);
 
-        std::string path;
-        path.append(config.m_projectRoot.Data(), config.m_projectRoot.Size());
-        path += "/CMakeLists.txt";
+        wax::String path{config.m_projectRoot};
+        path.Append("/CMakeLists.txt");
 
-        std::ofstream file{path};
+        std::ofstream file{path.CStr()};
         if (!file)
             return false;
 

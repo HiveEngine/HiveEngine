@@ -10,6 +10,7 @@
 #include <array>
 #include <cstddef>
 #include <memory>
+#include <utility>
 
 // Memory debugging (zero overhead when disabled)
 #if COMB_MEM_DEBUG
@@ -27,74 +28,9 @@
 
 namespace comb
 {
-    /**
-     * Buddy allocator with power-of-2 splitting and coalescing
-     *
-     * Manages memory using binary buddy system:
-     * - All allocations rounded to power-of-2
-     * - Large blocks split into smaller buddies
-     * - Adjacent free buddies automatically merged
-     * - Minimal fragmentation through coalescing
-     *
-     * Satisfies the comb::Allocator concept.
-     *
-     * Use cases:
-     * - General-purpose allocation with mixed sizes
-     * - Long-lived allocations (assets, subsystems)
-     * - Need for deallocation with minimal fragmentation
-     * - Alternative to malloc with better performance
-     *
-     * Memory layout:
-     * ┌────────────────────────────────────────────────────────┐
-     * │ Level 0: 64B    64B    64B    64B    ...               │
-     * │ Level 1: 128B        128B        128B        ...       │
-     * │ Level 2: 256B             256B             ...         │
-     * │ Level 3: 512B                      512B      ...       │
-     * └────────────────────────────────────────────────────────┘
-     *
-     * Each level maintains a free-list of blocks of that size.
-     * When allocating, find smallest suitable block and split if needed.
-     * When deallocating, merge with buddy if both are free.
-     *
-     * Buddy calculation:
-     *   buddy_offset = offset XOR block_size
-     *
-     * Performance characteristics:
-     * - Allocation: O(log N) - find/split blocks
-     * - Deallocation: O(log N) - merge buddies
-     * - Coalescing: Automatic (happens during deallocation)
-     * - Thread-safe: No (use per-thread or add synchronization)
-     * - Fragmentation: Low (internal only, power-of-2 rounding)
-     *
-     * Limitations:
-     * - Fixed capacity (set at construction)
-     * - Internal fragmentation (round to power-of-2)
-     * - Returns nullptr when out of memory (no hidden allocations)
-     * - Not thread-safe by default
-     * - Minimum allocation size: 64 bytes
-     *
-     * Example:
-     * @code
-     *   // Create buddy allocator with 1 MB capacity
-     *   comb::BuddyAllocator buddy{1 * 1024 * 1024};
-     *
-     *   // Allocate 100 bytes - rounded to 128 bytes
-     *   void* ptr1 = buddy.Allocate(100, 8);
-     *   if (!ptr1) {
-     *       // Out of memory
-     *       return;
-     *   }
-     *
-     *   // Allocate 200 bytes - rounded to 256 bytes
-     *   void* ptr2 = buddy.Allocate(200, 8);
-     *
-     *   // Free memory - automatically merges with buddy if free
-     *   buddy.Deallocate(ptr1);
-     *   buddy.Deallocate(ptr2);
-     *
-     *   // Memory coalesced, available for reuse
-     * @endcode
-     */
+    // Buddy allocator with power-of-2 splitting and coalescing.
+    // O(log N) alloc/dealloc, automatic merging of adjacent free blocks.
+    // Minimum allocation: 64 bytes. Fixed capacity, not thread-safe.
     class BuddyAllocator
     {
     private:
@@ -349,7 +285,7 @@ namespace comb
         /**
          * Get total bytes currently allocated
          */
-        [[nodiscard]] size_t GetUsedMemory() const
+        [[nodiscard]] size_t GetUsedMemory() const noexcept
         {
             return m_usedMemory;
         }
@@ -357,7 +293,7 @@ namespace comb
         /**
          * Get total capacity
          */
-        [[nodiscard]] size_t GetTotalMemory() const
+        [[nodiscard]] size_t GetTotalMemory() const noexcept
         {
             return m_capacity;
         }
@@ -365,7 +301,7 @@ namespace comb
         /**
          * Get allocator name for debugging
          */
-        [[nodiscard]] const char* GetName() const
+        [[nodiscard]] const char* GetName() const noexcept
         {
             return m_debugName;
         }
@@ -400,6 +336,11 @@ namespace comb
          * All existing allocations become invalid.
          * Rebuilds the free list as a single top-level block.
          */
+        [[nodiscard]] void* GetBaseAddress() const noexcept
+        {
+            return m_memoryBlock;
+        }
+
         void Reset()
         {
             for (size_t i = 0; i < maxLevels; ++i)
@@ -539,9 +480,7 @@ namespace comb
     static_assert(Allocator<BuddyAllocator>, "BuddyAllocator must satisfy Allocator concept");
 
 #if COMB_MEM_DEBUG
-    // ========================================================================
     // Debug Implementation (Inline methods - must be in header)
-    // ========================================================================
 
     inline void* BuddyAllocator::AllocateDebug(size_t size, size_t alignment, const char* tag)
     {

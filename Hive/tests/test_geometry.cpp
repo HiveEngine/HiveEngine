@@ -16,9 +16,7 @@ namespace
         return std::fabs(a - b) < kTol;
     }
 
-    // =========================================================================
     // AABB
-    // =========================================================================
 
     auto t_aabb_default = larvae::RegisterTest("Geometry", "AABB_Default", []() {
         AABB box{};
@@ -33,9 +31,7 @@ namespace
         larvae::AssertTrue(Near(box.m_max.m_z, 6.f));
     });
 
-    // =========================================================================
     // TransformAABB
-    // =========================================================================
 
     auto t_xform_identity = larvae::RegisterTest("Geometry", "TransformAABB_Identity", []() {
         AABB box{{-1.f, -1.f, -1.f}, {1.f, 1.f, 1.f}};
@@ -99,9 +95,7 @@ namespace
         larvae::AssertTrue(Near(result.m_max.m_y, 2.f));
     });
 
-    // =========================================================================
     // Frustum extraction + visibility
-    // =========================================================================
 
     // Helper: build a known view_proj from LookAt + Perspective
     Frustum MakeTestFrustum()

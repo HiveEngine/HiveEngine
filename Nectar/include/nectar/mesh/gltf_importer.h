@@ -8,7 +8,7 @@ namespace nectar
     /// Imports glTF 2.0 mesh files (.gltf/.glb) into NMSH intermediate format.
     /// Settings from HiveDocument [import] section:
     ///   scale (float, 1.0), flip_uv (bool, false), generate_normals (bool, true),
-    ///   base_path (string, "") — filesystem path to .gltf file for resolving external .bin
+    ///   generate_tangents (bool, true), base_path (string, "") — filesystem path for resolving external .bin
     class GltfImporter final : public AssetImporter<NmshHeader>
     {
     public:

@@ -18,9 +18,7 @@ namespace
         return alloc.Get();
     }
 
-    // =========================================================================
     // CRC32
-    // =========================================================================
 
     auto t1 = larvae::RegisterTest("NectarPakFmt", "Crc32Empty", []() {
         uint32_t crc = nectar::Crc32(nullptr, 0);
@@ -50,9 +48,7 @@ namespace
         larvae::AssertEqual(full, partial);
     });
 
-    // =========================================================================
     // Compression
-    // =========================================================================
 
     auto t4 = larvae::RegisterTest("NectarPakFmt", "CompressDecompressLZ4", []() {
         auto& alloc = GetPakAlloc();
@@ -121,9 +117,7 @@ namespace
         larvae::AssertEqual(compressed.Size(), size_t{0});
     });
 
-    // =========================================================================
     // Format struct sizes (compile-time, but verify at runtime too)
-    // =========================================================================
 
     auto t9 = larvae::RegisterTest("NectarPakFmt", "HeaderSize",
                                    []() { larvae::AssertEqual(sizeof(nectar::NpakHeader), size_t{32}); });
@@ -134,9 +128,7 @@ namespace
     auto t11 = larvae::RegisterTest("NectarPakFmt", "BlockEntrySize",
                                     []() { larvae::AssertEqual(sizeof(nectar::NpakBlockEntry), size_t{13}); });
 
-    // =========================================================================
     // AssetManifest
-    // =========================================================================
 
     auto t12 = larvae::RegisterTest("NectarPakFmt", "ManifestAddFind", []() {
         auto& alloc = GetPakAlloc();

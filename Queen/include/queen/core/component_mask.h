@@ -19,7 +19,7 @@ namespace queen
      *
      * Memory layout:
      * ┌────────────────────────────────────────────────────────────┐
-     * │ blocks_: Vector<uint64_t>                                  │
+     * │ m_blocks: Vector<uint64_t>                                  │
      * │   [block0: bits 0-63] [block1: bits 64-127] ...            │
      * └────────────────────────────────────────────────────────────┘
      *
@@ -60,8 +60,8 @@ namespace queen
         static constexpr size_t BitsPerBlock = 64;
 
         explicit ComponentMask(Allocator& allocator)
-            : allocator_{&allocator}
-            , blocks_{allocator}
+            : m_allocator{&allocator}
+            , m_blocks{allocator}
         {
         }
 
@@ -69,13 +69,13 @@ namespace queen
          * Copy constructor - uses the same allocator as other
          */
         ComponentMask(const ComponentMask& other)
-            : allocator_{other.allocator_}
-            , blocks_{*other.allocator_}
+            : m_allocator{other.m_allocator}
+            , m_blocks{*other.m_allocator}
         {
-            blocks_.Reserve(other.blocks_.Size());
-            for (size_t i = 0; i < other.blocks_.Size(); ++i)
+            m_blocks.Reserve(other.m_blocks.Size());
+            for (size_t i = 0; i < other.m_blocks.Size(); ++i)
             {
-                blocks_.PushBack(other.blocks_[i]);
+                m_blocks.PushBack(other.m_blocks[i]);
             }
         }
 
@@ -86,19 +86,19 @@ namespace queen
         {
             if (this != &other)
             {
-                blocks_.Clear();
-                blocks_.Reserve(other.blocks_.Size());
-                for (size_t i = 0; i < other.blocks_.Size(); ++i)
+                m_blocks.Clear();
+                m_blocks.Reserve(other.m_blocks.Size());
+                for (size_t i = 0; i < other.m_blocks.Size(); ++i)
                 {
-                    blocks_.PushBack(other.blocks_[i]);
+                    m_blocks.PushBack(other.m_blocks[i]);
                 }
             }
             return *this;
         }
 
         ComponentMask(ComponentMask&& other) noexcept
-            : allocator_{other.allocator_}
-            , blocks_{std::move(other.blocks_)}
+            : m_allocator{other.m_allocator}
+            , m_blocks{std::move(other.m_blocks)}
         {
         }
 
@@ -106,8 +106,8 @@ namespace queen
         {
             if (this != &other)
             {
-                allocator_ = other.allocator_;
-                blocks_ = std::move(other.blocks_);
+                m_allocator = other.m_allocator;
+                m_blocks = std::move(other.m_blocks);
             }
             return *this;
         }
@@ -121,7 +121,7 @@ namespace queen
             size_t bit_index = index % BitsPerBlock;
 
             EnsureCapacity(block_index + 1);
-            blocks_[block_index] |= (uint64_t{1} << bit_index);
+            m_blocks[block_index] |= (uint64_t{1} << bit_index);
         }
 
         /**
@@ -130,13 +130,13 @@ namespace queen
         void Clear(size_t index)
         {
             size_t block_index = index / BitsPerBlock;
-            if (block_index >= blocks_.Size())
+            if (block_index >= m_blocks.Size())
             {
                 return;
             }
 
             size_t bit_index = index % BitsPerBlock;
-            blocks_[block_index] &= ~(uint64_t{1} << bit_index);
+            m_blocks[block_index] &= ~(uint64_t{1} << bit_index);
         }
 
         /**
@@ -145,13 +145,13 @@ namespace queen
         [[nodiscard]] bool Test(size_t index) const noexcept
         {
             size_t block_index = index / BitsPerBlock;
-            if (block_index >= blocks_.Size())
+            if (block_index >= m_blocks.Size())
             {
                 return false;
             }
 
             size_t bit_index = index % BitsPerBlock;
-            return (blocks_[block_index] & (uint64_t{1} << bit_index)) != 0;
+            return (m_blocks[block_index] & (uint64_t{1} << bit_index)) != 0;
         }
 
         /**
@@ -163,7 +163,7 @@ namespace queen
             size_t bit_index = index % BitsPerBlock;
 
             EnsureCapacity(block_index + 1);
-            blocks_[block_index] ^= (uint64_t{1} << bit_index);
+            m_blocks[block_index] ^= (uint64_t{1} << bit_index);
         }
 
         /**
@@ -171,9 +171,9 @@ namespace queen
          */
         void ClearAll()
         {
-            for (size_t i = 0; i < blocks_.Size(); ++i)
+            for (size_t i = 0; i < m_blocks.Size(); ++i)
             {
-                blocks_[i] = 0;
+                m_blocks[i] = 0;
             }
         }
 
@@ -189,18 +189,18 @@ namespace queen
             {
                 if (i < block_count - 1)
                 {
-                    blocks_[i] = ~uint64_t{0};
+                    m_blocks[i] = ~uint64_t{0};
                 }
                 else
                 {
                     size_t remaining_bits = count % BitsPerBlock;
                     if (remaining_bits == 0)
                     {
-                        blocks_[i] = ~uint64_t{0};
+                        m_blocks[i] = ~uint64_t{0};
                     }
                     else
                     {
-                        blocks_[i] = (uint64_t{1} << remaining_bits) - 1;
+                        m_blocks[i] = (uint64_t{1} << remaining_bits) - 1;
                     }
                 }
             }
@@ -211,9 +211,9 @@ namespace queen
          */
         [[nodiscard]] bool Any() const noexcept
         {
-            for (size_t i = 0; i < blocks_.Size(); ++i)
+            for (size_t i = 0; i < m_blocks.Size(); ++i)
             {
-                if (blocks_[i] != 0)
+                if (m_blocks[i] != 0)
                 {
                     return true;
                 }
@@ -235,9 +235,9 @@ namespace queen
         [[nodiscard]] size_t Count() const noexcept
         {
             size_t count = 0;
-            for (size_t i = 0; i < blocks_.Size(); ++i)
+            for (size_t i = 0; i < m_blocks.Size(); ++i)
             {
-                count += PopCount(blocks_[i]);
+                count += PopCount(m_blocks[i]);
             }
             return count;
         }
@@ -247,11 +247,11 @@ namespace queen
          */
         [[nodiscard]] bool Intersects(const ComponentMask& other) const noexcept
         {
-            size_t min_size = blocks_.Size() < other.blocks_.Size() ? blocks_.Size() : other.blocks_.Size();
+            size_t min_size = m_blocks.Size() < other.m_blocks.Size() ? m_blocks.Size() : other.m_blocks.Size();
 
             for (size_t i = 0; i < min_size; ++i)
             {
-                if ((blocks_[i] & other.blocks_[i]) != 0)
+                if ((m_blocks[i] & other.m_blocks[i]) != 0)
                 {
                     return true;
                 }
@@ -264,10 +264,10 @@ namespace queen
          */
         [[nodiscard]] bool ContainsAll(const ComponentMask& other) const noexcept
         {
-            for (size_t i = 0; i < other.blocks_.Size(); ++i)
+            for (size_t i = 0; i < other.m_blocks.Size(); ++i)
             {
-                uint64_t our_block = (i < blocks_.Size()) ? blocks_[i] : 0;
-                if ((our_block & other.blocks_[i]) != other.blocks_[i])
+                uint64_t our_block = (i < m_blocks.Size()) ? m_blocks[i] : 0;
+                if ((our_block & other.m_blocks[i]) != other.m_blocks[i])
                 {
                     return false;
                 }
@@ -288,17 +288,17 @@ namespace queen
          */
         ComponentMask& operator&=(const ComponentMask& other)
         {
-            size_t min_size = blocks_.Size() < other.blocks_.Size() ? blocks_.Size() : other.blocks_.Size();
+            size_t min_size = m_blocks.Size() < other.m_blocks.Size() ? m_blocks.Size() : other.m_blocks.Size();
 
             for (size_t i = 0; i < min_size; ++i)
             {
-                blocks_[i] &= other.blocks_[i];
+                m_blocks[i] &= other.m_blocks[i];
             }
 
             // Clear bits beyond other's size
-            for (size_t i = min_size; i < blocks_.Size(); ++i)
+            for (size_t i = min_size; i < m_blocks.Size(); ++i)
             {
-                blocks_[i] = 0;
+                m_blocks[i] = 0;
             }
 
             return *this;
@@ -309,11 +309,11 @@ namespace queen
          */
         ComponentMask& operator|=(const ComponentMask& other)
         {
-            EnsureCapacity(other.blocks_.Size());
+            EnsureCapacity(other.m_blocks.Size());
 
-            for (size_t i = 0; i < other.blocks_.Size(); ++i)
+            for (size_t i = 0; i < other.m_blocks.Size(); ++i)
             {
-                blocks_[i] |= other.blocks_[i];
+                m_blocks[i] |= other.m_blocks[i];
             }
 
             return *this;
@@ -324,11 +324,11 @@ namespace queen
          */
         ComponentMask& operator^=(const ComponentMask& other)
         {
-            EnsureCapacity(other.blocks_.Size());
+            EnsureCapacity(other.m_blocks.Size());
 
-            for (size_t i = 0; i < other.blocks_.Size(); ++i)
+            for (size_t i = 0; i < other.m_blocks.Size(); ++i)
             {
-                blocks_[i] ^= other.blocks_[i];
+                m_blocks[i] ^= other.m_blocks[i];
             }
 
             return *this;
@@ -339,9 +339,9 @@ namespace queen
          */
         void Invert()
         {
-            for (size_t i = 0; i < blocks_.Size(); ++i)
+            for (size_t i = 0; i < m_blocks.Size(); ++i)
             {
-                blocks_[i] = ~blocks_[i];
+                m_blocks[i] = ~m_blocks[i];
             }
         }
 
@@ -350,12 +350,12 @@ namespace queen
          */
         [[nodiscard]] bool operator==(const ComponentMask& other) const noexcept
         {
-            size_t max_size = blocks_.Size() > other.blocks_.Size() ? blocks_.Size() : other.blocks_.Size();
+            size_t max_size = m_blocks.Size() > other.m_blocks.Size() ? m_blocks.Size() : other.m_blocks.Size();
 
             for (size_t i = 0; i < max_size; ++i)
             {
-                uint64_t our_block = (i < blocks_.Size()) ? blocks_[i] : 0;
-                uint64_t their_block = (i < other.blocks_.Size()) ? other.blocks_[i] : 0;
+                uint64_t our_block = (i < m_blocks.Size()) ? m_blocks[i] : 0;
+                uint64_t their_block = (i < other.m_blocks.Size()) ? other.m_blocks[i] : 0;
 
                 if (our_block != their_block)
                 {
@@ -375,11 +375,11 @@ namespace queen
          */
         [[nodiscard]] size_t FirstSetBit() const noexcept
         {
-            for (size_t i = 0; i < blocks_.Size(); ++i)
+            for (size_t i = 0; i < m_blocks.Size(); ++i)
             {
-                if (blocks_[i] != 0)
+                if (m_blocks[i] != 0)
                 {
-                    return i * BitsPerBlock + CountTrailingZeros(blocks_[i]);
+                    return i * BitsPerBlock + CountTrailingZeros(m_blocks[i]);
                 }
             }
             return static_cast<size_t>(-1);
@@ -390,11 +390,11 @@ namespace queen
          */
         [[nodiscard]] size_t LastSetBit() const noexcept
         {
-            for (size_t i = blocks_.Size(); i > 0; --i)
+            for (size_t i = m_blocks.Size(); i > 0; --i)
             {
-                if (blocks_[i - 1] != 0)
+                if (m_blocks[i - 1] != 0)
                 {
-                    return (i - 1) * BitsPerBlock + (BitsPerBlock - 1 - CountLeadingZeros(blocks_[i - 1]));
+                    return (i - 1) * BitsPerBlock + (BitsPerBlock - 1 - CountLeadingZeros(m_blocks[i - 1]));
                 }
             }
             return static_cast<size_t>(-1);
@@ -405,7 +405,7 @@ namespace queen
          */
         [[nodiscard]] size_t BlockCount() const noexcept
         {
-            return blocks_.Size();
+            return m_blocks.Size();
         }
 
         /**
@@ -413,7 +413,7 @@ namespace queen
          */
         [[nodiscard]] size_t Capacity() const noexcept
         {
-            return blocks_.Size() * BitsPerBlock;
+            return m_blocks.Size() * BitsPerBlock;
         }
 
         /**
@@ -422,15 +422,15 @@ namespace queen
         void Reserve(size_t bit_count)
         {
             size_t block_count = (bit_count + BitsPerBlock - 1) / BitsPerBlock;
-            blocks_.Reserve(block_count);
+            m_blocks.Reserve(block_count);
         }
 
     private:
         void EnsureCapacity(size_t block_count)
         {
-            while (blocks_.Size() < block_count)
+            while (m_blocks.Size() < block_count)
             {
-                blocks_.PushBack(0);
+                m_blocks.PushBack(0);
             }
         }
 
@@ -495,8 +495,8 @@ namespace queen
 #endif
         }
 
-        Allocator* allocator_;
-        wax::Vector<uint64_t> blocks_;
+        Allocator* m_allocator;
+        wax::Vector<uint64_t> m_blocks;
     };
 
     /**

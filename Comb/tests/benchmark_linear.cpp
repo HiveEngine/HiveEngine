@@ -31,8 +31,8 @@ namespace
                 }
             }
 
-            state.SetBytesProcessed(state.iterations() * 64);
-            state.SetItemsProcessed(state.iterations());
+            state.SetBytesProcessed(state.Iterations() * 64);
+            state.SetItemsProcessed(state.Iterations());
         });
 
     auto bench2 =
@@ -50,8 +50,8 @@ namespace
                 }
             }
 
-            state.SetBytesProcessed(state.iterations() * 1_KB);
-            state.SetItemsProcessed(state.iterations());
+            state.SetBytesProcessed(state.Iterations() * 1_KB);
+            state.SetItemsProcessed(state.Iterations());
         });
 
     auto bench3 = larvae::RegisterBenchmark("LinearAllocator", "WithReset", [](larvae::BenchmarkState& state) {
@@ -67,8 +67,8 @@ namespace
             allocator.Reset();
         }
 
-        state.SetBytesProcessed(state.iterations() * 100 * 256);
-        state.SetItemsProcessed(state.iterations() * 100);
+        state.SetBytesProcessed(state.Iterations() * 100 * 256);
+        state.SetItemsProcessed(state.Iterations() * 100);
     });
 
     auto bench4 =
@@ -86,7 +86,7 @@ namespace
                 }
             }
 
-            state.SetBytesProcessed(state.iterations() * 64);
+            state.SetBytesProcessed(state.Iterations() * 64);
         });
 
     auto bench5 = larvae::RegisterBenchmark("malloc", "SmallAllocations_64B", [](larvae::BenchmarkState& state) {
@@ -114,8 +114,8 @@ namespace
             std::free(p);
         }
 
-        state.SetBytesProcessed(state.iterations() * 64);
-        state.SetItemsProcessed(state.iterations());
+        state.SetBytesProcessed(state.Iterations() * 64);
+        state.SetItemsProcessed(state.Iterations());
     });
 
     auto bench6 = larvae::RegisterBenchmark("LinearAllocator", "Markers", [](larvae::BenchmarkState& state) {
@@ -134,6 +134,6 @@ namespace
             allocator.ResetToMarker(marker);
         }
 
-        state.SetItemsProcessed(state.iterations() * 50);
+        state.SetItemsProcessed(state.Iterations() * 50);
     });
 } // namespace

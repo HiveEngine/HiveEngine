@@ -1,6 +1,5 @@
 #pragma once
 
-#include <hive/math/bvh.h>
 #include <hive/math/functions.h>
 #include <hive/math/geometry.h>
 #include <hive/math/transforms.h>

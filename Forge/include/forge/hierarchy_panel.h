@@ -31,6 +31,7 @@ namespace forge
     signals:
         void entitySelected(uint32_t entityIndex);
         void sceneModified();
+        void assetDropped(const QString& path);
 
     private:
         void AddEntityNode(queen::World& world, queen::Entity entity, QTreeWidgetItem* parentItem);

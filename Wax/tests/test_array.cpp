@@ -4,9 +4,7 @@
 
 namespace
 {
-    // =============================================================================
     // Basic Construction and Access
-    // =============================================================================
 
     auto test1 = larvae::RegisterTest("WaxArray", "AggregateInitialization", []() {
         wax::Array<int, 4> arr = {1, 2, 3, 4};
@@ -56,9 +54,7 @@ namespace
         larvae::AssertEqual(arr.At(1), 42);
     });
 
-    // =============================================================================
     // Front and Back Access
-    // =============================================================================
 
     auto test6 = larvae::RegisterTest("WaxArray", "FrontReturnsFirstElement", []() {
         wax::Array<int, 4> arr = {5, 10, 15, 20};
@@ -93,9 +89,7 @@ namespace
         larvae::AssertEqual(arr[4], 50);
     });
 
-    // =============================================================================
     // Data Pointer Access
-    // =============================================================================
 
     auto test9 = larvae::RegisterTest("WaxArray", "DataReturnsPointerToFirstElement", []() {
         wax::Array<int, 3> arr = {7, 8, 9};
@@ -128,9 +122,7 @@ namespace
         }
     });
 
-    // =============================================================================
     // Iterators and Range-For
-    // =============================================================================
 
     auto test12 = larvae::RegisterTest("WaxArray", "BeginEndIteratorRange", []() {
         wax::Array<int, 4> arr = {10, 20, 30, 40};
@@ -188,9 +180,7 @@ namespace
         larvae::AssertEqual(sum, 60);
     });
 
-    // =============================================================================
     // Fill Operation
-    // =============================================================================
 
     auto test16 = larvae::RegisterTest("WaxArray", "FillSetsAllElements", []() {
         wax::Array<int, 5> arr = {};
@@ -213,9 +203,7 @@ namespace
         larvae::AssertEqual(arr[3], 99);
     });
 
-    // =============================================================================
     // Size and Emptiness
-    // =============================================================================
 
     auto test18 = larvae::RegisterTest("WaxArray", "SizeReturnsCorrectValue", []() {
         wax::Array<int, 1> arr1 = {0};
@@ -235,9 +223,7 @@ namespace
         larvae::AssertFalse(arr100.IsEmpty());
     });
 
-    // =============================================================================
     // Const Correctness
-    // =============================================================================
 
     auto test20 = larvae::RegisterTest("WaxArray", "ConstArrayReadAccess", []() {
         const wax::Array<int, 3> arr = {1, 2, 3};
@@ -260,9 +246,7 @@ namespace
         larvae::AssertEqual(data[2], 30);
     });
 
-    // =============================================================================
     // Different Types
-    // =============================================================================
 
     auto test22 = larvae::RegisterTest("WaxArray", "FloatArray", []() {
         wax::Array<float, 3> arr = {1.5f, 2.5f, 3.5f};
@@ -299,9 +283,7 @@ namespace
         larvae::AssertEqual(b, 42);
     });
 
-    // =============================================================================
     // Edge Cases
-    // =============================================================================
 
     auto test25 = larvae::RegisterTest("WaxArray", "SingleElementArray", []() {
         wax::Array<int, 1> arr = {42};

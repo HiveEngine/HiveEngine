@@ -25,9 +25,7 @@ namespace
     {
     };
 
-    // ─────────────────────────────────────────────────────────────
     // SystemNode Tests
-    // ─────────────────────────────────────────────────────────────
 
     auto test1 = larvae::RegisterTest("QueenScheduler", "SystemNodeDefault", []() {
         queen::SystemNode node{};
@@ -95,9 +93,7 @@ namespace
         larvae::AssertFalse(node.IsReady());
     });
 
-    // ─────────────────────────────────────────────────────────────
     // DependencyGraph Tests
-    // ─────────────────────────────────────────────────────────────
 
     auto test7 = larvae::RegisterTest("QueenScheduler", "DependencyGraphEmpty", []() {
         comb::LinearAllocator alloc{262144};
@@ -180,9 +176,7 @@ namespace
         larvae::AssertEqual(order[2], uint32_t{2});
     });
 
-    // ─────────────────────────────────────────────────────────────
     // Scheduler Execution Tests
-    // ─────────────────────────────────────────────────────────────
 
     auto test12 = larvae::RegisterTest("QueenScheduler", "SchedulerRunAll", []() {
         comb::LinearAllocator alloc{262144};
@@ -351,9 +345,7 @@ namespace
         larvae::AssertEqual(after_run_all, 2.0f);
     });
 
-    // ─────────────────────────────────────────────────────────────
     // Explicit Ordering Tests (After / Before)
-    // ─────────────────────────────────────────────────────────────
 
     auto test_after_by_id = larvae::RegisterTest("QueenScheduler", "AfterById", []() {
         queen::World world{};

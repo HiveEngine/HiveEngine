@@ -18,27 +18,27 @@ namespace larvae
 
         bool KeepRunning();
 
-        size_t iterations() const
+        size_t Iterations() const
         {
-            return iterations_;
+            return m_iterations;
         }
 
         void SetBytesProcessed(size_t bytes)
         {
-            bytes_processed_ = bytes;
+            m_bytesProcessed = bytes;
         }
         void SetItemsProcessed(size_t items)
         {
-            items_processed_ = items;
+            m_itemsProcessed = items;
         }
 
         size_t GetBytesProcessed() const
         {
-            return bytes_processed_;
+            return m_bytesProcessed;
         }
         size_t GetItemsProcessed() const
         {
-            return items_processed_;
+            return m_itemsProcessed;
         }
 
         void StartTiming();
@@ -46,30 +46,30 @@ namespace larvae
 
         std::chrono::nanoseconds GetElapsed() const
         {
-            return elapsed_;
+            return m_elapsed;
         }
 
     private:
-        size_t iterations_;
-        size_t current_iteration_{0};
-        size_t bytes_processed_{0};
-        size_t items_processed_{0};
-        std::chrono::nanoseconds elapsed_{0};
-        std::chrono::high_resolution_clock::time_point start_time_;
-        bool is_timing_{false};
+        size_t m_iterations;
+        size_t m_currentIteration{0};
+        size_t m_bytesProcessed{0};
+        size_t m_itemsProcessed{0};
+        std::chrono::nanoseconds m_elapsed{0};
+        std::chrono::high_resolution_clock::time_point m_startTime;
+        bool m_isTiming{false};
     };
 
     struct BenchmarkResult
     {
-        const char* suite_name;
-        const char* benchmark_name;
-        size_t iterations;
-        std::chrono::nanoseconds min_time;
-        std::chrono::nanoseconds max_time;
-        std::chrono::nanoseconds mean_time;
-        std::chrono::nanoseconds median_time;
-        double bytes_per_second{0.0};
-        double items_per_second{0.0};
+        const char* m_suiteName;
+        const char* m_benchmarkName;
+        size_t m_iterations;
+        std::chrono::nanoseconds m_minTime;
+        std::chrono::nanoseconds m_maxTime;
+        std::chrono::nanoseconds m_meanTime;
+        std::chrono::nanoseconds m_medianTime;
+        double m_bytesPerSecond{0.0};
+        double m_itemsPerSecond{0.0};
     };
 
     template <typename T> inline void DoNotOptimize(T const& value)

@@ -16,14 +16,14 @@ namespace swarm
     bool InitRenderContext(RenderContext* renderContext, terra::WindowContext* window)
     {
         terra::NativeWindow native = terra::GetNativeWindow(window);
-        switch (native.type_)
+        switch (native.m_type)
         {
             case terra::NativeWindowType::X11:
-                return InitRenderContextX11(*renderContext, native.x11Display_, native.x11Window_,
+                return InitRenderContextX11(*renderContext, native.m_x11Display, native.m_x11Window,
                                             static_cast<uint32_t>(terra::GetWindowWidth(window)),
                                             static_cast<uint32_t>(terra::GetWindowHeight(window)));
             case terra::NativeWindowType::WAYLAND:
-                return InitRenderContextWayland(*renderContext, native.wlDisplay_, native.wlSurface_,
+                return InitRenderContextWayland(*renderContext, native.m_wlDisplay, native.m_wlSurface,
                                                 static_cast<uint32_t>(terra::GetWindowWidth(window)),
                                                 static_cast<uint32_t>(terra::GetWindowHeight(window)));
         }

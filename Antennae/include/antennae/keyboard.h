@@ -8,24 +8,24 @@ namespace antennae
     {
         static constexpr int kKeyCount = static_cast<int>(terra::Key::COUNT);
 
-        bool current[kKeyCount]{};
-        bool previous[kKeyCount]{};
+        bool m_current[kKeyCount]{};
+        bool m_previous[kKeyCount]{};
 
-        [[nodiscard]] bool IsDown(terra::Key k) const
+        [[nodiscard]] bool IsDown(terra::Key k) const noexcept
         {
-            return current[static_cast<int>(k)];
+            return m_current[static_cast<int>(k)];
         }
 
-        [[nodiscard]] bool JustPressed(terra::Key k) const
+        [[nodiscard]] bool JustPressed(terra::Key k) const noexcept
         {
             int i = static_cast<int>(k);
-            return current[i] && !previous[i];
+            return m_current[i] && !m_previous[i];
         }
 
-        [[nodiscard]] bool JustReleased(terra::Key k) const
+        [[nodiscard]] bool JustReleased(terra::Key k) const noexcept
         {
             int i = static_cast<int>(k);
-            return !current[i] && previous[i];
+            return !m_current[i] && m_previous[i];
         }
     };
 } // namespace antennae

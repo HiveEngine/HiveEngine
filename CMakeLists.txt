@@ -194,7 +194,7 @@ if(HIVE_DILIGENT_PACKAGE_DIR)
     set(HIVE_DILIGENT_STATUS "${HIVE_DILIGENT_STATUS} @ ${HIVE_DILIGENT_PACKAGE_DIR}")
 endif()
 
-# Feature toggles — always define so C++ never falls back to HiveConfig.h guesses
+# Feature toggles — always define so C++ never falls back to hive_config.h guesses
 macro(hive_define_feature name)
     if(${name})
         target_compile_definitions(HiveDefines_Features INTERFACE ${name}=1)
@@ -230,6 +230,7 @@ add_subdirectory(Hive)
 add_subdirectory(Terra)
 add_subdirectory(Comb)
 add_subdirectory(Wax)
+add_subdirectory(Drone)
 add_subdirectory(Nectar)
 add_subdirectory(Queen)
 add_subdirectory(Waggle)

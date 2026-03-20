@@ -1,12 +1,14 @@
+#include <comb/buddy_allocator.h>
 #include <comb/debug/mem_debug_config.h>
 #include <comb/linear_allocator.h>
+
+#include <drone/job_system.h>
 
 #include <queen/world/world.h>
 
 #include <larvae/larvae.h>
 
 #include <atomic>
-#include <thread>
 
 namespace
 {
@@ -25,24 +27,35 @@ namespace
         int current, max;
     };
 
-    // Larger allocator size for parallel tests
     constexpr size_t ParallelAllocSize = 8 * 1024 * 1024;
 
-    // Default worker count for parallel tests (0 = auto-detect based on hardware)
-    constexpr size_t DefaultParallelWorkers = 0;
+    struct TestJobSystem
+    {
+        comb::BuddyAllocator m_poolAlloc{2 * 1024 * 1024};
+        drone::JobSystem<comb::BuddyAllocator> m_system{m_poolAlloc, {2, 1024, 1024, 64 * 1024}};
+        drone::JobSubmitter m_submitter{drone::MakeJobSubmitter(m_system)};
 
-    // ─────────────────────────────────────────────────────────────
+        TestJobSystem()
+        {
+            m_system.Start();
+        }
+        ~TestJobSystem()
+        {
+            m_system.Stop();
+        }
+    };
+
     // Basic UpdateParallel Tests
-    // ─────────────────────────────────────────────────────────────
 
     auto test1 = larvae::RegisterTest("QueenWorldParallel", "UpdateParallelCreatesScheduler", []() {
         comb::LinearAllocator alloc{ParallelAllocSize};
         queen::World world{};
+        TestJobSystem js;
 
         larvae::AssertFalse(world.HasParallelScheduler());
         larvae::AssertNull(world.GetParallelScheduler());
 
-        world.UpdateParallel(DefaultParallelWorkers);
+        world.UpdateParallel(js.m_submitter);
 
         larvae::AssertTrue(world.HasParallelScheduler());
         larvae::AssertNotNull(world.GetParallelScheduler());
@@ -51,9 +64,10 @@ namespace
     auto test2 = larvae::RegisterTest("QueenWorldParallel", "UpdateParallelNoSystems", []() {
         comb::LinearAllocator alloc{ParallelAllocSize};
         queen::World world{};
+        TestJobSystem js;
 
         queen::Tick tick_before = world.CurrentTick();
-        world.UpdateParallel(DefaultParallelWorkers);
+        world.UpdateParallel(js.m_submitter);
         queen::Tick tick_after = world.CurrentTick();
 
         larvae::AssertTrue(tick_after.IsNewerThan(tick_before));
@@ -62,6 +76,7 @@ namespace
     auto test3 = larvae::RegisterTest("QueenWorldParallel", "UpdateParallelSingleSystem", []() {
         comb::LinearAllocator alloc{ParallelAllocSize};
         queen::World world{};
+        TestJobSystem js;
 
         std::atomic<int> count{0};
 
@@ -73,7 +88,7 @@ namespace
         (void)world.Spawn(Position{2.0f, 0.0f, 0.0f});
         (void)world.Spawn(Position{3.0f, 0.0f, 0.0f});
 
-        world.UpdateParallel(DefaultParallelWorkers);
+        world.UpdateParallel(js.m_submitter);
 
         larvae::AssertEqual(count.load(), 3);
     });
@@ -81,6 +96,7 @@ namespace
     auto test4 = larvae::RegisterTest("QueenWorldParallel", "UpdateParallelMultipleSystems", []() {
         comb::LinearAllocator alloc{ParallelAllocSize};
         queen::World world{};
+        TestJobSystem js;
 
         std::atomic<int> system_a_count{0};
         std::atomic<int> system_b_count{0};
@@ -94,7 +110,7 @@ namespace
         (void)world.Spawn(Position{1.0f, 0.0f, 0.0f});
         (void)world.Spawn(Velocity{1.0f, 0.0f, 0.0f});
 
-        world.UpdateParallel(DefaultParallelWorkers);
+        world.UpdateParallel(js.m_submitter);
 
         larvae::AssertEqual(system_a_count.load(), 1);
         larvae::AssertEqual(system_b_count.load(), 1);
@@ -103,6 +119,7 @@ namespace
     auto test5 = larvae::RegisterTest("QueenWorldParallel", "UpdateParallelMixedArchetypes", []() {
         comb::LinearAllocator alloc{ParallelAllocSize};
         queen::World world{};
+        TestJobSystem js;
 
         std::atomic<int> count{0};
 
@@ -114,23 +131,22 @@ namespace
         (void)world.Spawn(Position{2.0f, 0.0f, 0.0f}, Velocity{0.0f, 0.0f, 0.0f});
         (void)world.Spawn(Position{3.0f, 0.0f, 0.0f}, Health{100, 100});
 
-        world.UpdateParallel(DefaultParallelWorkers);
+        world.UpdateParallel(js.m_submitter);
 
         larvae::AssertEqual(count.load(), 3);
     });
 
-    // ─────────────────────────────────────────────────────────────
     // Parallel Scheduler Reuse Tests
-    // ─────────────────────────────────────────────────────────────
 
     auto test6 = larvae::RegisterTest("QueenWorldParallel", "UpdateParallelReusesScheduler", []() {
         comb::LinearAllocator alloc{ParallelAllocSize};
         queen::World world{};
+        TestJobSystem js;
 
-        world.UpdateParallel(DefaultParallelWorkers);
+        world.UpdateParallel(js.m_submitter);
         auto* scheduler1 = world.GetParallelScheduler();
 
-        world.UpdateParallel(DefaultParallelWorkers);
+        world.UpdateParallel(js.m_submitter);
         auto* scheduler2 = world.GetParallelScheduler();
 
         larvae::AssertTrue(scheduler1 == scheduler2);
@@ -139,6 +155,7 @@ namespace
     auto test7 = larvae::RegisterTest("QueenWorldParallel", "UpdateParallelMultipleUpdates", []() {
         comb::LinearAllocator alloc{ParallelAllocSize};
         queen::World world{};
+        TestJobSystem js;
 
         std::atomic<int> count{0};
 
@@ -147,24 +164,23 @@ namespace
 
         (void)world.Spawn(Position{1.0f, 0.0f, 0.0f});
 
-        world.UpdateParallel(DefaultParallelWorkers);
-        world.UpdateParallel(DefaultParallelWorkers);
-        world.UpdateParallel(DefaultParallelWorkers);
+        world.UpdateParallel(js.m_submitter);
+        world.UpdateParallel(js.m_submitter);
+        world.UpdateParallel(js.m_submitter);
 
         larvae::AssertEqual(count.load(), 3);
     });
 
-    // ─────────────────────────────────────────────────────────────
     // Invalidate Tests
-    // ─────────────────────────────────────────────────────────────
 
     auto test8 = larvae::RegisterTest("QueenWorldParallel", "InvalidateSchedulerAffectsBoth", []() {
         comb::LinearAllocator alloc{ParallelAllocSize};
         queen::World world{};
+        TestJobSystem js;
 
         world.System<queen::Read<Position>>("Sys1").Each([](const Position&) {});
 
-        world.UpdateParallel(DefaultParallelWorkers);
+        world.UpdateParallel(js.m_submitter);
 
         auto* scheduler = world.GetParallelScheduler();
         larvae::AssertNotNull(scheduler);
@@ -177,9 +193,7 @@ namespace
         larvae::AssertTrue(needs_rebuild_after);
     });
 
-    // ─────────────────────────────────────────────────────────────
     // Comparison: Sequential vs Parallel
-    // ─────────────────────────────────────────────────────────────
 
     auto test9 = larvae::RegisterTest("QueenWorldParallel", "ParallelSameResultAsSequential", []() {
         comb::LinearAllocator alloc{2 * 1024 * 1024};
@@ -189,6 +203,7 @@ namespace
 
         {
             queen::World world{};
+            TestJobSystem js;
 
             world.System<queen::Read<Position>>("Counter").Each(
                 [&sequential_count](const Position&) { sequential_count.fetch_add(1, std::memory_order_relaxed); });
@@ -205,6 +220,7 @@ namespace
 
         {
             queen::World world{};
+            TestJobSystem js;
 
             world.System<queen::Read<Position>>("Counter").Each(
                 [&parallel_count](const Position&) { parallel_count.fetch_add(1, std::memory_order_relaxed); });
@@ -214,26 +230,25 @@ namespace
                 (void)world.Spawn(Position{static_cast<float>(i), 0.0f, 0.0f});
             }
 
-            world.UpdateParallel(DefaultParallelWorkers);
+            world.UpdateParallel(js.m_submitter);
         }
 
         larvae::AssertEqual(sequential_count.load(), parallel_count.load());
         larvae::AssertEqual(sequential_count.load(), 10);
     });
 
-    // ─────────────────────────────────────────────────────────────
     // Write System Tests
-    // ─────────────────────────────────────────────────────────────
 
     auto test10 = larvae::RegisterTest("QueenWorldParallel", "UpdateParallelWriteSystem", []() {
         comb::LinearAllocator alloc{ParallelAllocSize};
         queen::World world{};
+        TestJobSystem js;
 
         world.System<queen::Write<Position>>("Move").Each([](Position& pos) { pos.x += 1.0f; });
 
         auto e = world.Spawn(Position{0.0f, 0.0f, 0.0f});
 
-        world.UpdateParallel(DefaultParallelWorkers);
+        world.UpdateParallel(js.m_submitter);
 
         auto* pos = world.Get<Position>(e);
         larvae::AssertNotNull(pos);
@@ -243,6 +258,7 @@ namespace
     auto test11 = larvae::RegisterTest("QueenWorldParallel", "UpdateParallelMultipleWriteSystems", []() {
         comb::LinearAllocator alloc{16 * 1024 * 1024};
         queen::World world{};
+        TestJobSystem js;
 
         world.System<queen::Write<Position>>("MoveX").Each([](Position& pos) { pos.x += 1.0f; });
 
@@ -251,7 +267,7 @@ namespace
         auto e1 = world.Spawn(Position{0.0f, 0.0f, 0.0f});
         auto e2 = world.Spawn(Velocity{0.0f, 0.0f, 0.0f});
 
-        world.UpdateParallel(DefaultParallelWorkers);
+        world.UpdateParallel(js.m_submitter);
 
         auto* pos = world.Get<Position>(e1);
         auto* vel = world.Get<Velocity>(e2);
@@ -262,13 +278,12 @@ namespace
         larvae::AssertEqual(vel->dx, 0.5f);
     });
 
-    // ─────────────────────────────────────────────────────────────
     // Independent vs Dependent Systems
-    // ─────────────────────────────────────────────────────────────
 
     auto test12 = larvae::RegisterTest("QueenWorldParallel", "IndependentSystemsCanRunParallel", []() {
         comb::LinearAllocator alloc{ParallelAllocSize};
         queen::World world{};
+        TestJobSystem js;
 
         std::atomic<int> running_count{0};
         std::atomic<int> max_concurrent{0};
@@ -297,23 +312,22 @@ namespace
         (void)world.Spawn(Health{100, 100});
 
         // With multiple workers, systems on independent components can run in parallel
-        world.UpdateParallel(DefaultParallelWorkers);
+        world.UpdateParallel(js.m_submitter);
 
         larvae::AssertTrue(max_concurrent.load() >= 1);
     });
 
-    // ─────────────────────────────────────────────────────────────
     // Tick Increment Tests
-    // ─────────────────────────────────────────────────────────────
 
     auto test13 = larvae::RegisterTest("QueenWorldParallel", "UpdateParallelIncrementsTick", []() {
         comb::LinearAllocator alloc{ParallelAllocSize};
         queen::World world{};
+        TestJobSystem js;
 
         queen::Tick t1 = world.CurrentTick();
-        world.UpdateParallel(DefaultParallelWorkers);
+        world.UpdateParallel(js.m_submitter);
         queen::Tick t2 = world.CurrentTick();
-        world.UpdateParallel(DefaultParallelWorkers);
+        world.UpdateParallel(js.m_submitter);
         queen::Tick t3 = world.CurrentTick();
 
         larvae::AssertTrue(t2.IsNewerThan(t1));
@@ -323,6 +337,7 @@ namespace
     auto test14 = larvae::RegisterTest("QueenWorldParallel", "MixedUpdateAndUpdateParallel", []() {
         comb::LinearAllocator alloc{ParallelAllocSize};
         queen::World world{};
+        TestJobSystem js;
 
         std::atomic<int> count{0};
 
@@ -332,27 +347,26 @@ namespace
         (void)world.Spawn(Position{1.0f, 0.0f, 0.0f});
 
         world.Update();
-        world.UpdateParallel(DefaultParallelWorkers);
+        world.UpdateParallel(js.m_submitter);
         world.Update();
-        world.UpdateParallel(DefaultParallelWorkers);
+        world.UpdateParallel(js.m_submitter);
 
         larvae::AssertEqual(count.load(), 4);
     });
 
-    // ─────────────────────────────────────────────────────────────
     // No Entities Tests
-    // ─────────────────────────────────────────────────────────────
 
     auto test15 = larvae::RegisterTest("QueenWorldParallel", "UpdateParallelNoEntities", []() {
         comb::LinearAllocator alloc{ParallelAllocSize};
         queen::World world{};
+        TestJobSystem js;
 
         std::atomic<int> count{0};
 
         world.System<queen::Read<Position>>("Counter").Each(
             [&count](const Position&) { count.fetch_add(1, std::memory_order_relaxed); });
 
-        world.UpdateParallel(DefaultParallelWorkers);
+        world.UpdateParallel(js.m_submitter);
 
         larvae::AssertEqual(count.load(), 0);
     });

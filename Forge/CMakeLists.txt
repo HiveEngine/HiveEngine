@@ -14,12 +14,15 @@ target_sources(Forge
         src/forge/undo.cpp
         src/forge/inspector_panel.cpp
         src/forge/asset_browser.cpp
+        src/forge/console_panel.cpp
         src/forge/toolbar.cpp
         src/forge/scene_file.cpp
+        src/forge/forge_module.cpp
         src/forge/forge_main_window.cpp
         src/forge/project_hub.cpp
         src/forge/vulkan_viewport_widget.cpp
         include/forge/hierarchy_panel.h
+        include/forge/console_panel.h
         include/forge/project_hub.h
         include/forge/vulkan_viewport_widget.h
         include/forge/inspector_panel.h
@@ -48,6 +51,7 @@ target_link_libraries(Forge
         Swarm
         Qt6::Widgets
     PRIVATE
+        Waggle
         glfw
 )
 

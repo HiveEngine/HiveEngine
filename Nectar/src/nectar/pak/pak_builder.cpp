@@ -1,8 +1,9 @@
+#include <nectar/pak/pak_builder.h>
+
 #include <hive/profiling/profiler.h>
 
 #include <nectar/pak/compression.h>
 #include <nectar/pak/crc32.h>
-#include <nectar/pak/pak_builder.h>
 
 #include <algorithm>
 #include <cstdio>

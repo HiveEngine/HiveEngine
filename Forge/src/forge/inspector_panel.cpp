@@ -1,12 +1,14 @@
+#include <forge/inspector_panel.h>
+
 #include <hive/math/types.h>
+
+#include <wax/containers/fixed_string.h>
 
 #include <queen/core/type_id.h>
 #include <queen/reflect/component_registry.h>
 #include <queen/reflect/field_attributes.h>
 #include <queen/reflect/field_info.h>
 #include <queen/world/world.h>
-
-#include <forge/inspector_panel.h>
 #include <forge/selection.h>
 #include <forge/undo.h>
 
@@ -18,6 +20,7 @@
 #include <QGroupBox>
 #include <QHBoxLayout>
 #include <QLabel>
+#include <QLineEdit>
 #include <QPushButton>
 #include <QSpinBox>
 #include <QVBoxLayout>
@@ -116,26 +119,118 @@ namespace forge
             spin->setValue(value);
             return spin;
         }
+
+        constexpr const char* kAxisLabels[] = {"X", "Y", "Z", "W"};
+        constexpr const char* kAxisColors[] = {"#e05555", "#55b855", "#5580e0", "#c0c0c0"};
+
+        struct AxisSpinConfig
+        {
+            double m_value;
+            double m_step{0.01};
+            double m_min{-1e9};
+            double m_max{1e9};
+            const char* m_suffix{nullptr};
+        };
+
+        // Build a horizontal row of N labeled spin boxes (e.g. X/Y/Z or X/Y/Z/W).
+        // onChanged is called with (axisIndex, newFloatValue) when any spin box finishes editing.
+        template <typename Callback>
+        QWidget* BuildAxisRow(int axisCount, const AxisSpinConfig* configs, Callback&& onChanged)
+        {
+            auto* container = new QWidget;
+            auto* hbox = new QHBoxLayout{container};
+            hbox->setContentsMargins(0, 0, 0, 0);
+            hbox->setSpacing(2);
+
+            for (int axis = 0; axis < axisCount; ++axis)
+            {
+                auto* axisLabel = new QLabel{kAxisLabels[axis]};
+                axisLabel->setFixedWidth(12);
+                axisLabel->setAlignment(Qt::AlignCenter);
+                axisLabel->setStyleSheet(
+                    QString{"color: %1; font-size: 10px; font-weight: bold;"}.arg(kAxisColors[axis]));
+                hbox->addWidget(axisLabel);
+
+                auto* spin = MakeDoubleSpinBox(configs[axis].m_value, configs[axis].m_step);
+                spin->setMinimum(configs[axis].m_min);
+                spin->setMaximum(configs[axis].m_max);
+                if (configs[axis].m_suffix != nullptr)
+                {
+                    spin->setSuffix(QString::fromUtf8(configs[axis].m_suffix));
+                }
+                hbox->addWidget(spin, 1);
+
+                QObject::connect(spin, &QDoubleSpinBox::editingFinished, container,
+                                 [spin, axis, cb = std::forward<Callback>(onChanged)]() {
+                                     cb(axis, static_cast<float>(spin->value()));
+                                 });
+            }
+
+            return container;
+        }
     } // namespace
 
     InspectorPanel::InspectorPanel(QWidget* parent)
         : QScrollArea{parent}
     {
         setWidgetResizable(true);
+        setStyleSheet("QScrollArea { background: #0d0d0d; border: none; }"
+                      "QWidget#inspectorContent { background: #0d0d0d; }"
+                      "QGroupBox {"
+                      "  background: #141414; border: 1px solid #2a2a2a; border-radius: 4px;"
+                      "  margin-top: 6px; padding: 8px 6px 6px 6px; font-size: 11px;"
+                      "  font-weight: bold; color: #f0a500;"
+                      "}"
+                      "QGroupBox::title {"
+                      "  subcontrol-origin: margin; left: 8px; padding: 0 4px;"
+                      "}"
+                      "QGroupBox::indicator { width: 12px; height: 12px; }"
+                      "QGroupBox::indicator:checked { background: #f0a500; border-radius: 2px; }"
+                      "QGroupBox::indicator:unchecked { background: #333; border-radius: 2px; }"
+                      "QLabel { color: #999; font-size: 11px; }"
+                      "QLabel#inspectorHeader { color: #e8e8e8; font-size: 12px; font-weight: bold; }"
+                      "QDoubleSpinBox, QSpinBox {"
+                      "  background: #1a1a1a; color: #e8e8e8; border: 1px solid #2a2a2a;"
+                      "  border-radius: 3px; padding: 2px 4px; font-size: 11px;"
+                      "  min-width: 48px; max-height: 20px;"
+                      "}"
+                      "QDoubleSpinBox:focus, QSpinBox:focus { border-color: #f0a500; }"
+                      "QDoubleSpinBox::up-button, QDoubleSpinBox::down-button,"
+                      "QSpinBox::up-button, QSpinBox::down-button { width: 0; }"
+                      "QLineEdit {"
+                      "  background: #1a1a1a; color: #e8e8e8; border: 1px solid #2a2a2a;"
+                      "  border-radius: 3px; padding: 2px 4px; font-size: 11px; max-height: 20px;"
+                      "}"
+                      "QLineEdit:focus { border-color: #f0a500; }"
+                      "QCheckBox { color: #e8e8e8; font-size: 11px; }"
+                      "QCheckBox::indicator { width: 14px; height: 14px; border-radius: 2px; }"
+                      "QCheckBox::indicator:unchecked { background: #333; border: 1px solid #2a2a2a; }"
+                      "QCheckBox::indicator:checked { background: #f0a500; border: none; }"
+                      "QComboBox {"
+                      "  background: #1a1a1a; color: #e8e8e8; border: 1px solid #2a2a2a;"
+                      "  border-radius: 3px; padding: 2px 4px; font-size: 11px; max-height: 20px;"
+                      "}"
+                      "QPushButton {"
+                      "  background: #1a1a1a; color: #e8e8e8; border: 1px solid #2a2a2a;"
+                      "  border-radius: 3px; padding: 2px 8px; font-size: 11px; max-height: 20px;"
+                      "}"
+                      "QPushButton:hover { border-color: #f0a500; }");
     }
 
     void InspectorPanel::Refresh(queen::World& world, EditorSelection& selection,
                                  const queen::ComponentRegistry<256>& registry, UndoStack& undo)
     {
         auto* content = new QWidget;
+        content->setObjectName("inspectorContent");
         auto* rootLayout = new QVBoxLayout{content};
-        rootLayout->setContentsMargins(4, 4, 4, 4);
+        rootLayout->setContentsMargins(4, 2, 4, 4);
+        rootLayout->setSpacing(1);
 
         const queen::Entity entity = selection.Primary();
         if (entity.IsNull() || !world.IsAlive(entity))
         {
             auto* label = new QLabel{"No entity selected"};
-            label->setEnabled(false);
+            label->setStyleSheet("color: #555; font-size: 11px; padding: 12px;");
             rootLayout->addWidget(label);
             rootLayout->addStretch();
             setWidget(content);
@@ -143,6 +238,8 @@ namespace forge
         }
 
         auto* header = new QLabel{QString{"Entity %1"}.arg(entity.Index())};
+        header->setObjectName("inspectorHeader");
+        header->setContentsMargins(2, 0, 0, 0);
         rootLayout->addWidget(header);
 
         world.ForEachComponentType(entity, [&](queen::TypeId typeId) {
@@ -159,12 +256,18 @@ namespace forge
             }
 
             const auto& reflection = reg->m_reflection;
-            const char* name = reflection.m_name != nullptr ? reflection.m_name : "Component";
+            const char* rawName = reflection.m_name != nullptr ? reflection.m_name : "Component";
+            const char* name = rawName;
+            if (const char* sep = std::strrchr(rawName, ':'))
+                name = sep + 1;
 
             auto* group = new QGroupBox{QString::fromUtf8(name)};
             group->setCheckable(true);
             group->setChecked(true);
             auto* form = new QFormLayout{group};
+            form->setContentsMargins(4, 4, 4, 4);
+            form->setSpacing(3);
+            form->setLabelAlignment(Qt::AlignRight | Qt::AlignVCenter);
 
             FieldContext ctx{&world, entity, typeId, 0, &undo};
 
@@ -176,7 +279,7 @@ namespace forge
             rootLayout->addWidget(group);
         });
 
-        rootLayout->addStretch();
+        rootLayout->addStretch(1);
         setWidget(content);
     }
 
@@ -376,35 +479,32 @@ namespace forge
                     }
                     else
                     {
-                        auto* container = new QWidget;
-                        auto* hbox = new QHBoxLayout{container};
-                        hbox->setContentsMargins(0, 0, 0, 0);
+                        AxisSpinConfig configs[3];
+                        for (int i = 0; i < 3; ++i)
+                        {
+                            configs[i].m_value = static_cast<double>(floats[i]);
+                            if (field.m_attributes != nullptr && field.m_attributes->HasRange())
+                            {
+                                configs[i].m_min = static_cast<double>(field.m_attributes->m_min);
+                                configs[i].m_max = static_cast<double>(field.m_attributes->m_max);
+                            }
+                        }
 
                         auto snapshot = std::make_shared<SnapshotState>();
 
-                        for (int axis = 0; axis < 3; ++axis)
-                        {
-                            auto* spin = MakeDoubleSpinBox(static_cast<double>(floats[axis]));
-                            ApplyRange(spin, field);
-                            hbox->addWidget(spin);
-
-                            QObject::connect(spin, &QDoubleSpinBox::editingFinished, this,
-                                             [this, spin, floats, axis, snapshot, entity, typeId, offset, &undo]() {
-                                                 float newVal = static_cast<float>(spin->value());
-                                                 if (newVal != floats[axis])
-                                                 {
-                                                     if (snapshot->m_size == 0)
-                                                     {
-                                                         Snapshot(*snapshot, entity, typeId, offset, 12, floats);
-                                                     }
-                                                     floats[axis] = newVal;
-                                                     CommitIfChanged(*snapshot, undo, floats);
-                                                     emit sceneModified();
-                                                 }
-                                             });
-                        }
-
-                        widget = container;
+                        widget = BuildAxisRow(3, configs,
+                                              [this, floats, snapshot, entity, typeId, offset, &undo](int axis, float newVal) {
+                                                  if (newVal != floats[axis])
+                                                  {
+                                                      if (snapshot->m_size == 0)
+                                                      {
+                                                          Snapshot(*snapshot, entity, typeId, offset, 12, floats);
+                                                      }
+                                                      floats[axis] = newVal;
+                                                      CommitIfChanged(*snapshot, undo, floats);
+                                                      emit sceneModified();
+                                                  }
+                                              });
                     }
                 }
                 else if (field.m_nestedTypeId == queen::TypeIdOf<hive::math::Quat>())
@@ -453,41 +553,31 @@ namespace forge
                     float euler[3];
                     quatToEuler(q, euler);
 
-                    auto* container = new QWidget;
-                    auto* hbox = new QHBoxLayout{container};
-                    hbox->setContentsMargins(0, 0, 0, 0);
+                    static constexpr const char* kDegSuffix = "\xC2\xB0";
+                    AxisSpinConfig configs[3];
+                    for (int i = 0; i < 3; ++i)
+                    {
+                        configs[i] = {static_cast<double>(euler[i]), 0.5, -360.0, 360.0, kDegSuffix};
+                    }
 
                     auto snapshot = std::make_shared<SnapshotState>();
 
-                    for (int axis = 0; axis < 3; ++axis)
-                    {
-                        auto* spin = MakeDoubleSpinBox(static_cast<double>(euler[axis]), 0.5);
-                        spin->setSuffix(QString::fromUtf8("\xC2\xB0"));
-                        spin->setMinimum(-360.0);
-                        spin->setMaximum(360.0);
-                        hbox->addWidget(spin);
-
-                        QObject::connect(
-                            spin, &QDoubleSpinBox::editingFinished, this,
-                            [this, spin, q, axis, snapshot, entity, typeId, offset, &undo, quatToEuler, eulerToQuat]() {
-                                float curEuler[3];
-                                quatToEuler(q, curEuler);
-                                float newDeg = static_cast<float>(spin->value());
-                                if (newDeg != curEuler[axis])
-                                {
-                                    if (snapshot->m_size == 0)
-                                    {
-                                        Snapshot(*snapshot, entity, typeId, offset, 16, q);
-                                    }
-                                    curEuler[axis] = newDeg;
-                                    eulerToQuat(curEuler, q);
-                                    CommitIfChanged(*snapshot, undo, q);
-                                    emit sceneModified();
-                                }
-                            });
-                    }
-
-                    widget = container;
+                    widget = BuildAxisRow(3, configs,
+                                          [this, q, snapshot, entity, typeId, offset, &undo, quatToEuler, eulerToQuat](int axis, float newDeg) {
+                                              float curEuler[3];
+                                              quatToEuler(q, curEuler);
+                                              if (newDeg != curEuler[axis])
+                                              {
+                                                  if (snapshot->m_size == 0)
+                                                  {
+                                                      Snapshot(*snapshot, entity, typeId, offset, 16, q);
+                                                  }
+                                                  curEuler[axis] = newDeg;
+                                                  eulerToQuat(curEuler, q);
+                                                  CommitIfChanged(*snapshot, undo, q);
+                                                  emit sceneModified();
+                                              }
+                                          });
                 }
                 else if (field.m_nestedFields != nullptr && field.m_nestedFieldCount > 0)
                 {
@@ -560,6 +650,31 @@ namespace forge
                     widget = new QLabel{"(unsupported)"};
                     widget->setEnabled(false);
                 }
+                break;
+            }
+
+            case queen::FieldType::STRING: {
+                auto* value = static_cast<wax::FixedString*>(fieldData);
+                auto* lineEdit = new QLineEdit{QString::fromUtf8(value->CStr(), static_cast<int>(value->Size()))};
+                lineEdit->setMaxLength(static_cast<int>(wax::FixedString::MaxCapacity));
+
+                auto snapshot = std::make_shared<SnapshotState>();
+
+                QObject::connect(lineEdit, &QLineEdit::editingFinished, this,
+                                 [this, lineEdit, value, snapshot, entity, typeId, offset, &undo]() {
+                                     QByteArray utf8 = lineEdit->text().toUtf8();
+                                     wax::FixedString newVal{utf8.constData(), static_cast<size_t>(utf8.size())};
+                                     if (newVal != *value)
+                                     {
+                                         Snapshot(*snapshot, entity, typeId, offset,
+                                                  static_cast<uint16_t>(sizeof(wax::FixedString)), value);
+                                         *value = newVal;
+                                         CommitIfChanged(*snapshot, undo, value);
+                                         emit sceneModified();
+                                     }
+                                 });
+
+                widget = lineEdit;
                 break;
             }
 

@@ -1,17 +1,19 @@
 #pragma once
 
+#include <wax/containers/string.h>
+#include <wax/containers/vector.h>
+
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <string>
-#include <vector>
 
 namespace larvae
 {
     struct TestPlaylist
     {
-        std::string m_name;
-        std::vector<std::string> m_testPatterns;
+        wax::String m_name;
+        wax::Vector<wax::String> m_testPatterns;
         bool m_enabled = true;
     };
 
@@ -25,8 +27,8 @@ namespace larvae
         float m_windowWidth = 1280.0f;
         float m_windowHeight = 720.0f;
 
-        std::vector<TestPlaylist> m_playlists;
-        std::vector<std::string> m_selectedSuites;
+        wax::Vector<TestPlaylist> m_playlists;
+        wax::Vector<wax::String> m_selectedSuites;
 
         static std::filesystem::path GetConfigPath()
         {
@@ -66,21 +68,21 @@ namespace larvae
             file << "window_width=" << m_windowWidth << "\n";
             file << "window_height=" << m_windowHeight << "\n";
 
-            file << "selected_suites_count=" << m_selectedSuites.size() << "\n";
+            file << "selected_suites_count=" << m_selectedSuites.Size() << "\n";
             for (const auto& suite : m_selectedSuites)
             {
-                file << "selected_suite=" << suite << "\n";
+                file << "selected_suite=" << suite.CStr() << "\n";
             }
 
-            file << "playlists_count=" << m_playlists.size() << "\n";
+            file << "playlists_count=" << m_playlists.Size() << "\n";
             for (const auto& playlist : m_playlists)
             {
-                file << "playlist_name=" << playlist.m_name << "\n";
+                file << "playlist_name=" << playlist.m_name.CStr() << "\n";
                 file << "playlist_enabled=" << (playlist.m_enabled ? 1 : 0) << "\n";
-                file << "playlist_patterns_count=" << playlist.m_testPatterns.size() << "\n";
+                file << "playlist_patterns_count=" << playlist.m_testPatterns.Size() << "\n";
                 for (const auto& pattern : playlist.m_testPatterns)
                 {
-                    file << "playlist_pattern=" << pattern << "\n";
+                    file << "playlist_pattern=" << pattern.CStr() << "\n";
                 }
             }
         }
@@ -92,8 +94,8 @@ namespace larvae
                 return;
 
             std::string line;
-            m_playlists.clear();
-            m_selectedSuites.clear();
+            m_playlists.Clear();
+            m_selectedSuites.Clear();
 
             TestPlaylist currentPlaylist;
             bool readingPlaylist = false;
@@ -124,17 +126,17 @@ namespace larvae
                 else if (key == "selected_suites_count")
                     continue;
                 else if (key == "selected_suite")
-                    m_selectedSuites.push_back(value);
+                    m_selectedSuites.PushBack(wax::String{value.c_str()});
                 else if (key == "playlists_count")
                     continue;
                 else if (key == "playlist_name")
                 {
                     if (readingPlaylist)
                     {
-                        m_playlists.push_back(currentPlaylist);
+                        m_playlists.PushBack(std::move(currentPlaylist));
                     }
                     currentPlaylist = TestPlaylist{};
-                    currentPlaylist.m_name = value;
+                    currentPlaylist.m_name = wax::String{value.c_str()};
                     readingPlaylist = true;
                 }
                 else if (key == "playlist_enabled")
@@ -142,12 +144,12 @@ namespace larvae
                 else if (key == "playlist_patterns_count")
                     continue;
                 else if (key == "playlist_pattern")
-                    currentPlaylist.m_testPatterns.push_back(value);
+                    currentPlaylist.m_testPatterns.PushBack(wax::String{value.c_str()});
             }
 
             if (readingPlaylist)
             {
-                m_playlists.push_back(currentPlaylist);
+                m_playlists.PushBack(std::move(currentPlaylist));
             }
         }
     };

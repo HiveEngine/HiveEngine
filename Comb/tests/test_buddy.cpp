@@ -227,16 +227,12 @@ namespace
         larvae::AssertEqual(buddy.GetUsedMemory(), 0u);
     });
 
-    // =============================================================================
     // Concept Satisfaction
-    // =============================================================================
 
     auto test12 = larvae::RegisterTest("BuddyAllocator", "ConceptSatisfaction",
                                        []() { larvae::AssertTrue((comb::Allocator<comb::BuddyAllocator>)); });
 
-    // =============================================================================
     // Reset
-    // =============================================================================
 
     auto test13 = larvae::RegisterTest("BuddyAllocator", "ResetFreesAllMemory", []() {
         comb::BuddyAllocator buddy{4_KB};
@@ -291,9 +287,7 @@ namespace
         }
     });
 
-    // =============================================================================
     // Alignment
-    // =============================================================================
 
     auto test16 = larvae::RegisterTest("BuddyAllocator", "AllocatedPointersAreUsable", []() {
         comb::BuddyAllocator buddy{1_MB};
@@ -341,9 +335,7 @@ namespace
         larvae::AssertEqual(buddy.GetUsedMemory(), 0u);
     });
 
-    // =============================================================================
     // Move Semantics
-    // =============================================================================
 
     auto test18 = larvae::RegisterTest("BuddyAllocator", "MoveConstructorTransfersOwnership", []() {
         comb::BuddyAllocator buddy1{1_MB};
@@ -388,9 +380,7 @@ namespace
         larvae::AssertEqual(buddy1.GetUsedMemory(), 0u);
     });
 
-    // =============================================================================
     // New/Delete
-    // =============================================================================
 
     auto test21 = larvae::RegisterTest("BuddyAllocator", "NewDeleteWorks", []() {
         comb::BuddyAllocator buddy{1_MB};
@@ -437,9 +427,7 @@ namespace
         larvae::AssertTrue(destroyed);
     });
 
-    // =============================================================================
     // Memory Access
-    // =============================================================================
 
     auto test23 = larvae::RegisterTest("BuddyAllocator", "AllocatedMemoryIsWritable", []() {
         comb::BuddyAllocator buddy{1_MB};
@@ -457,9 +445,7 @@ namespace
         buddy.Deallocate(ptr);
     });
 
-    // =============================================================================
     // GetName
-    // =============================================================================
 
     auto test24 = larvae::RegisterTest("BuddyAllocator", "GetNameReturnsCorrectName", []() {
         comb::BuddyAllocator buddy{1_KB};

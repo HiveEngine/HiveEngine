@@ -433,6 +433,23 @@ namespace wax
             return ConstIterator{m_buckets, m_capacity, m_capacity};
         }
 
+        [[nodiscard]] Iterator begin() noexcept
+        {
+            return Begin();
+        }
+        [[nodiscard]] Iterator end() noexcept
+        {
+            return End();
+        }
+        [[nodiscard]] ConstIterator begin() const noexcept
+        {
+            return Begin();
+        }
+        [[nodiscard]] ConstIterator end() const noexcept
+        {
+            return End();
+        }
+
     private:
         void InitializeBuckets(size_t initialCapacity)
         {

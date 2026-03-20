@@ -28,9 +28,7 @@
 #include <cstddef>
 #include <cstdint>
 
-// ============================================================================
 // Build Configuration (Set by CMake)
-// ============================================================================
 
 // Default to disabled if not set by CMake
 #ifndef COMB_MEM_DEBUG
@@ -41,15 +39,11 @@
 #define COMB_MEM_DEBUG_CALLSTACKS 0
 #endif
 
-// ============================================================================
 // Feature Flags
-// ============================================================================
 
 #if COMB_MEM_DEBUG
 
-// ========================================================================
 // Core Features (Always Enabled)
-// ========================================================================
 
 /**
  * Leak Detection
@@ -89,9 +83,7 @@
  */
 #define COMB_MEM_DEBUG_STATS 1
 
-// ========================================================================
 // Optional Features (Can be Disabled for Performance)
-// ========================================================================
 
 /**
  * Use-After-Free Detection
@@ -119,9 +111,7 @@
 #define COMB_MEM_DEBUG_HISTORY_SIZE 1000 // Last 1000 allocations
 #endif
 
-// ========================================================================
 // Expensive Features (Disabled by Default)
-// ========================================================================
 
 /**
  * Callstack Capture
@@ -133,9 +123,7 @@
  */
 // COMB_MEM_DEBUG_CALLSTACKS already defined by CMake
 
-// ========================================================================
 // Debug Constants
-// ========================================================================
 
 #include <cstring> // For memcpy
 
@@ -173,9 +161,7 @@ namespace comb::debug
 
 #else // COMB_MEM_DEBUG = 0
 
-// ========================================================================
 // All Features Disabled (Zero Overhead)
-// ========================================================================
 
 #define COMB_MEM_DEBUG_LEAK_DETECTION 0
 #define COMB_MEM_DEBUG_DOUBLE_FREE 0
@@ -192,9 +178,7 @@ namespace comb::debug
 
 #endif // COMB_MEM_DEBUG
 
-// ============================================================================
 // Compile-Time Constants
-// ============================================================================
 
 namespace comb::debug
 {
@@ -227,17 +211,13 @@ namespace comb::debug
     inline constexpr bool kUseAfterFreeEnabled = (COMB_MEM_DEBUG_USE_AFTER_FREE != 0);
 } // namespace comb::debug
 
-// ============================================================================
 // Static Assertions (Compile-Time Checks)
-// ============================================================================
 
 // Callstacks require MEM_DEBUG
 static_assert(COMB_MEM_DEBUG_CALLSTACKS == 0 || COMB_MEM_DEBUG == 1,
               "COMB_MEM_DEBUG_CALLSTACKS requires COMB_MEM_DEBUG=1");
 
-// ============================================================================
 // Summary Log (Disabled - too verbose during compilation)
-// ============================================================================
 //
 // Memory debugging configuration:
 // - COMB_MEM_DEBUG: Enabled/Disabled

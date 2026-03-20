@@ -16,11 +16,14 @@ target_sources(Waggle
         src/waggle/project/gameplay_module.cpp
         src/waggle/project/cmake_generator.cpp
         src/waggle/project/project_scaffolder.cpp
+        src/waggle/scene/gltf_scene_loader.cpp
 )
 
 target_include_directories(Waggle
     PUBLIC
         include
+    SYSTEM PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/../Nectar/extern/cgltf
 )
 
 target_precompile_headers(Waggle
@@ -37,6 +40,6 @@ target_link_libraries(Waggle
 
 target_link_libraries(Waggle PUBLIC Terra Antennae Swarm)
 
-if(HIVE_ENGINE_MODE STREQUAL "Editor" AND HIVE_FEATURE_IMGUI AND HIVE_HAS_INTERACTIVE_GRAPHICS)
+if(TARGET Forge)
     target_link_libraries(Waggle PRIVATE Forge)
 endif()

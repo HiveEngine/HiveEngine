@@ -76,9 +76,7 @@ namespace comb::debug
         AllocationRegistry(AllocationRegistry&&) noexcept = delete;
         AllocationRegistry& operator=(AllocationRegistry&&) noexcept = delete;
 
-        // ========================================================================
         // Registration API
-        // ========================================================================
 
         /**
          * Register a new allocation
@@ -194,9 +192,7 @@ namespace comb::debug
             return nullptr;
         }
 
-        // ========================================================================
         // Statistics API
-        // ========================================================================
 
         /**
          * Get current allocation statistics
@@ -235,9 +231,7 @@ namespace comb::debug
             return m_nextAllocationId.fetch_add(1, std::memory_order_relaxed);
         }
 
-        // ========================================================================
         // Leak Detection & Reporting
-        // ========================================================================
 
         /**
          * Report memory leaks to log
@@ -271,7 +265,7 @@ namespace comb::debug
 #if COMB_MEM_DEBUG_CALLSTACKS
                 if (info.callstackDepth > 0)
                 {
-                    hive::LogError(comb::LogCombRoot, "    Callstack:");
+                    hive::LogError(comb::LOG_COMB_ROOT, "    Callstack:");
                     PrintCallstack(info.callstack, info.callstackDepth);
                 }
 #endif

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <hive/HiveConfig.h>
+#include <hive/hive_config.h>
 
 #include <brood/launcher/launcher_types.h>
 
@@ -9,9 +9,10 @@
 #include <shobjidl.h>
 #endif
 
+#include <wax/containers/string.h>
+#include <wax/containers/vector.h>
+
 #include <filesystem>
-#include <string>
-#include <vector>
 
 namespace brood::launcher
 {
@@ -19,20 +20,20 @@ namespace brood::launcher
 #if HIVE_MODE_EDITOR
     std::filesystem::path GetCurrentExecutablePath();
     bool IsEngineRoot(const std::filesystem::path& path);
-    std::string GetEnvironmentValue(const char* name);
+    wax::String GetEnvironmentValue(const char* name);
     std::filesystem::path FindEngineRoot();
     std::filesystem::path GetHomeDirectory();
     std::filesystem::path GetDefaultProjectsDirectory();
-    void CopyStringToBuffer(const std::string& value, char* buffer, size_t bufferSize);
-    std::string TrimmedCopy(const char* input);
-    bool IsProjectNameValid(const std::string& name);
-    bool TryLoadProjectSummary(const std::filesystem::path& path, std::string* name, std::string* version);
+    void CopyStringToBuffer(const wax::String& value, char* buffer, size_t bufferSize);
+    wax::String TrimmedCopy(const char* input);
+    bool IsProjectNameValid(const wax::String& name);
+    bool TryLoadProjectSummary(const std::filesystem::path& path, wax::String* name, wax::String* version);
     const char* GetPresetBase(LauncherToolchainPreset preset);
-    std::vector<LauncherDiscoveredProject> DiscoverProjects(const std::filesystem::path& engineRoot);
-    void SetHubStatus(ProjectHubState& hub, bool isError, const std::string& message);
+    wax::Vector<LauncherDiscoveredProject> DiscoverProjects(const std::filesystem::path& engineRoot);
+    void SetHubStatus(ProjectHubState& hub, bool isError, const wax::String& message);
     void RefreshProjectHub(ProjectHubState& hub);
     void InitializeProjectHub(ProjectHubState& hub);
-    std::filesystem::path BuildCreateTargetPath(const ProjectHubState& hub, const std::string& projectName);
+    std::filesystem::path BuildCreateTargetPath(const ProjectHubState& hub, const wax::String& projectName);
     [[maybe_unused]] std::filesystem::path GetPickerSeedDirectory(const char* rawPath);
 
 #if HIVE_PLATFORM_WINDOWS
@@ -85,19 +86,19 @@ namespace brood::launcher
 #endif
 
 #if !HIVE_PLATFORM_WINDOWS
-    std::string QuoteShellArgument(const std::string& value);
-    bool RunShellDialogCommand(const std::string& command, std::string* output);
+    wax::String QuoteShellArgument(const wax::String& value);
+    bool RunShellDialogCommand(const wax::String& command, wax::String* output);
 #endif
 
     NativePathPickerResult ShowNativePathPicker(NativePathPickerMode mode, const std::filesystem::path& seedPath,
                                                 std::filesystem::path* selectedPath);
-    [[maybe_unused]] std::string CompactPathForUi(const std::string& value, size_t maxChars);
+    [[maybe_unused]] wax::String CompactPathForUi(const wax::String& value, size_t maxChars);
     [[maybe_unused]] bool PickPathIntoBuffer(ProjectHubState& hub, NativePathPickerMode mode,
                                              const std::filesystem::path& seedDirectory, char* buffer,
                                              size_t bufferSize);
 #endif // HIVE_MODE_EDITOR
 
     bool ResolveProjectFilePath(const std::filesystem::path& inputPath, std::filesystem::path* resolvedPath);
-    std::string BuildWindowTitle(const std::string& projectPath);
+    wax::String BuildWindowTitle(const wax::String& projectPath);
 
 } // namespace brood::launcher

@@ -18,6 +18,7 @@ namespace nectar
         wax::String m_name;             // short name ("hero")
         ContentHash m_contentHash;      // source data hash (change detection)
         ContentHash m_intermediateHash; // CAS hash of intermediate blob
+        wax::String m_importSource;
         uint32_t m_importVersion{0};
         wax::Vector<wax::String> m_labels;
     };

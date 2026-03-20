@@ -12,14 +12,17 @@
 #include <cgltf.h>
 #pragma clang diagnostic pop
 
-#include <nectar/hive/hive_document.h>
 #include <nectar/mesh/gltf_importer.h>
+
+#include <wax/containers/string.h>
+#include <wax/containers/vector.h>
+
+#include <nectar/hive/hive_document.h>
+
+#include <wax/containers/hash_map.h>
 
 #include <cmath>
 #include <cstring>
-#include <map>
-#include <string>
-#include <vector>
 
 namespace nectar
 {
@@ -31,7 +34,7 @@ namespace nectar
 
     uint32_t GltfImporter::Version() const
     {
-        return 2;
+        return 3;
     }
 
     wax::StringView GltfImporter::TypeName() const
@@ -47,14 +50,14 @@ namespace nectar
         return toU8(r) | (toU8(g) << 8) | (toU8(b) << 16) | (toU8(a) << 24);
     }
 
-    ImportResult GltfImporter::Import(wax::ByteSpan sourceData, const HiveDocument& settings,
-                                      ImportContext& /*context*/)
+    ImportResult GltfImporter::Import(wax::ByteSpan sourceData, const HiveDocument& settings, ImportContext& context)
     {
         ImportResult result{};
 
         auto scale = static_cast<float>(settings.GetFloat("import", "scale", 1.0));
         bool flipUv = settings.GetBool("import", "flip_uv", false);
         bool genNormals = settings.GetBool("import", "generate_normals", true);
+        bool genTangents = settings.GetBool("import", "generate_tangents", true);
         auto basePath = settings.GetString("import", "base_path", "");
 
         // Parse glTF/GLB from memory
@@ -70,8 +73,8 @@ namespace nectar
         // Load buffers: external .bin for .gltf, embedded for .glb
         if (!basePath.IsEmpty())
         {
-            std::string path{basePath.Data(), basePath.Size()};
-            res = cgltf_load_buffers(&options, data, path.c_str());
+            wax::String path{basePath};
+            res = cgltf_load_buffers(&options, data, path.CStr());
         }
         else
         {
@@ -85,8 +88,9 @@ namespace nectar
         }
 
         // Collect geometry from all meshes/primitives
-        std::vector<MeshVertex> vertices;
-        std::map<int, std::vector<uint32_t>> matIndices;
+        auto& alloc = context.GetAllocator();
+        wax::Vector<MeshVertex> vertices{alloc};
+        wax::HashMap<int, wax::Vector<uint32_t>> matIndices;
 
         float aabbMin[3] = {1e30f, 1e30f, 1e30f};
         float aabbMax[3] = {-1e30f, -1e30f, -1e30f};
@@ -108,6 +112,7 @@ namespace nectar
                 const cgltf_accessor* normAcc = nullptr;
                 const cgltf_accessor* uvAcc = nullptr;
                 const cgltf_accessor* colorAcc = nullptr;
+                const cgltf_accessor* tanAcc = nullptr;
 
                 for (cgltf_size ai = 0; ai < prim.attributes_count; ++ai)
                 {
@@ -120,6 +125,8 @@ namespace nectar
                         uvAcc = attr.data;
                     else if (attr.type == cgltf_attribute_type_color && attr.index == 0)
                         colorAcc = attr.data;
+                    else if (attr.type == cgltf_attribute_type_tangent)
+                        tanAcc = attr.data;
                 }
 
                 if (!posAcc)
@@ -135,7 +142,7 @@ namespace nectar
                 if (prim.material && prim.material->has_pbr_metallic_roughness)
                     std::memcpy(baseColor, prim.material->pbr_metallic_roughness.base_color_factor, 4 * sizeof(float));
 
-                uint32_t baseVertex = static_cast<uint32_t>(vertices.size());
+                uint32_t baseVertex = static_cast<uint32_t>(vertices.Size());
                 auto vertCount = static_cast<cgltf_size>(posAcc->count);
 
                 // Extract vertices
@@ -189,7 +196,12 @@ namespace nectar
                         vert.m_color = PackRGBA8(baseColor[0], baseColor[1], baseColor[2], baseColor[3]);
                     }
 
-                    vertices.push_back(vert);
+                    if (tanAcc)
+                    {
+                        cgltf_accessor_read_float(tanAcc, vi, vert.m_tangent, 4);
+                    }
+
+                    vertices.PushBack(vert);
                 }
 
                 // Extract indices
@@ -199,19 +211,19 @@ namespace nectar
                     for (cgltf_size ii = 0; ii < prim.indices->count; ++ii)
                     {
                         auto idx = cgltf_accessor_read_index(prim.indices, ii);
-                        idxBuf.push_back(baseVertex + static_cast<uint32_t>(idx));
+                        idxBuf.PushBack(baseVertex + static_cast<uint32_t>(idx));
                     }
                 }
                 else
                 {
                     for (uint32_t vi = 0; vi < static_cast<uint32_t>(vertCount); ++vi)
-                        idxBuf.push_back(baseVertex + vi);
+                        idxBuf.PushBack(baseVertex + vi);
                 }
 
                 // Generate face normals if source has none
                 if (!normAcc && genNormals)
                 {
-                    size_t idxEnd = idxBuf.size();
+                    size_t idxEnd = idxBuf.Size();
                     size_t idxStart = idxEnd - (prim.indices ? prim.indices->count : vertCount);
                     size_t triCount = (idxEnd - idxStart) / 3;
 
@@ -252,31 +264,131 @@ namespace nectar
                         vertices[i2].m_normal[2] = n[2];
                     }
                 }
+
+                // Generate tangents from UV derivatives when not provided by glTF
+                if (!tanAcc && genTangents && uvAcc && (normAcc || genNormals))
+                {
+                    size_t idxEnd = idxBuf.Size();
+                    size_t idxStart = idxEnd - (prim.indices ? prim.indices->count : vertCount);
+                    size_t triCount = (idxEnd - idxStart) / 3;
+
+                    // Accumulate per-vertex tangent/bitangent
+                    wax::Vector<float> tanAccum(vertices.Size() * 3);
+                    tanAccum.Resize(vertices.Size() * 3);
+                    std::memset(tanAccum.Data(), 0, tanAccum.Size() * sizeof(float));
+                    wax::Vector<float> bitanAccum(vertices.Size() * 3);
+                    bitanAccum.Resize(vertices.Size() * 3);
+                    std::memset(bitanAccum.Data(), 0, bitanAccum.Size() * sizeof(float));
+
+                    for (size_t ti = 0; ti < triCount; ++ti)
+                    {
+                        uint32_t i0 = idxBuf[idxStart + ti * 3 + 0];
+                        uint32_t i1 = idxBuf[idxStart + ti * 3 + 1];
+                        uint32_t i2 = idxBuf[idxStart + ti * 3 + 2];
+
+                        const float* p0 = vertices[i0].m_position;
+                        const float* p1 = vertices[i1].m_position;
+                        const float* p2 = vertices[i2].m_position;
+
+                        const float* uv0 = vertices[i0].m_uv;
+                        const float* uv1 = vertices[i1].m_uv;
+                        const float* uv2 = vertices[i2].m_uv;
+
+                        float edge1[3] = {p1[0] - p0[0], p1[1] - p0[1], p1[2] - p0[2]};
+                        float edge2[3] = {p2[0] - p0[0], p2[1] - p0[1], p2[2] - p0[2]};
+
+                        float duv1[2] = {uv1[0] - uv0[0], uv1[1] - uv0[1]};
+                        float duv2[2] = {uv2[0] - uv0[0], uv2[1] - uv0[1]};
+
+                        float det = duv1[0] * duv2[1] - duv2[0] * duv1[1];
+                        if (std::fabs(det) < 1e-8f)
+                            continue;
+
+                        float f = 1.0f / det;
+
+                        float t[3] = {
+                            f * (duv2[1] * edge1[0] - duv1[1] * edge2[0]),
+                            f * (duv2[1] * edge1[1] - duv1[1] * edge2[1]),
+                            f * (duv2[1] * edge1[2] - duv1[1] * edge2[2]),
+                        };
+
+                        float b[3] = {
+                            f * (-duv2[0] * edge1[0] + duv1[0] * edge2[0]),
+                            f * (-duv2[0] * edge1[1] + duv1[0] * edge2[1]),
+                            f * (-duv2[0] * edge1[2] + duv1[0] * edge2[2]),
+                        };
+
+                        for (uint32_t vi : {i0, i1, i2})
+                        {
+                            for (int a = 0; a < 3; ++a)
+                            {
+                                tanAccum[vi * 3 + a] += t[a];
+                                bitanAccum[vi * 3 + a] += b[a];
+                            }
+                        }
+                    }
+
+                    // Orthonormalize and store
+                    for (uint32_t vi = baseVertex; vi < static_cast<uint32_t>(vertices.Size()); ++vi)
+                    {
+                        const float* n = vertices[vi].m_normal;
+                        float* ta = &tanAccum[vi * 3];
+
+                        // Gram-Schmidt: t = normalize(ta - n * dot(n, ta))
+                        float ndot = n[0] * ta[0] + n[1] * ta[1] + n[2] * ta[2];
+                        float orth[3] = {ta[0] - n[0] * ndot, ta[1] - n[1] * ndot, ta[2] - n[2] * ndot};
+                        float len = std::sqrt(orth[0] * orth[0] + orth[1] * orth[1] + orth[2] * orth[2]);
+
+                        if (len > 1e-8f)
+                        {
+                            vertices[vi].m_tangent[0] = orth[0] / len;
+                            vertices[vi].m_tangent[1] = orth[1] / len;
+                            vertices[vi].m_tangent[2] = orth[2] / len;
+                        }
+                        else
+                        {
+                            vertices[vi].m_tangent[0] = 1.f;
+                            vertices[vi].m_tangent[1] = 0.f;
+                            vertices[vi].m_tangent[2] = 0.f;
+                        }
+
+                        // w = sign of dot(cross(n, tangent), bitangent)
+                        float* ba = &bitanAccum[vi * 3];
+                        float cx[3] = {
+                            n[1] * vertices[vi].m_tangent[2] - n[2] * vertices[vi].m_tangent[1],
+                            n[2] * vertices[vi].m_tangent[0] - n[0] * vertices[vi].m_tangent[2],
+                            n[0] * vertices[vi].m_tangent[1] - n[1] * vertices[vi].m_tangent[0],
+                        };
+                        float w = cx[0] * ba[0] + cx[1] * ba[1] + cx[2] * ba[2];
+                        vertices[vi].m_tangent[3] = w < 0.f ? -1.f : 1.f;
+                    }
+                }
             }
         }
 
         cgltf_free(data);
 
-        if (vertices.empty())
+        if (vertices.IsEmpty())
         {
             result.m_errorMessage = wax::String{"glTF contains no geometry"};
             return result;
         }
 
         // Flatten per-material buckets into final index buffer + submeshes
-        std::vector<uint32_t> indices;
-        std::vector<SubMesh> submeshes;
+        wax::Vector<uint32_t> indices;
+        wax::Vector<SubMesh> submeshes;
 
-        for (auto& [mat_id, idx_buf] : matIndices)
+        for (auto&& [mat_id, idx_buf] : matIndices)
         {
-            if (idx_buf.empty())
+            if (idx_buf.IsEmpty())
                 continue;
             SubMesh sub{};
-            sub.m_indexOffset = static_cast<uint32_t>(indices.size());
-            sub.m_indexCount = static_cast<uint32_t>(idx_buf.size());
+            sub.m_indexOffset = static_cast<uint32_t>(indices.Size());
+            sub.m_indexCount = static_cast<uint32_t>(idx_buf.Size());
             sub.m_materialIndex = mat_id;
-            indices.insert(indices.end(), idx_buf.begin(), idx_buf.end());
-            submeshes.push_back(sub);
+            for (size_t i = 0; i < idx_buf.Size(); ++i)
+                indices.PushBack(idx_buf[i]);
+            submeshes.PushBack(sub);
         }
 
         // Per-submesh AABB
@@ -301,9 +413,9 @@ namespace nectar
 
         // Build NMSH blob
         NmshHeader header{};
-        header.m_vertexCount = static_cast<uint32_t>(vertices.size());
-        header.m_indexCount = static_cast<uint32_t>(indices.size());
-        header.m_submeshCount = static_cast<uint32_t>(submeshes.size());
+        header.m_vertexCount = static_cast<uint32_t>(vertices.Size());
+        header.m_indexCount = static_cast<uint32_t>(indices.Size());
+        header.m_submeshCount = static_cast<uint32_t>(submeshes.Size());
         std::memcpy(header.m_aabbMin, aabbMin, sizeof(aabbMin));
         std::memcpy(header.m_aabbMax, aabbMax, sizeof(aabbMax));
 
@@ -312,9 +424,9 @@ namespace nectar
         uint8_t* blob = result.m_intermediateData.Data();
 
         std::memcpy(blob, &header, sizeof(NmshHeader));
-        std::memcpy(blob + sizeof(NmshHeader), submeshes.data(), sizeof(SubMesh) * submeshes.size());
-        std::memcpy(blob + NmshVertexDataOffset(header), vertices.data(), sizeof(MeshVertex) * vertices.size());
-        std::memcpy(blob + NmshIndexDataOffset(header), indices.data(), sizeof(uint32_t) * indices.size());
+        std::memcpy(blob + sizeof(NmshHeader), submeshes.Data(), sizeof(SubMesh) * submeshes.Size());
+        std::memcpy(blob + NmshVertexDataOffset(header), vertices.Data(), sizeof(MeshVertex) * vertices.Size());
+        std::memcpy(blob + NmshIndexDataOffset(header), indices.Data(), sizeof(uint32_t) * indices.Size());
 
         result.m_success = true;
         return result;

@@ -1,6 +1,6 @@
-#include <wax/containers/vector.h>
-
 #include <nectar/vfs/path.h>
+
+#include <wax/containers/vector.h>
 
 namespace nectar
 {

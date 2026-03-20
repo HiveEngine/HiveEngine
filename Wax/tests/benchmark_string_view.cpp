@@ -6,9 +6,7 @@
 
 namespace
 {
-    // =============================================================================
     // Wax::StringView Benchmarks
-    // =============================================================================
 
     auto bench1 = larvae::RegisterBenchmark("WaxStringView", "ConstructFromLiteral", [](larvae::BenchmarkState& state) {
         while (state.KeepRunning())
@@ -17,7 +15,7 @@ namespace
             larvae::DoNotOptimize(sv.Data());
         }
 
-        state.SetItemsProcessed(state.iterations());
+        state.SetItemsProcessed(state.Iterations());
     });
 
     auto bench2 = larvae::RegisterBenchmark("WaxStringView", "ConstructFromPointer", [](larvae::BenchmarkState& state) {
@@ -29,7 +27,7 @@ namespace
             larvae::DoNotOptimize(sv.Data());
         }
 
-        state.SetItemsProcessed(state.iterations());
+        state.SetItemsProcessed(state.Iterations());
     });
 
     auto bench3 = larvae::RegisterBenchmark("WaxStringView", "Iteration", [](larvae::BenchmarkState& state) {
@@ -48,7 +46,7 @@ namespace
             larvae::DoNotOptimize(count);
         }
 
-        state.SetItemsProcessed(state.iterations() * sv.Size());
+        state.SetItemsProcessed(state.Iterations() * sv.Size());
     });
 
     auto bench4 = larvae::RegisterBenchmark("WaxStringView", "FindChar", [](larvae::BenchmarkState& state) {
@@ -60,7 +58,7 @@ namespace
             larvae::DoNotOptimize(pos);
         }
 
-        state.SetItemsProcessed(state.iterations());
+        state.SetItemsProcessed(state.Iterations());
     });
 
     auto bench5 = larvae::RegisterBenchmark("WaxStringView", "FindSubstring", [](larvae::BenchmarkState& state) {
@@ -72,7 +70,7 @@ namespace
             larvae::DoNotOptimize(pos);
         }
 
-        state.SetItemsProcessed(state.iterations());
+        state.SetItemsProcessed(state.Iterations());
     });
 
     auto bench6 = larvae::RegisterBenchmark("WaxStringView", "FindNotFound", [](larvae::BenchmarkState& state) {
@@ -84,7 +82,7 @@ namespace
             larvae::DoNotOptimize(pos);
         }
 
-        state.SetItemsProcessed(state.iterations());
+        state.SetItemsProcessed(state.Iterations());
     });
 
     auto bench7 = larvae::RegisterBenchmark("WaxStringView", "RFindChar", [](larvae::BenchmarkState& state) {
@@ -96,7 +94,7 @@ namespace
             larvae::DoNotOptimize(pos);
         }
 
-        state.SetItemsProcessed(state.iterations());
+        state.SetItemsProcessed(state.Iterations());
     });
 
     auto bench8 = larvae::RegisterBenchmark("WaxStringView", "Contains", [](larvae::BenchmarkState& state) {
@@ -108,7 +106,7 @@ namespace
             larvae::DoNotOptimize(result);
         }
 
-        state.SetItemsProcessed(state.iterations());
+        state.SetItemsProcessed(state.Iterations());
     });
 
     auto bench9 = larvae::RegisterBenchmark("WaxStringView", "StartsWith", [](larvae::BenchmarkState& state) {
@@ -120,7 +118,7 @@ namespace
             larvae::DoNotOptimize(result);
         }
 
-        state.SetItemsProcessed(state.iterations());
+        state.SetItemsProcessed(state.Iterations());
     });
 
     auto bench10 = larvae::RegisterBenchmark("WaxStringView", "EndsWith", [](larvae::BenchmarkState& state) {
@@ -132,7 +130,7 @@ namespace
             larvae::DoNotOptimize(result);
         }
 
-        state.SetItemsProcessed(state.iterations());
+        state.SetItemsProcessed(state.Iterations());
     });
 
     auto bench11 = larvae::RegisterBenchmark("WaxStringView", "Compare", [](larvae::BenchmarkState& state) {
@@ -145,7 +143,7 @@ namespace
             larvae::DoNotOptimize(result);
         }
 
-        state.SetItemsProcessed(state.iterations());
+        state.SetItemsProcessed(state.Iterations());
     });
 
     auto bench12 = larvae::RegisterBenchmark("WaxStringView", "Equals", [](larvae::BenchmarkState& state) {
@@ -158,7 +156,7 @@ namespace
             larvae::DoNotOptimize(result);
         }
 
-        state.SetItemsProcessed(state.iterations());
+        state.SetItemsProcessed(state.Iterations());
     });
 
     auto bench13 = larvae::RegisterBenchmark("WaxStringView", "EqualityOperator", [](larvae::BenchmarkState& state) {
@@ -171,7 +169,7 @@ namespace
             larvae::DoNotOptimize(result);
         }
 
-        state.SetItemsProcessed(state.iterations());
+        state.SetItemsProcessed(state.Iterations());
     });
 
     auto bench14 = larvae::RegisterBenchmark("WaxStringView", "Substr", [](larvae::BenchmarkState& state) {
@@ -183,7 +181,7 @@ namespace
             larvae::DoNotOptimize(sub.Data());
         }
 
-        state.SetItemsProcessed(state.iterations());
+        state.SetItemsProcessed(state.Iterations());
     });
 
     auto bench15 = larvae::RegisterBenchmark("WaxStringView", "RemovePrefix", [](larvae::BenchmarkState& state) {
@@ -195,7 +193,7 @@ namespace
             larvae::DoNotOptimize(result.Data());
         }
 
-        state.SetItemsProcessed(state.iterations());
+        state.SetItemsProcessed(state.Iterations());
     });
 
     auto bench16 = larvae::RegisterBenchmark("WaxStringView", "RemoveSuffix", [](larvae::BenchmarkState& state) {
@@ -207,12 +205,10 @@ namespace
             larvae::DoNotOptimize(result.Data());
         }
 
-        state.SetItemsProcessed(state.iterations());
+        state.SetItemsProcessed(state.Iterations());
     });
 
-    // =============================================================================
     // std::string_view Comparison Benchmarks
-    // =============================================================================
 
     auto bench17 =
         larvae::RegisterBenchmark("StdStringView", "ConstructFromLiteral", [](larvae::BenchmarkState& state) {
@@ -222,7 +218,7 @@ namespace
                 larvae::DoNotOptimize(sv.data());
             }
 
-            state.SetItemsProcessed(state.iterations());
+            state.SetItemsProcessed(state.Iterations());
         });
 
     auto bench18 = larvae::RegisterBenchmark("StdStringView", "FindChar", [](larvae::BenchmarkState& state) {
@@ -234,7 +230,7 @@ namespace
             larvae::DoNotOptimize(pos);
         }
 
-        state.SetItemsProcessed(state.iterations());
+        state.SetItemsProcessed(state.Iterations());
     });
 
     auto bench19 = larvae::RegisterBenchmark("StdStringView", "FindSubstring", [](larvae::BenchmarkState& state) {
@@ -246,7 +242,7 @@ namespace
             larvae::DoNotOptimize(pos);
         }
 
-        state.SetItemsProcessed(state.iterations());
+        state.SetItemsProcessed(state.Iterations());
     });
 
     auto bench20 = larvae::RegisterBenchmark("StdStringView", "StartsWith", [](larvae::BenchmarkState& state) {
@@ -258,7 +254,7 @@ namespace
             larvae::DoNotOptimize(result);
         }
 
-        state.SetItemsProcessed(state.iterations());
+        state.SetItemsProcessed(state.Iterations());
     });
 
     auto bench21 = larvae::RegisterBenchmark("StdStringView", "EndsWith", [](larvae::BenchmarkState& state) {
@@ -270,7 +266,7 @@ namespace
             larvae::DoNotOptimize(result);
         }
 
-        state.SetItemsProcessed(state.iterations());
+        state.SetItemsProcessed(state.Iterations());
     });
 
     auto bench22 = larvae::RegisterBenchmark("StdStringView", "Compare", [](larvae::BenchmarkState& state) {
@@ -283,7 +279,7 @@ namespace
             larvae::DoNotOptimize(result);
         }
 
-        state.SetItemsProcessed(state.iterations());
+        state.SetItemsProcessed(state.Iterations());
     });
 
     auto bench23 = larvae::RegisterBenchmark("StdStringView", "EqualityOperator", [](larvae::BenchmarkState& state) {
@@ -296,7 +292,7 @@ namespace
             larvae::DoNotOptimize(result);
         }
 
-        state.SetItemsProcessed(state.iterations());
+        state.SetItemsProcessed(state.Iterations());
     });
 
     auto bench24 = larvae::RegisterBenchmark("StdStringView", "Substr", [](larvae::BenchmarkState& state) {
@@ -308,6 +304,6 @@ namespace
             larvae::DoNotOptimize(sub.data());
         }
 
-        state.SetItemsProcessed(state.iterations());
+        state.SetItemsProcessed(state.Iterations());
     });
 } // namespace

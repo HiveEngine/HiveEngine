@@ -15,7 +15,7 @@ namespace hive
 
         auto it = std::find_if(m_loggers.begin(), m_loggers.begin() + m_count, isLoggerWithId);
 
-        const bool isLoggerFound = it != m_loggers.end();
+        const bool isLoggerFound = it != m_loggers.begin() + m_count;
         if (isLoggerFound)
         {
             *it = m_loggers[m_count - 1];

@@ -38,27 +38,27 @@ namespace comb
         {
         }
 
-        [[nodiscard]] void* Allocate(size_t size, size_t alignment) const
+        [[nodiscard]] void* Allocate(size_t size, size_t alignment) const noexcept
         {
             return m_allocate(m_object, size, alignment);
         }
 
-        void Deallocate(void* ptr) const
+        void Deallocate(void* ptr) const noexcept
         {
             m_deallocate(m_object, ptr);
         }
 
-        [[nodiscard]] size_t GetUsedMemory() const
+        [[nodiscard]] size_t GetUsedMemory() const noexcept
         {
             return m_getUsedMemory(m_object);
         }
 
-        [[nodiscard]] size_t GetTotalMemory() const
+        [[nodiscard]] size_t GetTotalMemory() const noexcept
         {
             return m_getTotalMemory(m_object);
         }
 
-        [[nodiscard]] const char* GetName() const
+        [[nodiscard]] const char* GetName() const noexcept
         {
             return m_getName(m_object);
         }

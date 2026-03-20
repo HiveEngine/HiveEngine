@@ -36,9 +36,7 @@ namespace
         return alloc.Get();
     }
 
-    // =========================================================================
     // Allocation
-    // =========================================================================
 
     auto t1 = larvae::RegisterTest("NectarAssetStorage", "AllocateSlotReturnsValid", []() {
         auto& alloc = GetStorageAlloc();
@@ -73,9 +71,7 @@ namespace
         larvae::AssertTrue(h3.IsNull());
     });
 
-    // =========================================================================
     // Asset set/get
-    // =========================================================================
 
     auto t4 = larvae::RegisterTest("NectarAssetStorage", "SetAndGetAsset", []() {
         auto& alloc = GetStorageAlloc();
@@ -113,9 +109,7 @@ namespace
         larvae::AssertNull(got);
     });
 
-    // =========================================================================
     // Ref counting
-    // =========================================================================
 
     auto t6 = larvae::RegisterTest("NectarAssetStorage", "RefCountStartsAtZero", []() {
         auto& alloc = GetStorageAlloc();
@@ -138,9 +132,7 @@ namespace
         larvae::AssertEqual(storage.GetRefCount(handle.m_index), uint32_t{1});
     });
 
-    // =========================================================================
     // Status transitions
-    // =========================================================================
 
     auto t8 = larvae::RegisterTest("NectarAssetStorage", "StatusTransitions", []() {
         auto& alloc = GetStorageAlloc();
@@ -159,9 +151,7 @@ namespace
                             static_cast<uint8_t>(nectar::AssetStatus::READY));
     });
 
-    // =========================================================================
     // Error info
-    // =========================================================================
 
     auto t9 = larvae::RegisterTest("NectarAssetStorage", "ErrorInfo", []() {
         auto& alloc = GetStorageAlloc();
@@ -176,9 +166,7 @@ namespace
                             static_cast<uint8_t>(nectar::AssetError::FILE_NOT_FOUND));
     });
 
-    // =========================================================================
     // Placeholder
-    // =========================================================================
 
     auto t10 = larvae::RegisterTest("NectarAssetStorage", "PlaceholderReturnedWhenNotReady", []() {
         auto& alloc = GetStorageAlloc();
@@ -195,9 +183,7 @@ namespace
         larvae::AssertEqual(got->id, -1);
     });
 
-    // =========================================================================
     // Destroy and reuse
-    // =========================================================================
 
     auto t11 = larvae::RegisterTest("NectarAssetStorage", "DestroyAndReuseSlot", []() {
         auto& alloc = GetStorageAlloc();
@@ -227,9 +213,7 @@ namespace
         larvae::AssertFalse(storage.IsHandleValid(h1.m_index, h1.m_generation));
     });
 
-    // =========================================================================
     // Garbage collection
-    // =========================================================================
 
     auto t12 = larvae::RegisterTest("NectarAssetStorage", "CollectGarbage", []() {
         auto& alloc = GetStorageAlloc();

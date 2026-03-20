@@ -81,17 +81,17 @@ namespace nectar
                 (void)reader.ReadString();
 
             AssetRecord record{};
-            record.uuid = AssetId{id_high, id_low};
-            record.path = wax::String{alloc};
-            record.path.Append(reinterpret_cast<const char*>(path_span.Data()), path_span.Size());
-            record.type = wax::String{alloc};
-            record.type.Append(reinterpret_cast<const char*>(type_span.Data()), type_span.Size());
-            record.name = wax::String{alloc};
-            record.name.Append(reinterpret_cast<const char*>(name_span.Data()), name_span.Size());
-            record.content_hash = ContentHash{ch_high, ch_low};
-            record.intermediate_hash = ContentHash{ih_high, ih_low};
-            record.import_version = imp_version;
-            record.labels = wax::Vector<wax::String>{alloc};
+            record.m_uuid = AssetId{id_high, id_low};
+            record.m_path = wax::String{alloc};
+            record.m_path.Append(reinterpret_cast<const char*>(path_span.Data()), path_span.Size());
+            record.m_type = wax::String{alloc};
+            record.m_type.Append(reinterpret_cast<const char*>(type_span.Data()), type_span.Size());
+            record.m_name = wax::String{alloc};
+            record.m_name.Append(reinterpret_cast<const char*>(name_span.Data()), name_span.Size());
+            record.m_contentHash = ContentHash{ch_high, ch_low};
+            record.m_intermediateHash = ContentHash{ih_high, ih_low};
+            record.m_importVersion = imp_version;
+            record.m_labels = wax::Vector<wax::String>{alloc};
 
             db.Insert(static_cast<AssetRecord&&>(record));
         }
@@ -114,14 +114,14 @@ namespace nectar
         db.ForEach([&](AssetId id, const AssetRecord& r) {
             writer.Write<uint64_t>(id.High());
             writer.Write<uint64_t>(id.Low());
-            writer.WriteString(r.path.CStr(), r.path.Size());
-            writer.WriteString(r.type.CStr(), r.type.Size());
-            writer.WriteString(r.name.CStr(), r.name.Size());
-            writer.Write<uint64_t>(r.content_hash.High());
-            writer.Write<uint64_t>(r.content_hash.Low());
-            writer.Write<uint64_t>(r.intermediate_hash.High());
-            writer.Write<uint64_t>(r.intermediate_hash.Low());
-            writer.Write<uint32_t>(r.import_version);
+            writer.WriteString(r.m_path.CStr(), r.m_path.Size());
+            writer.WriteString(r.m_type.CStr(), r.m_type.Size());
+            writer.WriteString(r.m_name.CStr(), r.m_name.Size());
+            writer.Write<uint64_t>(r.m_contentHash.High());
+            writer.Write<uint64_t>(r.m_contentHash.Low());
+            writer.Write<uint64_t>(r.m_intermediateHash.High());
+            writer.Write<uint64_t>(r.m_intermediateHash.Low());
+            writer.Write<uint32_t>(r.m_importVersion);
             writer.Write<uint32_t>(0);
         });
 

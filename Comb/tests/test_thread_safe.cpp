@@ -18,18 +18,14 @@ namespace
         return mb * 1024 * 1024;
     }
 
-    // =============================================================================
     // Concept Satisfaction
-    // =============================================================================
 
     auto test1 = larvae::RegisterTest("ThreadSafeAllocator", "ConceptSatisfaction", []() {
         larvae::AssertTrue((comb::Allocator<comb::ThreadSafeAllocator<comb::BuddyAllocator>>));
         larvae::AssertTrue((comb::Allocator<comb::ThreadSafeAllocator<comb::LinearAllocator>>));
     });
 
-    // =============================================================================
     // Basic Delegation
-    // =============================================================================
 
     auto test2 = larvae::RegisterTest("ThreadSafeAllocator", "AllocateDelegates", []() {
         comb::BuddyAllocator buddy{1_MB};
@@ -87,9 +83,7 @@ namespace
         larvae::AssertEqual(safe.GetTotalMemory(), 1_MB);
     });
 
-    // =============================================================================
     // Underlying Access
-    // =============================================================================
 
     auto test7 = larvae::RegisterTest("ThreadSafeAllocator", "UnderlyingReturnsReferenceToAllocator", []() {
         comb::BuddyAllocator buddy{1_MB};
@@ -107,9 +101,7 @@ namespace
         larvae::AssertEqual(&ref, &buddy);
     });
 
-    // =============================================================================
     // New/Delete Through Wrapper
-    // =============================================================================
 
     auto test9 = larvae::RegisterTest("ThreadSafeAllocator", "NewDeleteWorks", []() {
         comb::BuddyAllocator buddy{1_MB};
@@ -158,9 +150,7 @@ namespace
         larvae::AssertTrue(destroyed);
     });
 
-    // =============================================================================
     // Move Semantics
-    // =============================================================================
 
     auto test11 = larvae::RegisterTest("ThreadSafeAllocator", "MoveConstructor", []() {
         comb::BuddyAllocator buddy{1_MB};
@@ -197,9 +187,7 @@ namespace
         safe2.Deallocate(ptr);
     });
 
-    // =============================================================================
     // Multiple Allocations
-    // =============================================================================
 
     auto test13 = larvae::RegisterTest("ThreadSafeAllocator", "MultipleAllocationsAndDeallocations", []() {
         comb::BuddyAllocator buddy{1_MB};
@@ -235,9 +223,7 @@ namespace
         safe.Deallocate(ptr1);
     });
 
-    // =============================================================================
     // Concurrent Access
-    // =============================================================================
 
     auto test15 = larvae::RegisterTest("ThreadSafeAllocator", "ConcurrentAllocations", []() {
         comb::BuddyAllocator buddy{16_MB};
@@ -327,9 +313,7 @@ namespace
         larvae::AssertEqual(safe.GetUsedMemory(), 0u);
     });
 
-    // =============================================================================
     // With LinearAllocator
-    // =============================================================================
 
     auto test17 = larvae::RegisterTest("ThreadSafeAllocator", "WorksWithLinearAllocator", []() {
         comb::LinearAllocator linear{1_MB};

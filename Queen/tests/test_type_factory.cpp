@@ -66,9 +66,7 @@ namespace
         }
     };
 
-    // ============================================================
     // Construct tests
-    // ============================================================
 
     auto test_construct_by_type_id = larvae::RegisterTest("QueenTypeFactory", "ConstructByTypeId", []() {
         queen::ComponentRegistry<32> registry;
@@ -111,9 +109,7 @@ namespace
         larvae::AssertEqual(vel->dz, 0.f);
     });
 
-    // ============================================================
     // Clone tests
-    // ============================================================
 
     auto test_clone = larvae::RegisterTest("QueenTypeFactory", "CloneByTypeId", []() {
         queen::ComponentRegistry<32> registry;
@@ -142,9 +138,7 @@ namespace
         larvae::AssertFalse(ok);
     });
 
-    // ============================================================
     // Default value tests
-    // ============================================================
 
     auto test_has_default = larvae::RegisterTest("QueenTypeFactory", "HasDefault", []() {
         queen::ComponentRegistry<32> registry;
@@ -186,9 +180,7 @@ namespace
             larvae::AssertTrue(comp->HasDefault());
         });
 
-    // ============================================================
     // DiffWithDefault tests
-    // ============================================================
 
     auto test_diff_all_default = larvae::RegisterTest("QueenTypeFactory", "DiffAllDefault", []() {
         queen::ComponentRegistry<32> registry;

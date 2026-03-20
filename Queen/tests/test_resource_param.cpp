@@ -29,9 +29,7 @@ namespace
         float gravity;
     };
 
-    // ─────────────────────────────────────────────────────────────
     // Res<T> Basic Tests
-    // ─────────────────────────────────────────────────────────────
 
     auto test1 = larvae::RegisterTest("QueenResourceParam", "ResConstruction", []() {
         Time time{1.0f, 0.016f};
@@ -80,9 +78,7 @@ namespace
         larvae::AssertFalse(static_cast<bool>(invalid_res));
     });
 
-    // ─────────────────────────────────────────────────────────────
     // ResMut<T> Basic Tests
-    // ─────────────────────────────────────────────────────────────
 
     auto test8 = larvae::RegisterTest("QueenResourceParam", "ResMutConstruction", []() {
         Time time{1.0f, 0.016f};
@@ -127,9 +123,7 @@ namespace
         larvae::AssertEqual(queen::ResMut<Time>::typeId, queen::TypeIdOf<Time>());
     });
 
-    // ─────────────────────────────────────────────────────────────
     // Type Traits Tests
-    // ─────────────────────────────────────────────────────────────
 
     auto test14 = larvae::RegisterTest("QueenResourceParam", "IsResV", []() {
         larvae::AssertTrue(queen::isResV<queen::Res<Time>>);
@@ -152,9 +146,7 @@ namespace
         larvae::AssertFalse(queen::isResourceParam<int>);
     });
 
-    // ─────────────────────────────────────────────────────────────
     // RunWithRes / RunWithResMut Tests
-    // ─────────────────────────────────────────────────────────────
 
     auto test17 = larvae::RegisterTest("QueenResourceParam", "RunWithResReadsResource", []() {
         comb::LinearAllocator alloc{262144};
@@ -207,9 +199,7 @@ namespace
         larvae::AssertEqual(call_count, 3);
     });
 
-    // ─────────────────────────────────────────────────────────────
     // EachWithRes / EachWithResMut Tests
-    // ─────────────────────────────────────────────────────────────
 
     auto test20 = larvae::RegisterTest("QueenResourceParam", "EachWithResIteratesEntities", []() {
         comb::LinearAllocator alloc{262144};
@@ -272,9 +262,7 @@ namespace
         larvae::AssertEqual(call_count, 0);
     });
 
-    // ─────────────────────────────────────────────────────────────
     // Resource Access Descriptor Tests
-    // ─────────────────────────────────────────────────────────────
 
     auto test23 = larvae::RegisterTest("QueenResourceParam", "RunWithResRegistersRead", []() {
         comb::LinearAllocator alloc{262144};
@@ -371,9 +359,7 @@ namespace
         larvae::AssertTrue(component_found);
     });
 
-    // ─────────────────────────────────────────────────────────────
     // Integration with Multiple Systems
-    // ─────────────────────────────────────────────────────────────
 
     auto test26 = larvae::RegisterTest("QueenResourceParam", "MultipleSystemsWithSameResource", []() {
         comb::LinearAllocator alloc{262144};

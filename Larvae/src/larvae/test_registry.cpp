@@ -11,7 +11,7 @@ namespace larvae
 
     bool TestRegistry::Register(TestInfo&& test_info)
     {
-        tests_.push_back(std::move(test_info));
+        m_tests.push_back(std::move(test_info));
         return true;
     }
 
@@ -19,12 +19,12 @@ namespace larvae
                                  const char* file, std::uint_least32_t line, CapabilityMask required_capabilities)
     {
         TestInfo info;
-        info.suite_name = suite_name;
-        info.test_name = test_name;
-        info.func = func;
-        info.file = file;
-        info.line = line;
-        info.required_capabilities = required_capabilities;
+        info.m_suiteName = suite_name;
+        info.m_testName = test_name;
+        info.m_func = func;
+        info.m_file = file;
+        info.m_line = line;
+        info.m_requiredCapabilities = required_capabilities;
 
         TestRegistry::GetInstance().Register(std::move(info));
     }

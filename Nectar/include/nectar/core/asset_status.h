@@ -12,7 +12,7 @@ namespace nectar
         QUEUED,
         LOADING,
         READY,
-        Failed,
+        FAILED,
         UNLOADED
     };
 

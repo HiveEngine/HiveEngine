@@ -16,9 +16,7 @@
 
 namespace
 {
-    // ============================================================
     // Test enums
-    // ============================================================
 
     enum class RenderMode : uint8_t
     {
@@ -75,9 +73,7 @@ template <> struct queen::EnumInfo<Alignment>
 
 namespace
 {
-    // ============================================================
     // Test components
-    // ============================================================
 
     struct WithEnum
     {
@@ -158,9 +154,7 @@ namespace
         }
     };
 
-    // ============================================================
     // Enum reflection tests
-    // ============================================================
 
     auto test_enum_concept = larvae::RegisterTest("QueenReflectionPhase1", "ReflectableEnumConcept", []() {
         larvae::AssertTrue(queen::ReflectableEnum<RenderMode>);
@@ -211,9 +205,7 @@ namespace
         larvae::AssertEqual(value, int64_t{1});
     });
 
-    // ============================================================
     // Enum field detection tests
-    // ============================================================
 
     auto test_enum_field_type = larvae::RegisterTest("QueenReflectionPhase1", "EnumFieldTypeDetection", []() {
         queen::ComponentReflector<> reflector;
@@ -240,9 +232,7 @@ namespace
         larvae::AssertNull(flag_field.m_enumInfo);
     });
 
-    // ============================================================
     // Enum serialize/deserialize tests
-    // ============================================================
 
     auto test_enum_serialize = larvae::RegisterTest("QueenReflectionPhase1", "EnumSerializeDeserialize", []() {
         WithEnum original{RenderMode::Wireframe, 0.5f};
@@ -275,9 +265,7 @@ namespace
             larvae::AssertEqual(loaded.padding, int32_t{42});
         });
 
-    // ============================================================
     // FixedString field tests
-    // ============================================================
 
     auto test_string_field_type = larvae::RegisterTest("QueenReflectionPhase1", "FixedStringFieldTypeDetection", []() {
         queen::ComponentReflector<> reflector;
@@ -334,9 +322,7 @@ namespace
         larvae::AssertEqual(loaded.id, int32_t{1});
     });
 
-    // ============================================================
     // FixedArray field tests
-    // ============================================================
 
     auto test_array_field_type = larvae::RegisterTest("QueenReflectionPhase1", "FixedArrayFieldTypeDetection", []() {
         queen::ComponentReflector<> reflector;
@@ -367,9 +353,7 @@ namespace
         larvae::AssertEqual(loaded.count, int32_t{4});
     });
 
-    // ============================================================
     // FieldBuilder / FieldAttributes tests
-    // ============================================================
 
     auto test_no_chaining_no_attributes = larvae::RegisterTest("QueenReflectionPhase1", "NoChainNoAttributes", []() {
         queen::ComponentReflector<> reflector;
@@ -449,9 +433,7 @@ namespace
             larvae::AssertNull(mode_field.m_attributes);
         });
 
-    // ============================================================
     // Registry integration with new types
-    // ============================================================
 
     auto test_registry_enum_component = larvae::RegisterTest("QueenReflectionPhase1", "RegistryEnumComponent", []() {
         queen::ComponentRegistry<32> registry;

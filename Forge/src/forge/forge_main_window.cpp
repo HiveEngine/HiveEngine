@@ -1,7 +1,21 @@
+#include <forge/forge_main_window.h>
+
+#include <hive/core/log.h>
+
+#include <comb/default_allocator.h>
+
 #include <queen/reflect/component_registry.h>
+#include <queen/world/world.h>
+
+#include <nectar/mesh/mesh_data.h>
+#include <nectar/registry/hiveid_file.h>
+
+#include <waggle/components/mesh_reference.h>
+#include <waggle/components/name.h>
+#include <waggle/components/transform.h>
 
 #include <forge/asset_browser.h>
-#include <forge/forge_main_window.h>
+#include <forge/console_panel.h>
 #include <forge/hierarchy_panel.h>
 #include <forge/inspector_panel.h>
 #include <forge/project_hub.h>
@@ -21,6 +35,11 @@
 #include <QTimer>
 
 #include <cmath>
+#include <cstdio>
+#include <filesystem>
+#include <vector>
+
+static const hive::LogCategory LOG_FORGE{"Forge"};
 
 namespace forge
 {
@@ -201,6 +220,9 @@ namespace forge
 
         if (m_world && m_inspector && m_selection && m_registry && m_undo)
             m_inspector->Refresh(*m_world, *m_selection, *m_registry, *m_undo);
+
+        if (m_assetBrowser)
+            m_assetBrowser->Refresh();
     }
 
     void ForgeMainWindow::SetAssetsRoot(const char* path)
@@ -299,6 +321,14 @@ namespace forge
         addDockWidget(Qt::BottomDockWidgetArea, assetDock);
         m_docks.append(assetDock);
 
+        m_console = new ConsolePanel{this};
+        auto* consoleDock = new QDockWidget{"Console", this};
+        consoleDock->setWidget(m_console);
+        addDockWidget(Qt::BottomDockWidgetArea, consoleDock);
+        tabifyDockWidget(assetDock, consoleDock);
+        assetDock->raise();
+        m_docks.append(consoleDock);
+
         m_viewport = new VulkanViewportWidget{this};
         setCentralWidget(m_viewport);
     }
@@ -315,6 +345,107 @@ namespace forge
         connect(m_inspector, &InspectorPanel::sceneModified, this, [this] {
             if (m_world && m_hierarchy)
                 m_hierarchy->Refresh(*m_world);
+        });
+
+        connect(m_assetBrowser, &AssetBrowserPanel::gltfImportRequested, this, &ForgeMainWindow::gltfImportRequested);
+
+        connect(m_assetBrowser, &AssetBrowserPanel::assetImported, this, [this](const QString& path) {
+            std::filesystem::path fsPath{path.toStdString()};
+            auto ext = fsPath.extension().string();
+            if (ext == ".gltf" || ext == ".glb")
+            {
+                hive::LogInfo(LOG_FORGE, "Imported: {}", path.toStdString());
+            }
+            RefreshAll();
+        });
+
+        connect(m_hierarchy, &HierarchyPanel::assetDropped, this, [this](const QString& path) {
+            if (!m_world)
+                return;
+
+            std::filesystem::path fsPath{path.toStdString()};
+            auto ext = fsPath.extension().string();
+
+            if (ext == ".nmsh")
+            {
+                auto meshName = fsPath.stem().string();
+
+                nectar::NmshHeader header{};
+                uint32_t submeshCount{0};
+
+                FILE* f{nullptr};
+#ifdef _WIN32
+                fopen_s(&f, fsPath.string().c_str(), "rb");
+#else
+                f = fopen(fsPath.string().c_str(), "rb");
+#endif
+                std::vector<nectar::SubMesh> submeshes;
+                if (f)
+                {
+                    if (std::fread(&header, sizeof(header), 1, f) == 1 && header.m_magic == nectar::kNmshMagic)
+                    {
+                        submeshCount = header.m_submeshCount;
+                        submeshes.resize(submeshCount);
+                        std::fread(submeshes.data(), sizeof(nectar::SubMesh), submeshCount, f);
+                    }
+                    std::fclose(f);
+                }
+
+                if (submeshCount <= 1)
+                {
+                    waggle::MeshReference meshRef{};
+                    meshRef.m_meshName = wax::FixedString{meshName.c_str()};
+                    meshRef.m_indexCount = 1;
+
+                    (void)m_world->Spawn(waggle::Name{wax::FixedString{meshName.c_str()}}, waggle::Transform{},
+                                         waggle::WorldMatrix{}, waggle::TransformVersion{}, std::move(meshRef));
+                    hive::LogInfo(LOG_FORGE, "Spawned mesh entity: {}", meshName);
+                }
+                else
+                {
+                    queen::Entity root =
+                        m_world->Spawn(waggle::Name{wax::FixedString{meshName.c_str()}}, waggle::Transform{},
+                                       waggle::WorldMatrix{}, waggle::TransformVersion{});
+
+                    for (uint32_t si = 0; si < submeshCount; ++si)
+                    {
+                        char primName[128];
+                        std::snprintf(primName, sizeof(primName), "%s_prim%u", meshName.c_str(), si);
+
+                        waggle::MeshReference meshRef{};
+                        meshRef.m_meshName = wax::FixedString{meshName.c_str()};
+                        meshRef.m_meshIndex = static_cast<int32_t>(si);
+
+                        if (si < submeshes.size())
+                        {
+                            meshRef.m_indexCount = submeshes[si].m_indexCount;
+                            meshRef.m_materialIndex = submeshes[si].m_materialIndex;
+                            char matName[32];
+                            std::snprintf(matName, sizeof(matName), "Material_%d", submeshes[si].m_materialIndex);
+                            meshRef.m_materialName = wax::FixedString{matName};
+                        }
+
+                        queen::Entity child =
+                            m_world->Spawn(waggle::Name{wax::FixedString{primName}}, waggle::Transform{},
+                                           waggle::WorldMatrix{}, waggle::TransformVersion{}, std::move(meshRef));
+
+                        m_world->SetParent(child, root);
+                    }
+
+                    hive::LogInfo(LOG_FORGE, "Spawned mesh hierarchy: {} ({} primitives)", meshName, submeshCount);
+                }
+
+                RefreshAll();
+                emit m_hierarchy->sceneModified();
+            }
+            else if (ext == ".hscene")
+            {
+                hive::LogInfo(LOG_FORGE, "Scene drop not yet implemented: {}", fsPath.string());
+            }
+            else
+            {
+                hive::LogWarning(LOG_FORGE, "Unsupported asset drop: {}", path.toStdString());
+            }
         });
     }
 } // namespace forge

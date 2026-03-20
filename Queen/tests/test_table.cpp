@@ -252,9 +252,7 @@ namespace
         larvae::AssertNull(invalid);
     });
 
-    // ─────────────────────────────────────────────────────────────
     // MoveRowTo Tests
-    // ─────────────────────────────────────────────────────────────
 
     auto test13 = larvae::RegisterTest("QueenTable", "MoveRowToSameComponents", []() {
         comb::LinearAllocator alloc{65536};

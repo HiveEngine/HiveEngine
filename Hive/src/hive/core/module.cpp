@@ -15,12 +15,14 @@ namespace hive
     {
         hive::LogTrace(LOG_HIVE_ROOT, "Initializing module: {}", GetName());
         DoInitialize();
+        m_isInitialized = true;
     }
 
     void Module::Shutdown()
     {
         hive::LogTrace(LOG_HIVE_ROOT, "Shutdown module: {}", GetName());
         DoShutdown();
+        m_isInitialized = false;
     }
 
     bool Module::CanInitialize(const std::unordered_set<std::string>& initModulesNames) const

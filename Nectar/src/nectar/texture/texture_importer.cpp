@@ -2,7 +2,6 @@
 
 #define STB_IMAGE_IMPLEMENTATION
 #define STBI_NO_STDIO
-#include <cstdlib>
 #include <cstring>
 #include <stb_image.h>
 
@@ -65,7 +64,7 @@ namespace nectar
     }
 
     ImportResult TextureImporter::Import(wax::ByteSpan sourceData, const HiveDocument& settings,
-                                         ImportContext& /*context*/)
+                                         ImportContext& context)
     {
         ImportResult result{};
 
@@ -115,13 +114,14 @@ namespace nectar
 
                 const uint32_t newWidth = currentWidth / 2;
                 const uint32_t newHeight = currentHeight / 2;
-                auto* dst = static_cast<uint8_t*>(std::malloc(newWidth * newHeight * kChannels));
+                const size_t dstSize = static_cast<size_t>(newWidth) * newHeight * kChannels;
+                auto* dst = static_cast<uint8_t*>(context.GetAllocator().Allocate(dstSize, 1));
                 if (dst == nullptr)
                 {
                     stbi_image_free(pixels);
                     if (downscaled != nullptr)
                     {
-                        std::free(downscaled);
+                        context.GetAllocator().Deallocate(downscaled);
                     }
                     result.m_errorMessage = wax::String{"Failed to allocate downscale buffer"};
                     return result;
@@ -131,7 +131,7 @@ namespace nectar
 
                 if (downscaled != nullptr)
                 {
-                    std::free(downscaled);
+                    context.GetAllocator().Deallocate(downscaled);
                 }
                 downscaled = dst;
                 current = dst;
@@ -223,7 +223,7 @@ namespace nectar
         stbi_image_free(pixels);
         if (downscaled != nullptr)
         {
-            std::free(downscaled);
+            context.GetAllocator().Deallocate(downscaled);
         }
 
         result.m_success = true;

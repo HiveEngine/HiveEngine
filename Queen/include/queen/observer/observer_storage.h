@@ -80,9 +80,7 @@ namespace queen
         ObserverStorage(ObserverStorage&&) = default;
         ObserverStorage& operator=(ObserverStorage&&) = default;
 
-        // ─────────────────────────────────────────────────────────────────
         // Registration
-        // ─────────────────────────────────────────────────────────────────
 
         /**
          * Register a new observer for a trigger event
@@ -112,9 +110,7 @@ namespace queen
                                                             &m_observers[m_observers.Size() - 1]};
         }
 
-        // ─────────────────────────────────────────────────────────────────
         // Lookup
-        // ─────────────────────────────────────────────────────────────────
 
         /**
          * Get an observer by ID
@@ -160,9 +156,7 @@ namespace queen
             return nullptr;
         }
 
-        // ─────────────────────────────────────────────────────────────────
         // Triggering
-        // ─────────────────────────────────────────────────────────────────
 
         /**
          * Trigger all observers matching a structural change
@@ -193,9 +187,7 @@ namespace queen
                     static_cast<const void*>(component));
         }
 
-        // ─────────────────────────────────────────────────────────────────
         // State management
-        // ─────────────────────────────────────────────────────────────────
 
         /**
          * Enable or disable an observer

@@ -1,6 +1,6 @@
-#include <hive/profiling/profiler.h>
-
 #include <nectar/io/mapped_file.h>
+
+#include <hive/profiling/profiler.h>
 
 #ifdef _WIN32
 #ifndef WIN32_LEAN_AND_MEAN

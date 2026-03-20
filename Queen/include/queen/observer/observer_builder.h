@@ -7,6 +7,7 @@
 #include <queen/observer/observer_event.h>
 
 #include <type_traits>
+#include <utility>
 
 namespace queen
 {

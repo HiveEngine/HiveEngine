@@ -144,7 +144,6 @@ namespace
         }
     };
 
-    // =========================================================================
 
     auto t1 = larvae::RegisterTest("NectarPipeline", "ImportSuccess", []() {
         auto& alloc = GetPipeAlloc();

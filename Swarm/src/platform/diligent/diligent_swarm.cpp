@@ -1,6 +1,7 @@
+#include <swarm/platform/diligent_swarm.h>
+
 #include <hive/core/log.h>
 
-#include <swarm/platform/diligent_swarm.h>
 #include <swarm/precomp.h>
 #include <swarm/swarm.h>
 #include <swarm/swarm_log.h>
@@ -257,7 +258,8 @@ void main(in  PSInput  PSIn,
 
     ViewportRT* CreateViewportRT(RenderContext* ctx, uint32_t width, uint32_t height)
     {
-        auto* rt = new ViewportRT();
+        auto& allocator = SwarmModule::GetInstance().GetAllocator();
+        auto* rt = comb::New<ViewportRT>(allocator);
         rt->m_device = ctx->m_device;
         auto fmt = ctx->m_swapchain->GetDesc().ColorBufferFormat;
         CreateViewportRTTextures(rt, width, height, fmt);
@@ -266,7 +268,8 @@ void main(in  PSInput  PSIn,
 
     void DestroyViewportRT(ViewportRT* rt)
     {
-        delete rt;
+        auto& allocator = SwarmModule::GetInstance().GetAllocator();
+        comb::Delete(allocator, rt);
     }
 
     void ResizeViewportRT(ViewportRT* rt, uint32_t width, uint32_t height)

@@ -14,9 +14,7 @@
 
 namespace
 {
-    // ============================================================
     // Test types
-    // ============================================================
 
     struct Position
     {
@@ -158,9 +156,7 @@ namespace
         larvae::AssertTrue(result.m_success);
     }
 
-    // ============================================================
     // Serialize tests
-    // ============================================================
 
     auto test_serialize_position = larvae::RegisterTest("QueenJsonSerialization", "SerializePosition", []() {
         Position pos{1.f, 2.f, 3.f};
@@ -201,9 +197,7 @@ namespace
         larvae::AssertTrue(std::strstr(serializer.CStr(), "\"Wireframe\"") != nullptr);
     });
 
-    // ============================================================
     // Roundtrip tests
-    // ============================================================
 
     auto test_roundtrip_position = larvae::RegisterTest("QueenJsonSerialization", "RoundtripPosition", []() {
         Position original{1.5f, -2.5f, 3.0f};
@@ -280,9 +274,7 @@ namespace
         larvae::AssertEqual(loaded.id, int32_t{42});
     });
 
-    // ============================================================
     // Forward-compatibility tests
-    // ============================================================
 
     auto test_unknown_field_skipped = larvae::RegisterTest("QueenJsonSerialization", "UnknownFieldSkipped", []() {
         auto reflection = queen::GetReflectionData<Position>();

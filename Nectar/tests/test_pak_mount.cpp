@@ -58,7 +58,6 @@ namespace
         return nectar::PakReader::Open(wax::StringView{TempMountPakPath(), std::strlen(TempMountPakPath())}, alloc);
     }
 
-    // =========================================================================
 
     auto t1 = larvae::RegisterTest("NectarPakMount", "ReadFileFound", []() {
         auto& alloc = GetPakMountAlloc();

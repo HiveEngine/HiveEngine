@@ -209,9 +209,7 @@ namespace queen
             return *this;
         }
 
-        // ─────────────────────────────────────────────────────────────────
         // Accessors
-        // ─────────────────────────────────────────────────────────────────
 
         [[nodiscard]] ObserverId Id() const noexcept
         {
@@ -239,9 +237,7 @@ namespace queen
             return ObserverKey{m_trigger, m_componentId};
         }
 
-        // ─────────────────────────────────────────────────────────────────
         // Mutators
-        // ─────────────────────────────────────────────────────────────────
 
         void SetEnabled(bool enabled) noexcept
         {
@@ -284,9 +280,7 @@ namespace queen
             m_destructorFn = destructor;
         }
 
-        // ─────────────────────────────────────────────────────────────────
         // Execution
-        // ─────────────────────────────────────────────────────────────────
 
         /**
          * Invoke the observer callback

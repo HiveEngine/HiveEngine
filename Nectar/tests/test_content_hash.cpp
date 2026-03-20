@@ -14,9 +14,7 @@ namespace
         return kb * 1024;
     }
 
-    // =========================================================================
     // Construction
-    // =========================================================================
 
     auto t1 = larvae::RegisterTest("NectarContentHash", "DefaultConstructIsInvalid", []() {
         nectar::ContentHash h{};
@@ -39,9 +37,7 @@ namespace
         larvae::AssertFalse(inv.IsValid());
     });
 
-    // =========================================================================
     // FromData
-    // =========================================================================
 
     auto t4 = larvae::RegisterTest("NectarContentHash", "FromDataProducesNonZero", []() {
         const char* data = "hello";
@@ -99,9 +95,7 @@ namespace
         larvae::AssertTrue(h != h2);
     });
 
-    // =========================================================================
     // Operators
-    // =========================================================================
 
     auto t11 = larvae::RegisterTest("NectarContentHash", "EqualityOperator", []() {
         nectar::ContentHash a{100, 200};
@@ -122,9 +116,7 @@ namespace
         larvae::AssertTrue(a < c);
     });
 
-    // =========================================================================
     // Hash and ToString
-    // =========================================================================
 
     auto t13 = larvae::RegisterTest("NectarContentHash", "HashForHashMap", []() {
         auto h = nectar::ContentHash::FromData("test", 4);

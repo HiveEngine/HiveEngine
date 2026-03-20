@@ -1,10 +1,12 @@
-#include <nectar/database/asset_database.h>
 #include <nectar/pipeline/import_context.h>
+
+#include <nectar/database/asset_database.h>
 
 namespace nectar
 {
     ImportContext::ImportContext(comb::DefaultAllocator& alloc, AssetDatabase& db, AssetId current)
-        : m_db{&db}
+        : m_alloc{&alloc}
+        , m_db{&db}
         , m_currentAsset{current}
         , m_declaredDeps{alloc}
     {

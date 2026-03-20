@@ -7,7 +7,11 @@
 #include <wax/containers/string_view.h>
 #include <wax/containers/vector.h>
 
+#include <drone/job_submitter.h>
+
+#include <atomic>
 #include <cstdint>
+#include <mutex>
 
 namespace nectar
 {
@@ -48,6 +52,8 @@ namespace nectar
         void Watch(wax::StringView directory) override;
         void Poll(wax::Vector<FileChange>& changes) override;
 
+        void Baseline();
+
         [[nodiscard]] size_t WatchedDirCount() const noexcept;
 
         /// Force a rescan regardless of interval (for testing).
@@ -63,4 +69,50 @@ namespace nectar
         wax::Vector<wax::String> m_watchedDirs;
         wax::HashMap<wax::String, FileSnapshot> m_knownFiles;
     };
+
+    /// Native OS file watcher using platform notification APIs.
+    class NativeFileWatcher final : public IFileWatcher
+    {
+    public:
+        NativeFileWatcher(comb::DefaultAllocator& alloc, drone::JobSubmitter jobs = {});
+        ~NativeFileWatcher() override;
+
+        NativeFileWatcher(const NativeFileWatcher&) = delete;
+        NativeFileWatcher& operator=(const NativeFileWatcher&) = delete;
+
+        void Watch(wax::StringView directory) override;
+        void Poll(wax::Vector<FileChange>& changes) override;
+
+        bool SaveState(wax::StringView path) const;
+        bool LoadState(wax::StringView path);
+
+        // TODO: for 100k+ assets, run this on a background thread to avoid blocking editor startup
+        void DetectOfflineChanges(wax::Vector<FileChange>& changes);
+
+        void Shutdown();
+        void EnqueueChange(wax::StringView path, FileChangeKind kind);
+
+    private:
+        void ThreadMain();
+        void PlatformInit();
+        void PlatformWakeThread();
+        void PlatformShutdown();
+        void PlatformAddWatch(wax::StringView directory);
+        static bool IsDotDirectory(wax::StringView name);
+
+        static void WatcherJob(void* data);
+
+        comb::DefaultAllocator* m_alloc;
+        drone::JobSubmitter m_jobs;
+        std::atomic<bool> m_running{false};
+        std::mutex m_queueMutex;
+        wax::Vector<FileChange> m_pendingChanges;
+        std::mutex m_watchMutex;
+        wax::Vector<wax::String> m_watchedDirs;
+        wax::HashMap<wax::String, FileSnapshot> m_knownFiles;
+        struct PlatformData;
+        PlatformData* m_platform{nullptr};
+    };
+
+    IFileWatcher* CreateFileWatcher(comb::DefaultAllocator& alloc);
 } // namespace nectar

@@ -26,20 +26,18 @@ namespace
     {
     };
 
-    // ─────────────────────────────────────────────────────────────
     // Commands Basic Tests
-    // ─────────────────────────────────────────────────────────────
 
     auto test1 = larvae::RegisterTest("QueenCommands", "CommandsConstruction", []() {
         comb::LinearAllocator alloc{262144};
         queen::Commands<comb::LinearAllocator> commands{alloc};
 
-        larvae::AssertEqual(commands.BufferCount(), size_t{0});
+        larvae::AssertEqual(commands.BufferCount(), size_t{1});
         larvae::AssertTrue(commands.IsEmpty());
         larvae::AssertEqual(commands.TotalCommandCount(), size_t{0});
     });
 
-    auto test2 = larvae::RegisterTest("QueenCommands", "CommandsGetCreatesBuffer", []() {
+    auto test2 = larvae::RegisterTest("QueenCommands", "CommandsGetReturnsBuffer", []() {
         comb::LinearAllocator alloc{262144};
         queen::Commands<comb::LinearAllocator> commands{alloc};
 
@@ -56,7 +54,6 @@ namespace
         auto& buffer1 = commands.Get();
         auto& buffer2 = commands.Get();
 
-        // Should return same buffer for same thread
         larvae::AssertEqual(&buffer1, &buffer2);
         larvae::AssertEqual(commands.BufferCount(), size_t{1});
     });
@@ -173,9 +170,7 @@ namespace
         larvae::AssertTrue(world.IsAlive(e));
     });
 
-    // ─────────────────────────────────────────────────────────────
     // Commands with Scheduler Tests
-    // ─────────────────────────────────────────────────────────────
 
     auto test9 = larvae::RegisterTest("QueenCommands", "SchedulerFlushesCommands", []() {
         comb::LinearAllocator alloc{262144};
@@ -322,7 +317,7 @@ namespace
 
         // Initially empty
         larvae::AssertTrue(commands.IsEmpty());
-        larvae::AssertEqual(commands.BufferCount(), size_t{0});
+        larvae::AssertEqual(commands.BufferCount(), size_t{1});
     });
 
     auto test16 = larvae::RegisterTest("QueenCommands", "CommandsSetComponentDeferred", []() {

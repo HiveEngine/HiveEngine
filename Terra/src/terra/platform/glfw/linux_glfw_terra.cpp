@@ -14,19 +14,19 @@ namespace terra
         NativeWindow nativeWindow{};
         GLFWwindow* glfwWindow = GetGlfwWindow(windowContext);
 
-        nativeWindow.wlDisplay_ = glfwGetWaylandDisplay();
-        nativeWindow.wlSurface_ = glfwGetWaylandWindow(glfwWindow);
+        nativeWindow.m_wlDisplay = glfwGetWaylandDisplay();
+        nativeWindow.m_wlSurface = glfwGetWaylandWindow(glfwWindow);
 
-        nativeWindow.x11Display_ = glfwGetX11Display();
-        nativeWindow.x11Window_ = glfwGetX11Window(glfwWindow);
+        nativeWindow.m_x11Display = glfwGetX11Display();
+        nativeWindow.m_x11Window = glfwGetX11Window(glfwWindow);
 
-        if (nativeWindow.wlDisplay_ && nativeWindow.wlSurface_)
+        if (nativeWindow.m_wlDisplay && nativeWindow.m_wlSurface)
         {
-            nativeWindow.type_ = NativeWindowType::WAYLAND;
+            nativeWindow.m_type = NativeWindowType::WAYLAND;
         }
-        else if (nativeWindow.x11Display_ && nativeWindow.x11Window_)
+        else if (nativeWindow.m_x11Display && nativeWindow.m_x11Window)
         {
-            nativeWindow.type_ = NativeWindowType::X11;
+            nativeWindow.m_type = NativeWindowType::X11;
         }
 
         return nativeWindow;

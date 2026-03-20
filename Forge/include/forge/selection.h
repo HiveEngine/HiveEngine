@@ -2,17 +2,17 @@
 
 #include <queen/core/entity.h>
 
-#include <vector>
+#include <forge/forge_module.h>
+
+#include <wax/containers/vector.h>
 
 namespace forge
 {
     class EditorSelection
     {
     public:
-        // Replace selection with a single entity
         void Select(queen::Entity entity);
 
-        // Toggle entity in selection (Ctrl+click)
         void Toggle(queen::Entity entity);
 
         void Clear();
@@ -22,17 +22,17 @@ namespace forge
         {
             return m_primary;
         }
-        [[nodiscard]] const std::vector<queen::Entity>& All() const noexcept
+        [[nodiscard]] const wax::Vector<queen::Entity>& All() const noexcept
         {
             return m_selected;
         }
         [[nodiscard]] bool IsEmpty() const noexcept
         {
-            return m_selected.empty();
+            return m_selected.IsEmpty();
         }
 
     private:
         queen::Entity m_primary{};
-        std::vector<queen::Entity> m_selected;
+        wax::Vector<queen::Entity> m_selected{forge::GetAllocator()};
     };
 } // namespace forge

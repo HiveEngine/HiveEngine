@@ -12,62 +12,8 @@
 
 namespace wax
 {
-    /**
-     * Fixed-size string with Small String Optimization (SSO) only - no heap allocations
-     *
-     * FixedString is a stack-only string with a fixed maximum capacity (22 characters).
-     * Unlike String<Allocator>, it NEVER allocates on the heap and requires no allocator.
-     * Perfect for small, known-bounded strings (entity names, tags, short paths, etc.).
-     *
-     * Performance characteristics:
-     * - Storage: 24 bytes (inline buffer + size + padding)
-     * - Max capacity: 22 characters (fixed, cannot grow)
-     * - Access: O(1) - direct pointer arithmetic
-     * - Append: O(1) if within capacity, truncates silently otherwise
-     * - Find: O(n*m) naive search
-     * - Zero heap allocations (100% stack-based)
-     *
-     * Memory layout:
-     * ┌───────────────────────────────┐
-     * │ char buffer[23]               │  Inline storage (22 chars + null terminator)
-     * │ uint8_t size                  │  Current size (0-22)
-     * └───────────────────────────────┘
-     *   24 bytes total
-     *
-     * Limitations:
-     * - Fixed capacity (22 chars max, cannot grow)
-     * - Append/Insert beyond capacity truncates silently (no error)
-     * - No allocator required (pro and con)
-     * - UTF-8 data treated as raw bytes (no encoding awareness)
-     *
-     * Use cases:
-     * - Entity names, tags, IDs (short identifiers)
-     * - Debug labels, log prefixes
-     * - Short file extensions, enum strings
-     * - Embedded systems (no dynamic allocation)
-     * - Performance-critical code (zero allocations)
-     *
-     * Example:
-     * @code
-     *   // No allocator needed!
-     *   wax::FixedString name{"Player"};
-     *   name.Append("1");  // "Player1" - still fits
-     *
-     *   wax::FixedString tag{"Enemy"};
-     *   tag.Append("_Tank");  // "Enemy_Tank"
-     *
-     *   // Comparison
-     *   if (name == "Player1") {
-     *       // ...
-     *   }
-     *
-     *   // Convert to StringView
-     *   wax::StringView view = name.View();
-     *
-     *   // Null-terminated C string
-     *   const char* c_str = name.CStr();
-     * @endcode
-     */
+    // Stack-only fixed-capacity string (22 chars max, 24 bytes total).
+    // No heap allocation, no allocator required. Truncates silently on overflow.
     class FixedString
     {
     public:
@@ -76,24 +22,22 @@ namespace wax
         using ConstIterator = const char*;
 
         static constexpr size_t npos = static_cast<size_t>(-1);
-        static constexpr size_t MaxCapacity = 22; // Max characters (buffer is MaxCapacity + 1 for null terminator)
+        static constexpr size_t MaxCapacity = 22;
 
         constexpr FixedString() noexcept
             : buffer_{}
-            , size_{0}
+            , m_size{0}
         {
             buffer_[0] = '\0';
         }
 
-        // Constructor from C string (truncates if exceeds MaxCapacity)
         constexpr FixedString(const char* str) noexcept
             : buffer_{}
-            , size_{0}
+            , m_size{0}
         {
             if (str)
             {
                 size_t len = StrLen(str);
-                // Silently truncate to MaxCapacity (consistent with Append behavior)
                 len = len <= MaxCapacity ? len : MaxCapacity;
 
                 for (size_t i = 0; i < len; ++i)
@@ -101,7 +45,7 @@ namespace wax
                     buffer_[i] = str[i];
                 }
                 buffer_[len] = '\0';
-                size_ = static_cast<uint8_t>(len);
+                m_size = static_cast<uint8_t>(len);
             }
             else
             {
@@ -109,13 +53,11 @@ namespace wax
             }
         }
 
-        // Constructor from StringView (truncates if exceeds MaxCapacity)
         constexpr FixedString(StringView sv) noexcept
             : buffer_{}
-            , size_{0}
+            , m_size{0}
         {
             size_t len = sv.Size();
-            // Silently truncate to MaxCapacity (consistent with Append behavior)
             len = len <= MaxCapacity ? len : MaxCapacity;
 
             for (size_t i = 0; i < len; ++i)
@@ -123,15 +65,13 @@ namespace wax
                 buffer_[i] = sv[i];
             }
             buffer_[len] = '\0';
-            size_ = static_cast<uint8_t>(len);
+            m_size = static_cast<uint8_t>(len);
         }
 
-        // Constructor from pointer and size (truncates if exceeds MaxCapacity)
         constexpr FixedString(const char* data, size_t size) noexcept
             : buffer_{}
-            , size_{0}
+            , m_size{0}
         {
-            // Silently truncate to MaxCapacity (consistent with Append behavior)
             size = size <= MaxCapacity ? size : MaxCapacity;
 
             for (size_t i = 0; i < size; ++i)
@@ -139,7 +79,7 @@ namespace wax
                 buffer_[i] = data[i];
             }
             buffer_[size] = '\0';
-            size_ = static_cast<uint8_t>(size);
+            m_size = static_cast<uint8_t>(size);
         }
 
         constexpr FixedString(const FixedString&) noexcept = default;
@@ -148,58 +88,54 @@ namespace wax
         constexpr FixedString(FixedString&&) noexcept = default;
         constexpr FixedString& operator=(FixedString&&) noexcept = default;
 
-        // Element access (bounds-checked in debug)
         [[nodiscard]] constexpr char& operator[](size_t index) noexcept
         {
-            hive::Assert(index < size_, "FixedString index out of bounds");
+            hive::Assert(index < m_size, "FixedString index out of bounds");
             return buffer_[index];
         }
 
         [[nodiscard]] constexpr const char& operator[](size_t index) const noexcept
         {
-            hive::Assert(index < size_, "FixedString index out of bounds");
+            hive::Assert(index < m_size, "FixedString index out of bounds");
             return buffer_[index];
         }
 
-        // Element access (always bounds-checked)
         [[nodiscard]] constexpr char& At(size_t index)
         {
-            hive::Check(index < size_, "FixedString index out of bounds");
+            hive::Check(index < m_size, "FixedString index out of bounds");
             return buffer_[index];
         }
 
         [[nodiscard]] constexpr const char& At(size_t index) const
         {
-            hive::Check(index < size_, "FixedString index out of bounds");
+            hive::Check(index < m_size, "FixedString index out of bounds");
             return buffer_[index];
         }
 
-        // First and last character access
         [[nodiscard]] constexpr char& Front() noexcept
         {
-            hive::Assert(size_ > 0, "FixedString is empty");
+            hive::Assert(m_size > 0, "FixedString is empty");
             return buffer_[0];
         }
 
         [[nodiscard]] constexpr const char& Front() const noexcept
         {
-            hive::Assert(size_ > 0, "FixedString is empty");
+            hive::Assert(m_size > 0, "FixedString is empty");
             return buffer_[0];
         }
 
         [[nodiscard]] constexpr char& Back() noexcept
         {
-            hive::Assert(size_ > 0, "FixedString is empty");
-            return buffer_[size_ - 1];
+            hive::Assert(m_size > 0, "FixedString is empty");
+            return buffer_[m_size - 1];
         }
 
         [[nodiscard]] constexpr const char& Back() const noexcept
         {
-            hive::Assert(size_ > 0, "FixedString is empty");
-            return buffer_[size_ - 1];
+            hive::Assert(m_size > 0, "FixedString is empty");
+            return buffer_[m_size - 1];
         }
 
-        // Raw data access (mutable)
         [[nodiscard]] constexpr char* Data() noexcept
         {
             return buffer_;
@@ -215,15 +151,14 @@ namespace wax
             return buffer_;
         }
 
-        // Size information
         [[nodiscard]] constexpr size_t Size() const noexcept
         {
-            return size_;
+            return m_size;
         }
 
         [[nodiscard]] constexpr size_t Length() const noexcept
         {
-            return size_;
+            return m_size;
         }
 
         [[nodiscard]] constexpr size_t Capacity() const noexcept
@@ -233,15 +168,14 @@ namespace wax
 
         [[nodiscard]] constexpr bool IsEmpty() const noexcept
         {
-            return size_ == 0;
+            return m_size == 0;
         }
 
         [[nodiscard]] constexpr bool IsFull() const noexcept
         {
-            return size_ == MaxCapacity;
+            return m_size == MaxCapacity;
         }
 
-        // Iterator support
         [[nodiscard]] constexpr Iterator begin() noexcept
         {
             return buffer_;
@@ -254,18 +188,17 @@ namespace wax
 
         [[nodiscard]] constexpr Iterator end() noexcept
         {
-            return buffer_ + size_;
+            return buffer_ + m_size;
         }
 
         [[nodiscard]] constexpr ConstIterator end() const noexcept
         {
-            return buffer_ + size_;
+            return buffer_ + m_size;
         }
 
-        // View conversion
         [[nodiscard]] constexpr StringView View() const noexcept
         {
-            return StringView{buffer_, size_};
+            return StringView{buffer_, m_size};
         }
 
         [[nodiscard]] constexpr operator StringView() const noexcept
@@ -273,21 +206,19 @@ namespace wax
             return View();
         }
 
-        // Modifiers
         constexpr void Clear() noexcept
         {
-            size_ = 0;
+            m_size = 0;
             buffer_[0] = '\0';
         }
 
         constexpr void Append(char ch) noexcept
         {
-            // Silently ignore if at capacity (consistent with truncation behavior)
-            if (size_ < MaxCapacity)
+            if (m_size < MaxCapacity)
             {
-                buffer_[size_] = ch;
-                ++size_;
-                buffer_[size_] = '\0';
+                buffer_[m_size] = ch;
+                ++m_size;
+                buffer_[m_size] = '\0';
             }
         }
 
@@ -308,17 +239,15 @@ namespace wax
             {
                 return;
             }
-
-            // Silently truncate to MaxCapacity (consistent with truncation behavior)
-            size_t actual_count = (size_ + count <= MaxCapacity) ? count : (MaxCapacity - size_);
+            size_t actual_count = (m_size + count <= MaxCapacity) ? count : (MaxCapacity - m_size);
 
             for (size_t i = 0; i < actual_count; ++i)
             {
-                buffer_[size_ + i] = str[i];
+                buffer_[m_size + i] = str[i];
             }
 
-            size_ += actual_count;
-            buffer_[size_] = '\0';
+            m_size += actual_count;
+            buffer_[m_size] = '\0';
         }
 
         constexpr void Append(StringView sv) noexcept
@@ -328,32 +257,30 @@ namespace wax
 
         constexpr void PopBack() noexcept
         {
-            hive::Assert(size_ > 0, "FixedString is empty");
-            if (size_ > 0)
+            hive::Assert(m_size > 0, "FixedString is empty");
+            if (m_size > 0)
             {
-                --size_;
-                buffer_[size_] = '\0';
+                --m_size;
+                buffer_[m_size] = '\0';
             }
         }
 
         constexpr void Resize(size_t new_size, char ch = '\0') noexcept
         {
-            // Silently truncate to MaxCapacity (consistent with constructors and Append)
             new_size = (new_size <= MaxCapacity) ? new_size : MaxCapacity;
 
-            if (new_size > size_)
+            if (new_size > m_size)
             {
-                for (size_t i = size_; i < new_size; ++i)
+                for (size_t i = m_size; i < new_size; ++i)
                 {
                     buffer_[i] = ch;
                 }
             }
 
-            size_ = static_cast<uint8_t>(new_size);
-            buffer_[size_] = '\0';
+            m_size = static_cast<uint8_t>(new_size);
+            buffer_[m_size] = '\0';
         }
 
-        // Search operations (delegate to StringView)
         [[nodiscard]] constexpr size_t Find(char ch, size_t pos = 0) const noexcept
         {
             return View().Find(ch, pos);
@@ -399,7 +326,6 @@ namespace wax
             return View().EndsWith(sv);
         }
 
-        // Comparison operations
         [[nodiscard]] constexpr int Compare(const FixedString& other) const noexcept
         {
             return View().Compare(other.View());
@@ -421,7 +347,6 @@ namespace wax
         }
 
     private:
-        // constexpr strlen implementation
         static constexpr size_t StrLen(const char* str) noexcept
         {
             if (str == nullptr)
@@ -438,10 +363,9 @@ namespace wax
         }
 
         char buffer_[MaxCapacity + 1]; // +1 for null terminator
-        uint8_t size_;
+        uint8_t m_size;
     };
 
-    // Comparison operators
     [[nodiscard]] constexpr bool operator==(const FixedString& lhs, const FixedString& rhs) noexcept
     {
         return lhs.Equals(rhs);

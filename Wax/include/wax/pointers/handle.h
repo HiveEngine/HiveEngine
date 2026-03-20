@@ -10,44 +10,8 @@
 
 namespace wax
 {
-    /**
-     * Generational handle for safe entity/resource references
-     *
-     * Combines an index with a generation counter to detect use-after-free.
-     * When an object is destroyed, its slot's generation increments, invalidating
-     * all existing handles to that slot.
-     *
-     * Use cases:
-     * - ECS entity IDs (safe references across frames)
-     * - Resource handles (textures, meshes, sounds)
-     * - Object pools with stable IDs
-     *
-     * Layout: [32-bit index][32-bit generation] = 64 bits total
-     *
-     * Performance:
-     * - Create/Destroy: O(1)
-     * - Get: O(1) with generation check
-     * - IsValid: O(1)
-     * - Memory: 8 bytes per handle
-     *
-     * Limitations:
-     * - Max 4 billion objects per pool
-     * - Generation wraps after 4 billion destroy/create cycles per slot
-     *
-     * Example:
-     * @code
-     *   comb::PoolAllocator<Entity> pool{1000};
-     *   wax::HandlePool<Entity> entities{pool, 1000};
-     *
-     *   auto handle = entities.Create(args...);
-     *   if (Entity* e = entities.Get(handle)) {
-     *       e->Update();
-     *   }
-     *
-     *   entities.Destroy(handle);
-     *   // handle.IsValid() still true, but entities.Get(handle) returns nullptr
-     * @endcode
-     */
+    // Generational handle: [32-bit index][32-bit generation] = 64 bits.
+    // Generation counter detects use-after-free when a slot is recycled.
     template <typename T> struct Handle
     {
         uint32_t m_index{0};
@@ -69,15 +33,8 @@ namespace wax
         }
     };
 
-    /**
-     * Pool that manages objects with generational handles
-     *
-     * Provides O(1) create, destroy, and lookup with use-after-free detection.
-     * Uses a free-list for slot reuse.
-     *
-     * @tparam T Object type to store
-     * @tparam Allocator Comb allocator type
-     */
+    // Pool that manages objects with generational handles.
+    // O(1) create/destroy/lookup with use-after-free detection via free-list.
     template <typename T, comb::Allocator Allocator> class HandlePool
     {
     private:

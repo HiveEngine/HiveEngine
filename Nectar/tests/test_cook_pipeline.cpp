@@ -123,9 +123,7 @@ namespace
         return cas_hash;
     }
 
-    // =========================================================================
     // CookSingle
-    // =========================================================================
 
     auto t1 = larvae::RegisterTest("NectarCookPipe", "CookSingleSuccess", []() {
         auto& alloc = GetCookAlloc();
@@ -231,9 +229,7 @@ namespace
         larvae::AssertEqual(r2.m_cookedData.Size(), std::strlen(data));
     });
 
-    // =========================================================================
     // CookAll
-    // =========================================================================
 
     auto t6 = larvae::RegisterTest("NectarCookPipe", "CookAllSequential", []() {
         auto& alloc = GetCookAlloc();
@@ -366,9 +362,7 @@ namespace
         larvae::AssertEqual(out2.m_cooked, size_t{0});
     });
 
-    // =========================================================================
     // Invalidation
-    // =========================================================================
 
     auto t10 = larvae::RegisterTest("NectarCookPipe", "InvalidateCascade", []() {
         auto& alloc = GetCookAlloc();
@@ -436,9 +430,7 @@ namespace
         larvae::AssertEqual(cache.Count(), size_t{1});
     });
 
-    // =========================================================================
     // CookKey
-    // =========================================================================
 
     auto t12 = larvae::RegisterTest("NectarCookPipe", "CookKeyDeterminism", []() {
         nectar::ContentHash ih{0x1234, 0x5678};

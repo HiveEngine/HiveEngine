@@ -9,9 +9,7 @@
 
 namespace
 {
-    // =============================================================================
     // Wax::String SSO Benchmarks
-    // =============================================================================
 
     auto bench1 = larvae::RegisterBenchmark("WaxString", "ConstructSmallString", [](larvae::BenchmarkState& state) {
         comb::LinearAllocator alloc{1024 * 1024};
@@ -23,7 +21,7 @@ namespace
             larvae::DoNotOptimize(str.Data());
         }
 
-        state.SetItemsProcessed(state.iterations());
+        state.SetItemsProcessed(state.Iterations());
     });
 
     auto bench2 = larvae::RegisterBenchmark("WaxString", "ConstructLargeString", [](larvae::BenchmarkState& state) {
@@ -36,7 +34,7 @@ namespace
             larvae::DoNotOptimize(str.Data());
         }
 
-        state.SetItemsProcessed(state.iterations());
+        state.SetItemsProcessed(state.Iterations());
     });
 
     auto bench3 = larvae::RegisterBenchmark("WaxString", "AppendSmallStrings", [](larvae::BenchmarkState& state) {
@@ -53,7 +51,7 @@ namespace
             larvae::DoNotOptimize(str.Data());
         }
 
-        state.SetItemsProcessed(state.iterations() * 10);
+        state.SetItemsProcessed(state.Iterations() * 10);
     });
 
     auto bench4 = larvae::RegisterBenchmark("WaxString", "AppendLargeStrings", [](larvae::BenchmarkState& state) {
@@ -70,7 +68,7 @@ namespace
             larvae::DoNotOptimize(str.Data());
         }
 
-        state.SetItemsProcessed(state.iterations() * 10);
+        state.SetItemsProcessed(state.Iterations() * 10);
     });
 
     auto bench5 = larvae::RegisterBenchmark("WaxString", "AppendChars", [](larvae::BenchmarkState& state) {
@@ -87,7 +85,7 @@ namespace
             larvae::DoNotOptimize(str.Data());
         }
 
-        state.SetItemsProcessed(state.iterations() * 100);
+        state.SetItemsProcessed(state.Iterations() * 100);
     });
 
     auto bench6 = larvae::RegisterBenchmark("WaxString", "FindChar", [](larvae::BenchmarkState& state) {
@@ -100,7 +98,7 @@ namespace
             larvae::DoNotOptimize(pos);
         }
 
-        state.SetItemsProcessed(state.iterations());
+        state.SetItemsProcessed(state.Iterations());
     });
 
     auto bench7 = larvae::RegisterBenchmark("WaxString", "FindSubstring", [](larvae::BenchmarkState& state) {
@@ -113,7 +111,7 @@ namespace
             larvae::DoNotOptimize(pos);
         }
 
-        state.SetItemsProcessed(state.iterations());
+        state.SetItemsProcessed(state.Iterations());
     });
 
     auto bench8 = larvae::RegisterBenchmark("WaxString", "Compare", [](larvae::BenchmarkState& state) {
@@ -127,7 +125,7 @@ namespace
             larvae::DoNotOptimize(result);
         }
 
-        state.SetItemsProcessed(state.iterations());
+        state.SetItemsProcessed(state.Iterations());
     });
 
     auto bench9 = larvae::RegisterBenchmark("WaxString", "CopySmallString", [](larvae::BenchmarkState& state) {
@@ -140,7 +138,7 @@ namespace
             larvae::DoNotOptimize(copy.Data());
         }
 
-        state.SetItemsProcessed(state.iterations());
+        state.SetItemsProcessed(state.Iterations());
     });
 
     auto bench10 = larvae::RegisterBenchmark("WaxString", "CopyLargeString", [](larvae::BenchmarkState& state) {
@@ -154,12 +152,10 @@ namespace
             larvae::DoNotOptimize(copy.Data());
         }
 
-        state.SetItemsProcessed(state.iterations());
+        state.SetItemsProcessed(state.Iterations());
     });
 
-    // =============================================================================
     // std::string Comparison Benchmarks
-    // =============================================================================
 
     auto bench11 = larvae::RegisterBenchmark("StdString", "ConstructSmallString", [](larvae::BenchmarkState& state) {
         while (state.KeepRunning())
@@ -168,7 +164,7 @@ namespace
             larvae::DoNotOptimize(str.data());
         }
 
-        state.SetItemsProcessed(state.iterations());
+        state.SetItemsProcessed(state.Iterations());
     });
 
     auto bench12 = larvae::RegisterBenchmark("StdString", "ConstructLargeString", [](larvae::BenchmarkState& state) {
@@ -178,7 +174,7 @@ namespace
             larvae::DoNotOptimize(str.data());
         }
 
-        state.SetItemsProcessed(state.iterations());
+        state.SetItemsProcessed(state.Iterations());
     });
 
     auto bench13 = larvae::RegisterBenchmark("StdString", "AppendSmallStrings", [](larvae::BenchmarkState& state) {
@@ -192,7 +188,7 @@ namespace
             larvae::DoNotOptimize(str.data());
         }
 
-        state.SetItemsProcessed(state.iterations() * 10);
+        state.SetItemsProcessed(state.Iterations() * 10);
     });
 
     auto bench14 = larvae::RegisterBenchmark("StdString", "AppendLargeStrings", [](larvae::BenchmarkState& state) {
@@ -206,7 +202,7 @@ namespace
             larvae::DoNotOptimize(str.data());
         }
 
-        state.SetItemsProcessed(state.iterations() * 10);
+        state.SetItemsProcessed(state.Iterations() * 10);
     });
 
     auto bench15 = larvae::RegisterBenchmark("StdString", "AppendChars", [](larvae::BenchmarkState& state) {
@@ -220,7 +216,7 @@ namespace
             larvae::DoNotOptimize(str.data());
         }
 
-        state.SetItemsProcessed(state.iterations() * 100);
+        state.SetItemsProcessed(state.Iterations() * 100);
     });
 
     auto bench16 = larvae::RegisterBenchmark("StdString", "FindChar", [](larvae::BenchmarkState& state) {
@@ -232,7 +228,7 @@ namespace
             larvae::DoNotOptimize(pos);
         }
 
-        state.SetItemsProcessed(state.iterations());
+        state.SetItemsProcessed(state.Iterations());
     });
 
     auto bench17 = larvae::RegisterBenchmark("StdString", "FindSubstring", [](larvae::BenchmarkState& state) {
@@ -244,7 +240,7 @@ namespace
             larvae::DoNotOptimize(pos);
         }
 
-        state.SetItemsProcessed(state.iterations());
+        state.SetItemsProcessed(state.Iterations());
     });
 
     auto bench18 = larvae::RegisterBenchmark("StdString", "Compare", [](larvae::BenchmarkState& state) {
@@ -257,7 +253,7 @@ namespace
             larvae::DoNotOptimize(result);
         }
 
-        state.SetItemsProcessed(state.iterations());
+        state.SetItemsProcessed(state.Iterations());
     });
 
     auto bench19 = larvae::RegisterBenchmark("StdString", "CopySmallString", [](larvae::BenchmarkState& state) {
@@ -269,7 +265,7 @@ namespace
             larvae::DoNotOptimize(copy.data());
         }
 
-        state.SetItemsProcessed(state.iterations());
+        state.SetItemsProcessed(state.Iterations());
     });
 
     auto bench20 = larvae::RegisterBenchmark("StdString", "CopyLargeString", [](larvae::BenchmarkState& state) {
@@ -281,12 +277,10 @@ namespace
             larvae::DoNotOptimize(copy.data());
         }
 
-        state.SetItemsProcessed(state.iterations());
+        state.SetItemsProcessed(state.Iterations());
     });
 
-    // =============================================================================
     // StringView Benchmarks
-    // =============================================================================
 
     auto bench21 =
         larvae::RegisterBenchmark("WaxStringView", "ConstructFromLiteral", [](larvae::BenchmarkState& state) {
@@ -296,7 +290,7 @@ namespace
                 larvae::DoNotOptimize(sv.Data());
             }
 
-            state.SetItemsProcessed(state.iterations());
+            state.SetItemsProcessed(state.Iterations());
         });
 
     auto bench22 = larvae::RegisterBenchmark("WaxStringView", "FindChar", [](larvae::BenchmarkState& state) {
@@ -308,7 +302,7 @@ namespace
             larvae::DoNotOptimize(pos);
         }
 
-        state.SetItemsProcessed(state.iterations());
+        state.SetItemsProcessed(state.Iterations());
     });
 
     auto bench23 = larvae::RegisterBenchmark("WaxStringView", "FindSubstring", [](larvae::BenchmarkState& state) {
@@ -320,7 +314,7 @@ namespace
             larvae::DoNotOptimize(pos);
         }
 
-        state.SetItemsProcessed(state.iterations());
+        state.SetItemsProcessed(state.Iterations());
     });
 
     auto bench24 = larvae::RegisterBenchmark("WaxStringView", "Compare", [](larvae::BenchmarkState& state) {
@@ -333,7 +327,7 @@ namespace
             larvae::DoNotOptimize(result);
         }
 
-        state.SetItemsProcessed(state.iterations());
+        state.SetItemsProcessed(state.Iterations());
     });
 
     auto bench25 = larvae::RegisterBenchmark("WaxStringView", "Substr", [](larvae::BenchmarkState& state) {
@@ -345,7 +339,7 @@ namespace
             larvae::DoNotOptimize(sub.Data());
         }
 
-        state.SetItemsProcessed(state.iterations());
+        state.SetItemsProcessed(state.Iterations());
     });
 
     auto bench26 = larvae::RegisterBenchmark("WaxStringView", "StartsWith", [](larvae::BenchmarkState& state) {
@@ -357,7 +351,7 @@ namespace
             larvae::DoNotOptimize(result);
         }
 
-        state.SetItemsProcessed(state.iterations());
+        state.SetItemsProcessed(state.Iterations());
     });
 
     auto bench27 = larvae::RegisterBenchmark("WaxStringView", "EndsWith", [](larvae::BenchmarkState& state) {
@@ -369,6 +363,6 @@ namespace
             larvae::DoNotOptimize(result);
         }
 
-        state.SetItemsProcessed(state.iterations());
+        state.SetItemsProcessed(state.Iterations());
     });
 } // namespace

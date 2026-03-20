@@ -190,9 +190,7 @@ namespace queen
                                    config.m_threadFrameSize, config.m_threadCount};
         }
 
-        // ─────────────────────────────────────────────────────────────
         // Allocator Accessors
-        // ─────────────────────────────────────────────────────────────
 
         /**
          * Persistent allocator for long-lived data
@@ -293,9 +291,7 @@ namespace queen
             return m_threadFrames.Size();
         }
 
-        // ─────────────────────────────────────────────────────────────
         // Reset Operations
-        // ─────────────────────────────────────────────────────────────
 
         /**
          * Reset frame allocator
@@ -329,9 +325,7 @@ namespace queen
             m_threadFrames[threadIndex].Reset();
         }
 
-        // ─────────────────────────────────────────────────────────────
         // Statistics
-        // ─────────────────────────────────────────────────────────────
 
         /**
          * Get total memory used by persistent allocator
@@ -372,9 +366,7 @@ namespace queen
             return total;
         }
 
-        // ─────────────────────────────────────────────────────────────
         // Thread-Safe Allocation (for parallel system execution)
-        // ─────────────────────────────────────────────────────────────
 
         /**
          * Thread-safe allocation from the persistent allocator

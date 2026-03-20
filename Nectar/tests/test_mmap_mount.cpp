@@ -60,9 +60,7 @@ namespace
         return std::string(MmapTestDir()) + "/" + relative;
     }
 
-    // =========================================================================
     // MappedFile
-    // =========================================================================
 
     auto t1 = larvae::RegisterTest("NectarMmap", "MappedFileOpenValid", []() {
         SetupMmapDir();
@@ -125,9 +123,7 @@ namespace
         CleanupMmapDir();
     });
 
-    // =========================================================================
     // MmapMountSource
-    // =========================================================================
 
     auto t5 = larvae::RegisterTest("NectarMmap", "MmapMountReadFile", []() {
         auto& alloc = GetMmapAlloc();

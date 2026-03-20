@@ -5,9 +5,7 @@
 
 namespace
 {
-    // =============================================================================
     // Construction
-    // =============================================================================
 
     auto test1 = larvae::RegisterTest("WaxFixedString", "DefaultConstructor", []() {
         wax::FixedString str;
@@ -65,9 +63,7 @@ namespace
         larvae::AssertTrue(str.IsEmpty());
     });
 
-    // =============================================================================
     // Copy and Move
-    // =============================================================================
 
     auto test8 = larvae::RegisterTest("WaxFixedString", "CopyConstructor", []() {
         wax::FixedString str1{"Hello"};
@@ -109,9 +105,7 @@ namespace
         larvae::AssertEqual(str2[4], 'o');
     });
 
-    // =============================================================================
     // Element Access
-    // =============================================================================
 
     auto test12 = larvae::RegisterTest("WaxFixedString", "IndexOperator", []() {
         wax::FixedString str{"Hello"};
@@ -155,9 +149,7 @@ namespace
         larvae::AssertEqual(c_str[5], '\0');
     });
 
-    // =============================================================================
     // Iterators
-    // =============================================================================
 
     auto test17 = larvae::RegisterTest("WaxFixedString", "RangeBasedFor", []() {
         wax::FixedString str{"abc"};
@@ -174,9 +166,7 @@ namespace
         larvae::AssertEqual(result[2], 'c');
     });
 
-    // =============================================================================
     // StringView Conversion
-    // =============================================================================
 
     auto test18 = larvae::RegisterTest("WaxFixedString", "ViewConversion", []() {
         wax::FixedString str{"Hello"};
@@ -197,9 +187,7 @@ namespace
         larvae::AssertEqual(sv[0], 'W');
     });
 
-    // =============================================================================
     // Modifiers
-    // =============================================================================
 
     auto test20 = larvae::RegisterTest("WaxFixedString", "Clear", []() {
         wax::FixedString str{"Hello"};
@@ -292,9 +280,7 @@ namespace
         larvae::AssertEqual(str[4], 'o');
     });
 
-    // =============================================================================
     // Search Operations
-    // =============================================================================
 
     auto test29 = larvae::RegisterTest("WaxFixedString", "FindChar", []() {
         wax::FixedString str{"Hello World"};
@@ -338,9 +324,7 @@ namespace
         larvae::AssertFalse(str.EndsWith("Hello"));
     });
 
-    // =============================================================================
     // Comparison Operations
-    // =============================================================================
 
     auto test34 = larvae::RegisterTest("WaxFixedString", "CompareEqual", []() {
         wax::FixedString str1{"Hello"};
@@ -393,9 +377,7 @@ namespace
         larvae::AssertFalse(str == "World");
     });
 
-    // =============================================================================
     // Edge Cases - Capacity Limits
-    // =============================================================================
 
     auto test40 = larvae::RegisterTest("WaxFixedString", "MaxCapacity22Chars", []() {
         wax::FixedString str{"1234567890123456789012"};
@@ -443,9 +425,7 @@ namespace
         larvae::AssertTrue(str.IsFull());
     });
 
-    // =============================================================================
     // Constexpr Usage
-    // =============================================================================
 
     auto test45 = larvae::RegisterTest("WaxFixedString", "ConstexprConstructor", []() {
         constexpr wax::FixedString str{"Hello"};
@@ -466,9 +446,7 @@ namespace
         larvae::AssertEqual(size, 4u);
     });
 
-    // =============================================================================
     // Empty String
-    // =============================================================================
 
     auto test47 = larvae::RegisterTest("WaxFixedString", "EmptyStringOperations", []() {
         wax::FixedString str{};

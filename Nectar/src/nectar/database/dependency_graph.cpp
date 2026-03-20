@@ -1,7 +1,7 @@
+#include <nectar/database/dependency_graph.h>
+
 #include <wax/containers/hash_map.h>
 #include <wax/containers/hash_set.h>
-
-#include <nectar/database/dependency_graph.h>
 
 namespace nectar
 {

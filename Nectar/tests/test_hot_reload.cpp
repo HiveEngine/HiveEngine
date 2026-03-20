@@ -254,9 +254,7 @@ namespace
     };
 } // namespace
 
-// ============================================================================
 // Tests
-// ============================================================================
 
 auto t1 = larvae::RegisterTest("NectarHotReload", "ProcessChangesEmpty", []() {
     TestEnv env{"hr_test_1"};
@@ -287,10 +285,9 @@ auto t2 = larvae::RegisterTest("NectarHotReload", "DeletedIgnored", []() {
 
     nectar::HotReloadManager mgr{env.alloc, env.watcher, env.db, env.import_pipeline, env.cook_pipeline};
 
-    // Deleted event should be ignored
     env.watcher.Inject("data/test.dat", nectar::FileChangeKind::DELETED);
     size_t count = mgr.ProcessChanges("pc");
-    larvae::AssertEqual(count, size_t{0});
+    larvae::AssertEqual(count, size_t{1});
 });
 
 auto t3 = larvae::RegisterTest("NectarHotReload", "UnknownPathIgnored", []() {
@@ -419,4 +416,166 @@ auto t7 = larvae::RegisterTest("NectarHotReload", "SettingsProviderCalled", []()
     larvae::AssertEqual(count, size_t{1});
     larvae::AssertTrue(provider_called);
     larvae::AssertEqual(mesh_importer.last_base_path, std::string{"/some/path/model.mesh"});
+});
+
+// Rename/move detection tests
+
+auto t8 = larvae::RegisterTest("NectarHotReload", "RenameDetectedByContentHash", []() {
+    TestEnv env{"hr_test_8"};
+    TestImporter importer;
+    env.import_registry.Register(&importer);
+    TestCooker cooker{"TestAsset"};
+    env.cook_registry.Register(&cooker);
+
+    const char* data = "rename_me";
+    auto id = MakeId(80);
+    env.mem.AddFile("data/old_name.dat", wax::ByteSpan{data, 9});
+    SetupRecord(env.db, env.cas, id, "data/old_name.dat", "TestAsset", data, 9);
+
+    // File "moved" — same content at new path
+    env.mem.AddFile("data/new_name.dat", wax::ByteSpan{data, 9});
+    env.mem.RemoveFile("data/old_name.dat");
+
+    nectar::HotReloadManager mgr{env.alloc, env.watcher, env.db, env.import_pipeline, env.cook_pipeline, &env.vfs};
+
+    env.watcher.Inject("data/old_name.dat", nectar::FileChangeKind::DELETED);
+    env.watcher.Inject("data/new_name.dat", nectar::FileChangeKind::CREATED);
+    size_t count = mgr.ProcessChanges("pc");
+
+    // Rename should not trigger reimport/recook
+    larvae::AssertEqual(count, size_t{0});
+
+    // DB record should now point to new path, same UUID
+    auto* record = env.db.FindByPath("data/new_name.dat");
+    larvae::AssertTrue(record != nullptr);
+    larvae::AssertTrue(record->m_uuid == id);
+
+    // Old path should be gone
+    auto* oldRecord = env.db.FindByPath("data/old_name.dat");
+    larvae::AssertTrue(oldRecord == nullptr);
+});
+
+auto t9 = larvae::RegisterTest("NectarHotReload", "DeleteWithoutMatchingCreateIsDeletion", []() {
+    TestEnv env{"hr_test_9"};
+    TestImporter importer;
+    env.import_registry.Register(&importer);
+    TestCooker cooker{"TestAsset"};
+    env.cook_registry.Register(&cooker);
+
+    const char* data = "delete_me";
+    auto id = MakeId(90);
+    env.mem.AddFile("data/gone.dat", wax::ByteSpan{data, 9});
+    SetupRecord(env.db, env.cas, id, "data/gone.dat", "TestAsset", data, 9);
+    env.mem.RemoveFile("data/gone.dat");
+
+    nectar::HotReloadManager mgr{env.alloc, env.watcher, env.db, env.import_pipeline, env.cook_pipeline, &env.vfs};
+
+    // Only DELETED, no matching CREATED
+    env.watcher.Inject("data/gone.dat", nectar::FileChangeKind::DELETED);
+    size_t count = mgr.ProcessChanges("pc");
+
+    larvae::AssertEqual(count, size_t{1});
+});
+
+auto t10 = larvae::RegisterTest("NectarHotReload", "CreateWithoutMatchingDeleteIsNewAsset", []() {
+    TestEnv env{"hr_test_10"};
+    TestImporter importer;
+    env.import_registry.Register(&importer);
+    TestCooker cooker{"TestAsset"};
+    env.cook_registry.Register(&cooker);
+
+    const char* data = "brand_new";
+    env.mem.AddFile("data/fresh.dat", wax::ByteSpan{data, 9});
+
+    nectar::HotReloadManager mgr{env.alloc, env.watcher, env.db, env.import_pipeline, env.cook_pipeline, &env.vfs};
+
+    env.watcher.Inject("data/fresh.dat", nectar::FileChangeKind::CREATED);
+    size_t count = mgr.ProcessChanges("pc");
+
+    larvae::AssertEqual(count, size_t{0});
+});
+
+auto t11 = larvae::RegisterTest("NectarHotReload", "ModifiedUnaffectedByRenameDetection", []() {
+    TestEnv env{"hr_test_11"};
+    TestImporter importer;
+    env.import_registry.Register(&importer);
+    TestCooker cooker{"TestAsset"};
+    env.cook_registry.Register(&cooker);
+
+    const char* data = "modify_me";
+    auto id = MakeId(110);
+    env.mem.AddFile("data/stable.dat", wax::ByteSpan{data, 9});
+    SetupRecord(env.db, env.cas, id, "data/stable.dat", "TestAsset", data, 9);
+
+    const char* new_data = "modified!";
+    env.mem.AddFile("data/stable.dat", wax::ByteSpan{new_data, 9});
+
+    nectar::HotReloadManager mgr{env.alloc, env.watcher, env.db, env.import_pipeline, env.cook_pipeline, &env.vfs};
+
+    env.watcher.Inject("data/stable.dat", nectar::FileChangeKind::MODIFIED);
+    size_t count = mgr.ProcessChanges("pc");
+
+    larvae::AssertEqual(count, size_t{1});
+    larvae::AssertTrue(mgr.LastReloaded()[0] == id);
+
+    // Path unchanged
+    auto* record = env.db.FindByPath("data/stable.dat");
+    larvae::AssertTrue(record != nullptr);
+    larvae::AssertTrue(record->m_uuid == id);
+});
+
+auto t12 = larvae::RegisterTest("NectarHotReload", "RenameWithBaseDirectory", []() {
+    TestEnv env{"hr_test_12"};
+    TestImporter importer;
+    env.import_registry.Register(&importer);
+    TestCooker cooker{"TestAsset"};
+    env.cook_registry.Register(&cooker);
+
+    const char* data = "base_rename";
+    auto id = MakeId(120);
+    env.mem.AddFile("art/sprite.dat", wax::ByteSpan{data, 11});
+    SetupRecord(env.db, env.cas, id, "art/sprite.dat", "TestAsset", data, 11);
+
+    env.mem.AddFile("art/sprites/sprite.dat", wax::ByteSpan{data, 11});
+    env.mem.RemoveFile("art/sprite.dat");
+
+    nectar::HotReloadManager mgr{env.alloc, env.watcher, env.db, env.import_pipeline, env.cook_pipeline, &env.vfs};
+    mgr.SetBaseDirectory("/project/assets");
+
+    env.watcher.Inject("/project/assets/art/sprite.dat", nectar::FileChangeKind::DELETED);
+    env.watcher.Inject("/project/assets/art/sprites/sprite.dat", nectar::FileChangeKind::CREATED);
+    size_t count = mgr.ProcessChanges("pc");
+
+    larvae::AssertEqual(count, size_t{0});
+
+    auto* record = env.db.FindByPath("art/sprites/sprite.dat");
+    larvae::AssertTrue(record != nullptr);
+    larvae::AssertTrue(record->m_uuid == id);
+
+    auto* oldRecord = env.db.FindByPath("art/sprite.dat");
+    larvae::AssertTrue(oldRecord == nullptr);
+});
+
+auto t13 = larvae::RegisterTest("NectarHotReload", "RenameDetectionWithoutVfsSkipsMatching", []() {
+    TestEnv env{"hr_test_13"};
+    TestImporter importer;
+    env.import_registry.Register(&importer);
+    TestCooker cooker{"TestAsset"};
+    env.cook_registry.Register(&cooker);
+
+    const char* data = "no_vfs";
+    auto id = MakeId(130);
+    env.mem.AddFile("data/old.dat", wax::ByteSpan{data, 6});
+    SetupRecord(env.db, env.cas, id, "data/old.dat", "TestAsset", data, 6);
+
+    env.mem.AddFile("data/new.dat", wax::ByteSpan{data, 6});
+
+    // No VFS passed — rename detection disabled, CREATED treated as new asset
+    nectar::HotReloadManager mgr{env.alloc, env.watcher, env.db, env.import_pipeline, env.cook_pipeline};
+
+    env.watcher.Inject("data/old.dat", nectar::FileChangeKind::DELETED);
+    env.watcher.Inject("data/new.dat", nectar::FileChangeKind::CREATED);
+    size_t count = mgr.ProcessChanges("pc");
+
+    larvae::AssertEqual(count, size_t{1});
 });

@@ -9,7 +9,6 @@
 
 #include <cstdio>
 #include <cstdlib>
-#include <iostream>
 
 namespace brood
 {
@@ -17,7 +16,7 @@ namespace brood
     {
     public:
         ProcessRuntime()
-            : m_logger_{m_logManager_}
+            : m_logger{m_logManager}
         {
         }
 
@@ -28,7 +27,7 @@ namespace brood
 
         void Finalize()
         {
-            if (m_finalized_)
+            if (m_finalized)
             {
                 return;
             }
@@ -37,11 +36,9 @@ namespace brood
             comb::debug::ReportLiveAllocatorLeaks();
 #endif
             hive::ShutdownProfiler();
-            std::cout.flush();
-            std::cerr.flush();
             std::fflush(stdout);
             std::fflush(stderr);
-            m_finalized_ = true;
+            m_finalized = true;
         }
 
         [[noreturn]] void Exit(int exitCode)
@@ -51,8 +48,8 @@ namespace brood
         }
 
     private:
-        hive::LogManager m_logManager_;
-        hive::ConsoleLogger m_logger_;
-        bool m_finalized_{false};
+        hive::LogManager m_logManager;
+        hive::ConsoleLogger m_logger;
+        bool m_finalized{false};
     };
 } // namespace brood

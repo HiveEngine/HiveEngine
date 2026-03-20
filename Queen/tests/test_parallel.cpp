@@ -9,9 +9,7 @@
 
 namespace
 {
-    // ============================================================================
     // WaitGroup Tests
-    // ============================================================================
 
     auto test1 = larvae::RegisterTest("QueenWaitGroup", "DefaultConstruction", []() {
         queen::WaitGroup wg;
@@ -85,9 +83,7 @@ namespace
         pool.Stop();
     });
 
-    // ============================================================================
     // parallel_for Tests
-    // ============================================================================
 
     auto test5 = larvae::RegisterTest("QueenParallelFor", "EmptyRange", []() {
         comb::LinearAllocator alloc{4 * 1024 * 1024};
@@ -219,9 +215,7 @@ namespace
         pool.Stop();
     });
 
-    // ============================================================================
     // parallel_for_each Tests
-    // ============================================================================
 
     auto test12 = larvae::RegisterTest("QueenParallelForEach", "BasicUsage", []() {
         comb::LinearAllocator alloc{4 * 1024 * 1024};
@@ -240,9 +234,7 @@ namespace
         pool.Stop();
     });
 
-    // ============================================================================
     // TaskBatch Tests
-    // ============================================================================
 
     auto test13 = larvae::RegisterTest("QueenTaskBatch", "DefaultConstruction", []() {
         queen::TaskBatch batch;

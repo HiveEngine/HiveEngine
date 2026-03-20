@@ -6,26 +6,26 @@ namespace larvae
 {
     enum class TestStatus
     {
-        Passed,
-        Failed,
-        Skipped
+        PASSED,
+        FAILED,
+        SKIPPED
     };
 
     struct TestResult
     {
-        std::string suite_name;
-        std::string test_name;
-        TestStatus status;
-        std::string error_message;
-        double duration_ms;
-        size_t memory_allocated;
-        size_t memory_leaked;
+        std::string m_suiteName;
+        std::string m_testName;
+        TestStatus m_status;
+        std::string m_errorMessage;
+        double m_durationMs;
+        size_t m_memoryAllocated;
+        size_t m_memoryLeaked;
 
         TestResult()
-            : status{TestStatus::Passed}
-            , duration_ms{0.0}
-            , memory_allocated{0}
-            , memory_leaked{0}
+            : m_status{TestStatus::PASSED}
+            , m_durationMs{0.0}
+            , m_memoryAllocated{0}
+            , m_memoryLeaked{0}
         {
         }
     };

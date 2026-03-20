@@ -43,13 +43,11 @@ namespace
         }
     };
 
-    // ============================================================================
     // Regression: Entity hash excludes flags
     //
     // Bug: Entity hash previously included flags, causing entities with
     // same index+generation but different flags to hash differently.
     // This broke HashSet lookups when flags changed.
-    // ============================================================================
 
     auto test_entity_hash_1 = larvae::RegisterTest("QueenRegression", "EntityHashExcludesFlags", []() {
         // Two entities with same index+generation but different flags
@@ -104,12 +102,10 @@ namespace
         larvae::AssertEqual(std_hasher(e1), std_hasher(e2));
     });
 
-    // ============================================================================
     // Regression: Column::SwapRemove properly destructs moved-from source
     //
     // Bug: SwapRemove used to move last element into gap but did NOT
     // destruct the moved-from source, causing resource leaks.
-    // ============================================================================
 
     auto test_column_swap_remove = larvae::RegisterTest("QueenRegression", "ColumnSwapRemoveDestructsSource", []() {
         comb::LinearAllocator alloc{1024 * 1024};
@@ -142,12 +138,10 @@ namespace
         larvae::AssertEqual(column.Size(), size_t{2});
     });
 
-    // ============================================================================
     // Regression: Table::MoveRowTo transfers ticks
     //
     // Bug: MoveRowTo previously did not copy component ticks from source
     // to destination, losing change detection metadata on archetype transitions.
-    // ============================================================================
 
     auto test_table_move_ticks = larvae::RegisterTest("QueenRegression", "TableMoveRowToTransfersTicks", []() {
         comb::LinearAllocator alloc{1024 * 1024};
@@ -188,13 +182,11 @@ namespace
         larvae::AssertEqual(ticks.m_changed.m_value, uint32_t{50});
     });
 
-    // ============================================================================
     // Regression: Events uses index-based lookup (not dangling pointers)
     //
     // Bug: Events previously stored raw pointers to EventQueue objects.
     // When new event types were registered, the vector could reallocate,
     // invalidating those pointers. Now uses index-based lookup.
-    // ============================================================================
 
     struct EventA
     {
@@ -246,13 +238,11 @@ namespace
         larvae::AssertEqual(count_a2, size_t{2});
     });
 
-    // ============================================================================
     // Regression: CommandBuffer move semantics (was double-free)
     //
     // Bug: CommandBuffer move constructor/assignment did not nullify source
     // block pointers, causing double-free when both source and dest were
     // destroyed. Now properly nullifies source.
-    // ============================================================================
 
     auto test_cmdbuf_move = larvae::RegisterTest("QueenRegression", "CommandBufferMoveNullifiesSource", []() {
         comb::LinearAllocator alloc{65536};
@@ -295,13 +285,11 @@ namespace
             larvae::AssertTrue(cmd2.CommandCount() > 0);
         });
 
-    // ============================================================================
     // Regression: WorkStealingDeque retired buffers (was leak)
     //
     // Bug: When WorkStealingDeque grows, old buffers were not tracked.
     // Now uses a RetiredNode linked list to track old buffers for cleanup.
     // This test verifies growth doesn't crash and all items are preserved.
-    // ============================================================================
 
     auto test_deque_grow = larvae::RegisterTest("QueenRegression", "WorkStealingDequeGrowPreservesItems", []() {
         comb::LinearAllocator alloc{4 * 1024 * 1024};
@@ -359,14 +347,12 @@ namespace
         larvae::AssertEqual(count, 18);
     });
 
-    // ============================================================================
     // Regression: Hierarchy cycle detection + bounded loops
     //
     // Bug: SetParent did not check for cycles. Setting child as parent
     // of its ancestor would create infinite loops in traversal.
     // Now asserts if cycle would be created.
     // Also: IsDescendantOf/GetRoot/GetDepth use bounded loops (kMaxHierarchyDepth).
-    // ============================================================================
 
     auto test_hierarchy_cycle_1 = larvae::RegisterTest("QueenRegression", "IsDescendantOfDetectsChain", []() {
         queen::World world;

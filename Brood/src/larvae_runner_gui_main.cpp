@@ -1,3 +1,6 @@
+#include <wax/containers/string.h>
+#include <wax/containers/vector.h>
+
 #include <larvae/larvae.h>
 
 #include <imgui.h>
@@ -16,28 +19,59 @@
 #include <mutex>
 #include <random>
 #include <set>
-#include <sstream>
 #include <string>
 #include <thread>
 #include <vector>
 
 namespace
 {
+    // Layout constants
+    constexpr float kSuitesPanelRatio          = 0.65f;
+    constexpr float kControlPanelHeight        = 120.0f;
+    constexpr float kResultsPanelHeight        = 250.0f;
+    constexpr float kLeftColumnWidth           = 520.0f;
+    constexpr float kSelectionButtonWidth      = 115.0f;
+    constexpr float kPlaylistInputWidth        = 170.0f;
+    constexpr float kAddPlaylistButtonWidth    = 25.0f;
+    constexpr float kIterationInputWidth       = 100.0f;
+    constexpr float kProgressBarWidth          = 300.0f;
+    constexpr float kProgressBarHeight         = 20.0f;
+    constexpr float kActionButtonWidth         = 120.0f;
+    constexpr float kActionButtonHeight        = 40.0f;
+    constexpr float kShuffleCheckboxOffset     = 200.0f;
+    constexpr float kStopOnFailureOffset       = 300.0f;
+    constexpr float kVerboseCheckboxOffset     = 450.0f;
+    constexpr float kAutoScrollCheckboxOffset  = 550.0f;
+    constexpr float kProgressBarOffset         = 500.0f;
+    constexpr float kSubtitleRightMargin       = 200.0f;
+    constexpr float kLogClearButtonMargin      = 80.0f;
+    constexpr float kIterColumnWidth           = 40.0f;
+    constexpr float kStatusColumnWidth         = 60.0f;
+    constexpr float kDurationColumnWidth       = 80.0f;
+    constexpr float kStatsCountColumnWidth     = 50.0f;
+    constexpr float kStatsTimingColumnWidth    = 70.0f;
+    constexpr float kTimestampColumnWidth      = 140.0f;
+    constexpr float kHistoryCountColumnWidth   = 60.0f;
+    constexpr float kHistoryIterColumnWidth    = 70.0f;
+    constexpr float kHistoryDurationColumnWidth = 100.0f;
+    constexpr int   kMaxRepeatCount            = 1000;
+    constexpr size_t kMaxRunHistoryEntries     = 50;
+
     // Application state
     struct TestEntry
     {
-        std::string m_suiteName;
-        std::string m_testName;
-        std::string m_fullName;
+        wax::String m_suiteName;
+        wax::String m_testName;
+        wax::String m_fullName;
         bool m_selected = true;
     };
 
     struct TestResultEntry
     {
-        std::string m_suiteName;
-        std::string m_testName;
+        wax::String m_suiteName;
+        wax::String m_testName;
         larvae::TestStatus m_status;
-        std::string m_errorMessage;
+        wax::String m_errorMessage;
         double m_durationMs;
         int m_iteration;
     };
@@ -51,12 +85,12 @@ namespace
         double m_maxDurationMs = 0.0;
         double m_avgDurationMs = 0.0;
         double m_totalDurationMs = 0.0;
-        std::string m_lastError;
+        wax::String m_lastError;
     };
 
     struct RunHistoryEntry
     {
-        std::string m_timestamp;
+        wax::String m_timestamp;
         int m_totalTests = 0;
         int m_passed = 0;
         int m_failed = 0;
@@ -66,14 +100,14 @@ namespace
 
     struct RunnerState
     {
-        std::vector<TestEntry> m_allTests;
-        std::map<std::string, bool> m_suiteSelection;
-        std::map<std::string, bool> m_testSelection;
-        std::vector<TestResultEntry> m_results;
-        std::vector<std::string> m_logLines;
+        wax::Vector<TestEntry> m_allTests;
+        std::map<wax::String, bool> m_suiteSelection;
+        std::map<wax::String, bool> m_testSelection;
+        wax::Vector<TestResultEntry> m_results;
+        wax::Vector<wax::String> m_logLines;
 
-        std::map<std::string, TestStatistics> m_testStatistics;
-        std::vector<RunHistoryEntry> m_runHistory;
+        std::map<wax::String, TestStatistics> m_testStatistics;
+        wax::Vector<RunHistoryEntry> m_runHistory;
 
         std::atomic<bool> m_isRunning{false};
         std::atomic<bool> m_shouldStop{false};
@@ -98,21 +132,42 @@ namespace
 
     RunnerState g_state;
 
-    void AddLogLine(const std::string& line)
+    wax::String IntToStr(int value)
+    {
+        char buf[32];
+        std::snprintf(buf, sizeof(buf), "%d", value);
+        return wax::String{buf};
+    }
+
+    wax::String DoubleToStr(double value)
+    {
+        char buf[64];
+        std::snprintf(buf, sizeof(buf), "%g", value);
+        return wax::String{buf};
+    }
+
+    wax::String SizeToStr(size_t value)
+    {
+        char buf[32];
+        std::snprintf(buf, sizeof(buf), "%zu", value);
+        return wax::String{buf};
+    }
+
+    void AddLogLine(wax::StringView line)
     {
         std::lock_guard<std::mutex> lock{g_state.m_logMutex};
-        g_state.m_logLines.push_back(line);
+        g_state.m_logLines.PushBack(wax::String{line});
     }
 
     void ClearLog()
     {
         std::lock_guard<std::mutex> lock{g_state.m_logMutex};
-        g_state.m_logLines.clear();
+        g_state.m_logLines.Clear();
     }
 
     void DiscoverTests()
     {
-        g_state.m_allTests.clear();
+        g_state.m_allTests.Clear();
         g_state.m_suiteSelection.clear();
         g_state.m_testSelection.clear();
 
@@ -121,17 +176,16 @@ namespace
         for (const auto& test : tests)
         {
             TestEntry entry;
-            entry.m_suiteName = test.suite_name;
-            entry.m_testName = test.test_name;
-            entry.m_fullName = test.GetFullName();
+            entry.m_suiteName = test.m_suiteName.c_str();
+            entry.m_testName = test.m_testName.c_str();
+            entry.m_fullName = wax::String{test.GetFullName().c_str()};
 
-            // Check if this suite should be selected based on saved config
-            bool suite_enabled = g_state.m_config.m_selectedSuites.empty();
+            bool suite_enabled = g_state.m_config.m_selectedSuites.IsEmpty();
             if (!suite_enabled)
             {
                 for (const auto& s : g_state.m_config.m_selectedSuites)
                 {
-                    if (s == test.suite_name)
+                    if (s == test.m_suiteName.c_str())
                     {
                         suite_enabled = true;
                         break;
@@ -139,35 +193,36 @@ namespace
                 }
             }
             entry.m_selected = suite_enabled;
-            g_state.m_allTests.push_back(entry);
-            g_state.m_testSelection[entry.m_fullName] = suite_enabled;
+            const wax::String fullName{entry.m_fullName};
+            g_state.m_allTests.PushBack(std::move(entry));
+            g_state.m_testSelection[fullName] = suite_enabled;
 
-            if (g_state.m_suiteSelection.find(test.suite_name) == g_state.m_suiteSelection.end())
+            const wax::String suiteName{test.m_suiteName.c_str()};
+            if (g_state.m_suiteSelection.find(suiteName) == g_state.m_suiteSelection.end())
             {
-                g_state.m_suiteSelection[test.suite_name] = suite_enabled;
+                g_state.m_suiteSelection[suiteName] = suite_enabled;
             }
 
-            // Initialize statistics if not present
-            if (g_state.m_testStatistics.find(entry.m_fullName) == g_state.m_testStatistics.end())
+            if (g_state.m_testStatistics.find(fullName) == g_state.m_testStatistics.end())
             {
-                g_state.m_testStatistics[entry.m_fullName] = TestStatistics{};
+                g_state.m_testStatistics[fullName] = TestStatistics{};
             }
         }
     }
 
     void UpdateTestStatistics(const TestResultEntry& result)
     {
-        std::string fullName = result.m_suiteName + "." + result.m_testName;
+        const wax::String fullName = result.m_suiteName + "." + result.m_testName;
         auto& stats = g_state.m_testStatistics[fullName];
 
         stats.m_totalRuns++;
         stats.m_totalDurationMs += result.m_durationMs;
 
-        if (result.m_status == larvae::TestStatus::Passed)
+        if (result.m_status == larvae::TestStatus::PASSED)
         {
             stats.m_passed++;
         }
-        else if (result.m_status == larvae::TestStatus::Failed)
+        else if (result.m_status == larvae::TestStatus::FAILED)
         {
             stats.m_failed++;
             stats.m_lastError = result.m_errorMessage;
@@ -186,7 +241,7 @@ namespace
         stats.m_avgDurationMs = stats.m_totalDurationMs / stats.m_totalRuns;
     }
 
-    std::string FormatLocalTime(const char* format)
+    wax::String FormatLocalTime(const char* format)
     {
         const auto now = std::chrono::system_clock::now();
         const auto time = std::chrono::system_clock::to_time_t(now);
@@ -217,12 +272,17 @@ namespace
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - g_state.m_runStartTime);
         entry.m_durationMs = static_cast<double>(duration.count());
 
-        g_state.m_runHistory.push_back(entry);
+        g_state.m_runHistory.PushBack(std::move(entry));
 
-        // Keep only last 50 entries
-        if (g_state.m_runHistory.size() > 50)
+        // Keep only last N entries
+        if (g_state.m_runHistory.Size() > kMaxRunHistoryEntries)
         {
-            g_state.m_runHistory.erase(g_state.m_runHistory.begin());
+            // Shift elements left by one, then pop
+            for (size_t i = 0; i + 1 < g_state.m_runHistory.Size(); ++i)
+            {
+                g_state.m_runHistory[i] = std::move(g_state.m_runHistory[i + 1]);
+            }
+            g_state.m_runHistory.PopBack();
         }
     }
 
@@ -241,7 +301,7 @@ namespace
 
         for (const auto& test_info : allRegistered)
         {
-            std::string full_name = test_info.GetFullName();
+            const wax::String full_name{test_info.GetFullName().c_str()};
             auto test_it = g_state.m_testSelection.find(full_name);
             if (test_it != g_state.m_testSelection.end() && test_it->second)
             {
@@ -252,7 +312,7 @@ namespace
         // Reset counters
         {
             std::lock_guard<std::mutex> lock{g_state.m_resultsMutex};
-            g_state.m_results.clear();
+            g_state.m_results.Clear();
         }
         ClearLog();
 
@@ -265,8 +325,8 @@ namespace
 
         // Start runner thread
         g_state.m_runnerThread = std::thread([selectedTests]() {
-            AddLogLine("[==========] Running " + std::to_string(selectedTests.size()) + " test(s), " +
-                       std::to_string(g_state.m_config.m_repeatCount) + " iteration(s)");
+            AddLogLine(wax::String{"[==========] Running "} + SizeToStr(selectedTests.size()) + " test(s), " +
+                       IntToStr(g_state.m_config.m_repeatCount) + " iteration(s)");
 
             std::vector<larvae::TestInfo> testsToRun = selectedTests;
 
@@ -279,8 +339,8 @@ namespace
 
                 if (g_state.m_config.m_repeatCount > 1)
                 {
-                    AddLogLine("\n[----------] Iteration " + std::to_string(iter + 1) + " of " +
-                               std::to_string(g_state.m_config.m_repeatCount));
+                    AddLogLine(wax::String{"\n[----------] Iteration "} + IntToStr(iter + 1) + " of " +
+                               IntToStr(g_state.m_config.m_repeatCount));
                 }
 
                 if (g_state.m_config.m_shuffle)
@@ -290,28 +350,28 @@ namespace
                     std::ranges::shuffle(testsToRun, g);
                 }
 
-                std::string currentSuite;
+                wax::String currentSuite;
 
                 for (const auto& test : testsToRun)
                 {
                     if (g_state.m_shouldStop)
                         break;
 
-                    if (test.suite_name != currentSuite)
+                    if (test.m_suiteName.c_str() != currentSuite)
                     {
-                        currentSuite = test.suite_name;
-                        AddLogLine("\n[----------] Running tests from " + currentSuite);
+                        currentSuite = test.m_suiteName.c_str();
+                        AddLogLine(wax::String{"\n[----------] Running tests from "} + currentSuite);
                     }
 
-                    AddLogLine("[   RUN    ] " + test.GetFullName());
+                    const wax::String fullName{test.GetFullName().c_str()};
+                    AddLogLine(wax::String{"[   RUN    ] "} + fullName);
 
                     auto start = std::chrono::high_resolution_clock::now();
 
-                    // Run the test
-                    std::string error_message;
+                    wax::String error_message;
                     bool test_failed = false;
 
-                    static thread_local std::string* s_current_error = nullptr;
+                    static thread_local wax::String* s_current_error = nullptr;
                     static thread_local bool* s_current_failed = nullptr;
                     s_current_error = &error_message;
                     s_current_failed = &test_failed;
@@ -325,7 +385,7 @@ namespace
                         return true;
                     });
 
-                    test.func();
+                    test.m_func();
 
                     larvae::SetAssertionFailureHandler(nullptr);
                     s_current_error = nullptr;
@@ -336,22 +396,22 @@ namespace
                     double duration_ms = static_cast<double>(duration.count()) / 1000.0;
 
                     TestResultEntry result;
-                    result.m_suiteName = test.suite_name;
-                    result.m_testName = test.test_name;
+                    result.m_suiteName = test.m_suiteName.c_str();
+                    result.m_testName = test.m_testName.c_str();
                     result.m_durationMs = duration_ms;
                     result.m_iteration = iter + 1;
 
                     if (test_failed)
                     {
-                        result.m_status = larvae::TestStatus::Failed;
+                        result.m_status = larvae::TestStatus::FAILED;
                         result.m_errorMessage = error_message;
                         g_state.m_testsFailed++;
 
-                        AddLogLine("[  FAILED  ] " + test.GetFullName() + " (" + std::to_string(duration_ms) + " ms)");
+                        AddLogLine(wax::String{"[  FAILED  ] "} + fullName + " (" + DoubleToStr(duration_ms) + " ms)");
 
-                        if (g_state.m_config.m_verbose && !error_message.empty())
+                        if (g_state.m_config.m_verbose && !error_message.IsEmpty())
                         {
-                            AddLogLine("    " + error_message);
+                            AddLogLine(wax::String{"    "} + error_message);
                         }
 
                         if (g_state.m_config.m_stopOnFailure)
@@ -362,15 +422,15 @@ namespace
                     }
                     else
                     {
-                        result.m_status = larvae::TestStatus::Passed;
+                        result.m_status = larvae::TestStatus::PASSED;
                         g_state.m_testsPassed++;
 
-                        AddLogLine("[    OK    ] " + test.GetFullName() + " (" + std::to_string(duration_ms) + " ms)");
+                        AddLogLine(wax::String{"[    OK    ] "} + fullName + " (" + DoubleToStr(duration_ms) + " ms)");
                     }
 
                     {
                         std::lock_guard<std::mutex> lock{g_state.m_resultsMutex};
-                        g_state.m_results.push_back(result);
+                        g_state.m_results.PushBack(result);
                         UpdateTestStatistics(result);
                     }
 
@@ -378,11 +438,12 @@ namespace
                 }
             }
 
-            AddLogLine("\n[==========] " + std::to_string(g_state.m_testsCompleted.load()) + " test(s) completed");
-            AddLogLine("[  PASSED  ] " + std::to_string(g_state.m_testsPassed.load()) + " test(s)");
+            AddLogLine(wax::String{"\n[==========] "} + IntToStr(g_state.m_testsCompleted.load()) +
+                       " test(s) completed");
+            AddLogLine(wax::String{"[  PASSED  ] "} + IntToStr(g_state.m_testsPassed.load()) + " test(s)");
             if (g_state.m_testsFailed > 0)
             {
-                AddLogLine("[  FAILED  ] " + std::to_string(g_state.m_testsFailed.load()) + " test(s)");
+                AddLogLine(wax::String{"[  FAILED  ] "} + IntToStr(g_state.m_testsFailed.load()) + " test(s)");
             }
 
             AddRunToHistory();
@@ -407,9 +468,9 @@ namespace
             std::lock_guard<std::mutex> lock{g_state.m_resultsMutex};
             for (const auto& result : g_state.m_results)
             {
-                if (result.m_status == larvae::TestStatus::Failed)
+                if (result.m_status == larvae::TestStatus::FAILED)
                 {
-                    std::string full_name = result.m_suiteName + "." + result.m_testName;
+                    const wax::String full_name = result.m_suiteName + "." + result.m_testName;
                     g_state.m_testSelection[full_name] = true;
                 }
             }
@@ -541,12 +602,12 @@ namespace
     void RenderSuitesPanel()
     {
         float availableHeight = ImGui::GetContentRegionAvail().y;
-        ImGui::BeginChild("SuitesPanel", ImVec2(0, availableHeight * 0.65f), true);
+        ImGui::BeginChild("SuitesPanel", ImVec2(0, availableHeight * kSuitesPanelRatio), true);
 
         ImGui::Text("Test Suites");
         ImGui::Separator();
 
-        if (ImGui::Button("Select All", ImVec2(115, 0)))
+        if (ImGui::Button("Select All", ImVec2(kSelectionButtonWidth, 0)))
         {
             for (auto& [suite, selected] : g_state.m_suiteSelection)
             {
@@ -558,7 +619,7 @@ namespace
             }
         }
         ImGui::SameLine();
-        if (ImGui::Button("Deselect All", ImVec2(115, 0)))
+        if (ImGui::Button("Deselect All", ImVec2(kSelectionButtonWidth, 0)))
         {
             for (auto& [suite, selected] : g_state.m_suiteSelection)
             {
@@ -596,7 +657,7 @@ namespace
                 }
             }
 
-            ImGui::PushID(suite.c_str());
+            ImGui::PushID(suite.CStr());
 
             if (g_state.m_showIndividualTests)
             {
@@ -619,9 +680,9 @@ namespace
                     }
                 }
 
-                std::string suite_label =
-                    suite + " (" + std::to_string(selected_count) + "/" + std::to_string(test_count) + ")";
-                if (ImGui::TreeNode(suite_label.c_str()))
+                const wax::String suite_label =
+                    suite + " (" + IntToStr(selected_count) + "/" + IntToStr(test_count) + ")";
+                if (ImGui::TreeNode(suite_label.CStr()))
                 {
                     for (const auto& test : g_state.m_allTests)
                     {
@@ -630,8 +691,8 @@ namespace
 
                         if (strlen(g_state.m_testFilter) > 0)
                         {
-                            if (test.m_fullName.find(g_state.m_testFilter) == std::string::npos &&
-                                test.m_testName.find(g_state.m_testFilter) == std::string::npos)
+                            if (test.m_fullName.Find(g_state.m_testFilter) == wax::String::npos &&
+                                test.m_testName.Find(g_state.m_testFilter) == wax::String::npos)
                             {
                                 continue;
                             }
@@ -641,7 +702,7 @@ namespace
                         if (it != g_state.m_testSelection.end())
                         {
                             bool test_selected = it->second;
-                            if (ImGui::Checkbox(test.m_testName.c_str(), &test_selected))
+                            if (ImGui::Checkbox(test.m_testName.CStr(), &test_selected))
                             {
                                 it->second = test_selected;
                             }
@@ -657,10 +718,10 @@ namespace
                                                 stats.m_failed);
                                     ImGui::Text("Duration: %.2f ms (avg), %.2f-%.2f ms (range)", stats.m_avgDurationMs,
                                                 stats.m_minDurationMs, stats.m_maxDurationMs);
-                                    if (!stats.m_lastError.empty())
+                                    if (!stats.m_lastError.IsEmpty())
                                     {
                                         ImGui::TextColored(ImVec4(1.0f, 0.4f, 0.4f, 1.0f), "Last error: %s",
-                                                           stats.m_lastError.c_str());
+                                                           stats.m_lastError.CStr());
                                     }
                                     ImGui::EndTooltip();
                                 }
@@ -672,8 +733,8 @@ namespace
             }
             else
             {
-                std::string label = suite + " (" + std::to_string(test_count) + ")";
-                if (ImGui::Checkbox(label.c_str(), &suite_selected))
+                const wax::String label = suite + " (" + IntToStr(test_count) + ")";
+                if (ImGui::Checkbox(label.CStr(), &suite_selected))
                 {
                     for (auto& [test_name, test_selected] : g_state.m_testSelection)
                     {
@@ -704,10 +765,10 @@ namespace
 
         static char s_newPlaylistName[64] = "";
 
-        ImGui::SetNextItemWidth(170);
+        ImGui::SetNextItemWidth(kPlaylistInputWidth);
         ImGui::InputText("##NewPlaylist", s_newPlaylistName, sizeof(s_newPlaylistName));
         ImGui::SameLine();
-        if (ImGui::Button("+", ImVec2(25, 0)))
+        if (ImGui::Button("+", ImVec2(kAddPlaylistButtonWidth, 0)))
         {
             if (strlen(s_newPlaylistName) > 0)
             {
@@ -719,11 +780,11 @@ namespace
                 {
                     if (selected)
                     {
-                        playlist.m_testPatterns.push_back(suite + ".*");
+                        playlist.m_testPatterns.PushBack(suite + ".*");
                     }
                 }
 
-                g_state.m_config.m_playlists.push_back(playlist);
+                g_state.m_config.m_playlists.PushBack(std::move(playlist));
                 s_newPlaylistName[0] = '\0';
             }
         }
@@ -737,7 +798,7 @@ namespace
         ImGui::Spacing();
 
         int playlistToRemove = -1;
-        for (size_t i = 0; i < g_state.m_config.m_playlists.size(); ++i)
+        for (size_t i = 0; i < g_state.m_config.m_playlists.Size(); ++i)
         {
             auto& playlist = g_state.m_config.m_playlists[i];
 
@@ -746,12 +807,12 @@ namespace
             ImGui::Checkbox("##enabled", &playlist.m_enabled);
             ImGui::SameLine();
 
-            if (ImGui::TreeNode(playlist.m_name.c_str()))
+            if (ImGui::TreeNode(playlist.m_name.CStr()))
             {
                 ImGui::Text("Patterns:");
                 for (const auto& pattern : playlist.m_testPatterns)
                 {
-                    ImGui::BulletText("%s", pattern.c_str());
+                    ImGui::BulletText("%s", pattern.CStr());
                 }
 
                 if (ImGui::Button("Load"))
@@ -763,9 +824,9 @@ namespace
 
                     for (const auto& pattern : playlist.m_testPatterns)
                     {
-                        if (pattern.ends_with(".*"))
+                        if (pattern.EndsWith(".*"))
                         {
-                            std::string suite_name = pattern.substr(0, pattern.length() - 2);
+                            const wax::String suite_name{pattern.View().Substr(0, pattern.Size() - 2)};
                             auto it = g_state.m_suiteSelection.find(suite_name);
                             if (it != g_state.m_suiteSelection.end())
                             {
@@ -789,7 +850,12 @@ namespace
 
         if (playlistToRemove >= 0)
         {
-            g_state.m_config.m_playlists.erase(g_state.m_config.m_playlists.begin() + playlistToRemove);
+            const size_t idx = static_cast<size_t>(playlistToRemove);
+            for (size_t i = idx; i + 1 < g_state.m_config.m_playlists.Size(); ++i)
+            {
+                g_state.m_config.m_playlists[i] = std::move(g_state.m_config.m_playlists[i + 1]);
+            }
+            g_state.m_config.m_playlists.PopBack();
         }
 
         ImGui::EndChild();
@@ -797,29 +863,29 @@ namespace
 
     void RenderControlPanel()
     {
-        ImGui::BeginChild("ControlPanel", ImVec2(0, 120), true);
+        ImGui::BeginChild("ControlPanel", ImVec2(0, kControlPanelHeight), true);
 
         ImGui::Text("Run Configuration");
         ImGui::Separator();
 
         // Repeat count
-        ImGui::SetNextItemWidth(100);
+        ImGui::SetNextItemWidth(kIterationInputWidth);
         ImGui::InputInt("Iterations", &g_state.m_config.m_repeatCount);
         if (g_state.m_config.m_repeatCount < 1)
             g_state.m_config.m_repeatCount = 1;
-        if (g_state.m_config.m_repeatCount > 1000)
-            g_state.m_config.m_repeatCount = 1000;
+        if (g_state.m_config.m_repeatCount > kMaxRepeatCount)
+            g_state.m_config.m_repeatCount = kMaxRepeatCount;
 
-        ImGui::SameLine(200);
+        ImGui::SameLine(kShuffleCheckboxOffset);
         ImGui::Checkbox("Shuffle", &g_state.m_config.m_shuffle);
 
-        ImGui::SameLine(300);
+        ImGui::SameLine(kStopOnFailureOffset);
         ImGui::Checkbox("Stop on Failure", &g_state.m_config.m_stopOnFailure);
 
-        ImGui::SameLine(450);
+        ImGui::SameLine(kVerboseCheckboxOffset);
         ImGui::Checkbox("Verbose", &g_state.m_config.m_verbose);
 
-        ImGui::SameLine(550);
+        ImGui::SameLine(kAutoScrollCheckboxOffset);
         ImGui::Checkbox("Auto-scroll Log", &g_state.m_config.m_autoScrollLog);
 
         ImGui::Spacing();
@@ -833,7 +899,7 @@ namespace
             ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.3f, 0.7f, 0.3f, 1.0f));
             ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.15f, 0.5f, 0.15f, 1.0f));
 
-            if (ImGui::Button("Run Tests", ImVec2(120, 40)))
+            if (ImGui::Button("Run Tests", ImVec2(kActionButtonWidth, kActionButtonHeight)))
             {
                 RunSelectedTests();
             }
@@ -848,7 +914,7 @@ namespace
                 std::lock_guard<std::mutex> lock{g_state.m_resultsMutex};
                 for (const auto& result : g_state.m_results)
                 {
-                    if (result.m_status == larvae::TestStatus::Failed)
+                    if (result.m_status == larvae::TestStatus::FAILED)
                     {
                         hasFailed = true;
                         break;
@@ -862,7 +928,7 @@ namespace
                 ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.8f, 0.6f, 0.3f, 1.0f));
                 ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.6f, 0.4f, 0.15f, 1.0f));
 
-                if (ImGui::Button("Rerun Failed", ImVec2(120, 40)))
+                if (ImGui::Button("Rerun Failed", ImVec2(kActionButtonWidth, kActionButtonHeight)))
                 {
                     RunFailedTestsOnly();
                 }
@@ -876,7 +942,7 @@ namespace
             ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.8f, 0.3f, 0.3f, 1.0f));
             ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.6f, 0.15f, 0.15f, 1.0f));
 
-            if (ImGui::Button("Stop", ImVec2(120, 40)))
+            if (ImGui::Button("Stop", ImVec2(kActionButtonWidth, kActionButtonHeight)))
             {
                 g_state.m_shouldStop = true;
             }
@@ -898,11 +964,11 @@ namespace
                                                             static_cast<float>(g_state.m_testsTotal)
                                                       : 0.0f;
 
-            ImGui::SameLine(500);
-            ImGui::SetNextItemWidth(300);
-            ImGui::ProgressBar(progress, ImVec2(0, 20));
+            ImGui::SameLine(kProgressBarOffset);
+            ImGui::SetNextItemWidth(kProgressBarWidth);
+            ImGui::ProgressBar(progress, ImVec2(0, kProgressBarHeight));
         }
-        else if (!g_state.m_results.empty())
+        else if (!g_state.m_results.IsEmpty())
         {
             ImGui::Text("Completed | Passed: %d | Failed: %d", g_state.m_testsPassed.load(),
                         g_state.m_testsFailed.load());
@@ -913,7 +979,7 @@ namespace
 
     void RenderResultsPanel()
     {
-        ImGui::BeginChild("ResultsPanel", ImVec2(0, 250), true);
+        ImGui::BeginChild("ResultsPanel", ImVec2(0, kResultsPanelHeight), true);
 
         if (ImGui::BeginTabBar("ResultsTabs"))
         {
@@ -923,11 +989,11 @@ namespace
                                       ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable |
                                           ImGuiTableFlags_ScrollY))
                 {
-                    ImGui::TableSetupColumn("Iter", ImGuiTableColumnFlags_WidthFixed, 40);
-                    ImGui::TableSetupColumn("Status", ImGuiTableColumnFlags_WidthFixed, 60);
+                    ImGui::TableSetupColumn("Iter", ImGuiTableColumnFlags_WidthFixed, kIterColumnWidth);
+                    ImGui::TableSetupColumn("Status", ImGuiTableColumnFlags_WidthFixed, kStatusColumnWidth);
                     ImGui::TableSetupColumn("Suite", ImGuiTableColumnFlags_WidthStretch);
                     ImGui::TableSetupColumn("Test", ImGuiTableColumnFlags_WidthStretch);
-                    ImGui::TableSetupColumn("Duration", ImGuiTableColumnFlags_WidthFixed, 80);
+                    ImGui::TableSetupColumn("Duration", ImGuiTableColumnFlags_WidthFixed, kDurationColumnWidth);
                     ImGui::TableHeadersRow();
 
                     std::lock_guard<std::mutex> lock{g_state.m_resultsMutex};
@@ -940,13 +1006,13 @@ namespace
                         ImGui::Text("%d", result.m_iteration);
 
                         ImGui::TableNextColumn();
-                        if (result.m_status == larvae::TestStatus::Passed)
+                        if (result.m_status == larvae::TestStatus::PASSED)
                         {
                             ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.4f, 0.9f, 0.4f, 1.0f));
                             ImGui::Text("PASS");
                             ImGui::PopStyleColor();
                         }
-                        else if (result.m_status == larvae::TestStatus::Failed)
+                        else if (result.m_status == larvae::TestStatus::FAILED)
                         {
                             ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.9f, 0.4f, 0.4f, 1.0f));
                             ImGui::Text("FAIL");
@@ -960,10 +1026,10 @@ namespace
                         }
 
                         ImGui::TableNextColumn();
-                        ImGui::Text("%s", result.m_suiteName.c_str());
+                        ImGui::Text("%s", result.m_suiteName.CStr());
 
                         ImGui::TableNextColumn();
-                        ImGui::Text("%s", result.m_testName.c_str());
+                        ImGui::Text("%s", result.m_testName.CStr());
 
                         ImGui::TableNextColumn();
                         ImGui::Text("%.2f ms", result.m_durationMs);
@@ -980,10 +1046,10 @@ namespace
                                       ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable |
                                           ImGuiTableFlags_ScrollY))
                 {
-                    ImGui::TableSetupColumn("Iter", ImGuiTableColumnFlags_WidthFixed, 40);
+                    ImGui::TableSetupColumn("Iter", ImGuiTableColumnFlags_WidthFixed, kIterColumnWidth);
                     ImGui::TableSetupColumn("Suite", ImGuiTableColumnFlags_WidthStretch);
                     ImGui::TableSetupColumn("Test", ImGuiTableColumnFlags_WidthStretch);
-                    ImGui::TableSetupColumn("Duration", ImGuiTableColumnFlags_WidthFixed, 80);
+                    ImGui::TableSetupColumn("Duration", ImGuiTableColumnFlags_WidthFixed, kDurationColumnWidth);
                     ImGui::TableSetupColumn("Error", ImGuiTableColumnFlags_WidthStretch);
                     ImGui::TableHeadersRow();
 
@@ -991,7 +1057,7 @@ namespace
 
                     for (const auto& result : g_state.m_results)
                     {
-                        if (result.m_status != larvae::TestStatus::Failed)
+                        if (result.m_status != larvae::TestStatus::FAILED)
                             continue;
 
                         ImGui::TableNextRow();
@@ -1000,16 +1066,16 @@ namespace
                         ImGui::Text("%d", result.m_iteration);
 
                         ImGui::TableNextColumn();
-                        ImGui::Text("%s", result.m_suiteName.c_str());
+                        ImGui::Text("%s", result.m_suiteName.CStr());
 
                         ImGui::TableNextColumn();
-                        ImGui::Text("%s", result.m_testName.c_str());
+                        ImGui::Text("%s", result.m_testName.CStr());
 
                         ImGui::TableNextColumn();
                         ImGui::Text("%.2f ms", result.m_durationMs);
 
                         ImGui::TableNextColumn();
-                        ImGui::TextWrapped("%s", result.m_errorMessage.c_str());
+                        ImGui::TextWrapped("%s", result.m_errorMessage.CStr());
                     }
 
                     ImGui::EndTable();
@@ -1024,12 +1090,12 @@ namespace
                                           ImGuiTableFlags_ScrollY | ImGuiTableFlags_Sortable))
                 {
                     ImGui::TableSetupColumn("Test", ImGuiTableColumnFlags_WidthStretch);
-                    ImGui::TableSetupColumn("Runs", ImGuiTableColumnFlags_WidthFixed, 50);
-                    ImGui::TableSetupColumn("Pass", ImGuiTableColumnFlags_WidthFixed, 50);
-                    ImGui::TableSetupColumn("Fail", ImGuiTableColumnFlags_WidthFixed, 50);
-                    ImGui::TableSetupColumn("Avg (ms)", ImGuiTableColumnFlags_WidthFixed, 70);
-                    ImGui::TableSetupColumn("Min (ms)", ImGuiTableColumnFlags_WidthFixed, 70);
-                    ImGui::TableSetupColumn("Max (ms)", ImGuiTableColumnFlags_WidthFixed, 70);
+                    ImGui::TableSetupColumn("Runs", ImGuiTableColumnFlags_WidthFixed, kStatsCountColumnWidth);
+                    ImGui::TableSetupColumn("Pass", ImGuiTableColumnFlags_WidthFixed, kStatsCountColumnWidth);
+                    ImGui::TableSetupColumn("Fail", ImGuiTableColumnFlags_WidthFixed, kStatsCountColumnWidth);
+                    ImGui::TableSetupColumn("Avg (ms)", ImGuiTableColumnFlags_WidthFixed, kStatsTimingColumnWidth);
+                    ImGui::TableSetupColumn("Min (ms)", ImGuiTableColumnFlags_WidthFixed, kStatsTimingColumnWidth);
+                    ImGui::TableSetupColumn("Max (ms)", ImGuiTableColumnFlags_WidthFixed, kStatsTimingColumnWidth);
                     ImGui::TableHeadersRow();
 
                     for (const auto& [test_name, stats] : g_state.m_testStatistics)
@@ -1040,7 +1106,7 @@ namespace
                         ImGui::TableNextRow();
 
                         ImGui::TableNextColumn();
-                        ImGui::Text("%s", test_name.c_str());
+                        ImGui::Text("%s", test_name.CStr());
 
                         ImGui::TableNextColumn();
                         ImGui::Text("%d", stats.m_totalRuns);
@@ -1093,22 +1159,22 @@ namespace
                                       ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable |
                                           ImGuiTableFlags_ScrollY))
                 {
-                    ImGui::TableSetupColumn("Timestamp", ImGuiTableColumnFlags_WidthFixed, 140);
-                    ImGui::TableSetupColumn("Iterations", ImGuiTableColumnFlags_WidthFixed, 70);
-                    ImGui::TableSetupColumn("Total", ImGuiTableColumnFlags_WidthFixed, 60);
-                    ImGui::TableSetupColumn("Passed", ImGuiTableColumnFlags_WidthFixed, 60);
-                    ImGui::TableSetupColumn("Failed", ImGuiTableColumnFlags_WidthFixed, 60);
-                    ImGui::TableSetupColumn("Duration", ImGuiTableColumnFlags_WidthFixed, 100);
+                    ImGui::TableSetupColumn("Timestamp", ImGuiTableColumnFlags_WidthFixed, kTimestampColumnWidth);
+                    ImGui::TableSetupColumn("Iterations", ImGuiTableColumnFlags_WidthFixed, kHistoryIterColumnWidth);
+                    ImGui::TableSetupColumn("Total", ImGuiTableColumnFlags_WidthFixed, kHistoryCountColumnWidth);
+                    ImGui::TableSetupColumn("Passed", ImGuiTableColumnFlags_WidthFixed, kHistoryCountColumnWidth);
+                    ImGui::TableSetupColumn("Failed", ImGuiTableColumnFlags_WidthFixed, kHistoryCountColumnWidth);
+                    ImGui::TableSetupColumn("Duration", ImGuiTableColumnFlags_WidthFixed, kHistoryDurationColumnWidth);
                     ImGui::TableHeadersRow();
 
                     // Show most recent first
-                    for (auto it = g_state.m_runHistory.rbegin(); it != g_state.m_runHistory.rend(); ++it)
+                    for (size_t ri = g_state.m_runHistory.Size(); ri > 0; --ri)
                     {
-                        const auto& entry = *it;
+                        const auto& entry = g_state.m_runHistory[ri - 1];
                         ImGui::TableNextRow();
 
                         ImGui::TableNextColumn();
-                        ImGui::Text("%s", entry.m_timestamp.c_str());
+                        ImGui::Text("%s", entry.m_timestamp.CStr());
 
                         ImGui::TableNextColumn();
                         ImGui::Text("%d", entry.m_iterations);
@@ -1143,7 +1209,7 @@ namespace
                 ImGui::Spacing();
                 if (ImGui::Button("Clear History"))
                 {
-                    g_state.m_runHistory.clear();
+                    g_state.m_runHistory.Clear();
                 }
 
                 ImGui::EndTabItem();
@@ -1160,7 +1226,7 @@ namespace
         ImGui::BeginChild("LogPanel", ImVec2(0, 0), true);
 
         ImGui::Text("Log Output");
-        ImGui::SameLine(ImGui::GetWindowWidth() - 80);
+        ImGui::SameLine(ImGui::GetWindowWidth() - kLogClearButtonMargin);
         if (ImGui::Button("Clear"))
         {
             ClearLog();
@@ -1176,40 +1242,40 @@ namespace
             for (const auto& line : g_state.m_logLines)
             {
                 // Color coding
-                if (line.find("[  FAILED  ]") != std::string::npos)
+                if (line.Find("[  FAILED  ]") != wax::String::npos)
                 {
                     ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.9f, 0.4f, 0.4f, 1.0f));
-                    ImGui::TextUnformatted(line.c_str());
+                    ImGui::TextUnformatted(line.CStr());
                     ImGui::PopStyleColor();
                 }
-                else if (line.find("[    OK    ]") != std::string::npos)
+                else if (line.Find("[    OK    ]") != wax::String::npos)
                 {
                     ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.4f, 0.9f, 0.4f, 1.0f));
-                    ImGui::TextUnformatted(line.c_str());
+                    ImGui::TextUnformatted(line.CStr());
                     ImGui::PopStyleColor();
                 }
-                else if (line.find("[   RUN    ]") != std::string::npos)
+                else if (line.Find("[   RUN    ]") != wax::String::npos)
                 {
                     ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.4f, 0.7f, 0.9f, 1.0f));
-                    ImGui::TextUnformatted(line.c_str());
+                    ImGui::TextUnformatted(line.CStr());
                     ImGui::PopStyleColor();
                 }
-                else if (line.find("[==========]") != std::string::npos ||
-                         line.find("[----------]") != std::string::npos)
+                else if (line.Find("[==========]") != wax::String::npos ||
+                         line.Find("[----------]") != wax::String::npos)
                 {
                     ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.7f, 0.7f, 0.7f, 1.0f));
-                    ImGui::TextUnformatted(line.c_str());
+                    ImGui::TextUnformatted(line.CStr());
                     ImGui::PopStyleColor();
                 }
-                else if (line.find("[  PASSED  ]") != std::string::npos)
+                else if (line.Find("[  PASSED  ]") != wax::String::npos)
                 {
                     ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.4f, 0.9f, 0.4f, 1.0f));
-                    ImGui::TextUnformatted(line.c_str());
+                    ImGui::TextUnformatted(line.CStr());
                     ImGui::PopStyleColor();
                 }
                 else
                 {
-                    ImGui::TextUnformatted(line.c_str());
+                    ImGui::TextUnformatted(line.CStr());
                 }
             }
 
@@ -1244,12 +1310,12 @@ namespace
                 if (ImGui::MenuItem("Save Config"))
                 {
                     // Update selected suites before saving
-                    g_state.m_config.m_selectedSuites.clear();
+                    g_state.m_config.m_selectedSuites.Clear();
                     for (const auto& [suite, selected] : g_state.m_suiteSelection)
                     {
                         if (selected)
                         {
-                            g_state.m_config.m_selectedSuites.push_back(suite);
+                            g_state.m_config.m_selectedSuites.PushBack(suite);
                         }
                     }
                     g_state.m_config.Save();
@@ -1294,14 +1360,14 @@ namespace
         ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[0]);
         ImGui::Text("Larvae Test Runner");
         ImGui::PopFont();
-        ImGui::SameLine(ImGui::GetWindowWidth() - 200);
+        ImGui::SameLine(ImGui::GetWindowWidth() - kSubtitleRightMargin);
         ImGui::TextDisabled("HiveEngine Testing Framework");
 
         ImGui::Separator();
 
         // Main layout
         ImGui::Columns(2, "MainColumns", true);
-        ImGui::SetColumnWidth(0, 520);
+        ImGui::SetColumnWidth(0, kLeftColumnWidth);
 
         // Left column: Suites and Playlists
         RenderSuitesPanel();
@@ -1405,12 +1471,12 @@ int main(int argc, char** argv)
     g_state.m_config.m_windowWidth = static_cast<float>(width);
     g_state.m_config.m_windowHeight = static_cast<float>(height);
 
-    g_state.m_config.m_selectedSuites.clear();
+    g_state.m_config.m_selectedSuites.Clear();
     for (const auto& [suite, selected] : g_state.m_suiteSelection)
     {
         if (selected)
         {
-            g_state.m_config.m_selectedSuites.push_back(suite);
+            g_state.m_config.m_selectedSuites.PushBack(suite);
         }
     }
     g_state.m_config.Save();

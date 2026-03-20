@@ -1,5 +1,7 @@
 #pragma once
 
+#include <wax/containers/string.h>
+
 #include <queen/hierarchy/hierarchy.h>
 #include <queen/reflect/component_registry.h>
 #include <queen/reflect/json_serializer.h>
@@ -8,7 +10,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
-#include <string>
 
 namespace queen
 {
@@ -182,12 +183,12 @@ namespace queen
     class DynamicWorldSerializer : public detail::WorldSerializerCore<detail::DynamicTextWriter>
     {
     public:
-        [[nodiscard]] const std::string& String() const noexcept
+        [[nodiscard]] const wax::String& String() const noexcept
         {
             return this->WriterRef().String();
         }
 
-        [[nodiscard]] std::string TakeString() noexcept
+        [[nodiscard]] wax::String TakeString() noexcept
         {
             return this->WriterRef().TakeString();
         }

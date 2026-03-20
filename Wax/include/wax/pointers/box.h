@@ -10,57 +10,8 @@
 
 namespace wax
 {
-    /**
-     * Unique ownership smart pointer with custom allocator support
-     *
-     * Box<T, Allocator> is a unique-ownership smart pointer that manages the lifetime
-     * of a dynamically allocated object using a custom allocator. Similar to std::unique_ptr
-     * but with explicit allocator control for game engines.
-     *
-     * Performance characteristics:
-     * - Storage: 16 bytes (pointer + allocator reference on 64-bit)
-     * - Access: O(1) - direct dereference
-     * - Construction: O(1) - allocation + construction
-     * - Destruction: O(1) - destruction + deallocation
-     * - Move: O(1) - pointer swap
-     * - Copy: Deleted (unique ownership)
-     *
-     * Memory layout:
-     * ┌─────────────────────┐
-     * │ T* ptr (8 bytes)    │
-     * │ Allocator* alloc    │
-     * └─────────────────────┘
-     *   16 bytes total
-     *
-     * Limitations:
-     * - Not copyable (unique ownership)
-     * - Allocator must outlive the Box
-     * - No array support (use Vector instead)
-     * - Not thread-safe (no synchronization)
-     *
-     * Use cases:
-     * - Unique ownership of dynamically allocated objects
-     * - RAII for complex objects
-     * - Replacing std::unique_ptr with explicit allocator
-     * - Factory functions returning owned objects
-     *
-     * Example:
-     * @code
-     *   comb::LinearAllocator alloc{1024};
-     *
-     *   // Create owned object
-     *   auto camera = wax::MakeBox<Camera>(alloc, position, rotation);
-     *   camera->Update();
-     *
-     *   // Automatically destroyed when out of scope
-     *   {
-     *       auto temp = wax::MakeBox<Entity>(alloc);
-     *   }  // temp destroyed here
-     *
-     *   // Move ownership
-     *   auto moved = std::move(camera);
-     * @endcode
-     */
+    // Unique-ownership smart pointer with explicit allocator control.
+    // Allocator must outlive the Box. Not copyable, move-only.
     template <typename T, comb::Allocator Allocator = comb::DefaultAllocator> class Box
     {
     public:
@@ -68,14 +19,14 @@ namespace wax
         using AllocatorType = Allocator;
 
         constexpr Box() noexcept
-            : ptr_{nullptr}
-            , allocator_{nullptr}
+            : m_ptr{nullptr}
+            , m_allocator{nullptr}
         {
         }
 
         constexpr Box(Allocator& allocator, T* ptr) noexcept
-            : ptr_{ptr}
-            , allocator_{&allocator}
+            : m_ptr{ptr}
+            , m_allocator{&allocator}
         {
         }
 
@@ -83,11 +34,11 @@ namespace wax
         Box& operator=(const Box&) = delete;
 
         constexpr Box(Box&& other) noexcept
-            : ptr_{other.ptr_}
-            , allocator_{other.allocator_}
+            : m_ptr{other.m_ptr}
+            , m_allocator{other.m_allocator}
         {
-            other.ptr_ = nullptr;
-            other.allocator_ = nullptr;
+            other.m_ptr = nullptr;
+            other.m_allocator = nullptr;
         }
 
         constexpr Box& operator=(Box&& other) noexcept
@@ -96,11 +47,11 @@ namespace wax
             {
                 Reset();
 
-                ptr_ = other.ptr_;
-                allocator_ = other.allocator_;
+                m_ptr = other.m_ptr;
+                m_allocator = other.m_allocator;
 
-                other.ptr_ = nullptr;
-                other.allocator_ = nullptr;
+                other.m_ptr = nullptr;
+                other.m_allocator = nullptr;
             }
             return *this;
         }
@@ -112,82 +63,82 @@ namespace wax
 
         [[nodiscard]] constexpr T& operator*() const noexcept
         {
-            hive::Assert(ptr_ != nullptr, "Dereferencing null Box");
-            return *ptr_;
+            hive::Assert(m_ptr != nullptr, "Dereferencing null Box");
+            return *m_ptr;
         }
 
         [[nodiscard]] constexpr T* operator->() const noexcept
         {
-            hive::Assert(ptr_ != nullptr, "Dereferencing null Box");
-            return ptr_;
+            hive::Assert(m_ptr != nullptr, "Dereferencing null Box");
+            return m_ptr;
         }
 
         [[nodiscard]] constexpr T* Get() const noexcept
         {
-            return ptr_;
+            return m_ptr;
         }
 
         [[nodiscard]] constexpr Allocator* GetAllocator() const noexcept
         {
-            return allocator_;
+            return m_allocator;
         }
 
         [[nodiscard]] constexpr explicit operator bool() const noexcept
         {
-            return ptr_ != nullptr;
+            return m_ptr != nullptr;
         }
 
         [[nodiscard]] constexpr bool IsNull() const noexcept
         {
-            return ptr_ == nullptr;
+            return m_ptr == nullptr;
         }
 
         [[nodiscard]] constexpr bool IsValid() const noexcept
         {
-            return ptr_ != nullptr;
+            return m_ptr != nullptr;
         }
 
         [[nodiscard]] constexpr T* Release() noexcept
         {
-            T* temp = ptr_;
-            ptr_ = nullptr;
-            allocator_ = nullptr;
+            T* temp = m_ptr;
+            m_ptr = nullptr;
+            m_allocator = nullptr;
             return temp;
         }
 
         constexpr void Reset() noexcept
         {
-            if (ptr_ && allocator_)
+            if (m_ptr && m_allocator)
             {
-                comb::Delete(*allocator_, ptr_);
+                comb::Delete(*m_allocator, m_ptr);
             }
-            ptr_ = nullptr;
-            allocator_ = nullptr;
+            m_ptr = nullptr;
+            m_allocator = nullptr;
         }
 
         constexpr void Reset(Allocator& allocator, T* ptr) noexcept
         {
-            if (ptr_ && allocator_)
+            if (m_ptr && m_allocator)
             {
-                comb::Delete(*allocator_, ptr_);
+                comb::Delete(*m_allocator, m_ptr);
             }
-            ptr_ = ptr;
-            allocator_ = &allocator;
+            m_ptr = ptr;
+            m_allocator = &allocator;
         }
 
         [[nodiscard]] constexpr bool operator==(const Box& other) const noexcept
         {
-            return ptr_ == other.ptr_;
+            return m_ptr == other.m_ptr;
         }
 
         [[nodiscard]] constexpr bool operator==(std::nullptr_t) const noexcept
         {
-            return ptr_ == nullptr;
+            return m_ptr == nullptr;
         }
 
     private:
-        T* ptr_;
-        Allocator* allocator_;
+        T* m_ptr;
+        Allocator* m_allocator;
     };
 
     template <typename T, comb::Allocator Allocator, typename... Args>

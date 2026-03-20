@@ -75,7 +75,6 @@ namespace
         return wax::ByteSpan{buf, sizeof(float)};
     }
 
-    // =========================================================================
 
     auto t1 = larvae::RegisterTest("NectarEvent", "LoadEmitsLoadedEvent", []() {
         auto& alloc = GetEvtAlloc();
@@ -104,7 +103,7 @@ namespace
 
         nectar::AssetEvent<EvtAsset> evt{};
         larvae::AssertTrue(server.PollEvents<EvtAsset>(evt));
-        larvae::AssertEqual(static_cast<uint8_t>(evt.m_kind), static_cast<uint8_t>(nectar::AssetEventKind::Failed));
+        larvae::AssertEqual(static_cast<uint8_t>(evt.m_kind), static_cast<uint8_t>(nectar::AssetEventKind::FAILED));
     });
 
     auto t3 = larvae::RegisterTest("NectarEvent", "GcEmitsUnloadedEvent", []() {

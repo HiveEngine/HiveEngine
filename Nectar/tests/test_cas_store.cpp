@@ -45,7 +45,6 @@ namespace
         }
     };
 
-    // =========================================================================
 
     auto t1 = larvae::RegisterTest("NectarCAS", "StoreAndLoad", []() {
         auto& alloc = GetCasAlloc();

@@ -59,9 +59,7 @@ namespace
         }
     }
 
-    // =========================================================================
     // GC Grace Period
-    // =========================================================================
 
     auto t1 = larvae::RegisterTest("NectarGcBudget", "GcGracePeriodDelaysUnload", []() {
         auto& alloc = GetGcAlloc();
@@ -192,9 +190,7 @@ namespace
         larvae::AssertEqual(server.GetTotalAssetCount(), size_t{0});
     });
 
-    // =========================================================================
     // Budget
-    // =========================================================================
 
     auto t6 = larvae::RegisterTest("NectarGcBudget", "BudgetTracksBytesUsed", []() {
         auto& alloc = GetGcAlloc();
