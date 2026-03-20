@@ -31,6 +31,9 @@ namespace
             m_context.m_app = &m_app;
             m_context.m_world = &m_app.GetWorld();
             m_context.m_jobs = config.m_jobs;
+            // TODO: FramePipeline is prepared but not wired yet. When the render graph
+            // is implemented, call BeginFrame()/SubmitRender()/WaitRender() in the frame
+            // loop to overlap simulation and rendering.
             m_context.m_framePipeline = config.m_jobs.IsValid() ? &m_framePipeline : nullptr;
             m_app.GetWorld().InsertResource(waggle::RuntimeContext{config.m_mode});
 

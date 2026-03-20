@@ -26,27 +26,15 @@ namespace drone
 
         void await_suspend(std::coroutine_handle<> handle) noexcept
         {
-            struct WaitData
-            {
-                Counter* m_counter;
-                std::coroutine_handle<> m_handle;
-            };
-
-            static constexpr size_t kMaxWaitSlots = 64;
-            thread_local WaitData s_waitData[kMaxWaitSlots];
-            thread_local size_t s_waitIdx = 0;
-
-            auto& s_data = s_waitData[s_waitIdx++ % kMaxWaitSlots];
-            s_data.m_counter = m_counter;
-            s_data.m_handle = handle;
+            m_handle = handle;
 
             JobDecl job;
             job.m_func = [](void* data) {
-                auto& d = *static_cast<WaitData*>(data);
-                d.m_counter->Wait();
-                d.m_handle.resume();
+                auto* self = static_cast<AwaitCounter*>(data);
+                self->m_counter->Wait();
+                self->m_handle.resume();
             };
-            job.m_userData = &s_data;
+            job.m_userData = this;
             job.m_priority = Priority::LOW;
 
             m_submitter->SubmitDetached(job);
@@ -59,5 +47,6 @@ namespace drone
     private:
         const JobSubmitter* m_submitter;
         Counter* m_counter;
+        std::coroutine_handle<> m_handle;
     };
 } // namespace drone
