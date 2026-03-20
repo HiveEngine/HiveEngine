@@ -58,15 +58,16 @@ namespace forge
     {
         void Forward(const hive::LogCategory& category, hive::LogSeverity severity, const char* message)
         {
-            if (ConsolePanel::s_instance != nullptr)
+            ConsolePanel* panel = ConsolePanel::s_instance.load(std::memory_order_acquire);
+            if (panel != nullptr)
             {
-                ConsolePanel::s_instance->OnLog(category, severity, message);
+                panel->OnLog(category, severity, message);
             }
         }
     };
 
     ConsolePanel::LogForwarder ConsolePanel::s_logForwarder{};
-    ConsolePanel* ConsolePanel::s_instance{nullptr};
+    std::atomic<ConsolePanel*> ConsolePanel::s_instance{nullptr};
 
     ConsolePanel::ConsolePanel(QWidget* parent)
         : QWidget{parent}
@@ -78,7 +79,7 @@ namespace forge
 
         if (hive::LogManager::IsInitialized())
         {
-            s_instance = this;
+            s_instance.store(this, std::memory_order_release);
             m_loggerId = hive::LogManager::GetInstance().RegisterLogger(&s_logForwarder, &LogForwarder::Forward);
         }
     }
@@ -89,9 +90,9 @@ namespace forge
         {
             hive::LogManager::GetInstance().UnregisterLogger(m_loggerId);
         }
-        if (s_instance == this)
+        if (s_instance.load(std::memory_order_relaxed) == this)
         {
-            s_instance = nullptr;
+            s_instance.store(nullptr, std::memory_order_release);
         }
     }
 

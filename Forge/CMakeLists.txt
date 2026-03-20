@@ -17,6 +17,7 @@ target_sources(Forge
         src/forge/console_panel.cpp
         src/forge/toolbar.cpp
         src/forge/scene_file.cpp
+        src/forge/forge_module.cpp
         src/forge/forge_main_window.cpp
         src/forge/project_hub.cpp
         src/forge/vulkan_viewport_widget.cpp
@@ -48,9 +49,9 @@ target_link_libraries(Forge
     PUBLIC
         Queen
         Swarm
-        Waggle
         Qt6::Widgets
     PRIVATE
+        Waggle
         glfw
 )
 

@@ -5,6 +5,7 @@
 #include <QWidget>
 
 #include <array>
+#include <atomic>
 #include <mutex>
 #include <set>
 #include <vector>
@@ -58,7 +59,7 @@ namespace forge
 
         struct LogForwarder;
         static LogForwarder s_logForwarder;
-        static ConsolePanel* s_instance;
+        static std::atomic<ConsolePanel*> s_instance;
 
         static constexpr size_t kMaxEntries = 8192;
 

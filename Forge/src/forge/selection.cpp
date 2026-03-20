@@ -6,9 +6,9 @@ namespace forge
 {
     void EditorSelection::Select(queen::Entity entity)
     {
-        m_selected.clear();
+        m_selected.Clear();
         if (!entity.IsNull())
-            m_selected.push_back(entity);
+            m_selected.PushBack(entity);
         m_primary = entity;
     }
 
@@ -20,21 +20,20 @@ namespace forge
         auto it = std::find(m_selected.begin(), m_selected.end(), entity);
         if (it != m_selected.end())
         {
-            m_selected.erase(it);
-            // If we removed the primary, pick the last one (or null)
+            m_selected.Erase(it);
             if (m_primary == entity)
-                m_primary = m_selected.empty() ? queen::Entity{} : m_selected.back();
+                m_primary = m_selected.IsEmpty() ? queen::Entity{} : m_selected.Back();
         }
         else
         {
-            m_selected.push_back(entity);
+            m_selected.PushBack(entity);
             m_primary = entity;
         }
     }
 
     void EditorSelection::Clear()
     {
-        m_selected.clear();
+        m_selected.Clear();
         m_primary = {};
     }
 
