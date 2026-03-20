@@ -1,13 +1,16 @@
+#include <forge/scene_file.h>
+
 #include <hive/core/log.h>
 
 #include <queen/reflect/world_deserializer.h>
 #include <queen/reflect/world_serializer.h>
 #include <queen/world/world.h>
 
-#include <forge/scene_file.h>
+#include <forge/forge_module.h>
+
+#include <wax/containers/vector.h>
 
 #include <cstdio>
-#include <vector>
 
 static const hive::LogCategory LOG_FORGE{"Forge"};
 
@@ -61,11 +64,12 @@ namespace forge
         long size = ftell(f);
         fseek(f, 0, SEEK_SET);
 
-        std::vector<char> buffer(static_cast<size_t>(size) + 1, '\0');
-        fread(buffer.data(), 1, static_cast<size_t>(size), f);
+        wax::Vector<char> buffer{forge::GetAllocator()};
+        buffer.Resize(static_cast<size_t>(size) + 1, '\0');
+        fread(buffer.Data(), 1, static_cast<size_t>(size), f);
         fclose(f);
 
-        auto result = queen::WorldDeserializer::Deserialize(world, registry, buffer.data());
+        auto result = queen::WorldDeserializer::Deserialize(world, registry, buffer.Data());
         if (!result.m_success)
         {
             hive::LogError(LOG_FORGE, "Failed to deserialize scene: {}", result.m_error ? result.m_error : "unknown");

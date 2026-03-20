@@ -23,13 +23,13 @@ namespace nectar
 
         [[nodiscard]] const uint8_t* PixelData() const
         {
-            return data + sizeof(NtexHeader) + sizeof(TextureMipLevel) * header.mip_count;
+            return data + sizeof(NtexHeader) + sizeof(TextureMipLevel) * header.m_mipCount;
         }
 
         [[nodiscard]] const uint8_t* MipData(uint8_t level) const
         {
             auto* mips = MipLevels();
-            return PixelData() + mips[level].offset;
+            return PixelData() + mips[level].m_offset;
         }
     };
 
@@ -42,7 +42,7 @@ namespace nectar
                 return nullptr;
 
             auto* raw_header = reinterpret_cast<const NtexHeader*>(data.Data());
-            if (raw_header->magic != kNtexMagic)
+            if (raw_header->m_magic != kNtexMagic)
                 return nullptr;
 
             auto* blob = static_cast<uint8_t*>(alloc.Allocate(data.Size(), alignof(std::max_align_t)));

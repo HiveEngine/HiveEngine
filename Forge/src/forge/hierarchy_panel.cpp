@@ -1,23 +1,62 @@
+#include <forge/hierarchy_panel.h>
+
 #include <queen/hierarchy/children.h>
 #include <queen/hierarchy/parent.h>
 #include <queen/world/world.h>
 
 #include <waggle/components/name.h>
 
-#include <forge/hierarchy_panel.h>
 #include <forge/selection.h>
 
 #include <QApplication>
+#include <QDragEnterEvent>
+#include <QDropEvent>
 #include <QMenu>
 #include <QTreeWidget>
 #include <QVBoxLayout>
 
+#include <forge/forge_module.h>
+
+#include <wax/containers/vector.h>
+
 #include <algorithm>
 #include <cstdio>
-#include <vector>
+#include <functional>
 
 namespace forge
 {
+    class DropAwareTree : public QTreeWidget
+    {
+    public:
+        using QTreeWidget::QTreeWidget;
+        std::function<void(const QString&)> onAssetDropped;
+
+    protected:
+        void dragEnterEvent(QDragEnterEvent* e) override
+        {
+            e->acceptProposedAction();
+        }
+        void dragMoveEvent(QDragMoveEvent* e) override
+        {
+            e->acceptProposedAction();
+        }
+
+        void dropEvent(QDropEvent* e) override
+        {
+            auto* source = qobject_cast<QTreeWidget*>(e->source());
+            if (source && source != this)
+            {
+                auto items = source->selectedItems();
+                if (!items.isEmpty())
+                {
+                    auto path = items.first()->data(0, Qt::UserRole).toString();
+                    if (!path.isEmpty() && onAssetDropped)
+                        onAssetDropped(path);
+                }
+            }
+            e->acceptProposedAction();
+        }
+    };
     static void DefaultEntityLabel(queen::World& world, queen::Entity entity, char* buf, size_t bufSize)
     {
         const auto* name = world.Get<waggle::Name>(entity);
@@ -36,11 +75,16 @@ namespace forge
         auto* layout = new QVBoxLayout{this};
         layout->setContentsMargins(0, 0, 0, 0);
 
-        m_tree = new QTreeWidget{this};
+        auto* tree = new DropAwareTree{this};
+        tree->onAssetDropped = [this](const QString& path) {
+            emit assetDropped(path);
+        };
+        m_tree = tree;
         m_tree->setHeaderHidden(true);
         m_tree->setSelectionMode(QAbstractItemView::SingleSelection);
         m_tree->setContextMenuPolicy(Qt::CustomContextMenu);
-        m_tree->setRootIsDecorated(false);
+        m_tree->setAcceptDrops(true);
+        m_tree->setRootIsDecorated(true);
         m_tree->setIndentation(16);
 
         layout->addWidget(m_tree);
@@ -59,12 +103,12 @@ namespace forge
         m_currentWorld = &world;
         m_tree->clear();
 
-        std::vector<queen::Entity> roots;
+        wax::Vector<queen::Entity> roots{forge::GetAllocator()};
         world.ForEachArchetype([&](auto& arch) {
             if (arch.template HasComponent<queen::Parent>())
                 return;
             for (uint32_t row = 0; row < arch.EntityCount(); ++row)
-                roots.push_back(arch.GetEntity(row));
+                roots.PushBack(arch.GetEntity(row));
         });
 
         std::sort(roots.begin(), roots.end(), [](queen::Entity a, queen::Entity b) { return a.Index() < b.Index(); });

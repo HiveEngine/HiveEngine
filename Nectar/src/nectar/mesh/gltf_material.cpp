@@ -36,6 +36,8 @@ namespace nectar
 
             GltfMaterialInfo info{};
             info.m_materialIndex = static_cast<int32_t>(i);
+            if (mat.name)
+                info.m_name = wax::String{mat.name};
 
             if (mat.has_pbr_metallic_roughness)
             {

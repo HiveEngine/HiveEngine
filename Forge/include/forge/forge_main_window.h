@@ -63,6 +63,7 @@ namespace forge
         void hubCreateRequested(const QString& name, const QString& dir, const QString& version);
         void hubBrowseRequested();
         void editorCloseRequested();
+        void gltfImportRequested(const QString& path);
 
     private:
         void CreateMenus();

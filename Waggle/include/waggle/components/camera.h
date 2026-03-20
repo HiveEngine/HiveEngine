@@ -10,15 +10,15 @@ namespace waggle
 
     struct Camera
     {
-        float fov_rad{hive::math::Radians(60.f)};
-        float z_near{0.1f};
-        float z_far{100.f};
+        float m_fovRad{hive::math::Radians(60.f)};
+        float m_zNear{0.1f};
+        float m_zFar{100.f};
 
         static void Reflect(queen::ComponentReflector<>& r)
         {
-            r.Field("fov", &Camera::fov_rad).DisplayName("FOV").Flag(queen::FieldFlag::ANGLE);
-            r.Field("z_near", &Camera::z_near).Range(0.001f, 10.f);
-            r.Field("z_far", &Camera::z_far).Range(1.f, 10000.f);
+            r.Field("fov", &Camera::m_fovRad).DisplayName("FOV").Flag(queen::FieldFlag::ANGLE);
+            r.Field("z_near", &Camera::m_zNear).Range(0.001f, 10.f);
+            r.Field("z_far", &Camera::m_zFar).Range(1.f, 10000.f);
         }
     };
 

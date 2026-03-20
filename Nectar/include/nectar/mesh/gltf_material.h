@@ -12,6 +12,7 @@ namespace nectar
     struct GltfMaterialInfo
     {
         int32_t m_materialIndex{-1};
+        wax::String m_name{};
         wax::String m_baseColorTexture{}; // relative path to albedo texture (empty if none)
         float m_baseColorFactor[4]{1.f, 1.f, 1.f, 1.f};
         wax::String m_normalTexture{};
