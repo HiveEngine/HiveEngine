@@ -18,6 +18,7 @@
 #include <wax/containers/vector.h>
 
 #include <nectar/hive/hive_document.h>
+#include <nectar/pipeline/import_context.h>
 
 #include <wax/containers/hash_map.h>
 
@@ -409,6 +410,27 @@ namespace nectar
             }
             std::memcpy(sub.m_aabbMin, smin, sizeof(smin));
             std::memcpy(sub.m_aabbMax, smax, sizeof(smax));
+        }
+
+        // Declare BUILD dependencies on referenced materials
+        auto vfsDir = settings.GetString("import", "vfs_dir", "");
+        if (!vfsDir.IsEmpty() && data->materials_count > 0)
+        {
+            for (cgltf_size mi = 0; mi < data->materials_count; ++mi)
+            {
+                const char* matName = data->materials[mi].name;
+                if (!matName || matName[0] == '\0')
+                    continue;
+
+                wax::String matVfsPath;
+                matVfsPath.Append(vfsDir.Data(), vfsDir.Size());
+                matVfsPath.Append(matName, std::strlen(matName));
+                matVfsPath.Append(".hmat", 5);
+
+                AssetId matId = context.ResolveByPath(matVfsPath.View());
+                if (matId.IsValid())
+                    context.DeclareBuildDep(matId);
+            }
         }
 
         // Build NMSH blob

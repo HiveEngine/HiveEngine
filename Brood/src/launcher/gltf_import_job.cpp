@@ -10,6 +10,7 @@
 #include <nectar/material/material_serializer.h>
 #include <nectar/mesh/gltf_importer.h>
 #include <nectar/mesh/gltf_material.h>
+#include <nectar/pipeline/import_pipeline.h>
 #include <nectar/registry/hiveid_file.h>
 
 #include <wax/containers/string.h>
@@ -85,7 +86,8 @@ namespace nectar
         return MakeAssetIdFromPath(wax::StringView{rel.c_str()});
     }
 
-    GltfImportResult ExecuteGltfImport(const GltfImportDesc& desc, AssetDatabase& db, comb::DefaultAllocator& alloc)
+    GltfImportResult ExecuteGltfImport(const GltfImportDesc& desc, AssetDatabase& db, comb::DefaultAllocator& alloc,
+                                       ImportPipeline* pipeline)
     {
         GltfImportResult result{};
         std::error_code ec;
@@ -145,6 +147,14 @@ namespace nectar
                 rec.m_type = wax::String{"Texture"};
                 rec.m_name = wax::String{entry.path().stem().string().c_str()};
                 db.Insert(static_cast<AssetRecord&&>(rec));
+            }
+
+            if (pipeline)
+            {
+                ImportRequest req;
+                req.m_sourcePath = wax::StringView{relativePath.c_str()};
+                req.m_assetId = assetId;
+                pipeline->ImportAsset(req);
             }
 
             ++result.m_textureCount;
@@ -208,6 +218,14 @@ namespace nectar
                         rec.m_type = wax::String{"Mesh"};
                         rec.m_name = modelName;
                         db.Insert(static_cast<AssetRecord&&>(rec));
+                    }
+
+                    if (pipeline)
+                    {
+                        ImportRequest req;
+                        req.m_sourcePath = wax::StringView{meshRelative.c_str()};
+                        req.m_assetId = meshAssetId;
+                        pipeline->ImportAsset(req);
                     }
 
                     hive::LogInfo(LOG_IMPORT, "Wrote mesh: {}", nmshPath.generic_string());
@@ -284,6 +302,14 @@ namespace nectar
                 rec.m_type = wax::String{"Material"};
                 rec.m_name = matName;
                 db.Insert(static_cast<AssetRecord&&>(rec));
+            }
+
+            if (pipeline)
+            {
+                ImportRequest req;
+                req.m_sourcePath = wax::StringView{relativePath.c_str()};
+                req.m_assetId = assetId;
+                pipeline->ImportAsset(req);
             }
 
             ++result.m_materialCount;

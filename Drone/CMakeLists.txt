@@ -10,6 +10,7 @@ target_sources(Drone
     PRIVATE
         src/drone/drone_module.cpp
         src/drone/coroutine_allocator.cpp
+        src/drone/service_thread.cpp
 )
 
 target_include_directories(Drone

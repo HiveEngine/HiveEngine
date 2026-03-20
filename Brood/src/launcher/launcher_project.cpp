@@ -3,7 +3,9 @@
 
 #include <wax/containers/string.h>
 
+#include <nectar/material/material_importer.h>
 #include <nectar/mesh/gltf_importer.h>
+#include <nectar/pipeline/passthrough_cookers.h>
 #include <nectar/texture/texture_importer.h>
 
 #include <waggle/app_context.h>
@@ -126,11 +128,18 @@ namespace brood::launcher
         state.m_projectPath = projectPath;
         state.m_projectOpen = true;
 
-        // Stateless singletons — no init order dependency, no mutable state
         static nectar::GltfImporter s_gltfImporter;
         static nectar::TextureImporter s_textureImporter;
+        static nectar::MaterialImporter s_materialImporter;
+        static nectar::PassthroughMeshCooker s_meshCooker;
+        static nectar::PassthroughTextureCooker s_textureCooker;
+        static nectar::PassthroughMaterialCooker s_materialCooker;
         state.m_project->RegisterImporter(&s_gltfImporter);
         state.m_project->RegisterImporter(&s_textureImporter);
+        state.m_project->RegisterImporter(&s_materialImporter);
+        state.m_project->RegisterCooker(&s_meshCooker);
+        state.m_project->RegisterCooker(&s_textureCooker);
+        state.m_project->RegisterCooker(&s_materialCooker);
 
         const auto& project = state.m_project->Project();
         hive::LogInfo(LOG_LAUNCHER, "Project '{}' v{}", std::string_view{project.Name().Data(), project.Name().Size()},

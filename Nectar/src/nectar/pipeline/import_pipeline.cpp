@@ -91,6 +91,7 @@ namespace nectar
 
         auto& deps = ctx.GetDeclaredDeps();
         auto& graph = m_db->GetDependencyGraph();
+        graph.RemoveOutgoingEdges(request.m_assetId);
         for (size_t i = 0; i < deps.Size(); ++i)
         {
             graph.AddEdge(deps[i].m_from, deps[i].m_to, deps[i].m_kind);

@@ -6,6 +6,7 @@
 #include <wax/pointers/box.h>
 
 #include <drone/job_submitter.h>
+#include <drone/service_thread.h>
 
 #include <nectar/project/project_file.h>
 #include <nectar/watcher/file_watcher.h>
@@ -94,6 +95,7 @@ namespace waggle
         wax::Box<nectar::CookPipeline> m_cookPipeline;
         nectar::IFileWatcher* m_watcher{};
         wax::Box<nectar::NativeFileWatcher> m_nativeWatcher;
+        drone::ServiceThread m_serviceThread;
         wax::Box<nectar::HotReloadManager> m_hotReload;
         wax::Vector<nectar::FileChange> m_offlineChanges;
         wax::String m_watcherStatePath;

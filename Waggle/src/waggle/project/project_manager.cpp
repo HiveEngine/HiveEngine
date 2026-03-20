@@ -5,14 +5,17 @@
 #include <wax/serialization/binary_writer.h>
 #include <wax/serialization/byte_buffer.h>
 
+#include <nectar/assets/material_asset.h>
 #include <nectar/assets/mesh_asset.h>
 #include <nectar/assets/texture_asset.h>
 #include <nectar/cas/cas_store.h>
+#include <nectar/database/dep_cache.h>
 #include <nectar/core/asset_id.h>
 #include <nectar/database/asset_database.h>
 #include <nectar/database/asset_record.h>
 #include <nectar/io/io_scheduler.h>
 #include <nectar/pipeline/cook_cache.h>
+#include <nectar/pipeline/cook_cache_persist.h>
 #include <nectar/pipeline/cook_pipeline.h>
 #include <nectar/pipeline/cooker_registry.h>
 #include <nectar/pipeline/hot_reload.h>
@@ -224,7 +227,17 @@ namespace waggle
         m_importDb = wax::MakeBox<nectar::AssetDatabase>(*m_alloc, *m_alloc);
         LoadImportCache(m_paths.m_importCache.CStr(), *m_importDb, *m_alloc);
 
-        // Scan .hiveid sidecar files to populate the asset database
+        {
+            wax::String depPath{*m_alloc};
+            depPath.Append(m_paths.m_cache.Data(), m_paths.m_cache.Size());
+            depPath.Append("/dep_graph.bin");
+            nectar::LoadDependencyCache(depPath.View(), m_importDb->GetDependencyGraph(), *m_alloc);
+        }
+
+        // Scan .hiveid sidecar files — only for assets not already in the import cache.
+        // When a watcher state file exists, DetectOfflineChanges will handle
+        // CREATED/MODIFIED/DELETED efficiently. This scan is the fallback for
+        // first-run or missing watcher state.
         {
             std::error_code scanEc;
             std::filesystem::path assetsPath{m_paths.m_assets.CStr()};
@@ -265,12 +278,18 @@ namespace waggle
         m_importPipeline =
             wax::MakeBox<nectar::ImportPipeline>(*m_alloc, *m_alloc, *m_importerRegistry, *m_cas, *m_vfs, *m_importDb);
         m_cookCache = wax::MakeBox<nectar::CookCache>(*m_alloc, *m_alloc);
+        {
+            wax::String cookPath{*m_alloc};
+            cookPath.Append(m_paths.m_cache.Data(), m_paths.m_cache.Size());
+            cookPath.Append("/cook_cache.bin");
+            nectar::LoadCookCache(cookPath.View(), *m_cookCache, *m_alloc);
+        }
         m_cookPipeline = wax::MakeBox<nectar::CookPipeline>(*m_alloc, *m_alloc, *m_cookerRegistry, *m_cas, *m_importDb,
                                                             *m_cookCache, m_jobs);
 
         if (config.m_enableHotReload)
         {
-            m_nativeWatcher = wax::MakeBox<nectar::NativeFileWatcher>(*m_alloc, *m_alloc, m_jobs);
+            m_nativeWatcher = wax::MakeBox<nectar::NativeFileWatcher>(*m_alloc, *m_alloc);
             m_watcher = m_nativeWatcher.Get();
             m_hotReload = wax::MakeBox<nectar::HotReloadManager>(*m_alloc, *m_alloc, *m_watcher, *m_importDb,
                                                                  *m_importPipeline, *m_cookPipeline, m_vfs.Get());
@@ -289,6 +308,12 @@ namespace waggle
                         fullDir.Append("/");
                         settings.SetValue("import", "base_path",
                                           nectar::HiveValue::MakeString(*self->m_alloc, fullDir.View()));
+
+                        wax::String vfsDir{*self->m_alloc};
+                        vfsDir.Append(parentDir.c_str(), parentDir.size());
+                        vfsDir.Append("/", 1);
+                        settings.SetValue("import", "vfs_dir",
+                                          nectar::HiveValue::MakeString(*self->m_alloc, vfsDir.View()));
                     }
                 },
                 this);
@@ -299,6 +324,87 @@ namespace waggle
             m_nativeWatcher->LoadState(statePath.View());
             m_nativeWatcher->DetectOfflineChanges(m_offlineChanges);
             m_watcherStatePath = static_cast<wax::String&&>(statePath);
+
+            // Incremental startup: process offline changes immediately
+            if (m_offlineChanges.Size() > 0)
+            {
+                std::filesystem::path assetsPath{m_paths.m_assets.CStr()};
+                wax::Vector<nectar::AssetId> toReimport{*m_alloc};
+
+                for (size_t i = 0; i < m_offlineChanges.Size(); ++i)
+                {
+                    auto& change = m_offlineChanges[i];
+                    wax::StringView absPath = change.m_path.View();
+
+                    // Skip .hiveid sidecar files
+                    if (absPath.Size() > 7)
+                    {
+                        wax::StringView suffix{absPath.Data() + absPath.Size() - 7, 7};
+                        if (suffix == wax::StringView{".hiveid", 7})
+                            continue;
+                    }
+
+                    // Convert absolute path to VFS relative path
+                    wax::String vfsPath{*m_alloc};
+                    if (absPath.Size() > m_paths.m_assets.Size() + 1)
+                    {
+                        size_t prefixLen = m_paths.m_assets.Size();
+                        if (absPath[prefixLen] == '/')
+                            ++prefixLen;
+                        vfsPath.Append(absPath.Data() + prefixLen, absPath.Size() - prefixLen);
+                    }
+                    else
+                    {
+                        vfsPath.Append(absPath.Data(), absPath.Size());
+                    }
+
+                    if (change.m_kind == nectar::FileChangeKind::MODIFIED)
+                    {
+                        auto* record = m_importDb->FindByPath(vfsPath.View());
+                        if (record)
+                            toReimport.PushBack(record->m_uuid);
+                    }
+                    else if (change.m_kind == nectar::FileChangeKind::DELETED)
+                    {
+                        auto* record = m_importDb->FindByPath(vfsPath.View());
+                        if (record)
+                        {
+                            m_importDb->GetDependencyGraph().RemoveNode(record->m_uuid);
+                            m_cookCache->Invalidate(record->m_uuid);
+                        }
+                    }
+                }
+
+                // Version check: add assets whose importer version bumped
+                m_importDb->ForEach([&](nectar::AssetId id, const nectar::AssetRecord& rec) {
+                    nectar::IAssetImporter* imp = m_importerRegistry->FindByPath(rec.m_path.View());
+                    if (imp && rec.m_importVersion != imp->Version())
+                        toReimport.PushBack(id);
+                });
+
+                if (toReimport.Size() > 0)
+                {
+                    size_t reimported = m_importPipeline->ReimportOutdated(toReimport);
+                    hive::LogInfo(LOG_PROJECT, "Incremental startup: {}/{} assets reimported", reimported,
+                                  toReimport.Size());
+
+                    for (size_t i = 0; i < toReimport.Size(); ++i)
+                        m_cookPipeline->InvalidateCascade(toReimport[i]);
+
+                    nectar::CookRequest cookReq;
+                    cookReq.m_assets = static_cast<wax::Vector<nectar::AssetId>&&>(toReimport);
+                    cookReq.m_platform = kDefaultPlatform;
+                    cookReq.m_workerCount = 1;
+                    auto cookResult = m_cookPipeline->CookAll(cookReq);
+                    hive::LogInfo(LOG_PROJECT, "Incremental startup: {} cooked, {} skipped, {} failed",
+                                  cookResult.m_cooked, cookResult.m_skipped, cookResult.m_failed);
+                }
+
+                m_offlineChanges.Clear();
+            }
+
+            m_serviceThread.Register(m_nativeWatcher.Get());
+            m_serviceThread.Start();
         }
 
         m_open = true;
@@ -316,7 +422,23 @@ namespace waggle
 
         SaveImportCache();
 
-        // .hiveid files are written at import time; no centralized registry to save
+        if (m_importDb)
+        {
+            wax::String depPath{*m_alloc};
+            depPath.Append(m_paths.m_cache.Data(), m_paths.m_cache.Size());
+            depPath.Append("/dep_graph.bin");
+            nectar::SaveDependencyCache(depPath.View(), m_importDb->GetDependencyGraph(), *m_alloc);
+        }
+
+        if (m_cookCache)
+        {
+            wax::String cookPath{*m_alloc};
+            cookPath.Append(m_paths.m_cache.Data(), m_paths.m_cache.Size());
+            cookPath.Append("/cook_cache.bin");
+            nectar::SaveCookCache(cookPath.View(), *m_cookCache, *m_alloc);
+        }
+
+        m_serviceThread.Stop();
 
         if (m_nativeWatcher && m_watcherStatePath.Size() > 0)
             m_nativeWatcher->SaveState(m_watcherStatePath.View());
@@ -463,6 +585,8 @@ namespace waggle
                         SwapAsset<nectar::TextureAsset>(*m_server, record->m_path.View(), blobSpan);
                     else if (record->m_type.View().Equals(wax::StringView{"Mesh", 4}))
                         SwapAsset<nectar::MeshAsset>(*m_server, record->m_path.View(), blobSpan);
+                    else if (record->m_type.View().Equals(wax::StringView{"Material", 8}))
+                        SwapAsset<nectar::MaterialAsset>(*m_server, record->m_path.View(), blobSpan);
 
                     hive::LogInfo(LOG_PROJECT, "Swapped asset: {} ({})", record->m_path.CStr(), record->m_type.CStr());
                 }

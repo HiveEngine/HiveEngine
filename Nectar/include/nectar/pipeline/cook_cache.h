@@ -49,6 +49,28 @@ namespace nectar
 
         [[nodiscard]] size_t Count() const noexcept;
 
+        /// Iterate all entries. F signature: void(AssetId id, wax::StringView platform, const CookCacheEntry&).
+        /// Note: platform is not recoverable from the composite key, so the caller
+        /// must provide an overload that accepts the raw (uint64_t key, CookCacheEntry).
+        template <typename F>
+        void ForEachRaw(F&& fn) const
+        {
+            std::lock_guard lock{m_mutex};
+            for (auto it = m_entries.Begin(); it != m_entries.End(); ++it)
+                fn(it.Key(), it.Value());
+        }
+
+        /// Iterate asset keys index. F signature: void(AssetId, const wax::Vector<uint64_t>&).
+        template <typename F>
+        void ForEachAssetKeys(F&& fn) const
+        {
+            std::lock_guard lock{m_mutex};
+            for (auto it = m_assetKeys.Begin(); it != m_assetKeys.End(); ++it)
+                fn(it.Key(), it.Value());
+        }
+
+        void StoreRaw(uint64_t compositeKey, AssetId id, const CookCacheEntry& entry);
+
     private:
         static uint64_t MakeKey(AssetId id, wax::StringView platform);
 

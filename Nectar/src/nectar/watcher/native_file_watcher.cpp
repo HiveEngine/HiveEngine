@@ -15,24 +15,14 @@ namespace nectar
         constexpr uint32_t kStateVersion = 1;
     } // namespace
 
-    NativeFileWatcher::NativeFileWatcher(comb::DefaultAllocator& alloc, drone::JobSubmitter jobs)
+    NativeFileWatcher::NativeFileWatcher(comb::DefaultAllocator& alloc)
         : m_alloc{&alloc}
-        , m_jobs{jobs}
         , m_pendingChanges{alloc}
         , m_watchedDirs{alloc}
         , m_knownFiles{alloc, 256}
     {
         PlatformInit();
         m_running.store(true, std::memory_order_release);
-
-        if (m_jobs.IsValid())
-        {
-            drone::JobDecl job;
-            job.m_func = &NativeFileWatcher::WatcherJob;
-            job.m_userData = this;
-            job.m_priority = drone::Priority::LOW;
-            m_jobs.SubmitDetached(job);
-        }
     }
 
     NativeFileWatcher::~NativeFileWatcher()
@@ -47,14 +37,14 @@ namespace nectar
             return;
         }
 
-        PlatformWakeThread();
         PlatformShutdown();
     }
 
-    void NativeFileWatcher::WatcherJob(void* data)
+    void NativeFileWatcher::Tick()
     {
-        auto* self = static_cast<NativeFileWatcher*>(data);
-        self->ThreadMain();
+        if (!m_running.load(std::memory_order_acquire))
+            return;
+        PlatformTick();
     }
 
     void NativeFileWatcher::Watch(wax::StringView directory)

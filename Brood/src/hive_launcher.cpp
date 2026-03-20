@@ -207,7 +207,7 @@ namespace
                         desc.m_gltfPath = wax::StringView{gltfStdPath.c_str()};
                         desc.m_assetsDir = s.m_project->Paths().m_assets.View();
 
-                        auto result = nectar::ExecuteGltfImport(desc, db, alloc);
+                        auto result = nectar::ExecuteGltfImport(desc, db, alloc, &s.m_project->Import());
 
                         if (result.m_success)
                         {
