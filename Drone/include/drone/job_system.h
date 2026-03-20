@@ -198,6 +198,9 @@ namespace drone
 
             hive::Assert(numChunks <= kMaxChunks, "ParallelFor: too many chunks, increase kMaxChunks or chunkSize");
 
+            size_t baseIdx = s_chunkIdx % kMaxChunks;
+            s_chunkIdx += numChunks;
+
             Counter counter{static_cast<int64_t>(numChunks)};
 
             for (size_t chunk = 0; chunk < numChunks; ++chunk)
@@ -205,7 +208,7 @@ namespace drone
                 const size_t chunkBegin = begin + chunk * chunkSize;
                 const size_t chunkEnd = (chunkBegin + chunkSize < end) ? (chunkBegin + chunkSize) : end;
 
-                auto& cd = s_chunks[s_chunkIdx++ % kMaxChunks];
+                auto& cd = s_chunks[(baseIdx + chunk) % kMaxChunks];
                 cd.m_func = func;
                 cd.m_userData = data;
                 cd.m_begin = chunkBegin;
