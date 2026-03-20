@@ -1,12 +1,5 @@
 #pragma once
 
-/**
- * ParallelScheduler method implementations
- *
- * This file contains implementations of ParallelScheduler methods that access World members.
- * It must be included AFTER the World class is fully defined.
- */
-
 namespace queen
 {
     template <comb::Allocator Allocator>
@@ -23,29 +16,21 @@ namespace queen
             return;
         }
 
-        if (!m_pool->IsRunning())
-        {
-            m_pool->Start();
-        }
-
         m_graph.Reset();
         ResetRemainingCounts();
 
         Tick currentTick = world.CurrentTick();
 
-        WaitGroup wg;
-        wg.Add(static_cast<int64_t>(nodeCount));
+        drone::Counter counter{static_cast<int64_t>(nodeCount)};
 
         const auto& roots = m_graph.Roots();
         for (size_t i = 0; i < roots.Size(); ++i)
         {
-            uint32_t rootIdx = roots[i];
-            SubmitSystemTask(rootIdx, world, storage, currentTick, wg);
+            SubmitSystemTask(roots[i], world, storage, currentTick, counter);
         }
 
-        wg.Wait();
+        counter.Wait();
 
-        // Sync point
         world.GetCommands().FlushAll(world);
     }
 } // namespace queen
