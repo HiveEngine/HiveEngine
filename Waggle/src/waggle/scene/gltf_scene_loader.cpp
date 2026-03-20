@@ -59,10 +59,13 @@ namespace waggle
         scale.m_y = std::sqrt(c1[0] * c1[0] + c1[1] * c1[1] + c1[2] * c1[2]);
         scale.m_z = std::sqrt(c2[0] * c2[0] + c2[1] * c2[1] + c2[2] * c2[2]);
 
-        // Normalize columns to get rotation matrix
-        float r00 = c0[0] / scale.m_x, r10 = c0[1] / scale.m_x, r20 = c0[2] / scale.m_x;
-        float r01 = c1[0] / scale.m_y, r11 = c1[1] / scale.m_y, r21 = c1[2] / scale.m_y;
-        float r02 = c2[0] / scale.m_z, r12 = c2[1] / scale.m_z, r22 = c2[2] / scale.m_z;
+        float invSx = scale.m_x > 1e-7f ? 1.f / scale.m_x : 0.f;
+        float invSy = scale.m_y > 1e-7f ? 1.f / scale.m_y : 0.f;
+        float invSz = scale.m_z > 1e-7f ? 1.f / scale.m_z : 0.f;
+
+        float r00 = c0[0] * invSx, r10 = c0[1] * invSx, r20 = c0[2] * invSx;
+        float r01 = c1[0] * invSy, r11 = c1[1] * invSy, r21 = c1[2] * invSy;
+        float r02 = c2[0] * invSz, r12 = c2[1] * invSz, r22 = c2[2] * invSz;
 
         // Rotation matrix to quaternion (Shepperd's method)
         float trace = r00 + r11 + r22;

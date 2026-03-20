@@ -1,5 +1,7 @@
 #pragma once
 
+#include <hive/core/assert.h>
+
 #include <algorithm>
 #include <cstddef>
 #include <new>
@@ -112,7 +114,14 @@ namespace hive
         using Types =
             std::tuple<FreeFunction, MemberFunction<Functor<R, Args...>>, ConstMemberFunction<Functor<R, Args...>>>;
 
-        alignas(kMaxAlignof<Types>) char m_buffer[kMaxSizeof<Types>];
+        // Worst-case PMF on MSVC with virtual inheritance is 24 bytes.
+        // MemberFunction<T> = vtable(8) + obj_ptr(8) + PMF(up to 24) = 40 bytes.
+        // Add headroom beyond the simple-class measurement.
+        static constexpr size_t kMinBufferSize = 48;
+        static constexpr size_t kBufferSize =
+            kMaxSizeof<Types> > kMinBufferSize ? kMaxSizeof<Types> : kMinBufferSize;
+
+        alignas(kMaxAlignof<Types>) char m_buffer[kBufferSize];
         Callable* m_callable{};
 
     public:
@@ -132,12 +141,16 @@ namespace hive
         Functor(T* obj, R (T::*fn)(Args...))
             : m_callable{::new (m_buffer) MemberFunction<T>{obj, fn}}
         {
+            static_assert(sizeof(MemberFunction<T>) <= sizeof(m_buffer),
+                          "MemberFunction<T> exceeds SBO buffer — T likely uses virtual inheritance");
         }
 
         template <class T>
         Functor(T* obj, R (T::*fn)(Args...) const)
             : m_callable{::new (m_buffer) ConstMemberFunction<T>{obj, fn}}
         {
+            static_assert(sizeof(ConstMemberFunction<T>) <= sizeof(m_buffer),
+                          "ConstMemberFunction<T> exceeds SBO buffer — T likely uses virtual inheritance");
         }
 
         Functor(const Functor& other)
@@ -164,6 +177,7 @@ namespace hive
 
         R operator()(Args... args)
         {
+            hive::Assert(m_callable != nullptr, "Functor invoked while empty");
             return m_callable->Invoke(static_cast<Args&&>(args)...);
         }
     };

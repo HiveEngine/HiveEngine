@@ -23,7 +23,7 @@ namespace wax
         {
             alignas(K) unsigned char m_keyStorage[sizeof(K)];
             uint8_t m_state{kEmpty};
-            uint8_t m_psl{0};
+            uint16_t m_psl{0};
 
             [[nodiscard]] K* Key()
             {
@@ -200,7 +200,7 @@ namespace wax
         {
             const size_t hash = Hash{}(key);
             size_t index = hash & (m_capacity - 1);
-            uint8_t psl = 0;
+            uint16_t psl = 0;
 
             while (true)
             {
@@ -233,7 +233,7 @@ namespace wax
         {
             const size_t hash = Hash{}(key);
             size_t index = hash & (m_capacity - 1);
-            uint8_t psl = 0;
+            uint16_t psl = 0;
 
             while (true)
             {
@@ -323,6 +323,11 @@ namespace wax
             return ConstIterator{m_buckets, m_capacity, m_capacity};
         }
 
+        [[nodiscard]] Iterator begin() noexcept { return Begin(); }
+        [[nodiscard]] Iterator end() noexcept { return End(); }
+        [[nodiscard]] ConstIterator begin() const noexcept { return Begin(); }
+        [[nodiscard]] ConstIterator end() const noexcept { return End(); }
+
     private:
         void InitializeBuckets(size_t initialCapacity)
         {
@@ -376,7 +381,7 @@ namespace wax
         {
             const size_t hash = Hash{}(key);
             size_t index = hash & (m_capacity - 1);
-            uint8_t psl = 0;
+            uint16_t psl = 0;
 
             K insertKey = key;
 

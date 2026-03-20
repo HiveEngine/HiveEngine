@@ -50,6 +50,7 @@
 
 #include <atomic>
 #include <mutex>
+#include <optional>
 #include <unordered_map>
 
 namespace comb::debug
@@ -163,33 +164,15 @@ namespace comb::debug
          * NOTE: Returned pointer is only valid while mutex is held.
          * Do not store the pointer, copy the data instead.
          */
-        AllocationInfo* FindAllocation(void* address)
+        std::optional<AllocationInfo> FindAllocation(void* address) const
         {
             std::lock_guard<std::mutex> lock(m_mutex);
 
             auto it = m_allocations.find(address);
             if (it != m_allocations.end())
-            {
-                return &it->second;
-            }
+                return it->second;
 
-            return nullptr;
-        }
-
-        /**
-         * Find allocation info by address (const version)
-         */
-        const AllocationInfo* FindAllocation(void* address) const
-        {
-            std::lock_guard<std::mutex> lock(m_mutex);
-
-            auto it = m_allocations.find(address);
-            if (it != m_allocations.end())
-            {
-                return &it->second;
-            }
-
-            return nullptr;
+            return std::nullopt;
         }
 
         // Statistics API

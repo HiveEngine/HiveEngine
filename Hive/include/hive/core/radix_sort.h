@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <cstring>
+#include <type_traits>
 
 namespace hive
 {
@@ -93,6 +94,8 @@ namespace hive
         }
 
         // If result ended up in scratch, copy back
+        static_assert(std::is_trivially_copyable_v<SortItem<T>>,
+                      "RadixSort requires trivially copyable value type");
         if (src != data)
             std::memcpy(data, src, count * sizeof(SortItem<T>));
     }

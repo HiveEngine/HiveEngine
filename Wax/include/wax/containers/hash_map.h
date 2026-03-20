@@ -24,7 +24,7 @@ namespace wax
             alignas(K) unsigned char m_keyStorage[sizeof(K)];
             alignas(V) unsigned char m_valueStorage[sizeof(V)];
             uint8_t m_state{kEmpty};
-            uint8_t m_psl{0};
+            uint16_t m_psl{0};
 
             [[nodiscard]] K* Key()
             {
@@ -239,7 +239,7 @@ namespace wax
 
             const size_t hash = Hash{}(key);
             size_t index = hash & (m_capacity - 1);
-            uint8_t psl = 0;
+            uint16_t psl = 0;
 
             while (true)
             {
@@ -264,7 +264,7 @@ namespace wax
                 {
                     K tempKey = static_cast<K&&>(*bucket.Key());
                     V tempValue = static_cast<V&&>(*bucket.Value());
-                    const uint8_t tempPsl = bucket.m_psl;
+                    const uint16_t tempPsl = bucket.m_psl;
 
                     bucket.Key()->~K();
                     bucket.Value()->~V();
@@ -287,7 +287,7 @@ namespace wax
         {
             const size_t hash = Hash{}(key);
             size_t index = hash & (m_capacity - 1);
-            uint8_t psl = 0;
+            uint16_t psl = 0;
 
             while (true)
             {
@@ -330,7 +330,7 @@ namespace wax
         {
             const size_t hash = Hash{}(key);
             size_t index = hash & (m_capacity - 1);
-            uint8_t psl = 0;
+            uint16_t psl = 0;
 
             while (true)
             {
@@ -504,7 +504,7 @@ namespace wax
         {
             const size_t hash = Hash{}(key);
             size_t index = hash & (m_capacity - 1);
-            uint8_t psl = 0;
+            uint16_t psl = 0;
 
             K insertKey = key;
             V insertValue = value;
@@ -544,7 +544,7 @@ namespace wax
         {
             const size_t hash = Hash{}(key);
             size_t index = hash & (m_capacity - 1);
-            uint8_t psl = 0;
+            uint16_t psl = 0;
 
             K insertKey = key;
             V insertValue = static_cast<V&&>(value);
@@ -580,7 +580,7 @@ namespace wax
             }
         }
 
-        void InsertDisplaced(K&& key, V&& value, uint8_t psl, size_t startIndex)
+        void InsertDisplaced(K&& key, V&& value, uint16_t psl, size_t startIndex)
         {
             size_t index = (startIndex + 1) & (m_capacity - 1);
             ++psl;

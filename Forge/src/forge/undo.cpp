@@ -6,6 +6,39 @@
 
 namespace forge
 {
+    namespace
+    {
+        void RingWrite(std::byte* ring, size_t cap, size_t offset, const void* src, size_t size)
+        {
+            auto* s = static_cast<const std::byte*>(src);
+            size_t first = cap - offset;
+            if (first >= size)
+            {
+                std::memcpy(&ring[offset], s, size);
+            }
+            else
+            {
+                std::memcpy(&ring[offset], s, first);
+                std::memcpy(&ring[0], s + first, size - first);
+            }
+        }
+
+        void RingRead(const std::byte* ring, size_t cap, size_t offset, void* dst, size_t size)
+        {
+            auto* d = static_cast<std::byte*>(dst);
+            size_t first = cap - offset;
+            if (first >= size)
+            {
+                std::memcpy(d, &ring[offset], size);
+            }
+            else
+            {
+                std::memcpy(d, &ring[offset], first);
+                std::memcpy(d + first, &ring[0], size - first);
+            }
+        }
+    } // namespace
+
     void UndoStack::PushSetField(queen::Entity entity, queen::TypeId typeId, uint16_t offset, uint16_t size,
                                  const void* before, const void* after)
     {
@@ -14,8 +47,8 @@ namespace forge
         uint32_t dataOff = static_cast<uint32_t>(m_dataHead);
         m_dataHead = (m_dataHead + size * 2) % kMaxDataBytes;
 
-        std::memcpy(&m_data[dataOff], before, size);
-        std::memcpy(&m_data[(dataOff + size) % kMaxDataBytes], after, size);
+        RingWrite(m_data, kMaxDataBytes, dataOff, before, size);
+        RingWrite(m_data, kMaxDataBytes, (dataOff + size) % kMaxDataBytes, after, size);
 
         UndoCommand cmd{};
         cmd.m_entity = entity;
@@ -45,7 +78,7 @@ namespace forge
             return cmd.m_entity;
 
         auto* dst = static_cast<std::byte*>(comp) + cmd.m_fieldOffset;
-        std::memcpy(dst, &m_data[cmd.m_dataOffset], cmd.m_fieldSize);
+        RingRead(m_data, kMaxDataBytes, cmd.m_dataOffset, dst, cmd.m_fieldSize);
         return cmd.m_entity;
     }
 
@@ -65,7 +98,7 @@ namespace forge
 
         auto* dst = static_cast<std::byte*>(comp) + cmd.m_fieldOffset;
         uint32_t afterOffset = (cmd.m_dataOffset + cmd.m_fieldSize) % kMaxDataBytes;
-        std::memcpy(dst, &m_data[afterOffset], cmd.m_fieldSize);
+        RingRead(m_data, kMaxDataBytes, afterOffset, dst, cmd.m_fieldSize);
         return cmd.m_entity;
     }
 } // namespace forge

@@ -41,8 +41,9 @@ namespace nectar
             if (data.Size() < sizeof(NtexHeader))
                 return nullptr;
 
-            auto* raw_header = reinterpret_cast<const NtexHeader*>(data.Data());
-            if (raw_header->m_magic != kNtexMagic)
+            NtexHeader hdr{};
+            std::memcpy(&hdr, data.Data(), sizeof(NtexHeader));
+            if (hdr.m_magic != kNtexMagic)
                 return nullptr;
 
             auto* blob = static_cast<uint8_t*>(alloc.Allocate(data.Size(), alignof(std::max_align_t)));
@@ -50,7 +51,7 @@ namespace nectar
                 return nullptr;
 
             auto* asset = comb::New<TextureAsset>(alloc);
-            asset->header = *raw_header;
+            asset->header = hdr;
             asset->data_size = data.Size();
             asset->data = blob;
             std::memcpy(blob, data.Data(), data.Size());

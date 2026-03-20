@@ -3,6 +3,7 @@
 #include <hive/profiling/profiler.h>
 
 #include <hive/core/assert.h>
+#include <hive/core/log.h>
 
 namespace hive
 {
@@ -41,7 +42,10 @@ namespace hive
 
             if (it == remainingModules.end())
             {
-                return;
+                for (auto& stuck : remainingModules)
+                    hive::LogError(LOG_HIVE_ROOT, "Module '{}' stuck in dependency cycle", stuck->GetName());
+                hive::Assert(false, "Module dependency cycle detected — cannot initialize all modules");
+                break;
             }
 
             initializedModules.insert((*it)->GetName());

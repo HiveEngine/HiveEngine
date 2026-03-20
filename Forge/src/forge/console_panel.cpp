@@ -243,7 +243,7 @@ namespace forge
 
     void ConsolePanel::OnLog(const hive::LogCategory& category, hive::LogSeverity severity, const char* message)
     {
-        emit logReceived(static_cast<int>(severity), QString::fromUtf8(category.GetFullPath().c_str()),
+        emit logReceived(static_cast<int>(severity), QString::fromUtf8(category.GetFullPath()),
                          QString::fromUtf8(message));
     }
 

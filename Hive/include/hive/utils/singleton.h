@@ -1,4 +1,9 @@
 #pragma once
+
+#include <hive/core/assert.h>
+
+#include <atomic>
+
 namespace hive
 {
     template <typename T> class Singleton
@@ -6,31 +11,31 @@ namespace hive
     public:
         Singleton()
         {
-            if (g_mInstance == nullptr)
-            {
-                g_mInstance = static_cast<T*>(this);
-            }
+            T* expected = nullptr;
+            g_mInstance.compare_exchange_strong(expected, static_cast<T*>(this), std::memory_order_release,
+                                               std::memory_order_relaxed);
         }
 
         ~Singleton()
         {
-            if (g_mInstance == this)
-            {
-                g_mInstance = nullptr;
-            }
+            T* expected = static_cast<T*>(this);
+            g_mInstance.compare_exchange_strong(expected, nullptr, std::memory_order_release,
+                                               std::memory_order_relaxed);
         }
 
         static T& GetInstance()
         {
-            return *g_mInstance;
+            T* ptr = g_mInstance.load(std::memory_order_acquire);
+            hive::Assert(ptr != nullptr, "Singleton::GetInstance() called before initialization");
+            return *ptr;
         }
 
-        [[nodiscard]] static inline bool IsInitialized()
+        [[nodiscard]] static bool IsInitialized()
         {
-            return g_mInstance != nullptr;
+            return g_mInstance.load(std::memory_order_acquire) != nullptr;
         }
 
     protected:
-        static inline T* g_mInstance = nullptr;
+        static inline std::atomic<T*> g_mInstance{nullptr};
     };
 } // namespace hive

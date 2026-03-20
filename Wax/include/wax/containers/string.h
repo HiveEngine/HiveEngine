@@ -575,6 +575,13 @@ namespace wax
             HeapLayout m_heap;
         };
 
+        static_assert(sizeof(SsoLayout) == sizeof(HeapLayout),
+                      "SSO/Heap layout size mismatch — String SSO requires 64-bit platform");
+        static_assert(sizeof(size_t) == 8,
+                      "String SSO flag trick requires 64-bit size_t");
+        static_assert(offsetof(SsoLayout, m_sizeAndFlag) == sizeof(HeapLayout) - 1,
+                      "SSO flag byte must overlap high byte of HeapLayout::m_capacity (requires little-endian)");
+
         comb::MemoryResource m_allocator;
 
         [[nodiscard]] bool IsHeap() const noexcept

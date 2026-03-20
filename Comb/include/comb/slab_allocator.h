@@ -555,33 +555,34 @@ namespace comb
             return;
 
         // 1. Find allocation info
-        auto* info = m_registry->FindAllocation(ptr);
-        if (!info)
+        auto infoOpt = m_registry->FindAllocation(ptr);
+        if (!infoOpt)
         {
             hive::LogError(comb::LOG_COMB_ROOT, "[MEM_DEBUG] [{}] Double-free or invalid pointer detected! Address: {}",
                            GetName(), ptr);
             hive::Assert(false, "Double-free or invalid pointer (not found in registry)");
             return;
         }
+        auto& info = *infoOpt;
 
         // 2. Check guard bytes
         if constexpr (debug::kMemDebugEnabled)
         {
-            if (!info->CheckGuards())
+            if (!info.CheckGuards())
             {
-                if (info->ReadGuardFront() != debug::guardMagic)
+                if (info.ReadGuardFront() != debug::guardMagic)
                 {
                     hive::LogError(comb::LOG_COMB_ROOT,
                                    "[MEM_DEBUG] [{}] Buffer UNDERRUN detected! Address: {}, Size: {}, Tag: {}",
-                                   GetName(), ptr, info->m_size, info->GetTagOrDefault());
+                                   GetName(), ptr, info.m_size, info.GetTagOrDefault());
                     hive::Assert(false, "Buffer underrun detected");
                 }
 
-                if (info->ReadGuardBack() != debug::guardMagic)
+                if (info.ReadGuardBack() != debug::guardMagic)
                 {
                     hive::LogError(comb::LOG_COMB_ROOT,
                                    "[MEM_DEBUG] [{}] Buffer OVERRUN detected! Address: {}, Size: {}, Tag: {}",
-                                   GetName(), ptr, info->m_size, info->GetTagOrDefault());
+                                   GetName(), ptr, info.m_size, info.GetTagOrDefault());
                     hive::Assert(false, "Buffer overrun detected");
                 }
             }

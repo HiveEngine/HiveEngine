@@ -20,7 +20,7 @@ namespace waggle
         if (!time)
             return;
 
-        uint32_t tick = static_cast<uint32_t>(time->m_tick);
+        uint64_t tick = time->m_tick;
 
         // Pass 1 — Roots (no Parent): recompute if dirty or first frame
         world
@@ -67,7 +67,7 @@ namespace waggle
         if (!time)
             return;
 
-        uint32_t tick = static_cast<uint32_t>(time->m_tick);
+        uint64_t tick = time->m_tick;
 
         world
             .Query<queen::Write<WorldAABB>, queen::Read<WorldMatrix>, queen::Read<LocalAABB>,

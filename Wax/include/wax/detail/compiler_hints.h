@@ -2,19 +2,21 @@
 
 namespace wax::detail
 {
-    template <typename T> [[nodiscard]] constexpr T Likely(T value) noexcept
+    // Prefer [[likely]]/[[unlikely]] on branches (C++20) over these functions.
+    // These are kept for expression contexts where attributes can't be used.
+    [[nodiscard]] constexpr bool Likely(bool value) noexcept
     {
 #if defined(__GNUC__) || defined(__clang__)
-        return __builtin_expect(static_cast<bool>(value), 1) ? value : T{};
+        return __builtin_expect(value, 1);
 #else
         return value;
 #endif
     }
 
-    template <typename T> [[nodiscard]] constexpr T Unlikely(T value) noexcept
+    [[nodiscard]] constexpr bool Unlikely(bool value) noexcept
     {
 #if defined(__GNUC__) || defined(__clang__)
-        return __builtin_expect(static_cast<bool>(value), 0) ? value : T{};
+        return __builtin_expect(value, 0);
 #else
         return value;
 #endif

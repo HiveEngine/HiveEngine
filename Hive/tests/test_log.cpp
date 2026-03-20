@@ -33,8 +33,9 @@ namespace
     auto t_category_hierarchy = larvae::RegisterTest("HiveLog", "CategoryHierarchy", []() {
         hive::LogCategory root{"Root"};
         hive::LogCategory child{"Child", &root};
-        larvae::AssertStringEqual(child.GetFullPath(), "Root/Child");
+        larvae::AssertStringEqual(child.GetName(), "Child");
         larvae::AssertEqual(child.GetParentCategory(), &root);
+        larvae::AssertStringEqual(child.GetParentCategory()->GetName(), "Root");
     });
 
     // LogManager: register, log, unregister

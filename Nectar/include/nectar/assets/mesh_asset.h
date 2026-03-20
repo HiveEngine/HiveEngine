@@ -40,11 +40,12 @@ namespace nectar
             if (data.Size() < sizeof(NmshHeader))
                 return nullptr;
 
-            auto* raw_header = reinterpret_cast<const NmshHeader*>(data.Data());
-            if (raw_header->m_magic != kNmshMagic)
+            NmshHeader hdr{};
+            std::memcpy(&hdr, data.Data(), sizeof(NmshHeader));
+            if (hdr.m_magic != kNmshMagic)
                 return nullptr;
 
-            size_t expected = NmshTotalSize(*raw_header);
+            size_t expected = NmshTotalSize(hdr);
             if (data.Size() < expected)
                 return nullptr;
 
@@ -53,7 +54,7 @@ namespace nectar
                 return nullptr;
 
             auto* asset = comb::New<MeshAsset>(alloc);
-            asset->header = *raw_header;
+            asset->header = hdr;
             asset->data_size = expected;
             asset->data = blob;
             std::memcpy(blob, data.Data(), expected);

@@ -1286,7 +1286,10 @@ namespace queen
                 {
                     void* src = oldArch->GetComponentRaw(oldRow, typeId);
                     void* dst = newArch->GetComponentRaw(newRow, typeId);
-                    oldMetas[i].m_move(dst, src);
+                    if (oldMetas[i].m_move != nullptr)
+                        oldMetas[i].m_move(dst, src);
+                    else
+                        std::memcpy(dst, src, oldMetas[i].m_size);
                 }
             }
 

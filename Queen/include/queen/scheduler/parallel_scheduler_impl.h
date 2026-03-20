@@ -16,6 +16,8 @@ namespace queen
             return;
         }
 
+        hive::Assert(nodeCount <= 256, "ParallelScheduler: system count exceeds ring buffer (256 max)");
+
         m_graph.Reset();
         ResetRemainingCounts();
 
