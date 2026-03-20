@@ -624,7 +624,7 @@ namespace comb
         // 3. Calculate release block size BEFORE unregistering (info will be destroyed)
         // Track memory using release mode calculation (excluding guard bytes)
         // This ensures GetUsedMemory() returns consistent values between debug and release
-        size_t releaseTotalSize = info->m_size + headerPrefix;
+        size_t releaseTotalSize = info.m_size + headerPrefix;
         size_t releaseBlockSize = NextPowerOfTwo(releaseTotalSize);
         if (releaseBlockSize < minBlockSize)
         {
@@ -633,12 +633,12 @@ namespace comb
 
         // 4. Fill with freed pattern (detect use-after-free)
 #if COMB_MEM_DEBUG_USE_AFTER_FREE
-        std::memset(ptr, debug::freedMemoryPattern, info->m_size);
+        std::memset(ptr, debug::freedMemoryPattern, info.m_size);
 #endif
 
         // 5. Record deallocation in history
 #if COMB_MEM_DEBUG_HISTORY
-        m_history->RecordDeallocation(ptr, info->m_size);
+        m_history->RecordDeallocation(ptr, info.m_size);
 #endif
 
         // 6. Unregister allocation (info pointer becomes invalid after this!)
