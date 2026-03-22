@@ -84,6 +84,10 @@ Additional naming rules:
 - Predicates should read like predicates: `Is*`, `Has*`, `Can*`, `Contains*`.
 - Prefer nouns for types and verbs for functions.
 - Keep abbreviations consistent inside a module.
+- **Qt signals and slots** follow Qt convention (`camelBack`) instead of `PascalCase`, since they
+  must integrate with Qt's signal/slot system and match the style of Qt's own signals.
+  Example: `sceneModified()`, `assetSelected()`, not `SceneModified()`.
+- **Qt event overrides** (`paintEvent`, `mousePressEvent`, etc.) keep their Qt names.
 
 ---
 

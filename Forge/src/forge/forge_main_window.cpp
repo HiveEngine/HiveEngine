@@ -1,5 +1,3 @@
-#include <forge/forge_main_window.h>
-
 #include <hive/core/log.h>
 
 #include <queen/reflect/component_registry.h>
@@ -13,6 +11,8 @@
 
 #include <forge/asset_browser.h>
 #include <forge/console_panel.h>
+#include <forge/editor_undo.h>
+#include <forge/forge_main_window.h>
 #include <forge/hierarchy_panel.h>
 #include <forge/inspector_panel.h>
 #include <forge/progress_overlay.h>
@@ -24,6 +24,7 @@
 
 #include <QCloseEvent>
 #include <QDockWidget>
+#include <QHBoxLayout>
 #include <QIcon>
 #include <QLabel>
 #include <QMenuBar>
@@ -34,6 +35,7 @@
 #include <QPropertyAnimation>
 #include <QStackedWidget>
 #include <QTimer>
+#include <QToolButton>
 
 #include <cmath>
 #include <cstdio>
@@ -234,6 +236,8 @@ namespace forge
         }
         m_hub->hide();
 
+        m_editorUndo = new EditorUndoManager{};
+
         CreateMenus();
         CreateDocks();
         ConnectSignals();
@@ -248,8 +252,7 @@ namespace forge
         if (m_sceneDirty)
         {
             auto answer = QMessageBox::question(
-                this, "Unsaved Changes",
-                "The current scene has unsaved changes. Do you want to save before closing?",
+                this, "Unsaved Changes", "The current scene has unsaved changes. Do you want to save before closing?",
                 QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel);
 
             if (answer == QMessageBox::Cancel)
@@ -272,7 +275,7 @@ namespace forge
             m_hierarchy->Refresh(*m_world);
 
         if (m_world && m_inspector && m_selection && m_registry && m_undo)
-            m_inspector->Refresh(*m_world, *m_selection, *m_registry, *m_undo);
+            m_inspector->Refresh(*m_world, *m_selection, *m_registry, *m_undo, *m_editorUndo);
 
         if (m_assetBrowser)
             m_assetBrowser->Refresh();
@@ -356,21 +359,15 @@ namespace forge
         auto* undoAction = editMenu->addAction("&Undo");
         undoAction->setShortcut(QKeySequence{"Ctrl+Z"});
         connect(undoAction, &QAction::triggered, this, [this] {
-            if (m_undo && m_world)
-            {
-                m_undo->Undo(*m_world);
+            if (m_editorUndo && m_editorUndo->Undo())
                 RefreshAll();
-            }
         });
 
         auto* redoAction = editMenu->addAction("&Redo");
         redoAction->setShortcuts({QKeySequence{"Ctrl+Y"}, QKeySequence{"Ctrl+Shift+Z"}});
         connect(redoAction, &QAction::triggered, this, [this] {
-            if (m_undo && m_world)
-            {
-                m_undo->Redo(*m_world);
+            if (m_editorUndo && m_editorUndo->Redo())
                 RefreshAll();
-            }
         });
     }
 
@@ -389,7 +386,33 @@ namespace forge
         addDockWidget(Qt::RightDockWidgetArea, inspectorDock);
         m_docks.append(inspectorDock);
 
-        m_assetBrowser = new AssetBrowserPanel{this};
+        auto* lockBtn = new QToolButton{inspectorDock};
+        lockBtn->setText("\xf0\x9f\x94\x93");
+        lockBtn->setCheckable(true);
+        lockBtn->setChecked(false);
+        lockBtn->setCursor(Qt::PointingHandCursor);
+        lockBtn->setToolTip("Lock Inspector");
+        lockBtn->setStyleSheet(
+            "QToolButton { background: transparent; border: none; font-size: 14px; padding: 2px 6px; }"
+            "QToolButton:checked { color: #f0a500; }");
+        connect(lockBtn, &QToolButton::toggled, this, [this, lockBtn](bool checked) {
+            m_inspectorLocked = checked;
+            lockBtn->setText(checked ? "\xf0\x9f\x94\x92" : "\xf0\x9f\x94\x93");
+        });
+        inspectorDock->setTitleBarWidget(nullptr);
+
+        auto* titleBar = new QWidget{inspectorDock};
+        auto* titleLayout = new QHBoxLayout{titleBar};
+        titleLayout->setContentsMargins(8, 2, 4, 2);
+        titleLayout->setSpacing(4);
+        auto* titleLabel = new QLabel{"Inspector", titleBar};
+        titleLabel->setStyleSheet("color: #e8e8e8; font-size: 11px; font-weight: bold;");
+        titleLayout->addWidget(titleLabel);
+        titleLayout->addStretch();
+        titleLayout->addWidget(lockBtn);
+        inspectorDock->setTitleBarWidget(titleBar);
+
+        m_assetBrowser = new AssetBrowserPanel{m_editorUndo, this};
         auto* assetDock = new QDockWidget{"Assets", this};
         assetDock->setWidget(m_assetBrowser);
         addDockWidget(Qt::BottomDockWidgetArea, assetDock);
@@ -410,8 +433,8 @@ namespace forge
     void ForgeMainWindow::ConnectSignals()
     {
         connect(m_hierarchy, &HierarchyPanel::entitySelected, this, [this](uint32_t) {
-            if (m_world && m_registry && m_undo)
-                m_inspector->Refresh(*m_world, *m_selection, *m_registry, *m_undo);
+            if (!m_inspectorLocked && m_world && m_registry && m_undo)
+                m_inspector->Refresh(*m_world, *m_selection, *m_registry, *m_undo, *m_editorUndo);
         });
 
         connect(m_hierarchy, &HierarchyPanel::sceneModified, this, [this] {
@@ -425,10 +448,27 @@ namespace forge
             emit sceneModified();
         });
 
+        connect(m_inspector, &InspectorPanel::entityLabelChanged, this,
+                [this](queen::Entity entity) { m_hierarchy->RefreshEntityLabel(entity); });
+
+        connect(m_inspector, &InspectorPanel::browseToAsset, this, [this](const QString& path) {
+            m_assetBrowser->NavigateToFile(std::filesystem::path{path.toStdString()});
+        });
+
+        connect(m_assetBrowser, &AssetBrowserPanel::assetSelected, this, [this](const QString& path, AssetType type) {
+            if (m_inspectorLocked)
+                return;
+            if (m_selection)
+            {
+                m_selection->SelectAsset(std::filesystem::path{path.toStdString()}, type);
+                if (m_world && m_registry && m_undo)
+                    m_inspector->Refresh(*m_world, *m_selection, *m_registry, *m_undo, *m_editorUndo);
+            }
+        });
+
         connect(m_assetBrowser, &AssetBrowserPanel::gltfImportRequested, this, &ForgeMainWindow::gltfImportRequested);
 
-        connect(m_assetBrowser, &AssetBrowserPanel::sceneOpenRequested, this,
-                &ForgeMainWindow::sceneOpenRequested);
+        connect(m_assetBrowser, &AssetBrowserPanel::sceneOpenRequested, this, &ForgeMainWindow::sceneOpenRequested);
 
         connect(m_assetBrowser, &AssetBrowserPanel::assetImported, this, [this](const QString& path) {
             std::filesystem::path fsPath{path.toStdString()};

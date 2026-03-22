@@ -26,9 +26,8 @@
 #include <QUrl>
 #include <QVBoxLayout>
 
+#include <forge/editor_undo.h>
 #include <forge/forge_module.h>
-
-#include <hive/core/log.h>
 
 #include <nectar/registry/hiveid_file.h>
 
@@ -38,8 +37,6 @@
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
-
-static const hive::LogCategory LOG_ASSETS{"AssetBrowser"};
 
 namespace forge
 {
@@ -249,8 +246,10 @@ namespace forge
             if (!(event->modifiers() & (Qt::ControlModifier | Qt::ShiftModifier)))
                 clearSelection();
             if (hit != nullptr)
+            {
                 hit->setSelected(true);
-            setCurrentItem(hit);
+                setCurrentItem(hit);
+            }
             return;
         }
 
@@ -283,6 +282,13 @@ namespace forge
             m_didDrag = false;
             return;
         }
+
+        auto* hit = itemAt(event->pos());
+        if (hit != nullptr && event->button() == Qt::LeftButton)
+        {
+            emit itemClicked(hit);
+        }
+
         QListWidget::mouseReleaseEvent(event);
     }
 
@@ -379,7 +385,7 @@ namespace forge
         event->acceptProposedAction();
     }
 
-    static AssetType ClassifyExtension(const std::string& ext)
+    AssetType ClassifyExtension(const std::string& ext)
     {
         if (ext == ".nmsh")
             return AssetType::MESH;
@@ -642,114 +648,7 @@ namespace forge
         ThumbnailCache* m_cache{};
     };
 
-    void FileUndoStack::PushCreateFolder(const std::filesystem::path& created)
-    {
-        m_redoStack.clear();
-        m_undoStack.push_back({FileAction::CREATE_FOLDER, created, {}});
-    }
 
-    void FileUndoStack::PushCreateCopy(const std::filesystem::path& created, const std::filesystem::path& trashPath)
-    {
-        m_redoStack.clear();
-        m_undoStack.push_back({FileAction::CREATE_COPY, created, trashPath});
-    }
-
-    void FileUndoStack::PushDelete(const std::filesystem::path& original, const std::filesystem::path& trashPath)
-    {
-        m_redoStack.clear();
-        m_undoStack.push_back({FileAction::DELETE_FILE, original, trashPath});
-    }
-
-    void FileUndoStack::PushRename(const std::filesystem::path& newPath, const std::filesystem::path& oldPath)
-    {
-        m_redoStack.clear();
-        m_undoStack.push_back({FileAction::RENAME, newPath, oldPath});
-    }
-
-    void FileUndoStack::PushMove(const std::filesystem::path& newPath, const std::filesystem::path& oldPath)
-    {
-        m_redoStack.clear();
-        m_undoStack.push_back({FileAction::MOVE, newPath, oldPath});
-    }
-
-    bool FileUndoStack::Undo()
-    {
-        if (m_undoStack.empty())
-            return false;
-
-        auto entry = std::move(m_undoStack.back());
-        m_undoStack.pop_back();
-
-        if (!Execute(entry, true))
-            return false;
-
-        m_redoStack.push_back(std::move(entry));
-        return true;
-    }
-
-    bool FileUndoStack::Redo()
-    {
-        if (m_redoStack.empty())
-            return false;
-
-        auto entry = std::move(m_redoStack.back());
-        m_redoStack.pop_back();
-
-        if (!Execute(entry, false))
-            return false;
-
-        m_undoStack.push_back(std::move(entry));
-        return true;
-    }
-
-    bool FileUndoStack::Execute(const FileUndoEntry& entry, bool undo)
-    {
-        std::error_code ec;
-        switch (entry.m_action)
-        {
-        case FileAction::CREATE_FOLDER:
-            if (undo)
-                std::filesystem::remove_all(entry.m_path, ec);
-            else
-                std::filesystem::create_directory(entry.m_path, ec);
-            break;
-
-        case FileAction::CREATE_COPY:
-            if (undo)
-                std::filesystem::rename(entry.m_path, entry.m_auxPath, ec);
-            else
-                std::filesystem::rename(entry.m_auxPath, entry.m_path, ec);
-            break;
-
-        case FileAction::DELETE_FILE:
-            if (undo)
-                std::filesystem::rename(entry.m_auxPath, entry.m_path, ec);
-            else
-                std::filesystem::rename(entry.m_path, entry.m_auxPath, ec);
-            break;
-
-        case FileAction::RENAME:
-            if (undo)
-                std::filesystem::rename(entry.m_path, entry.m_auxPath, ec);
-            else
-                std::filesystem::rename(entry.m_auxPath, entry.m_path, ec);
-            break;
-
-        case FileAction::MOVE:
-            if (undo)
-                std::filesystem::rename(entry.m_path, entry.m_auxPath, ec);
-            else
-                std::filesystem::rename(entry.m_auxPath, entry.m_path, ec);
-            break;
-        }
-
-        if (ec)
-        {
-            hive::LogWarning(LOG_ASSETS, "File undo/redo failed: {}", ec.message());
-            return false;
-        }
-        return true;
-    }
 
     static QToolButton* MakeToolBtn(QWidget* parent, const QString& text, const QString& tooltip)
     {
@@ -766,12 +665,13 @@ namespace forge
         return btn;
     }
 
-    AssetBrowserPanel::AssetBrowserPanel(QWidget* parent)
+    AssetBrowserPanel::AssetBrowserPanel(EditorUndoManager* undoManager, QWidget* parent)
         : QWidget{parent}
         , m_historyBack{forge::GetAllocator()}
         , m_historyForward{forge::GetAllocator()}
     {
         setFocusPolicy(Qt::StrongFocus);
+        m_undoManager = undoManager;
 
         m_thumbnailCache = new ThumbnailCache{this};
         connect(m_thumbnailCache, &ThumbnailCache::ThumbnailLoaded, this, [this] {
@@ -938,6 +838,13 @@ namespace forge
         m_contentList->setItemDelegate(new ContentItemDelegate{m_thumbnailCache, m_contentList});
 
         connect(m_contentList, &QListWidget::itemDoubleClicked, this, &AssetBrowserPanel::OnContentDoubleClicked);
+        connect(m_contentList, &QListWidget::itemClicked, this, [this](QListWidgetItem* item) {
+            auto type = static_cast<AssetType>(item->data(Qt::UserRole + 1).toInt());
+            if (type != AssetType::FOLDER)
+            {
+                emit assetSelected(item->data(Qt::UserRole).toString(), type);
+            }
+        });
         connect(m_contentList, &QListWidget::customContextMenuRequested, this,
                 &AssetBrowserPanel::OnContentContextMenu);
     }
@@ -1121,8 +1028,8 @@ namespace forge
         UpdateBreadcrumb();
         UpdateStatusBar();
 
-        m_undoBtn->setEnabled(m_fileUndo.CanUndo());
-        m_redoBtn->setEnabled(m_fileUndo.CanRedo());
+        m_undoBtn->setEnabled(m_undoManager->CanUndo());
+        m_redoBtn->setEnabled(m_undoManager->CanRedo());
     }
 
     void AssetBrowserPanel::NavigateTo(const std::filesystem::path& dir)
@@ -1497,9 +1404,9 @@ namespace forge
         menu.addSeparator();
 
         auto* undoAction = menu.addAction("Undo\tCtrl+Z", this, &AssetBrowserPanel::UndoFileAction);
-        undoAction->setEnabled(m_fileUndo.CanUndo());
+        undoAction->setEnabled(m_undoManager->CanUndo());
         auto* redoAction = menu.addAction("Redo\tCtrl+Y", this, &AssetBrowserPanel::RedoFileAction);
-        redoAction->setEnabled(m_fileUndo.CanRedo());
+        redoAction->setEnabled(m_undoManager->CanRedo());
 
         menu.exec(m_contentList->mapToGlobal(pos));
     }
@@ -1672,7 +1579,9 @@ namespace forge
             return;
         }
 
-        m_fileUndo.PushCreateFolder(newPath);
+        m_undoManager->Push(
+            [newPath] { std::error_code ec; std::filesystem::remove_all(newPath, ec); },
+            [newPath] { std::error_code ec; std::filesystem::create_directory(newPath, ec); });
         Refresh();
     }
 
@@ -1701,7 +1610,9 @@ namespace forge
             std::filesystem::rename(oldHiveid, newHiveid, ec);
         }
 
-        m_fileUndo.PushRename(newPath, fsPath);
+        m_undoManager->Push(
+            [newPath, fsPath] { std::error_code ec; std::filesystem::rename(newPath, fsPath, ec); },
+            [newPath, fsPath] { std::error_code ec; std::filesystem::rename(fsPath, newPath, ec); });
 
         if (m_currentDir.generic_string().find(fsPath.generic_string()) != std::string::npos)
             m_currentDir = newPath;
@@ -1727,7 +1638,9 @@ namespace forge
             return;
         }
 
-        m_fileUndo.PushDelete(fsPath, trashPath);
+        m_undoManager->Push(
+            [fsPath, trashPath] { std::error_code ec; std::filesystem::rename(trashPath, fsPath, ec); },
+            [fsPath, trashPath] { std::error_code ec; std::filesystem::rename(fsPath, trashPath, ec); });
 
         if (m_currentDir.generic_string().find(fsPath.generic_string()) != std::string::npos)
             m_currentDir = fsPath.parent_path();
@@ -1769,7 +1682,11 @@ namespace forge
             std::error_code ec;
             std::filesystem::rename(fsPath, trashPath, ec);
             if (!ec)
-                m_fileUndo.PushDelete(fsPath, trashPath);
+            {
+                m_undoManager->Push(
+                    [fsPath, trashPath] { std::error_code e; std::filesystem::rename(trashPath, fsPath, e); },
+                    [fsPath, trashPath] { std::error_code e; std::filesystem::rename(fsPath, trashPath, e); });
+            }
         }
 
         Refresh();
@@ -1779,6 +1696,27 @@ namespace forge
     {
         std::filesystem::path target = std::filesystem::is_directory(path) ? path : path.parent_path();
         QDesktopServices::openUrl(QUrl::fromLocalFile(QString::fromStdString(target.string())));
+    }
+
+    void AssetBrowserPanel::NavigateToFile(const std::filesystem::path& filePath)
+    {
+        auto dir = filePath.parent_path();
+        NavigateTo(dir);
+
+        QString targetPath = QString::fromStdString(filePath.generic_string());
+        for (int i = 0; i < m_contentList->count(); ++i)
+        {
+            auto* item = m_contentList->item(i);
+            if (item->data(Qt::UserRole).toString() == targetPath)
+            {
+                m_contentList->clearSelection();
+                item->setSelected(true);
+                m_contentList->setCurrentItem(item);
+                m_contentList->scrollToItem(item);
+                emit assetSelected(targetPath, static_cast<AssetType>(item->data(Qt::UserRole + 1).toInt()));
+                break;
+            }
+        }
     }
 
     void AssetBrowserPanel::MoveAsset(const std::filesystem::path& src, const std::filesystem::path& dstDir)
@@ -1803,7 +1741,9 @@ namespace forge
             std::filesystem::rename(srcHiveid, dstHiveid, ec);
         }
 
-        m_fileUndo.PushMove(dstPath, src);
+        m_undoManager->Push(
+            [dstPath, src] { std::error_code e; std::filesystem::rename(dstPath, src, e); },
+            [dstPath, src] { std::error_code e; std::filesystem::rename(src, dstPath, e); });
         Refresh();
     }
 
@@ -1883,7 +1823,9 @@ namespace forge
                     std::filesystem::rename(src, dst, ec);
                     if (!ec)
                     {
-                        m_fileUndo.PushMove(dst, src);
+                        m_undoManager->Push(
+                            [dst, src] { std::error_code e; std::filesystem::rename(dst, src, e); },
+                            [dst, src] { std::error_code e; std::filesystem::rename(src, dst, e); });
                         auto srcHiveid = std::filesystem::path{src}.concat(".hiveid");
                         if (std::filesystem::exists(srcHiveid, ec))
                         {
@@ -1908,7 +1850,10 @@ namespace forge
                     }
                 }
                 CopyAssetFile(src, dst);
-                m_fileUndo.PushCreateCopy(dst, TrashPathFor(dst));
+                auto trashPath = TrashPathFor(dst);
+                m_undoManager->Push(
+                    [dst, trashPath] { std::error_code e; std::filesystem::rename(dst, trashPath, e); },
+                    [dst, trashPath] { std::error_code e; std::filesystem::rename(trashPath, dst, e); });
             }
         }
 
@@ -1944,7 +1889,10 @@ namespace forge
             }
 
             CopyAssetFile(src, dst);
-            m_fileUndo.PushCreateCopy(dst, TrashPathFor(dst));
+            auto trashPath = TrashPathFor(dst);
+            m_undoManager->Push(
+                [dst, trashPath] { std::error_code e; std::filesystem::rename(dst, trashPath, e); },
+                [dst, trashPath] { std::error_code e; std::filesystem::rename(trashPath, dst, e); });
         }
 
         Refresh();
@@ -2037,13 +1985,13 @@ namespace forge
 
     void AssetBrowserPanel::UndoFileAction()
     {
-        if (m_fileUndo.Undo())
+        if (m_undoManager->Undo())
             Refresh();
     }
 
     void AssetBrowserPanel::RedoFileAction()
     {
-        if (m_fileUndo.Redo())
+        if (m_undoManager->Redo())
             Refresh();
     }
 
