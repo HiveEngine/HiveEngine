@@ -70,6 +70,7 @@ namespace forge
         void hubBrowseRequested();
         void editorCloseRequested();
         void gltfImportRequested(const QString& path);
+        void sceneOpenRequested(const QString& path);
 
     private:
         void CreateMenus();
