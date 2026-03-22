@@ -48,6 +48,8 @@ namespace forge
 
         void RefreshAll();
         void SetAssetsRoot(const char* path);
+        void SetSceneDirty(bool dirty);
+        void SetSceneName(const QString& name);
         void AttachViewport(terra::WindowContext* window, swarm::RenderContext* ctx);
         void RenderFrame();
 
@@ -71,6 +73,7 @@ namespace forge
         void editorCloseRequested();
         void gltfImportRequested(const QString& path);
         void sceneOpenRequested(const QString& path);
+        void sceneModified();
 
     private:
         void CreateMenus();
@@ -93,5 +96,7 @@ namespace forge
         QWidget* m_editorWidget{};
         ProgressOverlay* m_progressOverlay{};
         QList<class QDockWidget*> m_docks;
+        QString m_sceneName;
+        bool m_sceneDirty{false};
     };
 } // namespace forge

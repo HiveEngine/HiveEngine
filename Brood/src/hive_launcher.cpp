@@ -26,6 +26,7 @@
 #include <forge/theme.h>
 
 #include <QApplication>
+#include <QMessageBox>
 #endif
 
 #include <brood/process_runtime.h>
@@ -142,6 +143,13 @@ namespace
                     s.m_mainWindow->RefreshAll();
                     if (!s.m_assetsRoot.IsEmpty())
                         s.m_mainWindow->SetAssetsRoot(s.m_assetsRoot.CStr());
+
+                    if (!s.m_currentScenePath.IsEmpty())
+                    {
+                        auto stem = std::filesystem::path{s.m_currentScenePath.CStr()}.stem().string();
+                        s.m_mainWindow->SetSceneName(QString::fromStdString(stem));
+                    }
+                    s.m_mainWindow->SetSceneDirty(false);
                 };
 
                 if (s.m_projectPath.IsEmpty())
@@ -162,22 +170,69 @@ namespace
                 QObject::connect(s.m_mainWindow, &forge::ForgeMainWindow::editorCloseRequested,
                                  [&ctx]() { ctx.m_app->RequestStop(); });
 
-                QObject::connect(s.m_mainWindow, &forge::ForgeMainWindow::saveRequested,
-                                 [&ctx, &s]() { SaveEditorScene(ctx, s); });
+                QObject::connect(s.m_mainWindow, &forge::ForgeMainWindow::saveRequested, [&ctx, &s]() {
+                    SaveEditorScene(ctx, s);
+                    s.m_mainWindow->SetSceneDirty(s.m_sceneDirty);
+                });
 
-                QObject::connect(s.m_mainWindow, &forge::ForgeMainWindow::saveAsRequested,
-                                 [&ctx, &s]() { SaveEditorSceneAs(ctx, s); });
+                QObject::connect(s.m_mainWindow, &forge::ForgeMainWindow::saveAsRequested, [&ctx, &s]() {
+                    SaveEditorSceneAs(ctx, s);
+                    s.m_mainWindow->SetSceneDirty(s.m_sceneDirty);
+                });
 
-                QObject::connect(s.m_mainWindow, &forge::ForgeMainWindow::openRequested,
-                                 [&ctx, &s]() { OpenEditorSceneWithPicker(ctx, s); });
+                QObject::connect(s.m_mainWindow, &forge::ForgeMainWindow::openRequested, [&ctx, &s]() {
+                    if (s.m_sceneDirty)
+                    {
+                        auto answer = QMessageBox::question(
+                            s.m_mainWindow, "Unsaved Changes",
+                            "The current scene has unsaved changes. Do you want to save before opening?",
+                            QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel);
+
+                        if (answer == QMessageBox::Cancel)
+                        {
+                            return;
+                        }
+                        if (answer == QMessageBox::Save)
+                        {
+                            SaveEditorScene(ctx, s);
+                        }
+                    }
+                    OpenEditorSceneWithPicker(ctx, s);
+                    s.m_mainWindow->SetSceneDirty(s.m_sceneDirty);
+                });
 
                 QObject::connect(
                     s.m_mainWindow, &forge::ForgeMainWindow::sceneOpenRequested,
                     [&ctx, &s](const QString& path) {
-                        RequestPendingEditorAction(ctx, s, PendingEditorAction::OPEN_SCENE,
-                                                   std::filesystem::path{path.toStdString()});
+                        if (s.m_sceneDirty)
+                        {
+                            auto answer = QMessageBox::question(
+                                s.m_mainWindow, "Unsaved Changes",
+                                "The current scene has unsaved changes. Do you want to save before opening?",
+                                QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel);
+
+                            if (answer == QMessageBox::Cancel)
+                            {
+                                return;
+                            }
+                            if (answer == QMessageBox::Save)
+                            {
+                                SaveEditorScene(ctx, s);
+                            }
+                        }
+
+                        s.m_pendingEditorAction = PendingEditorAction::NONE;
+                        auto fsPath = std::filesystem::path{path.toStdString()};
+                        LoadEditorSceneAsset(ctx, s, fsPath);
                         s.m_mainWindow->RefreshAll();
+                        s.m_mainWindow->SetSceneName(QString::fromStdString(fsPath.stem().string()));
+                        s.m_mainWindow->SetSceneDirty(false);
                     });
+
+                QObject::connect(s.m_mainWindow, &forge::ForgeMainWindow::sceneModified, [&s]() {
+                    s.m_sceneDirty = true;
+                    s.m_mainWindow->SetSceneDirty(true);
+                });
 
                 QObject::connect(
                     s.m_mainWindow, &forge::ForgeMainWindow::hubCreateRequested,

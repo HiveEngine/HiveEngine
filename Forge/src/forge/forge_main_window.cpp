@@ -2,13 +2,10 @@
 
 #include <hive/core/log.h>
 
-#include <comb/default_allocator.h>
-
 #include <queen/reflect/component_registry.h>
 #include <queen/world/world.h>
 
 #include <nectar/mesh/mesh_data.h>
-#include <nectar/registry/hiveid_file.h>
 
 #include <waggle/components/mesh_reference.h>
 #include <waggle/components/name.h>
@@ -30,6 +27,7 @@
 #include <QIcon>
 #include <QLabel>
 #include <QMenuBar>
+#include <QMessageBox>
 #include <QPainter>
 #include <QPainterPath>
 #include <QPixmap>
@@ -247,6 +245,23 @@ namespace forge
 
     void ForgeMainWindow::closeEvent(QCloseEvent* event)
     {
+        if (m_sceneDirty)
+        {
+            auto answer = QMessageBox::question(
+                this, "Unsaved Changes",
+                "The current scene has unsaved changes. Do you want to save before closing?",
+                QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel);
+
+            if (answer == QMessageBox::Cancel)
+            {
+                event->ignore();
+                return;
+            }
+            if (answer == QMessageBox::Save)
+            {
+                emit saveRequested();
+            }
+        }
         emit editorCloseRequested();
         event->accept();
     }
@@ -261,6 +276,27 @@ namespace forge
 
         if (m_assetBrowser)
             m_assetBrowser->Refresh();
+    }
+
+    void ForgeMainWindow::SetSceneDirty(bool dirty)
+    {
+        m_sceneDirty = dirty;
+        QString title = "HiveEngine";
+        if (!m_sceneName.isEmpty())
+        {
+            title = QString{"HiveEngine - %1"}.arg(m_sceneName);
+        }
+        if (m_sceneDirty)
+        {
+            title += " *";
+        }
+        setWindowTitle(title);
+    }
+
+    void ForgeMainWindow::SetSceneName(const QString& name)
+    {
+        m_sceneName = name;
+        SetSceneDirty(m_sceneDirty);
     }
 
     void ForgeMainWindow::SetAssetsRoot(const char* path)
@@ -378,11 +414,15 @@ namespace forge
                 m_inspector->Refresh(*m_world, *m_selection, *m_registry, *m_undo);
         });
 
-        connect(m_hierarchy, &HierarchyPanel::sceneModified, this, [this] { RefreshAll(); });
+        connect(m_hierarchy, &HierarchyPanel::sceneModified, this, [this] {
+            RefreshAll();
+            emit sceneModified();
+        });
 
         connect(m_inspector, &InspectorPanel::sceneModified, this, [this] {
             if (m_world && m_hierarchy)
                 m_hierarchy->Refresh(*m_world);
+            emit sceneModified();
         });
 
         connect(m_assetBrowser, &AssetBrowserPanel::gltfImportRequested, this, &ForgeMainWindow::gltfImportRequested);
