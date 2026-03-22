@@ -74,15 +74,6 @@ namespace forge
         UNKNOWN
     };
 
-    enum class FileAction : uint8_t
-    {
-        CREATE_FOLDER,
-        CREATE_COPY,
-        DELETE_FILE,
-        RENAME,
-        MOVE
-    };
-
     enum class SortMode : uint8_t
     {
         NAME,
@@ -90,36 +81,8 @@ namespace forge
         DATE
     };
 
-    struct FileUndoEntry
-    {
-        FileAction m_action{};
-        std::filesystem::path m_path;    // primary path (created/deleted/renamed/moved item)
-        std::filesystem::path m_auxPath; // rename: old path, move: original location, delete: trash path
-    };
-
-    class FileUndoStack
-    {
-    public:
-        void PushCreateFolder(const std::filesystem::path& created);
-        void PushCreateCopy(const std::filesystem::path& created, const std::filesystem::path& trashPath);
-        void PushDelete(const std::filesystem::path& original, const std::filesystem::path& trashPath);
-        void PushRename(const std::filesystem::path& newPath, const std::filesystem::path& oldPath);
-        void PushMove(const std::filesystem::path& newPath, const std::filesystem::path& oldPath);
-
-        [[nodiscard]] bool Undo();
-        [[nodiscard]] bool Redo();
-
-        [[nodiscard]] bool CanUndo() const noexcept { return !m_undoStack.empty(); }
-        [[nodiscard]] bool CanRedo() const noexcept { return !m_redoStack.empty(); }
-
-    private:
-        bool Execute(const FileUndoEntry& entry, bool undo);
-
-        std::vector<FileUndoEntry> m_undoStack;
-        std::vector<FileUndoEntry> m_redoStack;
-    };
-
     class ContentItemDelegate;
+    class EditorUndoManager;
     class ThumbnailCache;
 
     class AssetBrowserPanel : public QWidget
@@ -127,7 +90,7 @@ namespace forge
         Q_OBJECT
 
     public:
-        explicit AssetBrowserPanel(QWidget* parent = nullptr);
+        explicit AssetBrowserPanel(EditorUndoManager* undoManager, QWidget* parent = nullptr);
 
         void SetAssetsRoot(const char* path);
         void Refresh();
@@ -214,7 +177,7 @@ namespace forge
         wax::Vector<std::filesystem::path> m_historyBack;
         wax::Vector<std::filesystem::path> m_historyForward;
 
-        FileUndoStack m_fileUndo;
+        EditorUndoManager* m_undoManager{};
         ThumbnailCache* m_thumbnailCache{};
 
         QFileSystemWatcher m_fsWatcher;

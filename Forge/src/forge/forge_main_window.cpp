@@ -13,6 +13,7 @@
 
 #include <forge/asset_browser.h>
 #include <forge/console_panel.h>
+#include <forge/editor_undo.h>
 #include <forge/hierarchy_panel.h>
 #include <forge/inspector_panel.h>
 #include <forge/progress_overlay.h>
@@ -234,6 +235,8 @@ namespace forge
         }
         m_hub->hide();
 
+        m_editorUndo = new EditorUndoManager{};
+
         CreateMenus();
         CreateDocks();
         ConnectSignals();
@@ -272,7 +275,7 @@ namespace forge
             m_hierarchy->Refresh(*m_world);
 
         if (m_world && m_inspector && m_selection && m_registry && m_undo)
-            m_inspector->Refresh(*m_world, *m_selection, *m_registry, *m_undo);
+            m_inspector->Refresh(*m_world, *m_selection, *m_registry, *m_undo, *m_editorUndo);
 
         if (m_assetBrowser)
             m_assetBrowser->Refresh();
@@ -356,21 +359,15 @@ namespace forge
         auto* undoAction = editMenu->addAction("&Undo");
         undoAction->setShortcut(QKeySequence{"Ctrl+Z"});
         connect(undoAction, &QAction::triggered, this, [this] {
-            if (m_undo && m_world)
-            {
-                m_undo->Undo(*m_world);
+            if (m_editorUndo && m_editorUndo->Undo())
                 RefreshAll();
-            }
         });
 
         auto* redoAction = editMenu->addAction("&Redo");
         redoAction->setShortcuts({QKeySequence{"Ctrl+Y"}, QKeySequence{"Ctrl+Shift+Z"}});
         connect(redoAction, &QAction::triggered, this, [this] {
-            if (m_undo && m_world)
-            {
-                m_undo->Redo(*m_world);
+            if (m_editorUndo && m_editorUndo->Redo())
                 RefreshAll();
-            }
         });
     }
 
@@ -389,7 +386,7 @@ namespace forge
         addDockWidget(Qt::RightDockWidgetArea, inspectorDock);
         m_docks.append(inspectorDock);
 
-        m_assetBrowser = new AssetBrowserPanel{this};
+        m_assetBrowser = new AssetBrowserPanel{m_editorUndo, this};
         auto* assetDock = new QDockWidget{"Assets", this};
         assetDock->setWidget(m_assetBrowser);
         addDockWidget(Qt::BottomDockWidgetArea, assetDock);
@@ -411,7 +408,7 @@ namespace forge
     {
         connect(m_hierarchy, &HierarchyPanel::entitySelected, this, [this](uint32_t) {
             if (m_world && m_registry && m_undo)
-                m_inspector->Refresh(*m_world, *m_selection, *m_registry, *m_undo);
+                m_inspector->Refresh(*m_world, *m_selection, *m_registry, *m_undo, *m_editorUndo);
         });
 
         connect(m_hierarchy, &HierarchyPanel::sceneModified, this, [this] {
@@ -431,7 +428,7 @@ namespace forge
                     {
                         m_selection->SelectAsset(std::filesystem::path{path.toStdString()}, type);
                         if (m_world && m_registry && m_undo)
-                            m_inspector->Refresh(*m_world, *m_selection, *m_registry, *m_undo);
+                            m_inspector->Refresh(*m_world, *m_selection, *m_registry, *m_undo, *m_editorUndo);
                     }
                 });
 

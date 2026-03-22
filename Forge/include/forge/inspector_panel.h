@@ -21,6 +21,7 @@ namespace forge
 {
     enum class AssetType : uint8_t;
     class EditorSelection;
+    class EditorUndoManager;
     class UndoStack;
 
     class InspectorPanel : public QScrollArea
@@ -31,21 +32,22 @@ namespace forge
         explicit InspectorPanel(QWidget* parent = nullptr);
 
         void Refresh(queen::World& world, EditorSelection& selection, const queen::ComponentRegistry<256>& registry,
-                     UndoStack& undo);
+                     UndoStack& undo, EditorUndoManager& editorUndo);
 
     signals:
         void sceneModified();
 
     private:
         void RefreshEntity(queen::World& world, EditorSelection& selection,
-                           const queen::ComponentRegistry<256>& registry, UndoStack& undo);
-        void RefreshAsset(const std::filesystem::path& path, AssetType type);
+                           const queen::ComponentRegistry<256>& registry, UndoStack& undo,
+                           EditorUndoManager& editorUndo);
+        void RefreshAsset(const std::filesystem::path& path, AssetType type, EditorUndoManager& editorUndo);
         void RefreshTexture(const std::filesystem::path& path, QVBoxLayout* layout,
                             const std::function<void(const char*, const QString&)>& addRow);
         void RefreshMesh(const std::filesystem::path& path,
                          const std::function<void(const char*, const QString&)>& addRow);
-        void RefreshMaterial(const std::filesystem::path& path,
-                             const std::function<void(const char*, const QString&)>& addRow);
+        void RefreshMaterial(const std::filesystem::path& path, QVBoxLayout* layout,
+                             EditorUndoManager& editorUndo);
         void ShowEmpty();
 
         struct FieldContext

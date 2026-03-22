@@ -26,6 +26,7 @@ namespace forge
     class ConsolePanel;
     class EditorSelection;
     class EditorToolbar;
+    class EditorUndoManager;
     class HierarchyPanel;
     class InspectorPanel;
     class ProgressOverlay;
@@ -95,6 +96,7 @@ namespace forge
         QWidget* m_loadingWidget{};
         QWidget* m_editorWidget{};
         ProgressOverlay* m_progressOverlay{};
+        EditorUndoManager* m_editorUndo{};
         QList<class QDockWidget*> m_docks;
         QString m_sceneName;
         bool m_sceneDirty{false};

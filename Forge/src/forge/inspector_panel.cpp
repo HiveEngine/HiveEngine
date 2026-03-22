@@ -12,12 +12,13 @@
 #include <nectar/mesh/mesh_data.h>
 
 #include <forge/asset_browser.h>
+#include <forge/editor_undo.h>
+#include <forge/material_inspector.h>
 #include <forge/selection.h>
 #include <forge/undo.h>
 
 #include <QCheckBox>
 #include <QColorDialog>
-#include <QFile>
 #include <QComboBox>
 #include <QDoubleSpinBox>
 #include <QFormLayout>
@@ -40,8 +41,8 @@ namespace forge
 {
     namespace
     {
-        constexpr float kDeg = 180.f / hive::math::kPi;
-        constexpr float kRad = hive::math::kPi / 180.f;
+        constexpr float DEG_PER_RAD = 180.f / hive::math::kPi;
+        constexpr float RAD_PER_DEG = hive::math::kPi / 180.f;
 
         struct SnapshotState
         {
@@ -126,8 +127,8 @@ namespace forge
             return spin;
         }
 
-        constexpr const char* kAxisLabels[] = {"X", "Y", "Z", "W"};
-        constexpr const char* kAxisColors[] = {"#e05555", "#55b855", "#5580e0", "#c0c0c0"};
+        constexpr const char* AXIS_LABELS[] = {"X", "Y", "Z", "W"};
+        constexpr const char* AXIS_COLORS[] = {"#e05555", "#55b855", "#5580e0", "#c0c0c0"};
 
         struct AxisSpinConfig
         {
@@ -150,11 +151,11 @@ namespace forge
 
             for (int axis = 0; axis < axisCount; ++axis)
             {
-                auto* axisLabel = new QLabel{kAxisLabels[axis]};
+                auto* axisLabel = new QLabel{AXIS_LABELS[axis]};
                 axisLabel->setFixedWidth(12);
                 axisLabel->setAlignment(Qt::AlignCenter);
                 axisLabel->setStyleSheet(
-                    QString{"color: %1; font-size: 10px; font-weight: bold;"}.arg(kAxisColors[axis]));
+                    QString{"color: %1; font-size: 10px; font-weight: bold;"}.arg(AXIS_COLORS[axis]));
                 hbox->addWidget(axisLabel);
 
                 auto* spin = MakeDoubleSpinBox(configs[axis].m_value, configs[axis].m_step);
@@ -224,15 +225,16 @@ namespace forge
     }
 
     void InspectorPanel::Refresh(queen::World& world, EditorSelection& selection,
-                                 const queen::ComponentRegistry<256>& registry, UndoStack& undo)
+                                 const queen::ComponentRegistry<256>& registry, UndoStack& undo,
+                                 EditorUndoManager& editorUndo)
     {
         switch (selection.Kind())
         {
         case SelectionKind::ENTITY:
-            RefreshEntity(world, selection, registry, undo);
+            RefreshEntity(world, selection, registry, undo, editorUndo);
             return;
         case SelectionKind::ASSET:
-            RefreshAsset(selection.AssetPath(), selection.SelectedAssetType());
+            RefreshAsset(selection.AssetPath(), selection.SelectedAssetType(), editorUndo);
             return;
         case SelectionKind::NONE:
             ShowEmpty();
@@ -257,7 +259,8 @@ namespace forge
 
     static constexpr int ASSET_PREVIEW_SIZE = 256;
 
-    void InspectorPanel::RefreshAsset(const std::filesystem::path& path, AssetType type)
+    void InspectorPanel::RefreshAsset(const std::filesystem::path& path, AssetType type,
+                                      EditorUndoManager& editorUndo)
     {
         auto* content = new QWidget;
         content->setObjectName("inspectorContent");
@@ -313,7 +316,7 @@ namespace forge
         else if (type == AssetType::MESH)
             RefreshMesh(path, addRow);
         else if (type == AssetType::MATERIAL)
-            RefreshMaterial(path, addRow);
+            RefreshMaterial(path, rootLayout, editorUndo);
 
         rootLayout->addStretch();
         setWidget(content);
@@ -360,66 +363,17 @@ namespace forge
         std::fclose(f);
     }
 
-    void InspectorPanel::RefreshMaterial(const std::filesystem::path& path,
-                                         const std::function<void(const char*, const QString&)>& addRow)
+
+    void InspectorPanel::RefreshMaterial(const std::filesystem::path& path, QVBoxLayout* layout,
+                                         EditorUndoManager& editorUndo)
     {
-        QFile matFile{QString::fromStdString(path.string())};
-        if (!matFile.open(QIODevice::ReadOnly | QIODevice::Text))
-            return;
-
-        QString currentSection;
-        while (!matFile.atEnd())
-        {
-            QString line = matFile.readLine().trimmed();
-            if (line.isEmpty() || line.startsWith('#'))
-                continue;
-
-            if (line.startsWith('[') && line.endsWith(']'))
-            {
-                currentSection = line.mid(1, line.size() - 2);
-                continue;
-            }
-
-            int eq = line.indexOf('=');
-            if (eq < 0)
-                continue;
-
-            QString key = line.left(eq).trimmed();
-            QString value = line.mid(eq + 1).trimmed();
-            if (value.startsWith('"') && value.endsWith('"'))
-                value = value.mid(1, value.size() - 2);
-
-            if (currentSection == "material")
-            {
-                if (key == "name" && !value.isEmpty())
-                    addRow("Mat Name", value);
-                else if (key == "shader")
-                    addRow("Shader", value);
-                else if (key == "blend")
-                    addRow("Blend", value);
-                else if (key == "double_sided")
-                    addRow("2-Sided", value);
-                else if (key == "alpha_cutoff")
-                    addRow("Alpha Cut", value);
-            }
-            else if (currentSection == "factors")
-            {
-                if (key == "base_color")
-                    addRow("Base Color", value);
-                else if (key == "metallic")
-                    addRow("Metallic", value);
-                else if (key == "roughness")
-                    addRow("Roughness", value);
-            }
-            else if (currentSection == "textures")
-            {
-                addRow(key.toUtf8().constData(), value);
-            }
-        }
+        auto* matInspector = new MaterialInspector{path, editorUndo, this};
+        layout->addWidget(matInspector);
     }
 
     void InspectorPanel::RefreshEntity(queen::World& world, EditorSelection& selection,
-                                       const queen::ComponentRegistry<256>& registry, UndoStack& undo)
+                                       const queen::ComponentRegistry<256>& registry, UndoStack& undo,
+                                       EditorUndoManager& editorUndo)
     {
         auto* content = new QWidget;
         content->setObjectName("inspectorContent");
@@ -508,7 +462,7 @@ namespace forge
                 if (HasFlag(field, queen::FieldFlag::ANGLE))
                 {
                     spin->setSuffix(QString::fromUtf8("\xC2\xB0"));
-                    spin->setValue(static_cast<double>(*value * kDeg));
+                    spin->setValue(static_cast<double>(*value * DEG_PER_RAD));
                 }
 
                 auto snapshot = std::make_shared<SnapshotState>();
@@ -519,7 +473,7 @@ namespace forge
                                      float newVal = static_cast<float>(spin->value());
                                      if (isAngle)
                                      {
-                                         newVal *= kRad;
+                                         newVal *= RAD_PER_DEG;
                                      }
                                      if (newVal != *value)
                                      {
@@ -712,7 +666,7 @@ namespace forge
                     auto quatToEuler = [](const float* quat, float* euler) {
                         const float sinr = 2.f * (quat[3] * quat[0] + quat[1] * quat[2]);
                         const float cosr = 1.f - 2.f * (quat[0] * quat[0] + quat[1] * quat[1]);
-                        euler[0] = std::atan2(sinr, cosr) * kDeg;
+                        euler[0] = std::atan2(sinr, cosr) * DEG_PER_RAD;
 
                         const float sinp = 2.f * (quat[3] * quat[1] - quat[2] * quat[0]);
                         if (std::fabs(sinp) >= 1.f)
@@ -721,18 +675,18 @@ namespace forge
                         }
                         else
                         {
-                            euler[1] = std::asin(sinp) * kDeg;
+                            euler[1] = std::asin(sinp) * DEG_PER_RAD;
                         }
 
                         const float siny = 2.f * (quat[3] * quat[2] + quat[0] * quat[1]);
                         const float cosy = 1.f - 2.f * (quat[1] * quat[1] + quat[2] * quat[2]);
-                        euler[2] = std::atan2(siny, cosy) * kDeg;
+                        euler[2] = std::atan2(siny, cosy) * DEG_PER_RAD;
                     };
 
                     auto eulerToQuat = [](const float* euler, float* quat) {
-                        const float p = euler[0] * kRad * 0.5f;
-                        const float y = euler[1] * kRad * 0.5f;
-                        const float r = euler[2] * kRad * 0.5f;
+                        const float p = euler[0] * RAD_PER_DEG * 0.5f;
+                        const float y = euler[1] * RAD_PER_DEG * 0.5f;
+                        const float r = euler[2] * RAD_PER_DEG * 0.5f;
 
                         const float cp = std::cos(p);
                         const float sp = std::sin(p);
@@ -750,11 +704,11 @@ namespace forge
                     float euler[3];
                     quatToEuler(q, euler);
 
-                    static constexpr const char* kDegSuffix = "\xC2\xB0";
+                    static constexpr const char* DEG_SUFFIX = "\xC2\xB0";
                     AxisSpinConfig configs[3];
                     for (int i = 0; i < 3; ++i)
                     {
-                        configs[i] = {static_cast<double>(euler[i]), 0.5, -360.0, 360.0, kDegSuffix};
+                        configs[i] = {static_cast<double>(euler[i]), 0.5, -360.0, 360.0, DEG_SUFFIX};
                     }
 
                     auto snapshot = std::make_shared<SnapshotState>();

@@ -12,7 +12,10 @@ target_sources(Forge
         src/forge/selection.cpp
         src/forge/hierarchy_panel.cpp
         src/forge/undo.cpp
+        src/forge/editor_undo.cpp
         src/forge/inspector_panel.cpp
+        src/forge/material_inspector.cpp
+        include/forge/material_inspector.h
         src/forge/asset_browser.cpp
         src/forge/console_panel.cpp
         src/forge/toolbar.cpp
