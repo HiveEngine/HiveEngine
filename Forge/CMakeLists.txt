@@ -14,8 +14,16 @@ target_sources(Forge
         src/forge/undo.cpp
         src/forge/editor_undo.cpp
         src/forge/inspector_panel.cpp
+        src/forge/entity_inspector.cpp
+        src/forge/asset_inspector.cpp
         src/forge/material_inspector.cpp
+        src/forge/asset_picker.cpp
+        include/forge/inspector_panel.h
+        include/forge/entity_inspector.h
+        include/forge/asset_inspector.h
+        include/forge/inspector_widgets.h
         include/forge/material_inspector.h
+        include/forge/asset_picker.h
         src/forge/asset_browser.cpp
         src/forge/console_panel.cpp
         src/forge/toolbar.cpp

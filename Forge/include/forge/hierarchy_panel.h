@@ -4,6 +4,8 @@
 
 #include <QWidget>
 
+#include <unordered_map>
+
 class QTreeWidget;
 class QTreeWidgetItem;
 
@@ -27,6 +29,7 @@ namespace forge
 
         void SetLabelFn(EntityLabelFn fn);
         void Refresh(queen::World& world);
+        void RefreshEntityLabel(queen::Entity entity);
 
     signals:
         void entitySelected(uint32_t entityIndex);
@@ -38,9 +41,14 @@ namespace forge
         void OnItemClicked(QTreeWidgetItem* item, int column);
         void ShowEntityContextMenu(const QPoint& pos);
 
+        void SelectRange(QTreeWidgetItem* from, QTreeWidgetItem* to);
+        void AddItemToSelection(QTreeWidgetItem* item);
+
         QTreeWidget* m_tree{};
         EditorSelection& m_selection;
         EntityLabelFn m_labelFn{};
         queen::World* m_currentWorld{};
+        QTreeWidgetItem* m_lastClickedItem{};
+        std::unordered_map<uint32_t, QTreeWidgetItem*> m_entityItems;
     };
 } // namespace forge

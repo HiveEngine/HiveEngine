@@ -18,7 +18,7 @@ function(brood_link_test_target target)
             Drone
     )
 
-    foreach(_module IN ITEMS Terra Antennae Swarm)
+    foreach(_module IN ITEMS Terra Antennae Swarm Forge)
         if(TARGET ${_module})
             target_link_libraries(${target} PRIVATE ${_module})
         endif()
@@ -105,6 +105,10 @@ if(HIVE_BUILD_TESTING)
                 list(APPEND BROOD_BENCHMARK_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/../${_module}/tests)
             endif()
         endforeach()
+    endif()
+
+    if(TARGET Forge)
+        list(APPEND BROOD_TEST_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/../Forge/tests)
     endif()
 
     function(brood_collect_sources out_var entrypoint pattern)

@@ -32,7 +32,7 @@ namespace forge
         return true;
     }
 
-    void EditorUndoManager::Clear()
+    void EditorUndoManager::Clear() noexcept
     {
         m_undoStack.clear();
         m_redoStack.clear();

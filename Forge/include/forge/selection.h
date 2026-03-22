@@ -1,10 +1,10 @@
 #pragma once
 
+#include <wax/containers/vector.h>
+
 #include <queen/core/entity.h>
 
 #include <forge/forge_module.h>
-
-#include <wax/containers/vector.h>
 
 #include <cstdint>
 #include <filesystem>
@@ -25,17 +25,33 @@ namespace forge
     public:
         void Select(queen::Entity entity);
         void Toggle(queen::Entity entity);
+        void AddToSelection(queen::Entity entity);
         void SelectAsset(const std::filesystem::path& path, AssetType type);
         void Clear();
 
-        [[nodiscard]] SelectionKind Kind() const noexcept { return m_kind; }
+        [[nodiscard]] SelectionKind Kind() const noexcept
+        {
+            return m_kind;
+        }
 
         [[nodiscard]] bool IsSelected(queen::Entity entity) const noexcept;
-        [[nodiscard]] queen::Entity Primary() const noexcept { return m_primary; }
-        [[nodiscard]] const wax::Vector<queen::Entity>& All() const noexcept { return m_selected; }
-        [[nodiscard]] bool IsEmpty() const noexcept { return m_kind == SelectionKind::NONE; }
+        [[nodiscard]] queen::Entity Primary() const noexcept
+        {
+            return m_primary;
+        }
+        [[nodiscard]] const wax::Vector<queen::Entity>& All() const noexcept
+        {
+            return m_selected;
+        }
+        [[nodiscard]] bool IsEmpty() const noexcept
+        {
+            return m_kind == SelectionKind::NONE;
+        }
 
-        [[nodiscard]] const std::filesystem::path& AssetPath() const noexcept { return m_assetPath; }
+        [[nodiscard]] const std::filesystem::path& AssetPath() const noexcept
+        {
+            return m_assetPath;
+        }
         [[nodiscard]] AssetType SelectedAssetType() const noexcept;
 
     private:

@@ -441,12 +441,12 @@ namespace comb
 
         // 3. Fill with freed pattern (detect use-after-free)
 #if COMB_MEM_DEBUG_USE_AFTER_FREE
-        std::memset(ptr, debug::freedMemoryPattern, info->m_size);
+        std::memset(ptr, debug::freedMemoryPattern, info.m_size);
 #endif
 
         // 4. Record deallocation in history
 #if COMB_MEM_DEBUG_HISTORY
-        m_history->RecordDeallocation(ptr, info->m_size);
+        m_history->RecordDeallocation(ptr, info.m_size);
 #endif
 
         // 5. Unregister allocation

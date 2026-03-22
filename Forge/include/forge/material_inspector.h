@@ -3,7 +3,9 @@
 #include <QWidget>
 
 #include <filesystem>
+#include <functional>
 #include <map>
+#include <memory>
 
 namespace forge
 {
@@ -23,7 +25,9 @@ namespace forge
     };
 
     [[nodiscard]] MatFields ParseMatFile(const std::filesystem::path& path);
-    void WriteMatFile(const std::filesystem::path& path, const MatFields& mat);
+
+    static constexpr int MATERIAL_THUMB_SIZE = 48;
+    [[nodiscard]] bool WriteMatFile(const std::filesystem::path& path, const MatFields& mat);
 
     class MaterialInspector : public QWidget
     {
@@ -33,7 +37,16 @@ namespace forge
         MaterialInspector(const std::filesystem::path& path, EditorUndoManager& editorUndo,
                           QWidget* parent = nullptr);
 
+    protected:
+        bool eventFilter(QObject* obj, QEvent* event) override;
+
     signals:
         void materialModified();
+        void browseToAsset(const QString& path);
+
+    private:
+        std::shared_ptr<MatFields> m_matState;
+        std::shared_ptr<std::filesystem::path> m_matPath;
+        std::function<void()> m_saveMat;
     };
 } // namespace forge

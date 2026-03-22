@@ -97,6 +97,7 @@ namespace forge
         QWidget* m_editorWidget{};
         ProgressOverlay* m_progressOverlay{};
         EditorUndoManager* m_editorUndo{};
+        bool m_inspectorLocked{false};
         QList<class QDockWidget*> m_docks;
         QString m_sceneName;
         bool m_sceneDirty{false};

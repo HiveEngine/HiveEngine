@@ -74,6 +74,8 @@ namespace forge
         UNKNOWN
     };
 
+    [[nodiscard]] AssetType ClassifyExtension(const std::string& ext);
+
     enum class SortMode : uint8_t
     {
         NAME,
@@ -95,6 +97,7 @@ namespace forge
         void SetAssetsRoot(const char* path);
         void Refresh();
         void MoveAsset(const std::filesystem::path& src, const std::filesystem::path& dstDir);
+        void NavigateToFile(const std::filesystem::path& filePath);
 
     signals:
         void assetImported(const QString& path);

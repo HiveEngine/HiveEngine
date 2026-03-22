@@ -18,7 +18,7 @@ namespace forge
         [[nodiscard]] bool CanUndo() const noexcept { return !m_undoStack.empty(); }
         [[nodiscard]] bool CanRedo() const noexcept { return !m_redoStack.empty(); }
 
-        void Clear();
+        void Clear() noexcept;
 
     private:
         struct Command

@@ -249,7 +249,6 @@ namespace forge
             {
                 hit->setSelected(true);
                 setCurrentItem(hit);
-                emit itemClicked(hit);
             }
             return;
         }
@@ -283,6 +282,13 @@ namespace forge
             m_didDrag = false;
             return;
         }
+
+        auto* hit = itemAt(event->pos());
+        if (hit != nullptr && event->button() == Qt::LeftButton)
+        {
+            emit itemClicked(hit);
+        }
+
         QListWidget::mouseReleaseEvent(event);
     }
 
@@ -379,7 +385,7 @@ namespace forge
         event->acceptProposedAction();
     }
 
-    static AssetType ClassifyExtension(const std::string& ext)
+    AssetType ClassifyExtension(const std::string& ext)
     {
         if (ext == ".nmsh")
             return AssetType::MESH;
@@ -1690,6 +1696,27 @@ namespace forge
     {
         std::filesystem::path target = std::filesystem::is_directory(path) ? path : path.parent_path();
         QDesktopServices::openUrl(QUrl::fromLocalFile(QString::fromStdString(target.string())));
+    }
+
+    void AssetBrowserPanel::NavigateToFile(const std::filesystem::path& filePath)
+    {
+        auto dir = filePath.parent_path();
+        NavigateTo(dir);
+
+        QString targetPath = QString::fromStdString(filePath.generic_string());
+        for (int i = 0; i < m_contentList->count(); ++i)
+        {
+            auto* item = m_contentList->item(i);
+            if (item->data(Qt::UserRole).toString() == targetPath)
+            {
+                m_contentList->clearSelection();
+                item->setSelected(true);
+                m_contentList->setCurrentItem(item);
+                m_contentList->scrollToItem(item);
+                emit assetSelected(targetPath, static_cast<AssetType>(item->data(Qt::UserRole + 1).toInt()));
+                break;
+            }
+        }
     }
 
     void AssetBrowserPanel::MoveAsset(const std::filesystem::path& src, const std::filesystem::path& dstDir)
