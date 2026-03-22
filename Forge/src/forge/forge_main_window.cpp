@@ -27,10 +27,12 @@
 
 #include <QCloseEvent>
 #include <QDockWidget>
+#include <QIcon>
 #include <QLabel>
 #include <QMenuBar>
 #include <QPainter>
 #include <QPainterPath>
+#include <QPixmap>
 #include <QPropertyAnimation>
 #include <QStackedWidget>
 #include <QTimer>
@@ -42,12 +44,47 @@
 
 static const hive::LogCategory LOG_FORGE{"Forge"};
 
+static QIcon MakeHexIcon()
+{
+    QPixmap pix{64, 64};
+    pix.fill(Qt::transparent);
+
+    QPainter p{&pix};
+    p.setRenderHint(QPainter::Antialiasing);
+    p.translate(32.0, 32.0);
+
+    auto drawHex = [&](double r, QColor color) {
+        QPainterPath hex;
+        for (int i = 0; i < 6; ++i)
+        {
+            double a = (60.0 * i - 30.0) * 3.14159265 / 180.0;
+            QPointF pt{r * std::cos(a), r * std::sin(a)};
+            if (i == 0)
+                hex.moveTo(pt);
+            else
+                hex.lineTo(pt);
+        }
+        hex.closeSubpath();
+        p.setPen(QPen{color, 2.0, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin});
+        p.setBrush(Qt::NoBrush);
+        p.drawPath(hex);
+    };
+
+    drawHex(26.0, QColor{0xf0, 0xa5, 0x00, 180});
+    drawHex(18.0, QColor{0xf0, 0xa5, 0x00});
+    drawHex(10.0, QColor{0xf0, 0xa5, 0x00, 90});
+    p.end();
+
+    return QIcon{pix};
+}
+
 namespace forge
 {
     ForgeMainWindow::ForgeMainWindow(QWidget* parent)
         : QMainWindow{parent}
     {
-        setWindowTitle("Hive Engine");
+        setWindowTitle("HiveEngine");
+        setWindowIcon(MakeHexIcon());
         resize(1200, 750);
 
         m_hub = new ProjectHub{this};
@@ -76,7 +113,7 @@ namespace forge
         m_hub->SetProjects(projects);
         m_hub->show();
         setCentralWidget(m_hub);
-        setWindowTitle("Hive Engine");
+        setWindowTitle("HiveEngine");
         resize(1200, 750);
     }
 
@@ -151,7 +188,7 @@ namespace forge
 
         layout->addSpacing(24);
 
-        auto* title = new QLabel{"HIVE ENGINE"};
+        auto* title = new QLabel{"Hive Engine"};
         title->setAlignment(Qt::AlignCenter);
         title->setStyleSheet("color: #f0a500; font-size: 24px; font-weight: bold; letter-spacing: 4px;");
         layout->addWidget(title);
@@ -187,7 +224,7 @@ namespace forge
         layout->addLayout(barRow);
 
         setCentralWidget(m_loadingWidget);
-        setWindowTitle(QString{"Hive Engine - %1"}.arg(projectName));
+        setWindowTitle(QString{"HiveEngine - %1"}.arg(projectName));
     }
 
     void ForgeMainWindow::ShowEditor()
@@ -204,7 +241,7 @@ namespace forge
         ConnectSignals();
         menuBar()->show();
 
-        setWindowTitle("Forge Editor");
+        setWindowTitle("HiveEngine");
         resize(1600, 900);
     }
 
