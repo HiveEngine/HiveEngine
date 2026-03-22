@@ -425,6 +425,16 @@ namespace forge
             emit sceneModified();
         });
 
+        connect(m_assetBrowser, &AssetBrowserPanel::assetSelected, this,
+                [this](const QString& path, AssetType type) {
+                    if (m_selection)
+                    {
+                        m_selection->SelectAsset(std::filesystem::path{path.toStdString()}, type);
+                        if (m_world && m_registry && m_undo)
+                            m_inspector->Refresh(*m_world, *m_selection, *m_registry, *m_undo);
+                    }
+                });
+
         connect(m_assetBrowser, &AssetBrowserPanel::gltfImportRequested, this, &ForgeMainWindow::gltfImportRequested);
 
         connect(m_assetBrowser, &AssetBrowserPanel::sceneOpenRequested, this,

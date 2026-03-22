@@ -7,6 +7,8 @@
 #include <QScrollArea>
 
 #include <cstdint>
+#include <filesystem>
+#include <functional>
 
 namespace queen
 {
@@ -17,6 +19,7 @@ namespace queen
 
 namespace forge
 {
+    enum class AssetType : uint8_t;
     class EditorSelection;
     class UndoStack;
 
@@ -34,6 +37,17 @@ namespace forge
         void sceneModified();
 
     private:
+        void RefreshEntity(queen::World& world, EditorSelection& selection,
+                           const queen::ComponentRegistry<256>& registry, UndoStack& undo);
+        void RefreshAsset(const std::filesystem::path& path, AssetType type);
+        void RefreshTexture(const std::filesystem::path& path, QVBoxLayout* layout,
+                            const std::function<void(const char*, const QString&)>& addRow);
+        void RefreshMesh(const std::filesystem::path& path,
+                         const std::function<void(const char*, const QString&)>& addRow);
+        void RefreshMaterial(const std::filesystem::path& path,
+                             const std::function<void(const char*, const QString&)>& addRow);
+        void ShowEmpty();
+
         struct FieldContext
         {
             queen::World* m_world;

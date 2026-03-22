@@ -249,8 +249,11 @@ namespace forge
             if (!(event->modifiers() & (Qt::ControlModifier | Qt::ShiftModifier)))
                 clearSelection();
             if (hit != nullptr)
+            {
                 hit->setSelected(true);
-            setCurrentItem(hit);
+                setCurrentItem(hit);
+                emit itemClicked(hit);
+            }
             return;
         }
 
@@ -938,6 +941,13 @@ namespace forge
         m_contentList->setItemDelegate(new ContentItemDelegate{m_thumbnailCache, m_contentList});
 
         connect(m_contentList, &QListWidget::itemDoubleClicked, this, &AssetBrowserPanel::OnContentDoubleClicked);
+        connect(m_contentList, &QListWidget::itemClicked, this, [this](QListWidgetItem* item) {
+            auto type = static_cast<AssetType>(item->data(Qt::UserRole + 1).toInt());
+            if (type != AssetType::FOLDER)
+            {
+                emit assetSelected(item->data(Qt::UserRole).toString(), type);
+            }
+        });
         connect(m_contentList, &QListWidget::customContextMenuRequested, this,
                 &AssetBrowserPanel::OnContentContextMenu);
     }

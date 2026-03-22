@@ -9,11 +9,15 @@
 #include <queen/reflect/field_attributes.h>
 #include <queen/reflect/field_info.h>
 #include <queen/world/world.h>
+#include <nectar/mesh/mesh_data.h>
+
+#include <forge/asset_browser.h>
 #include <forge/selection.h>
 #include <forge/undo.h>
 
 #include <QCheckBox>
 #include <QColorDialog>
+#include <QFile>
 #include <QComboBox>
 #include <QDoubleSpinBox>
 #include <QFormLayout>
@@ -27,7 +31,9 @@
 #include <QWidget>
 
 #include <cmath>
+#include <cstdio>
 #include <cstring>
+#include <filesystem>
 #include <memory>
 
 namespace forge
@@ -220,6 +226,201 @@ namespace forge
     void InspectorPanel::Refresh(queen::World& world, EditorSelection& selection,
                                  const queen::ComponentRegistry<256>& registry, UndoStack& undo)
     {
+        switch (selection.Kind())
+        {
+        case SelectionKind::ENTITY:
+            RefreshEntity(world, selection, registry, undo);
+            return;
+        case SelectionKind::ASSET:
+            RefreshAsset(selection.AssetPath(), selection.SelectedAssetType());
+            return;
+        case SelectionKind::NONE:
+            ShowEmpty();
+            return;
+        }
+    }
+
+    void InspectorPanel::ShowEmpty()
+    {
+        auto* content = new QWidget;
+        content->setObjectName("inspectorContent");
+        auto* rootLayout = new QVBoxLayout{content};
+        rootLayout->setContentsMargins(4, 2, 4, 4);
+        rootLayout->setSpacing(1);
+
+        auto* label = new QLabel{"Nothing selected"};
+        label->setStyleSheet("color: #555; font-size: 11px; padding: 12px;");
+        rootLayout->addWidget(label);
+        rootLayout->addStretch();
+        setWidget(content);
+    }
+
+    static constexpr int ASSET_PREVIEW_SIZE = 256;
+
+    void InspectorPanel::RefreshAsset(const std::filesystem::path& path, AssetType type)
+    {
+        auto* content = new QWidget;
+        content->setObjectName("inspectorContent");
+        auto* rootLayout = new QVBoxLayout{content};
+        rootLayout->setContentsMargins(4, 2, 4, 4);
+        rootLayout->setSpacing(4);
+
+        auto* header = new QLabel{"Asset"};
+        header->setObjectName("inspectorHeader");
+        header->setContentsMargins(2, 0, 0, 0);
+        rootLayout->addWidget(header);
+
+        auto addRow = [&](const char* label, const QString& value) {
+            auto* row = new QWidget{content};
+            auto* hbox = new QHBoxLayout{row};
+            hbox->setContentsMargins(4, 0, 4, 0);
+            hbox->setSpacing(8);
+            auto* lbl = new QLabel{label};
+            lbl->setStyleSheet("color: #888; font-size: 12px;");
+            lbl->setFixedWidth(70);
+            hbox->addWidget(lbl);
+            auto* val = new QLabel{value};
+            val->setStyleSheet("color: #e8e8e8; font-size: 12px;");
+            val->setTextInteractionFlags(Qt::TextSelectableByMouse);
+            val->setWordWrap(true);
+            hbox->addWidget(val, 1);
+            rootLayout->addWidget(row);
+        };
+
+        addRow("Name", QString::fromStdString(path.stem().string()));
+        addRow("Type", QString::fromStdString(path.extension().string()));
+        addRow("Path", QString::fromStdString(path.generic_string()));
+
+        std::error_code ec;
+        if (std::filesystem::exists(path, ec))
+        {
+            auto fileSize = std::filesystem::file_size(path, ec);
+            if (!ec)
+            {
+                QString sizeStr;
+                if (fileSize < 1024)
+                    sizeStr = QString{"%1 B"}.arg(fileSize);
+                else if (fileSize < 1024 * 1024)
+                    sizeStr = QString{"%1 KB"}.arg(fileSize / 1024);
+                else
+                    sizeStr = QString{"%1 MB"}.arg(fileSize / (1024 * 1024));
+                addRow("Size", sizeStr);
+            }
+        }
+
+        if (type == AssetType::TEXTURE)
+            RefreshTexture(path, rootLayout, addRow);
+        else if (type == AssetType::MESH)
+            RefreshMesh(path, addRow);
+        else if (type == AssetType::MATERIAL)
+            RefreshMaterial(path, addRow);
+
+        rootLayout->addStretch();
+        setWidget(content);
+    }
+
+    void InspectorPanel::RefreshTexture(const std::filesystem::path& path, QVBoxLayout* layout,
+                                        const std::function<void(const char*, const QString&)>& addRow)
+    {
+        QImage img;
+        if (!img.load(QString::fromStdString(path.string())))
+            return;
+
+        addRow("Dims", QString{"%1 x %2"}.arg(img.width()).arg(img.height()));
+        addRow("Format", img.isGrayscale() ? "Grayscale" : (img.hasAlphaChannel() ? "RGBA" : "RGB"));
+
+        auto* preview = new QLabel;
+        QPixmap pix = QPixmap::fromImage(
+            img.scaled(ASSET_PREVIEW_SIZE, ASSET_PREVIEW_SIZE, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+        preview->setPixmap(pix);
+        preview->setAlignment(Qt::AlignCenter);
+        preview->setStyleSheet("margin: 8px; border: 1px solid #2a2a2a; border-radius: 4px;");
+        layout->addWidget(preview);
+    }
+
+    void InspectorPanel::RefreshMesh(const std::filesystem::path& path,
+                                     const std::function<void(const char*, const QString&)>& addRow)
+    {
+        nectar::NmshHeader header{};
+        FILE* f{nullptr};
+#ifdef _WIN32
+        fopen_s(&f, path.string().c_str(), "rb");
+#else
+        f = fopen(path.string().c_str(), "rb");
+#endif
+        if (!f)
+            return;
+
+        if (std::fread(&header, sizeof(header), 1, f) == 1 && header.m_magic == nectar::kNmshMagic)
+        {
+            addRow("Vertices", QString::number(header.m_vertexCount));
+            addRow("Indices", QString::number(header.m_indexCount));
+            addRow("Submeshes", QString::number(header.m_submeshCount));
+        }
+        std::fclose(f);
+    }
+
+    void InspectorPanel::RefreshMaterial(const std::filesystem::path& path,
+                                         const std::function<void(const char*, const QString&)>& addRow)
+    {
+        QFile matFile{QString::fromStdString(path.string())};
+        if (!matFile.open(QIODevice::ReadOnly | QIODevice::Text))
+            return;
+
+        QString currentSection;
+        while (!matFile.atEnd())
+        {
+            QString line = matFile.readLine().trimmed();
+            if (line.isEmpty() || line.startsWith('#'))
+                continue;
+
+            if (line.startsWith('[') && line.endsWith(']'))
+            {
+                currentSection = line.mid(1, line.size() - 2);
+                continue;
+            }
+
+            int eq = line.indexOf('=');
+            if (eq < 0)
+                continue;
+
+            QString key = line.left(eq).trimmed();
+            QString value = line.mid(eq + 1).trimmed();
+            if (value.startsWith('"') && value.endsWith('"'))
+                value = value.mid(1, value.size() - 2);
+
+            if (currentSection == "material")
+            {
+                if (key == "name" && !value.isEmpty())
+                    addRow("Mat Name", value);
+                else if (key == "shader")
+                    addRow("Shader", value);
+                else if (key == "blend")
+                    addRow("Blend", value);
+                else if (key == "double_sided")
+                    addRow("2-Sided", value);
+                else if (key == "alpha_cutoff")
+                    addRow("Alpha Cut", value);
+            }
+            else if (currentSection == "factors")
+            {
+                if (key == "base_color")
+                    addRow("Base Color", value);
+                else if (key == "metallic")
+                    addRow("Metallic", value);
+                else if (key == "roughness")
+                    addRow("Roughness", value);
+            }
+            else if (currentSection == "textures")
+            {
+                addRow(key.toUtf8().constData(), value);
+            }
+        }
+    }
+
+    void InspectorPanel::RefreshEntity(queen::World& world, EditorSelection& selection,
+                                       const queen::ComponentRegistry<256>& registry, UndoStack& undo)
+    {
         auto* content = new QWidget;
         content->setObjectName("inspectorContent");
         auto* rootLayout = new QVBoxLayout{content};
@@ -229,11 +430,7 @@ namespace forge
         const queen::Entity entity = selection.Primary();
         if (entity.IsNull() || !world.IsAlive(entity))
         {
-            auto* label = new QLabel{"No entity selected"};
-            label->setStyleSheet("color: #555; font-size: 11px; padding: 12px;");
-            rootLayout->addWidget(label);
-            rootLayout->addStretch();
-            setWidget(content);
+            ShowEmpty();
             return;
         }
 

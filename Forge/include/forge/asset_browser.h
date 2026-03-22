@@ -138,6 +138,7 @@ namespace forge
         void gltfImportRequested(const QString& path);
         void sceneOpenRequested(const QString& path);
         void assetOpenRequested(const QString& path, AssetType type);
+        void assetSelected(const QString& path, AssetType type);
 
     protected:
         void keyPressEvent(QKeyEvent* event) override;
