@@ -1,0 +1,44 @@
+name: clang-format
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '**.h'
+      - '**.hpp'
+      - '**.cpp'
+      - '**.inl'
+
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install clang-format
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y clang-format-18
+
+      - name: Run clang-format
+        run: |
+          find Hive Comb Wax Queen Nectar Waggle Swarm Terra Forge Antennae Larvae Brood \
+            -name '*.h' -o -name '*.hpp' -o -name '*.cpp' -o -name '*.inl' \
+            | grep -v '/extern/' \
+            | xargs clang-format-18 -i --style=file
+
+      - name: Commit if changed
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          if ! git diff --quiet; then
+            git add -A
+            git commit -m "style: apply clang-format"
+            git push
+          fi

@@ -87,7 +87,7 @@ namespace terra
             if (windowContext->m_height <= 0)
                 windowContext->m_height = 720;
             if (!windowContext->m_title)
-                windowContext->m_title = "Hive Engine";
+                windowContext->m_title = "HiveEngine";
             windowContext->m_window = glfwCreateWindow(windowContext->m_width, windowContext->m_height,
                                                        windowContext->m_title, nullptr, nullptr);
 
