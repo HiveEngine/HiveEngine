@@ -138,7 +138,13 @@ namespace nectar
                             wax::String vfs = ToVfsPath(normalized.View());
                             onDisk = m_vfs->ReadSync(vfs.View()).Size() > 0;
                         }
-                        prev.m_kind = onDisk ? FileChangeKind::MODIFIED : FileChangeKind::DELETED;
+
+                        if (!onDisk)
+                            prev.m_kind = FileChangeKind::DELETED;
+                        else if (prev.m_kind == FileChangeKind::CREATED || changes[i].m_kind == FileChangeKind::CREATED)
+                            prev.m_kind = FileChangeKind::CREATED;
+                        else
+                            prev.m_kind = FileChangeKind::MODIFIED;
                     }
                     else
                     {

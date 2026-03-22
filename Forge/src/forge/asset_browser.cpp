@@ -6,6 +6,7 @@
 #include <QDragEnterEvent>
 #include <QDropEvent>
 #include <QMouseEvent>
+#include <QFile>
 #include <QFileDialog>
 #include <QHBoxLayout>
 #include <QInputDialog>
@@ -28,6 +29,8 @@
 #include <forge/forge_module.h>
 
 #include <hive/core/log.h>
+
+#include <nectar/registry/hiveid_file.h>
 
 #include <algorithm>
 #include <chrono>
@@ -58,6 +61,12 @@ namespace forge
                 m_queue.push_back(path);
             }
             QMetaObject::invokeMethod(this, &ThumbnailLoader::ProcessNext, Qt::QueuedConnection);
+        }
+
+        void InvalidatePath(const QString& path)
+        {
+            QMutexLocker lock{&m_mutex};
+            m_queued.erase(path.toStdString());
         }
 
     signals:
@@ -129,6 +138,14 @@ namespace forge
                 return {};
             m_loader->Request(path);
             return {};
+        }
+
+        void Invalidate(const QString& path)
+        {
+            auto key = path.toStdString();
+            m_cache.erase(key);
+            m_failed.erase(key);
+            m_loader->InvalidatePath(path);
         }
 
         void Clear()
@@ -529,6 +546,10 @@ namespace forge
                 painter->fillRect(option.rect, QColor{0x1e, 0x1e, 0x1e});
             }
 
+            bool isCut = index.data(Qt::UserRole + 2).toBool();
+            if (isCut)
+                painter->setOpacity(0.35);
+
             QRect iconRect = option.rect;
             iconRect.setHeight(iconRect.width());
 
@@ -573,6 +594,21 @@ namespace forge
                 PaintFileIcon(*painter, iconRect, color, TypeLabel(type));
             }
 
+            if (isCut)
+            {
+                painter->setOpacity(1.0);
+                painter->setRenderHint(QPainter::Antialiasing);
+                painter->setPen(Qt::NoPen);
+                painter->setBrush(QColor{0xef, 0x53, 0x50, 220});
+                int badgeSize = qMax(iconRect.width() / 5, 14);
+                QRect cutBadge{iconRect.right() - badgeSize - 1, iconRect.top() + 1, badgeSize, badgeSize};
+                painter->drawRoundedRect(cutBadge, badgeSize / 2, badgeSize / 2);
+                QFont cutFont{"Segoe UI", badgeSize / 3, QFont::Bold};
+                painter->setFont(cutFont);
+                painter->setPen(Qt::white);
+                painter->drawText(cutBadge, Qt::AlignCenter, "\xe2\x9c\x82");
+            }
+
             QRect textRect = option.rect;
             textRect.setTop(iconRect.bottom() + 2);
             textRect.adjust(2, 0, -2, 0);
@@ -608,6 +644,12 @@ namespace forge
     {
         m_redoStack.clear();
         m_undoStack.push_back({FileAction::CreateFolder, created, {}});
+    }
+
+    void FileUndoStack::PushCreateCopy(const std::filesystem::path& created, const std::filesystem::path& trashPath)
+    {
+        m_redoStack.clear();
+        m_undoStack.push_back({FileAction::CreateCopy, created, trashPath});
     }
 
     void FileUndoStack::PushDelete(const std::filesystem::path& original, const std::filesystem::path& trashPath)
@@ -670,6 +712,13 @@ namespace forge
                 std::filesystem::create_directory(entry.m_path, ec);
             break;
 
+        case FileAction::CreateCopy:
+            if (undo)
+                std::filesystem::rename(entry.m_path, entry.m_auxPath, ec);
+            else
+                std::filesystem::rename(entry.m_auxPath, entry.m_path, ec);
+            break;
+
         case FileAction::Delete:
             if (undo)
                 std::filesystem::rename(entry.m_auxPath, entry.m_path, ec);
@@ -726,6 +775,9 @@ namespace forge
         connect(m_thumbnailCache, &ThumbnailCache::ThumbnailLoaded, this, [this] {
             m_contentList->viewport()->update();
         });
+
+        connect(&m_fsWatcher, &QFileSystemWatcher::directoryChanged, this, &AssetBrowserPanel::OnDirectoryChanged);
+        connect(&m_fsWatcher, &QFileSystemWatcher::fileChanged, this, &AssetBrowserPanel::OnFileChanged);
 
         auto* mainLayout = new QVBoxLayout{this};
         mainLayout->setContentsMargins(0, 0, 0, 0);
@@ -925,6 +977,7 @@ namespace forge
         m_currentDir = m_root;
         m_historyBack.Clear();
         m_historyForward.Clear();
+        CleanTrash();
         Refresh();
     }
 
@@ -1157,6 +1210,7 @@ namespace forge
     void AssetBrowserPanel::PopulateContent()
     {
         m_contentList->clear();
+        WatchCurrentDir();
 
         if (!std::filesystem::exists(m_currentDir))
             return;
@@ -1206,6 +1260,7 @@ namespace forge
         }
 
         ApplySearchFilter();
+        MarkCutItems();
     }
 
     void AssetBrowserPanel::ApplySearchFilter()
@@ -1256,6 +1311,10 @@ namespace forge
 
         if (item != nullptr)
         {
+            menu.addAction("Copy\tCtrl+C", this, &AssetBrowserPanel::CopySelected);
+            menu.addAction("Cut\tCtrl+X", this, &AssetBrowserPanel::CutSelected);
+            menu.addAction("Duplicate\tCtrl+D", this, &AssetBrowserPanel::DuplicateSelected);
+            menu.addSeparator();
             menu.addAction("Rename\tF2", this, &AssetBrowserPanel::RenameSelected);
             menu.addAction("Delete\tDel", this, &AssetBrowserPanel::DeleteSelected);
             menu.addSeparator();
@@ -1266,6 +1325,15 @@ namespace forge
         else
         {
             menu.addAction("Show in Explorer", this, [this] { ShowInExplorer(m_currentDir); });
+        }
+
+        if (!m_clipboard.empty())
+        {
+            menu.addSeparator();
+            QString pasteLabel = m_clipboardIsCut
+                ? QString{"Paste (Move %1 items)\tCtrl+V"}.arg(m_clipboard.size())
+                : QString{"Paste (Copy %1 items)\tCtrl+V"}.arg(m_clipboard.size());
+            menu.addAction(pasteLabel, this, &AssetBrowserPanel::PasteClipboard);
         }
 
         menu.addSeparator();
@@ -1337,8 +1405,34 @@ namespace forge
             return;
         }
 
+        if (event->key() == Qt::Key_Escape)
+        {
+            CancelClipboard();
+            return;
+        }
+
         if (event->modifiers() & Qt::ControlModifier)
         {
+            if (event->key() == Qt::Key_C)
+            {
+                CopySelected();
+                return;
+            }
+            if (event->key() == Qt::Key_X)
+            {
+                CutSelected();
+                return;
+            }
+            if (event->key() == Qt::Key_V)
+            {
+                PasteClipboard();
+                return;
+            }
+            if (event->key() == Qt::Key_D)
+            {
+                DuplicateSelected();
+                return;
+            }
             if (event->key() == Qt::Key_Z)
             {
                 UndoFileAction();
@@ -1442,6 +1536,13 @@ namespace forge
             return;
         }
 
+        auto oldHiveid = std::filesystem::path{fsPath}.concat(".hiveid");
+        if (std::filesystem::exists(oldHiveid, ec))
+        {
+            auto newHiveid = std::filesystem::path{newPath}.concat(".hiveid");
+            std::filesystem::rename(oldHiveid, newHiveid, ec);
+        }
+
         m_fileUndo.PushRename(newPath, fsPath);
 
         if (m_currentDir.generic_string().find(fsPath.generic_string()) != std::string::npos)
@@ -1537,8 +1638,243 @@ namespace forge
             return;
         }
 
+        auto srcHiveid = std::filesystem::path{src}.concat(".hiveid");
+        if (std::filesystem::exists(srcHiveid, ec))
+        {
+            auto dstHiveid = std::filesystem::path{dstPath}.concat(".hiveid");
+            std::filesystem::rename(srcHiveid, dstHiveid, ec);
+        }
+
         m_fileUndo.PushMove(dstPath, src);
         Refresh();
+    }
+
+    void AssetBrowserPanel::CopySelected()
+    {
+        m_clipboard.clear();
+        m_clipboardIsCut = false;
+        for (auto* item : m_contentList->selectedItems())
+        {
+            auto path = std::filesystem::path{item->data(Qt::UserRole).toString().toStdString()};
+            m_clipboard.push_back(path);
+        }
+        MarkCutItems();
+    }
+
+    void AssetBrowserPanel::CutSelected()
+    {
+        m_clipboard.clear();
+        m_clipboardIsCut = true;
+        for (auto* item : m_contentList->selectedItems())
+        {
+            auto path = std::filesystem::path{item->data(Qt::UserRole).toString().toStdString()};
+            m_clipboard.push_back(path);
+        }
+        MarkCutItems();
+    }
+
+    static void CopyAssetFile(const std::filesystem::path& src, const std::filesystem::path& dst)
+    {
+        std::error_code ec;
+        if (std::filesystem::is_directory(src))
+        {
+            std::filesystem::copy(src, dst, std::filesystem::copy_options::recursive, ec);
+            return;
+        }
+
+        std::filesystem::copy_file(src, dst, std::filesystem::copy_options::skip_existing, ec);
+
+        auto srcHiveid = std::filesystem::path{src}.concat(".hiveid");
+        if (std::filesystem::exists(srcHiveid, ec))
+        {
+            comb::ModuleAllocator tmpAlloc{"TmpHiveId", 4096};
+            nectar::HiveIdData hid{};
+            if (nectar::ReadHiveId(src.string().c_str(), hid, tmpAlloc.Get()))
+            {
+                auto dstStr = dst.generic_string();
+                uint64_t h = 0xcbf29ce484222325ULL;
+                for (char c : dstStr)
+                {
+                    h ^= static_cast<uint64_t>(c);
+                    h *= 0x100000001b3ULL;
+                }
+                auto now = std::chrono::steady_clock::now().time_since_epoch().count();
+                nectar::AssetId newId{h, static_cast<uint64_t>(now)};
+                nectar::HiveIdData newHid{newId, std::move(hid.m_type)};
+                nectar::WriteHiveId(dst.string().c_str(), newHid);
+            }
+        }
+    }
+
+    void AssetBrowserPanel::PasteClipboard()
+    {
+        if (m_clipboard.empty())
+            return;
+
+        std::error_code ec;
+        for (const auto& src : m_clipboard)
+        {
+            if (!std::filesystem::exists(src))
+                continue;
+
+            if (m_clipboardIsCut)
+            {
+                auto dst = m_currentDir / src.filename();
+                if (src != dst)
+                {
+                    std::filesystem::rename(src, dst, ec);
+                    if (!ec)
+                    {
+                        m_fileUndo.PushMove(dst, src);
+                        auto srcHiveid = std::filesystem::path{src}.concat(".hiveid");
+                        if (std::filesystem::exists(srcHiveid, ec))
+                        {
+                            auto dstHiveid = std::filesystem::path{dst}.concat(".hiveid");
+                            std::filesystem::rename(srcHiveid, dstHiveid, ec);
+                        }
+                    }
+                }
+            }
+            else
+            {
+                auto dst = m_currentDir / src.filename();
+                if (dst == src)
+                {
+                    auto stem = src.stem().string();
+                    auto ext = src.extension().string();
+                    for (int i = 1; ; ++i)
+                    {
+                        dst = m_currentDir / (stem + "_copy" + (i > 1 ? std::to_string(i) : "") + ext);
+                        if (!std::filesystem::exists(dst))
+                            break;
+                    }
+                }
+                CopyAssetFile(src, dst);
+                m_fileUndo.PushCreateCopy(dst, TrashPathFor(dst));
+            }
+        }
+
+        if (m_clipboardIsCut)
+        {
+            m_clipboard.clear();
+            m_clipboardIsCut = false;
+        }
+
+        Refresh();
+    }
+
+    void AssetBrowserPanel::DuplicateSelected()
+    {
+        auto items = m_contentList->selectedItems();
+        if (items.isEmpty())
+            return;
+
+        std::error_code ec;
+        for (auto* item : items)
+        {
+            auto src = std::filesystem::path{item->data(Qt::UserRole).toString().toStdString()};
+            auto stem = src.stem().string();
+            auto ext = src.extension().string();
+            auto dir = src.parent_path();
+
+            std::filesystem::path dst;
+            for (int i = 1; ; ++i)
+            {
+                dst = dir / (stem + "_copy" + (i > 1 ? std::to_string(i) : "") + ext);
+                if (!std::filesystem::exists(dst))
+                    break;
+            }
+
+            CopyAssetFile(src, dst);
+            m_fileUndo.PushCreateCopy(dst, TrashPathFor(dst));
+        }
+
+        Refresh();
+    }
+
+    void AssetBrowserPanel::CancelClipboard()
+    {
+        if (m_clipboard.empty())
+            return;
+        m_clipboard.clear();
+        m_clipboardIsCut = false;
+        MarkCutItems();
+    }
+
+    void AssetBrowserPanel::MarkCutItems()
+    {
+        std::unordered_set<std::string> cutPaths;
+        if (m_clipboardIsCut)
+        {
+            for (const auto& p : m_clipboard)
+                cutPaths.insert(p.generic_string());
+        }
+
+        for (int i = 0; i < m_contentList->count(); ++i)
+        {
+            auto* item = m_contentList->item(i);
+            auto path = item->data(Qt::UserRole).toString().toStdString();
+            item->setData(Qt::UserRole + 2, cutPaths.count(path) > 0);
+        }
+
+        m_contentList->viewport()->update();
+    }
+
+    void AssetBrowserPanel::OnDirectoryChanged(const QString&)
+    {
+        Refresh();
+    }
+
+    void AssetBrowserPanel::OnFileChanged(const QString& path)
+    {
+        // QFileSystemWatcher reports native paths (\), cache keys use generic paths (/)
+        QString normalized = path;
+        normalized.replace('\\', '/');
+        m_thumbnailCache->Invalidate(normalized);
+
+        // Qt removes files from the watch list after fileChanged fires
+        if (QFile::exists(path))
+            m_fsWatcher.addPath(path);
+
+        Refresh();
+    }
+
+    void AssetBrowserPanel::WatchCurrentDir()
+    {
+        auto watched = m_fsWatcher.directories();
+        if (!watched.isEmpty())
+            m_fsWatcher.removePaths(watched);
+        auto watchedFiles = m_fsWatcher.files();
+        if (!watchedFiles.isEmpty())
+            m_fsWatcher.removePaths(watchedFiles);
+
+        if (m_currentDir.empty() || !std::filesystem::exists(m_currentDir))
+            return;
+
+        m_fsWatcher.addPath(QString::fromStdString(m_currentDir.string()));
+
+        std::error_code ec;
+        for (const auto& entry : std::filesystem::directory_iterator(m_currentDir, ec))
+        {
+            if (entry.is_regular_file() && ClassifyExtension(entry.path().extension().string()) == AssetType::Texture)
+                m_fsWatcher.addPath(QString::fromStdString(entry.path().string()));
+        }
+    }
+
+    void AssetBrowserPanel::CleanTrash()
+    {
+        auto trashDir = m_root / ".hive-trash";
+        if (!std::filesystem::exists(trashDir))
+            return;
+
+        std::error_code ec;
+        auto now = std::filesystem::file_time_type::clock::now();
+        for (const auto& entry : std::filesystem::directory_iterator(trashDir, ec))
+        {
+            auto age = now - entry.last_write_time(ec);
+            if (age > std::chrono::hours{24})
+                std::filesystem::remove_all(entry.path(), ec);
+        }
     }
 
     void AssetBrowserPanel::UndoFileAction()

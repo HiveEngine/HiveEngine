@@ -1,5 +1,6 @@
 #pragma once
 
+#include <QFileSystemWatcher>
 #include <QLabel>
 #include <QLineEdit>
 #include <QListWidget>
@@ -76,6 +77,7 @@ namespace forge
     enum class FileAction : uint8_t
     {
         CreateFolder,
+        CreateCopy,
         Delete,
         Rename,
         Move
@@ -92,6 +94,7 @@ namespace forge
     {
     public:
         void PushCreateFolder(const std::filesystem::path& created);
+        void PushCreateCopy(const std::filesystem::path& created, const std::filesystem::path& trashPath);
         void PushDelete(const std::filesystem::path& original, const std::filesystem::path& trashPath);
         void PushRename(const std::filesystem::path& newPath, const std::filesystem::path& oldPath);
         void PushMove(const std::filesystem::path& newPath, const std::filesystem::path& oldPath);
@@ -160,6 +163,17 @@ namespace forge
         void DeleteSelected();
         void ShowInExplorer(const std::filesystem::path& path);
 
+        void CopySelected();
+        void CutSelected();
+        void PasteClipboard();
+        void DuplicateSelected();
+        void CancelClipboard();
+        void MarkCutItems();
+        void OnDirectoryChanged(const QString& path);
+        void OnFileChanged(const QString& path);
+        void WatchCurrentDir();
+        void CleanTrash();
+
         void UndoFileAction();
         void RedoFileAction();
         void UpdateIconSize(int size);
@@ -188,6 +202,11 @@ namespace forge
 
         FileUndoStack m_fileUndo;
         ThumbnailCache* m_thumbnailCache{};
+
+        QFileSystemWatcher m_fsWatcher;
+        std::vector<std::filesystem::path> m_clipboard;
+        bool m_clipboardIsCut{false};
+
         int m_iconSize{80};
     };
 } // namespace forge
