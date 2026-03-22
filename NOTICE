@@ -1,0 +1,23 @@
+HiveEngine
+Copyright 2024-2026 Quentin Pepe, Samuel Laporte
+
+This product includes software developed by Quentin Pepe and Samuel Laporte.
+
+Third-party libraries used by this project are located in their
+respective extern/ directories, each with their own license:
+
+- fmt (MIT) — Hive/extern/fmt/
+- GLFW (Zlib) — Terra/extern/glfw/
+- DiligentCore (Apache 2.0) — Swarm/extern/diligentcore/
+- stb_image (Public Domain) — Nectar/extern/stb/
+- tinyobjloader (MIT) — Hive/extern/tinyobj/
+- cgltf (MIT) — Nectar/extern/cgltf/
+- LZ4 (BSD 2-Clause) — Nectar/extern/lz4/
+- Zstd (BSD 3-Clause) — Nectar/extern/zstd/
+- Tracy (BSD 3-Clause) — Hive/extern/tracy/
+- Qt 6 (LGPL v3) — Forge/extern/qtbase/
+  Source code: https://code.qt.io/cgit/qt/qtbase.git/
+
+The editor (Forge) links Qt 6 dynamically under the terms of the
+GNU Lesser General Public License v3. The complete Qt source code
+is available at the URL above. The game runtime does not use Qt.
