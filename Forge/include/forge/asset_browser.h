@@ -64,25 +64,30 @@ namespace forge
 
     enum class AssetType : uint8_t
     {
-        Folder,
-        Mesh,
-        Texture,
-        Shader,
-        Scene,
-        Material,
-        Audio,
-        Unknown
+        FOLDER,
+        MESH,
+        TEXTURE,
+        SHADER,
+        SCENE,
+        MATERIAL,
+        AUDIO,
+        UNKNOWN
     };
-
-    AssetType ClassifyExtension(const std::string& ext);
 
     enum class FileAction : uint8_t
     {
-        CreateFolder,
-        CreateCopy,
-        Delete,
-        Rename,
-        Move
+        CREATE_FOLDER,
+        CREATE_COPY,
+        DELETE_FILE,
+        RENAME,
+        MOVE
+    };
+
+    enum class SortMode : uint8_t
+    {
+        NAME,
+        TYPE,
+        DATE
     };
 
     struct FileUndoEntry
@@ -101,8 +106,8 @@ namespace forge
         void PushRename(const std::filesystem::path& newPath, const std::filesystem::path& oldPath);
         void PushMove(const std::filesystem::path& newPath, const std::filesystem::path& oldPath);
 
-        bool Undo();
-        bool Redo();
+        [[nodiscard]] bool Undo();
+        [[nodiscard]] bool Redo();
 
         [[nodiscard]] bool CanUndo() const noexcept { return !m_undoStack.empty(); }
         [[nodiscard]] bool CanRedo() const noexcept { return !m_redoStack.empty(); }
@@ -179,7 +184,7 @@ namespace forge
         void CleanTrash();
 
         void SetTypeFilter(AssetType type);
-        void SetSortMode(int mode);
+        void SetSortMode(SortMode mode);
         void BuildFilterBar();
 
         void UndoFileAction();
@@ -219,8 +224,8 @@ namespace forge
         std::vector<std::filesystem::path> m_clipboard;
         bool m_clipboardIsCut{false};
 
-        AssetType m_typeFilter{AssetType::Unknown}; // Unknown = show all
-        int m_sortMode{0}; // 0=name, 1=type, 2=date
+        AssetType m_typeFilter{AssetType::UNKNOWN};
+        SortMode m_sortMode{SortMode::NAME};
         int m_iconSize{80};
     };
 } // namespace forge
