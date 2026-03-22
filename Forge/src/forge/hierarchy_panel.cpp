@@ -4,8 +4,11 @@
 #include <queen/hierarchy/parent.h>
 #include <queen/world/world.h>
 
+#include <waggle/components/disabled.h>
 #include <waggle/components/name.h>
+#include <waggle/disabled_propagation.h>
 
+#include <forge/editor_undo.h>
 #include <forge/forge_module.h>
 #include <forge/hierarchy_panel.h>
 #include <forge/selection.h>
@@ -21,6 +24,7 @@
 #include <algorithm>
 #include <cstdio>
 #include <functional>
+#include <unordered_set>
 
 namespace forge
 {
@@ -56,6 +60,9 @@ namespace forge
             e->acceptProposedAction();
         }
     };
+    static const QColor ENABLED_COLOR{0xe8, 0xe8, 0xe8};
+    static const QColor DISABLED_COLOR{0x55, 0x55, 0x55};
+
     static void DefaultEntityLabel(queen::World& world, queen::Entity entity, char* buf, size_t bufSize)
     {
         const auto* name = world.Get<waggle::Name>(entity);
@@ -67,9 +74,10 @@ namespace forge
         snprintf(buf, bufSize, "Entity %u", entity.Index());
     }
 
-    HierarchyPanel::HierarchyPanel(EditorSelection& selection, QWidget* parent)
+    HierarchyPanel::HierarchyPanel(EditorSelection& selection, EditorUndoManager& editorUndo, QWidget* parent)
         : QWidget{parent}
         , m_selection{selection}
+        , m_editorUndo{editorUndo}
     {
         auto* layout = new QVBoxLayout{this};
         layout->setContentsMargins(0, 0, 0, 0);
@@ -101,6 +109,18 @@ namespace forge
     {
         m_currentWorld = &world;
         m_lastClickedItem = nullptr;
+
+        std::unordered_set<uint32_t> expandedIndices;
+        QTreeWidgetItemIterator it{m_tree};
+        while (*it)
+        {
+            if ((*it)->isExpanded())
+            {
+                expandedIndices.insert((*it)->data(0, Qt::UserRole).toUInt());
+            }
+            ++it;
+        }
+
         m_entityItems.clear();
         m_tree->clear();
 
@@ -125,6 +145,15 @@ namespace forge
                 AddEntityNode(world, root, nullptr);
             }
         }
+
+        for (uint32_t idx : expandedIndices)
+        {
+            auto found = m_entityItems.find(idx);
+            if (found != m_entityItems.end())
+            {
+                found->second->setExpanded(true);
+            }
+        }
     }
 
     void HierarchyPanel::AddEntityNode(queen::World& world, queen::Entity entity, QTreeWidgetItem* parentItem)
@@ -140,6 +169,8 @@ namespace forge
         item->setData(0, Qt::UserRole + 1, entity.Generation());
         m_entityItems[entity.Index()] = item;
 
+        item->setForeground(0, world.Has<waggle::HierarchyDisabled>(entity) ? DISABLED_COLOR : ENABLED_COLOR);
+
         if (m_selection.IsSelected(entity))
         {
             item->setSelected(true);
@@ -148,7 +179,7 @@ namespace forge
         world.ForEachChild(entity, [&](queen::Entity child) { AddEntityNode(world, child, item); });
     }
 
-    void HierarchyPanel::RefreshEntityLabel(queen::Entity entity)
+    void HierarchyPanel::RefreshEntityItem(queen::Entity entity)
     {
         if (!m_currentWorld)
         {
@@ -165,6 +196,9 @@ namespace forge
         char label[64];
         fn(*m_currentWorld, entity, label, sizeof(label));
         it->second->setText(0, QString::fromUtf8(label));
+
+        it->second->setForeground(0, m_currentWorld->Has<waggle::HierarchyDisabled>(entity) ? DISABLED_COLOR
+                                                                                            : ENABLED_COLOR);
     }
 
     void HierarchyPanel::OnItemClicked(QTreeWidgetItem* item, int /*column*/)
@@ -257,6 +291,46 @@ namespace forge
             uint32_t index = item->data(0, Qt::UserRole).toUInt();
             uint16_t generation = static_cast<uint16_t>(item->data(0, Qt::UserRole + 1).toUInt());
             queen::Entity entity{index, generation};
+
+            bool isDisabled = m_currentWorld->Has<waggle::Disabled>(entity);
+            menu.addAction(isDisabled ? "Enable" : "Disable", [this, entity, isDisabled]() {
+                auto before = std::make_shared<std::vector<std::pair<queen::Entity, bool>>>();
+
+                if (m_selection.All().Size() > 1 && m_selection.IsSelected(entity))
+                {
+                    for (size_t i = 0; i < m_selection.All().Size(); ++i)
+                    {
+                        queen::Entity e = m_selection.All()[i];
+                        before->push_back({e, m_currentWorld->Has<waggle::Disabled>(e)});
+                    }
+                }
+                else
+                {
+                    before->push_back({entity, isDisabled});
+                }
+
+                bool nowDisabling = !isDisabled;
+                for (auto& [e, _] : *before)
+                {
+                    waggle::SetEntityDisabled(*m_currentWorld, e, nowDisabling);
+                }
+
+                m_editorUndo.Push(
+                    [this, before]() {
+                        for (auto& [e, wasDisabled] : *before)
+                        {
+                            waggle::SetEntityDisabled(*m_currentWorld, e, wasDisabled);
+                        }
+                    },
+                    [this, before, nowDisabling]() {
+                        for (auto& [e, _] : *before)
+                        {
+                            waggle::SetEntityDisabled(*m_currentWorld, e, nowDisabling);
+                        }
+                    });
+
+                emit sceneModified();
+            });
 
             menu.addAction("Delete", [this, entity]() {
                 if (m_selection.All().Size() > 1 && m_selection.IsSelected(entity))

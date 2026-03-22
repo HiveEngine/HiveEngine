@@ -7,6 +7,7 @@
 #include <nectar/pipeline/hot_reload.h>
 
 #include <waggle/app_context.h>
+#include <waggle/disabled_propagation.h>
 #include <waggle/engine_runner.h>
 #include <waggle/project/gameplay_module.h>
 #include <waggle/project/project_context.h>
@@ -116,6 +117,7 @@ namespace
 
                 s.m_project = comb::New<waggle::ProjectManager>(alloc, alloc);
                 ctx.m_world->InsertResource(waggle::AppContext{ctx.m_app});
+                waggle::RegisterDisabledObservers(*ctx.m_world);
 
 #if HIVE_MODE_EDITOR
                 RegisterSceneComponentTypes(s);
