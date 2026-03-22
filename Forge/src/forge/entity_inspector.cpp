@@ -1029,7 +1029,7 @@ namespace forge
             }
 
             default: {
-                auto* lbl = new QLabel{uniform ? "--" : "(mixed)"};
+                auto* lbl = new QLabel{"--"};
                 lbl->setStyleSheet("color: #555; font-style: italic;");
                 form->addRow(label, lbl);
                 break;
