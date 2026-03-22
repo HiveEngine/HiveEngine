@@ -17,6 +17,7 @@ namespace queen
 namespace forge
 {
     class EditorSelection;
+    class EditorUndoManager;
 
     using EntityLabelFn = void (*)(queen::World& world, queen::Entity entity, char* buf, size_t bufSize);
 
@@ -25,11 +26,11 @@ namespace forge
         Q_OBJECT
 
     public:
-        explicit HierarchyPanel(EditorSelection& selection, QWidget* parent = nullptr);
+        explicit HierarchyPanel(EditorSelection& selection, EditorUndoManager& editorUndo, QWidget* parent = nullptr);
 
         void SetLabelFn(EntityLabelFn fn);
         void Refresh(queen::World& world);
-        void RefreshEntityLabel(queen::Entity entity);
+        void RefreshEntityItem(queen::Entity entity);
 
     signals:
         void entitySelected(uint32_t entityIndex);
@@ -46,6 +47,7 @@ namespace forge
 
         QTreeWidget* m_tree{};
         EditorSelection& m_selection;
+        EditorUndoManager& m_editorUndo;
         EntityLabelFn m_labelFn{};
         queen::World* m_currentWorld{};
         QTreeWidgetItem* m_lastClickedItem{};

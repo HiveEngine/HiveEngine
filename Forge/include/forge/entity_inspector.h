@@ -55,7 +55,7 @@ namespace forge
         };
 
         void BuildSingleEntity(queen::World& world, queen::Entity entity, const queen::ComponentRegistry<256>& registry,
-                               UndoStack& undo);
+                               UndoStack& undo, EditorUndoManager& editorUndo);
         void BuildMultiEntity(queen::World& world, const wax::Vector<queen::Entity>& entities,
                               const queen::ComponentRegistry<256>& registry, EditorUndoManager& editorUndo);
 

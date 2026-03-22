@@ -7,6 +7,10 @@
 #include <queen/reflect/field_info.h>
 #include <queen/world/world.h>
 
+#include <waggle/components/disabled.h>
+#include <waggle/components/name.h>
+#include <waggle/disabled_propagation.h>
+
 #include <forge/editor_undo.h>
 #include <forge/entity_inspector.h>
 #include <forge/inspector_widgets.h>
@@ -153,34 +157,109 @@ namespace forge
         }
         else
         {
-            BuildSingleEntity(world, selection.Primary(), registry, undo);
+            BuildSingleEntity(world, selection.Primary(), registry, undo, editorUndo);
         }
         m_rootLayout->addStretch(1);
     }
 
     void EntityInspector::BuildSingleEntity(queen::World& world, queen::Entity entity,
-                                            const queen::ComponentRegistry<256>& registry, UndoStack& undo)
+                                            const queen::ComponentRegistry<256>& registry, UndoStack& undo,
+                                            EditorUndoManager& editorUndo)
     {
         if (entity.IsNull() || !world.IsAlive(entity))
+        {
             return;
+        }
 
-        auto* header = new QLabel{QString{"Entity %1"}.arg(entity.Index())};
-        header->setObjectName("inspectorHeader");
-        header->setContentsMargins(2, 0, 0, 0);
-        m_rootLayout->addWidget(header);
+        constexpr queen::TypeId nameTypeId = queen::TypeIdOf<waggle::Name>();
+
+        auto* nameData = static_cast<waggle::Name*>(world.GetComponentRaw(entity, nameTypeId));
+
+        auto* headerRow = new QHBoxLayout;
+        headerRow->setContentsMargins(2, 2, 2, 4);
+        headerRow->setSpacing(4);
+
+        auto* enableCheck = new QCheckBox;
+        enableCheck->setChecked(!world.Has<waggle::Disabled>(entity));
+        enableCheck->setToolTip("Enable/Disable entity");
+        headerRow->addWidget(enableCheck);
+
+        auto* nameEdit = new QLineEdit{
+            nameData ? QString::fromUtf8(nameData->m_name.CStr(), static_cast<int>(nameData->m_name.Size()))
+                     : QString{}};
+        nameEdit->setObjectName("inspectorHeader");
+        nameEdit->setPlaceholderText(QString{"Entity %1"}.arg(entity.Index()));
+        headerRow->addWidget(nameEdit);
+
+        m_rootLayout->addLayout(headerRow);
+
+        QObject::connect(
+            enableCheck, &QCheckBox::checkStateChanged, this,
+            [this, &world, &editorUndo, entity](Qt::CheckState state) {
+                bool disabling = (state != Qt::Checked);
+                waggle::SetEntityDisabled(world, entity, disabling);
+                editorUndo.Push([&world, entity, disabling]() { waggle::SetEntityDisabled(world, entity, !disabling); },
+                                [&world, entity, disabling]() { waggle::SetEntityDisabled(world, entity, disabling); });
+                emit entityLabelChanged(entity);
+                emit sceneModified();
+            });
+
+        if (!nameData)
+        {
+            nameEdit->setReadOnly(true);
+        }
+        else
+        {
+            auto snapshot = std::make_shared<SnapshotState>();
+            auto snapshotTaken = std::make_shared<bool>(false);
+
+            QObject::connect(nameEdit, &QLineEdit::textEdited, this,
+                             [this, nameData, snapshot, snapshotTaken, entity](const QString& text) {
+                                 if (!*snapshotTaken)
+                                 {
+                                     Snapshot(*snapshot, entity, nameTypeId, 0,
+                                              static_cast<uint16_t>(sizeof(wax::FixedString)), &nameData->m_name);
+                                     *snapshotTaken = true;
+                                 }
+                                 QByteArray utf8 = text.toUtf8();
+                                 nameData->m_name =
+                                     wax::FixedString{utf8.constData(), static_cast<size_t>(utf8.size())};
+                                 emit entityLabelChanged(entity);
+                             });
+
+            QObject::connect(nameEdit, &QLineEdit::editingFinished, this,
+                             [this, nameData, snapshot, snapshotTaken, &undo]() {
+                                 if (*snapshotTaken)
+                                 {
+                                     CommitIfChanged(*snapshot, undo, &nameData->m_name);
+                                     *snapshotTaken = false;
+                                     emit sceneModified();
+                                 }
+                             });
+        }
 
         world.ForEachComponentType(entity, [&](queen::TypeId typeId) {
+            if (typeId == nameTypeId)
+            {
+                return;
+            }
             const auto* reg = registry.Find(typeId);
             if (reg == nullptr || !reg->HasReflection())
+            {
                 return;
+            }
             void* comp = world.GetComponentRaw(entity, typeId);
             if (comp == nullptr)
+            {
                 return;
+            }
             const auto& reflection = reg->m_reflection;
             const char* rawName = reflection.m_name != nullptr ? reflection.m_name : "Component";
             const char* name = rawName;
             if (const char* sep = std::strrchr(rawName, ':'))
+            {
                 name = sep + 1;
+            }
             auto* group = new QGroupBox{QString::fromUtf8(name)};
             group->setCheckable(true);
             group->setChecked(true);
@@ -190,7 +269,9 @@ namespace forge
             form->setLabelAlignment(Qt::AlignRight | Qt::AlignVCenter);
             FieldContext ctx{&world, entity, typeId, 0, &undo};
             for (size_t i = 0; i < reflection.m_fieldCount; ++i)
+            {
                 BuildFieldWidget(reflection.m_fields[i], comp, ctx, form);
+            }
             m_rootLayout->addWidget(group);
         });
     }
@@ -198,21 +279,76 @@ namespace forge
     void EntityInspector::BuildMultiEntity(queen::World& world, const wax::Vector<queen::Entity>& entities,
                                            const queen::ComponentRegistry<256>& registry, EditorUndoManager& editorUndo)
     {
+        constexpr queen::TypeId nameTypeId = queen::TypeIdOf<waggle::Name>();
+
+        auto* headerRow = new QHBoxLayout;
+        headerRow->setContentsMargins(2, 2, 2, 4);
+        headerRow->setSpacing(4);
+
+        bool allDisabled = true;
+        for (size_t i = 0; i < entities.Size(); ++i)
+        {
+            if (!world.Has<waggle::Disabled>(entities[i]))
+            {
+                allDisabled = false;
+                break;
+            }
+        }
+
+        auto* enableCheck = new QCheckBox;
+        enableCheck->setChecked(!allDisabled);
+        enableCheck->setToolTip("Enable/Disable entities");
+        headerRow->addWidget(enableCheck);
+
         auto* header = new QLabel{QString{"%1 entities selected"}.arg(entities.Size())};
         header->setObjectName("inspectorHeader");
-        header->setContentsMargins(2, 0, 0, 0);
-        m_rootLayout->addWidget(header);
+        headerRow->addWidget(header);
+
+        m_rootLayout->addLayout(headerRow);
+
+        QObject::connect(enableCheck, &QCheckBox::clicked, this,
+                         [this, &world, &editorUndo, entities = &entities](bool checked) {
+                             bool disabling = !checked;
+                             auto before = std::make_shared<std::vector<std::pair<queen::Entity, bool>>>();
+                             for (size_t i = 0; i < entities->Size(); ++i)
+                             {
+                                 before->push_back({(*entities)[i], world.Has<waggle::Disabled>((*entities)[i])});
+                                 waggle::SetEntityDisabled(world, (*entities)[i], disabling);
+                             }
+                             editorUndo.Push(
+                                 [&world, before]() {
+                                     for (auto& [e, wasDisabled] : *before)
+                                     {
+                                         waggle::SetEntityDisabled(world, e, wasDisabled);
+                                     }
+                                 },
+                                 [&world, before, disabling]() {
+                                     for (auto& [e, _] : *before)
+                                     {
+                                         waggle::SetEntityDisabled(world, e, disabling);
+                                     }
+                                 });
+                             emit sceneModified();
+                         });
 
         queen::Entity primary = entities[0];
         if (primary.IsNull() || !world.IsAlive(primary))
+        {
             return;
+        }
 
         std::vector<queen::TypeId> commonTypes;
         world.ForEachComponentType(primary, [&](queen::TypeId typeId) {
+            if (typeId == nameTypeId)
+            {
+                return;
+            }
             for (size_t i = 0; i < entities.Size(); ++i)
             {
                 if (!world.HasComponent(entities[i], typeId))
+                {
                     return;
+                }
             }
             commonTypes.push_back(typeId);
         });
@@ -221,17 +357,23 @@ namespace forge
         {
             const auto* reg = registry.Find(typeId);
             if (reg == nullptr || !reg->HasReflection())
+            {
                 continue;
+            }
 
             void* primaryComp = world.GetComponentRaw(primary, typeId);
             if (primaryComp == nullptr)
+            {
                 continue;
+            }
 
             const auto& reflection = reg->m_reflection;
             const char* rawName = reflection.m_name != nullptr ? reflection.m_name : "Component";
             const char* name = rawName;
             if (const char* sep = std::strrchr(rawName, ':'))
+            {
                 name = sep + 1;
+            }
 
             auto* group = new QGroupBox{QString::fromUtf8(name)};
             group->setCheckable(true);
@@ -632,7 +774,7 @@ namespace forge
                 auto snapshotTaken = std::make_shared<bool>(false);
 
                 QObject::connect(lineEdit, &QLineEdit::textEdited, this,
-                                 [this, value, snapshot, snapshotTaken, entity, typeId, offset](const QString& text) {
+                                 [value, snapshot, snapshotTaken, entity, typeId, offset](const QString& text) {
                                      if (!*snapshotTaken)
                                      {
                                          Snapshot(*snapshot, entity, typeId, offset,
@@ -641,7 +783,6 @@ namespace forge
                                      }
                                      QByteArray utf8 = text.toUtf8();
                                      *value = wax::FixedString{utf8.constData(), static_cast<size_t>(utf8.size())};
-                                     emit entityLabelChanged(entity);
                                  });
 
                 QObject::connect(lineEdit, &QLineEdit::editingFinished, this,
@@ -966,7 +1107,7 @@ namespace forge
             }
 
             default: {
-                auto* lbl = new QLabel{uniform ? "--" : "(mixed)"};
+                auto* lbl = new QLabel{"--"};
                 lbl->setStyleSheet("color: #555; font-style: italic;");
                 form->addRow(label, lbl);
                 break;

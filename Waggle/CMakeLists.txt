@@ -17,6 +17,7 @@ target_sources(Waggle
         src/waggle/project/cmake_generator.cpp
         src/waggle/project/project_scaffolder.cpp
         src/waggle/scene/gltf_scene_loader.cpp
+        src/waggle/disabled_propagation.cpp
 )
 
 target_include_directories(Waggle

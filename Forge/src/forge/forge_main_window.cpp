@@ -373,7 +373,7 @@ namespace forge
 
     void ForgeMainWindow::CreateDocks()
     {
-        m_hierarchy = new HierarchyPanel{*m_selection, this};
+        m_hierarchy = new HierarchyPanel{*m_selection, *m_editorUndo, this};
         auto* hierarchyDock = new QDockWidget{"Hierarchy", this};
         hierarchyDock->setWidget(m_hierarchy);
         addDockWidget(Qt::LeftDockWidgetArea, hierarchyDock);
@@ -449,7 +449,7 @@ namespace forge
         });
 
         connect(m_inspector, &InspectorPanel::entityLabelChanged, this,
-                [this](queen::Entity entity) { m_hierarchy->RefreshEntityLabel(entity); });
+                [this](queen::Entity entity) { m_hierarchy->RefreshEntityItem(entity); });
 
         connect(m_inspector, &InspectorPanel::browseToAsset, this, [this](const QString& path) {
             m_assetBrowser->NavigateToFile(std::filesystem::path{path.toStdString()});
