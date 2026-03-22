@@ -387,6 +387,9 @@ namespace forge
 
         connect(m_assetBrowser, &AssetBrowserPanel::gltfImportRequested, this, &ForgeMainWindow::gltfImportRequested);
 
+        connect(m_assetBrowser, &AssetBrowserPanel::sceneOpenRequested, this,
+                &ForgeMainWindow::sceneOpenRequested);
+
         connect(m_assetBrowser, &AssetBrowserPanel::assetImported, this, [this](const QString& path) {
             std::filesystem::path fsPath{path.toStdString()};
             auto ext = fsPath.extension().string();

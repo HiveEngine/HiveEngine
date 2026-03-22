@@ -1,7 +1,9 @@
 #pragma once
 
+#include <QComboBox>
 #include <QFileSystemWatcher>
 #include <QLabel>
+#include <QTimer>
 #include <QLineEdit>
 #include <QListWidget>
 #include <QSlider>
@@ -129,6 +131,8 @@ namespace forge
     signals:
         void assetImported(const QString& path);
         void gltfImportRequested(const QString& path);
+        void sceneOpenRequested(const QString& path);
+        void assetOpenRequested(const QString& path, AssetType type);
 
     protected:
         void keyPressEvent(QKeyEvent* event) override;
@@ -174,6 +178,10 @@ namespace forge
         void WatchCurrentDir();
         void CleanTrash();
 
+        void SetTypeFilter(AssetType type);
+        void SetSortMode(int mode);
+        void BuildFilterBar();
+
         void UndoFileAction();
         void RedoFileAction();
         void UpdateIconSize(int size);
@@ -204,9 +212,15 @@ namespace forge
         ThumbnailCache* m_thumbnailCache{};
 
         QFileSystemWatcher m_fsWatcher;
+        QTimer m_refreshDebounce;
+        QWidget* m_filterBar{};
+        QComboBox* m_sortCombo{};
+
         std::vector<std::filesystem::path> m_clipboard;
         bool m_clipboardIsCut{false};
 
+        AssetType m_typeFilter{AssetType::Unknown}; // Unknown = show all
+        int m_sortMode{0}; // 0=name, 1=type, 2=date
         int m_iconSize{80};
     };
 } // namespace forge

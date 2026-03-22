@@ -776,6 +776,10 @@ namespace forge
             m_contentList->viewport()->update();
         });
 
+        m_refreshDebounce.setSingleShot(true);
+        m_refreshDebounce.setInterval(300);
+        connect(&m_refreshDebounce, &QTimer::timeout, this, &AssetBrowserPanel::Refresh);
+
         connect(&m_fsWatcher, &QFileSystemWatcher::directoryChanged, this, &AssetBrowserPanel::OnDirectoryChanged);
         connect(&m_fsWatcher, &QFileSystemWatcher::fileChanged, this, &AssetBrowserPanel::OnFileChanged);
 
@@ -799,6 +803,9 @@ namespace forge
         m_splitter->setSizes({180, 600});
 
         mainLayout->addWidget(m_splitter);
+
+        BuildFilterBar();
+        mainLayout->addWidget(m_filterBar);
 
         BuildStatusBar();
         mainLayout->addWidget(m_statusBar);
@@ -969,6 +976,104 @@ namespace forge
                                     "QSlider::handle:horizontal:hover { background: #f0a500; }");
         connect(m_sizeSlider, &QSlider::valueChanged, this, &AssetBrowserPanel::UpdateIconSize);
         layout->addWidget(m_sizeSlider);
+    }
+
+    void AssetBrowserPanel::BuildFilterBar()
+    {
+        m_filterBar = new QWidget{this};
+        m_filterBar->setFixedHeight(26);
+        m_filterBar->setStyleSheet("QWidget { background: #131313; border-bottom: 1px solid #222; }");
+
+        auto* layout = new QHBoxLayout{m_filterBar};
+        layout->setContentsMargins(6, 0, 6, 0);
+        layout->setSpacing(2);
+
+        struct FilterDef
+        {
+            const char* label;
+            AssetType type;
+            QColor color;
+        };
+
+        FilterDef filters[] = {
+            {"All", AssetType::Unknown, QColor{0xaa, 0xaa, 0xaa}},
+            {"Mesh", AssetType::Mesh, QColor{0x4f, 0xc3, 0xf7}},
+            {"Tex", AssetType::Texture, QColor{0x81, 0xc7, 0x84}},
+            {"Shader", AssetType::Shader, QColor{0xce, 0x93, 0xd8}},
+            {"Scene", AssetType::Scene, QColor{0xff, 0xb7, 0x4d}},
+            {"Mat", AssetType::Material, QColor{0xef, 0x53, 0x50}},
+            {"Audio", AssetType::Audio, QColor{0xff, 0xf1, 0x76}},
+        };
+
+        for (const auto& f : filters)
+        {
+            auto* btn = new QToolButton{m_filterBar};
+            btn->setText(f.label);
+            btn->setCheckable(true);
+            btn->setChecked(f.type == m_typeFilter);
+            btn->setCursor(Qt::PointingHandCursor);
+
+            QString normalColor = f.color.name();
+            QString dimColor = f.color.darker(200).name();
+            btn->setStyleSheet(
+                QString{"QToolButton {"
+                        "  background: transparent; color: %1; border: none; border-radius: 3px;"
+                        "  padding: 2px 8px; font-size: 10px; font-family: 'Segoe UI', sans-serif;"
+                        "}"
+                        "QToolButton:hover { background: #1e1e1e; }"
+                        "QToolButton:checked { background: #222; color: %2; font-weight: bold; }"}
+                    .arg(dimColor, normalColor));
+
+            AssetType capturedType = f.type;
+            connect(btn, &QToolButton::clicked, this, [this, capturedType, btn] {
+                SetTypeFilter(capturedType);
+                for (auto* child : m_filterBar->findChildren<QToolButton*>())
+                {
+                    child->setChecked(false);
+                }
+                btn->setChecked(true);
+            });
+
+            layout->addWidget(btn);
+        }
+
+        layout->addStretch();
+
+        auto* sortLabel = new QLabel{"Sort:", m_filterBar};
+        sortLabel->setStyleSheet("color: #666; font-size: 10px; font-family: 'Segoe UI', sans-serif;");
+        layout->addWidget(sortLabel);
+
+        m_sortCombo = new QComboBox{m_filterBar};
+        m_sortCombo->addItems({"Name", "Type", "Date"});
+        m_sortCombo->setCurrentIndex(m_sortMode);
+        m_sortCombo->setFixedHeight(20);
+        m_sortCombo->setStyleSheet(
+            "QComboBox {"
+            "  background: #1a1a1a; color: #ccc; border: 1px solid #333; border-radius: 3px;"
+            "  padding: 0 6px; font-size: 10px; font-family: 'Segoe UI', sans-serif;"
+            "}"
+            "QComboBox:focus { border-color: #f0a500; }"
+            "QComboBox::drop-down { border: none; width: 14px; }"
+            "QComboBox QAbstractItemView {"
+            "  background: #1a1a1a; color: #e8e8e8; border: 1px solid #2a2a2a;"
+            "  selection-background-color: #3d2e0a; selection-color: #f0a500;"
+            "}");
+        connect(m_sortCombo, &QComboBox::currentIndexChanged, this, &AssetBrowserPanel::SetSortMode);
+        layout->addWidget(m_sortCombo);
+    }
+
+    void AssetBrowserPanel::SetTypeFilter(AssetType type)
+    {
+        m_typeFilter = type;
+        PopulateContent();
+        UpdateStatusBar();
+    }
+
+    void AssetBrowserPanel::SetSortMode(int mode)
+    {
+        m_sortMode = mode;
+        PopulateContent();
+        UpdateStatusBar();
     }
 
     void AssetBrowserPanel::SetAssetsRoot(const char* path)
@@ -1226,23 +1331,55 @@ namespace forge
                 continue;
 
             if (entry.is_directory())
+            {
                 dirs.PushBack(entry);
+            }
             else if (IsSupportedExtension(entry.path().extension().string()))
-                files.PushBack(entry);
+            {
+                if (m_typeFilter == AssetType::Unknown ||
+                    ClassifyExtension(entry.path().extension().string()) == m_typeFilter)
+                {
+                    files.PushBack(entry);
+                }
+            }
         }
 
         std::sort(dirs.begin(), dirs.end());
-        std::sort(files.begin(), files.end());
 
-        for (const auto& d : dirs)
+        if (m_sortMode == 0)
         {
-            auto* item = new QListWidgetItem{};
-            item->setText(QString::fromStdString(d.path().filename().string()));
-            item->setData(Qt::UserRole, QString::fromStdString(d.path().generic_string()));
-            item->setData(Qt::UserRole + 1, static_cast<int>(AssetType::Folder));
-            item->setToolTip(QString::fromStdString(d.path().string()));
-            item->setFlags((item->flags() | Qt::ItemIsDragEnabled) & ~Qt::ItemIsDropEnabled);
-            m_contentList->addItem(item);
+            std::sort(files.begin(), files.end());
+        }
+        else if (m_sortMode == 1)
+        {
+            std::sort(files.begin(), files.end(), [](const auto& a, const auto& b) {
+                auto ta = ClassifyExtension(a.path().extension().string());
+                auto tb = ClassifyExtension(b.path().extension().string());
+                if (ta != tb)
+                    return static_cast<int>(ta) < static_cast<int>(tb);
+                return a < b;
+            });
+        }
+        else if (m_sortMode == 2)
+        {
+            std::sort(files.begin(), files.end(), [](const auto& a, const auto& b) {
+                std::error_code e;
+                return a.last_write_time(e) > b.last_write_time(e);
+            });
+        }
+
+        if (m_typeFilter == AssetType::Unknown)
+        {
+            for (const auto& d : dirs)
+            {
+                auto* item = new QListWidgetItem{};
+                item->setText(QString::fromStdString(d.path().filename().string()));
+                item->setData(Qt::UserRole, QString::fromStdString(d.path().generic_string()));
+                item->setData(Qt::UserRole + 1, static_cast<int>(AssetType::Folder));
+                item->setToolTip(QString::fromStdString(d.path().string()));
+                item->setFlags((item->flags() | Qt::ItemIsDragEnabled) & ~Qt::ItemIsDropEnabled);
+                m_contentList->addItem(item);
+            }
         }
 
         for (const auto& f : files)
@@ -1290,11 +1427,21 @@ namespace forge
     void AssetBrowserPanel::OnContentDoubleClicked(QListWidgetItem* item)
     {
         auto type = static_cast<AssetType>(item->data(Qt::UserRole + 1).toInt());
+        auto path = item->data(Qt::UserRole).toString();
+
         if (type == AssetType::Folder)
         {
-            auto path = item->data(Qt::UserRole).toString().toStdString();
-            NavigateTo(std::filesystem::path{path});
+            NavigateTo(std::filesystem::path{path.toStdString()});
+            return;
         }
+
+        if (type == AssetType::Scene)
+        {
+            emit sceneOpenRequested(path);
+            return;
+        }
+
+        emit assetOpenRequested(path, type);
     }
 
     void AssetBrowserPanel::OnContentContextMenu(const QPoint& pos)
@@ -1822,7 +1969,7 @@ namespace forge
 
     void AssetBrowserPanel::OnDirectoryChanged(const QString&)
     {
-        Refresh();
+        m_refreshDebounce.start();
     }
 
     void AssetBrowserPanel::OnFileChanged(const QString& path)
@@ -1836,7 +1983,7 @@ namespace forge
         if (QFile::exists(path))
             m_fsWatcher.addPath(path);
 
-        Refresh();
+        m_refreshDebounce.start();
     }
 
     void AssetBrowserPanel::WatchCurrentDir()

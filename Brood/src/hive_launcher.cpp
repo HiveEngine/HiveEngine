@@ -172,6 +172,14 @@ namespace
                                  [&ctx, &s]() { OpenEditorSceneWithPicker(ctx, s); });
 
                 QObject::connect(
+                    s.m_mainWindow, &forge::ForgeMainWindow::sceneOpenRequested,
+                    [&ctx, &s](const QString& path) {
+                        RequestPendingEditorAction(ctx, s, PendingEditorAction::OPEN_SCENE,
+                                                   std::filesystem::path{path.toStdString()});
+                        s.m_mainWindow->RefreshAll();
+                    });
+
+                QObject::connect(
                     s.m_mainWindow, &forge::ForgeMainWindow::hubCreateRequested,
                     [&ctx, &s, transitionToEditor](const QString& name, const QString& dir, const QString& version) {
                         auto& hub = s.m_hub;
