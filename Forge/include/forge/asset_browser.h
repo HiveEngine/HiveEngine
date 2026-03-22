@@ -1,7 +1,9 @@
 #pragma once
 
+#include <QLabel>
 #include <QLineEdit>
 #include <QListWidget>
+#include <QSlider>
 #include <QSplitter>
 #include <QToolButton>
 #include <QTreeWidget>
@@ -13,6 +15,50 @@
 
 namespace forge
 {
+    class AssetBrowserPanel;
+
+    // QTreeWidget that accepts drops and forwards them to the asset browser
+    class DropFolderTree : public QTreeWidget
+    {
+        Q_OBJECT
+    public:
+        explicit DropFolderTree(AssetBrowserPanel* browser, QWidget* parent = nullptr);
+
+    protected:
+        void dragEnterEvent(QDragEnterEvent* event) override;
+        void dragMoveEvent(QDragMoveEvent* event) override;
+        void dropEvent(QDropEvent* event) override;
+
+    private:
+        AssetBrowserPanel* m_browser{};
+    };
+
+    // QListWidget that accepts drops on folder items and forwards them
+    class DropContentList : public QListWidget
+    {
+        Q_OBJECT
+    public:
+        explicit DropContentList(AssetBrowserPanel* browser, QWidget* parent = nullptr);
+
+    protected:
+        void mousePressEvent(QMouseEvent* event) override;
+        void mouseMoveEvent(QMouseEvent* event) override;
+        void mouseReleaseEvent(QMouseEvent* event) override;
+        void mouseDoubleClickEvent(QMouseEvent* event) override;
+        void wheelEvent(QWheelEvent* event) override;
+        void dragEnterEvent(QDragEnterEvent* event) override;
+        void dragMoveEvent(QDragMoveEvent* event) override;
+        void dropEvent(QDropEvent* event) override;
+
+    private:
+        void StartDrag();
+
+        AssetBrowserPanel* m_browser{};
+        QPoint m_dragStartPos;
+        bool m_dragPending{false};
+        bool m_didDrag{false};
+    };
+
     enum class AssetType : uint8_t
     {
         Folder,
@@ -27,7 +73,44 @@ namespace forge
 
     AssetType ClassifyExtension(const std::string& ext);
 
+    enum class FileAction : uint8_t
+    {
+        CreateFolder,
+        Delete,
+        Rename,
+        Move
+    };
+
+    struct FileUndoEntry
+    {
+        FileAction m_action{};
+        std::filesystem::path m_path;    // primary path (created/deleted/renamed/moved item)
+        std::filesystem::path m_auxPath; // rename: old path, move: original location, delete: trash path
+    };
+
+    class FileUndoStack
+    {
+    public:
+        void PushCreateFolder(const std::filesystem::path& created);
+        void PushDelete(const std::filesystem::path& original, const std::filesystem::path& trashPath);
+        void PushRename(const std::filesystem::path& newPath, const std::filesystem::path& oldPath);
+        void PushMove(const std::filesystem::path& newPath, const std::filesystem::path& oldPath);
+
+        bool Undo();
+        bool Redo();
+
+        [[nodiscard]] bool CanUndo() const noexcept { return !m_undoStack.empty(); }
+        [[nodiscard]] bool CanRedo() const noexcept { return !m_redoStack.empty(); }
+
+    private:
+        bool Execute(const FileUndoEntry& entry, bool undo);
+
+        std::vector<FileUndoEntry> m_undoStack;
+        std::vector<FileUndoEntry> m_redoStack;
+    };
+
     class ContentItemDelegate;
+    class ThumbnailCache;
 
     class AssetBrowserPanel : public QWidget
     {
@@ -38,21 +121,27 @@ namespace forge
 
         void SetAssetsRoot(const char* path);
         void Refresh();
+        void MoveAsset(const std::filesystem::path& src, const std::filesystem::path& dstDir);
 
     signals:
         void assetImported(const QString& path);
         void gltfImportRequested(const QString& path);
 
+    protected:
+        void keyPressEvent(QKeyEvent* event) override;
+
     private:
         void BuildToolbar();
         void BuildFolderTree();
         void BuildContentArea();
+        void BuildStatusBar();
 
         void NavigateTo(const std::filesystem::path& dir);
         void NavigateBack();
         void NavigateForward();
         void NavigateUp();
         void UpdateBreadcrumb();
+        void UpdateStatusBar();
         void PopulateFolderTree(QTreeWidgetItem* parent, const std::filesystem::path& dir);
         void PopulateContent();
         void ApplySearchFilter();
@@ -70,16 +159,26 @@ namespace forge
         void RenameSelected();
         void DeleteSelected();
         void ShowInExplorer(const std::filesystem::path& path);
-        void MoveAsset(const std::filesystem::path& src, const std::filesystem::path& dstDir);
+
+        void UndoFileAction();
+        void RedoFileAction();
+        void UpdateIconSize(int size);
+
+        std::filesystem::path TrashPathFor(const std::filesystem::path& path);
 
         QSplitter* m_splitter{};
-        QTreeWidget* m_folderTree{};
-        QListWidget* m_contentList{};
+        DropFolderTree* m_folderTree{};
+        DropContentList* m_contentList{};
         QWidget* m_breadcrumbBar{};
+        QWidget* m_statusBar{};
         QLineEdit* m_searchField{};
         QToolButton* m_backBtn{};
         QToolButton* m_forwardBtn{};
         QToolButton* m_upBtn{};
+        QToolButton* m_undoBtn{};
+        QToolButton* m_redoBtn{};
+        QLabel* m_statusLabel{};
+        QSlider* m_sizeSlider{};
 
         std::filesystem::path m_root;
         std::filesystem::path m_currentDir;
@@ -87,6 +186,8 @@ namespace forge
         wax::Vector<std::filesystem::path> m_historyBack;
         wax::Vector<std::filesystem::path> m_historyForward;
 
+        FileUndoStack m_fileUndo;
+        ThumbnailCache* m_thumbnailCache{};
         int m_iconSize{80};
     };
 } // namespace forge

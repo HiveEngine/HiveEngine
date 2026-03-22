@@ -1,27 +1,364 @@
 #include <forge/asset_browser.h>
 
+#include <QApplication>
 #include <QDesktopServices>
+#include <QDrag>
+#include <QDragEnterEvent>
+#include <QDropEvent>
+#include <QMouseEvent>
 #include <QFileDialog>
 #include <QHBoxLayout>
 #include <QInputDialog>
+#include <QKeyEvent>
 #include <QLabel>
 #include <QMenu>
 #include <QMessageBox>
+#include <QMimeData>
+#include <QMutex>
+#include <QMutexLocker>
 #include <QPainter>
+#include <QScrollBar>
+#include <QSlider>
 #include <QStyledItemDelegate>
+#include <QThread>
 #include <QToolButton>
 #include <QUrl>
 #include <QVBoxLayout>
 
 #include <forge/forge_module.h>
 
+#include <hive/core/log.h>
+
 #include <algorithm>
+#include <chrono>
 #include <filesystem>
 #include <string>
+#include <unordered_map>
+#include <unordered_set>
+
+static const hive::LogCategory LOG_ASSETS{"AssetBrowser"};
 
 namespace forge
 {
-    // ── asset type classification ──────────────────────────────────────
+    static const char* kAssetPathMime = "application/x-hive-asset-paths";
+    static constexpr int kThumbnailMaxSize = 160;
+
+    class ThumbnailLoader : public QObject
+    {
+        Q_OBJECT
+    public:
+        void Request(const QString& path)
+        {
+            {
+                QMutexLocker lock{&m_mutex};
+                auto key = path.toStdString();
+                if (m_queued.count(key))
+                    return;
+                m_queued.insert(key);
+                m_queue.push_back(path);
+            }
+            QMetaObject::invokeMethod(this, &ThumbnailLoader::ProcessNext, Qt::QueuedConnection);
+        }
+
+    signals:
+        void Ready(const QString& path, const QImage& image);
+        void Failed(const QString& path);
+
+    private:
+        void ProcessNext()
+        {
+            QString path;
+            {
+                QMutexLocker lock{&m_mutex};
+                if (m_queue.empty())
+                    return;
+                path = m_queue.back();
+                m_queue.pop_back();
+            }
+
+            QImage img;
+            if (img.load(path))
+            {
+                QImage scaled = img.scaled(kThumbnailMaxSize, kThumbnailMaxSize,
+                                           Qt::KeepAspectRatio, Qt::SmoothTransformation);
+                emit Ready(path, scaled);
+            }
+            else
+            {
+                emit Failed(path);
+            }
+
+            QMutexLocker lock{&m_mutex};
+            if (!m_queue.empty())
+                QMetaObject::invokeMethod(this, &ThumbnailLoader::ProcessNext, Qt::QueuedConnection);
+        }
+
+        QMutex m_mutex;
+        std::vector<QString> m_queue;
+        std::unordered_set<std::string> m_queued;
+    };
+
+    class ThumbnailCache : public QObject
+    {
+        Q_OBJECT
+    public:
+        explicit ThumbnailCache(QObject* parent = nullptr)
+            : QObject{parent}
+        {
+            m_loader = new ThumbnailLoader{};
+            m_loader->moveToThread(&m_thread);
+            connect(&m_thread, &QThread::finished, m_loader, &QObject::deleteLater);
+            connect(m_loader, &ThumbnailLoader::Ready, this, &ThumbnailCache::OnReady);
+            connect(m_loader, &ThumbnailLoader::Failed, this, &ThumbnailCache::OnFailed);
+            m_thread.start();
+        }
+
+        ~ThumbnailCache() override
+        {
+            m_thread.quit();
+            m_thread.wait();
+        }
+
+        QPixmap Get(const QString& path)
+        {
+            auto key = path.toStdString();
+            auto it = m_cache.find(key);
+            if (it != m_cache.end())
+                return it->second;
+            if (m_failed.count(key))
+                return {};
+            m_loader->Request(path);
+            return {};
+        }
+
+        void Clear()
+        {
+            m_cache.clear();
+            m_failed.clear();
+        }
+
+    signals:
+        void ThumbnailLoaded();
+
+    private:
+        void OnReady(const QString& path, const QImage& image)
+        {
+            m_cache[path.toStdString()] = QPixmap::fromImage(image);
+            emit ThumbnailLoaded();
+        }
+
+        void OnFailed(const QString& path)
+        {
+            m_failed.insert(path.toStdString());
+        }
+
+        std::unordered_map<std::string, QPixmap> m_cache;
+        std::unordered_set<std::string> m_failed;
+        QThread m_thread;
+        ThumbnailLoader* m_loader{};
+    };
+
+    DropFolderTree::DropFolderTree(AssetBrowserPanel* browser, QWidget* parent)
+        : QTreeWidget{parent}
+        , m_browser{browser}
+    {
+        setAcceptDrops(true);
+    }
+
+    void DropFolderTree::dragEnterEvent(QDragEnterEvent* event)
+    {
+        if (event->mimeData()->hasFormat(kAssetPathMime))
+            event->acceptProposedAction();
+        else
+            event->ignore();
+    }
+
+    void DropFolderTree::dragMoveEvent(QDragMoveEvent* event)
+    {
+        auto* item = itemAt(event->position().toPoint());
+        if (item != nullptr && event->mimeData()->hasFormat(kAssetPathMime))
+        {
+            setCurrentItem(item);
+            event->acceptProposedAction();
+        }
+        else
+        {
+            event->ignore();
+        }
+    }
+
+    void DropFolderTree::dropEvent(QDropEvent* event)
+    {
+        auto* item = itemAt(event->position().toPoint());
+        if (item == nullptr || !event->mimeData()->hasFormat(kAssetPathMime))
+        {
+            event->ignore();
+            return;
+        }
+
+        auto dstDir = std::filesystem::path{item->data(0, Qt::UserRole).toString().toStdString()};
+        auto paths = QString::fromUtf8(event->mimeData()->data(kAssetPathMime)).split('\n', Qt::SkipEmptyParts);
+
+        for (const auto& p : paths)
+        {
+            auto src = std::filesystem::path{p.toStdString()};
+            if (src.parent_path() != dstDir)
+                m_browser->MoveAsset(src, dstDir);
+        }
+
+        event->acceptProposedAction();
+    }
+
+    DropContentList::DropContentList(AssetBrowserPanel* browser, QWidget* parent)
+        : QListWidget{parent}
+        , m_browser{browser}
+    {
+        setAcceptDrops(true);
+        setDragEnabled(false);
+        setSelectionMode(QAbstractItemView::ExtendedSelection);
+    }
+
+    void DropContentList::mousePressEvent(QMouseEvent* event)
+    {
+        m_didDrag = false;
+
+        if (event->button() == Qt::LeftButton && itemAt(event->pos()) != nullptr)
+        {
+            m_dragStartPos = event->pos();
+            m_dragPending = true;
+            auto* hit = itemAt(event->pos());
+            if (!(event->modifiers() & (Qt::ControlModifier | Qt::ShiftModifier)))
+                clearSelection();
+            if (hit != nullptr)
+                hit->setSelected(true);
+            setCurrentItem(hit);
+            return;
+        }
+
+        m_dragPending = false;
+        QListWidget::mousePressEvent(event);
+    }
+
+    void DropContentList::mouseMoveEvent(QMouseEvent* event)
+    {
+        if (m_dragPending && (event->buttons() & Qt::LeftButton))
+        {
+            int distance = (event->pos() - m_dragStartPos).manhattanLength();
+            if (distance >= QApplication::startDragDistance())
+            {
+                m_dragPending = false;
+                m_didDrag = true;
+                StartDrag();
+                return;
+            }
+            return;
+        }
+        QListWidget::mouseMoveEvent(event);
+    }
+
+    void DropContentList::mouseReleaseEvent(QMouseEvent* event)
+    {
+        m_dragPending = false;
+        if (m_didDrag)
+        {
+            m_didDrag = false;
+            return;
+        }
+        QListWidget::mouseReleaseEvent(event);
+    }
+
+    void DropContentList::mouseDoubleClickEvent(QMouseEvent* event)
+    {
+        m_dragPending = false;
+        auto* hit = itemAt(event->pos());
+        if (hit != nullptr)
+            emit itemDoubleClicked(hit);
+    }
+
+    static constexpr int kScrollStep = 40;
+
+    void DropContentList::wheelEvent(QWheelEvent* event)
+    {
+        int delta = event->angleDelta().y();
+        verticalScrollBar()->setValue(verticalScrollBar()->value() - (delta > 0 ? kScrollStep : -kScrollStep));
+        event->accept();
+    }
+
+    void DropContentList::StartDrag()
+    {
+        auto items = selectedItems();
+        if (items.isEmpty())
+            return;
+
+        QStringList paths;
+        for (auto* item : items)
+        {
+            auto path = item->data(Qt::UserRole).toString();
+            if (!path.isEmpty())
+                paths.append(path);
+        }
+
+        if (paths.isEmpty())
+            return;
+
+        auto* data = new QMimeData{};
+        data->setData(kAssetPathMime, paths.join('\n').toUtf8());
+
+        auto* drag = new QDrag{this};
+        drag->setMimeData(data);
+        drag->exec(Qt::MoveAction);
+    }
+
+    void DropContentList::dragEnterEvent(QDragEnterEvent* event)
+    {
+        if (event->mimeData()->hasFormat(kAssetPathMime))
+            event->acceptProposedAction();
+        else
+            event->ignore();
+    }
+
+    void DropContentList::dragMoveEvent(QDragMoveEvent* event)
+    {
+        if (!event->mimeData()->hasFormat(kAssetPathMime))
+        {
+            event->ignore();
+            return;
+        }
+
+        auto* item = itemAt(event->position().toPoint());
+        if (item != nullptr && static_cast<AssetType>(item->data(Qt::UserRole + 1).toInt()) == AssetType::Folder)
+            event->acceptProposedAction();
+        else
+            event->ignore();
+    }
+
+    void DropContentList::dropEvent(QDropEvent* event)
+    {
+        if (!event->mimeData()->hasFormat(kAssetPathMime))
+        {
+            event->ignore();
+            return;
+        }
+
+        auto* targetItem = itemAt(event->position().toPoint());
+        if (targetItem == nullptr ||
+            static_cast<AssetType>(targetItem->data(Qt::UserRole + 1).toInt()) != AssetType::Folder)
+        {
+            event->ignore();
+            return;
+        }
+
+        auto dstDir = std::filesystem::path{targetItem->data(Qt::UserRole).toString().toStdString()};
+        auto paths = QString::fromUtf8(event->mimeData()->data(kAssetPathMime)).split('\n', Qt::SkipEmptyParts);
+        for (const auto& p : paths)
+        {
+            auto src = std::filesystem::path{p.toStdString()};
+            if (src.parent_path() != dstDir && src != dstDir)
+                m_browser->MoveAsset(src, dstDir);
+        }
+
+        event->acceptProposedAction();
+    }
 
     AssetType ClassifyExtension(const std::string& ext)
     {
@@ -44,8 +381,6 @@ namespace forge
     {
         return ClassifyExtension(ext) != AssetType::Unknown;
     }
-
-    // ── icon colors per asset type ─────────────────────────────────────
 
     static QColor IconColor(AssetType type)
     {
@@ -90,8 +425,6 @@ namespace forge
             return "FILE";
         }
     }
-
-    // ── icon painting ──────────────────────────────────────────────────
 
     static void PaintFolderIcon(QPainter& p, const QRect& rect, const QColor& color)
     {
@@ -174,12 +507,14 @@ namespace forge
         }
     }
 
-    // ── content item delegate ──────────────────────────────────────────
-
     class ContentItemDelegate : public QStyledItemDelegate
     {
     public:
-        using QStyledItemDelegate::QStyledItemDelegate;
+        explicit ContentItemDelegate(ThumbnailCache* cache, QObject* parent = nullptr)
+            : QStyledItemDelegate{parent}
+            , m_cache{cache}
+        {
+        }
 
         void paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const override
         {
@@ -201,9 +536,42 @@ namespace forge
             QColor color = IconColor(type);
 
             if (type == AssetType::Folder)
+            {
                 PaintFolderIcon(*painter, iconRect, color);
+            }
+            else if (type == AssetType::Texture && m_cache != nullptr)
+            {
+                QString filePath = index.data(Qt::UserRole).toString();
+                QPixmap thumb = m_cache->Get(filePath);
+                if (!thumb.isNull())
+                {
+                    QPixmap scaled = thumb.scaled(iconRect.size(), Qt::KeepAspectRatio, Qt::SmoothTransformation);
+                    int dx = (iconRect.width() - scaled.width()) / 2;
+                    int dy = (iconRect.height() - scaled.height()) / 2;
+                    painter->drawPixmap(iconRect.x() + dx, iconRect.y() + dy, scaled);
+
+                    QFont badgeFont{"Segoe UI", 6, QFont::Bold};
+                    painter->setFont(badgeFont);
+                    QFontMetrics bfm{badgeFont};
+                    int bw = bfm.horizontalAdvance("TEX") + 6;
+                    int bh = bfm.height() + 2;
+                    QRect badgeRect{iconRect.right() - bw - 2, iconRect.bottom() - bh - 2, bw, bh};
+                    painter->setPen(Qt::NoPen);
+                    painter->setBrush(QColor{0x81, 0xc7, 0x84, 200});
+                    painter->setRenderHint(QPainter::Antialiasing);
+                    painter->drawRoundedRect(badgeRect, 3, 3);
+                    painter->setPen(QColor{0x0d, 0x0d, 0x0d});
+                    painter->drawText(badgeRect, Qt::AlignCenter, "TEX");
+                }
+                else
+                {
+                    PaintFileIcon(*painter, iconRect, color, TypeLabel(type));
+                }
+            }
             else
+            {
                 PaintFileIcon(*painter, iconRect, color, TypeLabel(type));
+            }
 
             QRect textRect = option.rect;
             textRect.setTop(iconRect.bottom() + 2);
@@ -213,7 +581,8 @@ namespace forge
             QFont font{"Segoe UI", 8};
             painter->setFont(font);
 
-            QColor textColor = (option.state & QStyle::State_Selected) ? QColor{0xf0, 0xa5, 0x00} : QColor{0xcc, 0xcc, 0xcc};
+            QColor textColor =
+                (option.state & QStyle::State_Selected) ? QColor{0xf0, 0xa5, 0x00} : QColor{0xcc, 0xcc, 0xcc};
             painter->setPen(textColor);
 
             QFontMetrics fm{font};
@@ -230,9 +599,106 @@ namespace forge
                 size = 80;
             return QSize{size + 8, size + 28};
         }
+
+    private:
+        ThumbnailCache* m_cache{};
     };
 
-    // ── toolbar button helper ──────────────────────────────────────────
+    void FileUndoStack::PushCreateFolder(const std::filesystem::path& created)
+    {
+        m_redoStack.clear();
+        m_undoStack.push_back({FileAction::CreateFolder, created, {}});
+    }
+
+    void FileUndoStack::PushDelete(const std::filesystem::path& original, const std::filesystem::path& trashPath)
+    {
+        m_redoStack.clear();
+        m_undoStack.push_back({FileAction::Delete, original, trashPath});
+    }
+
+    void FileUndoStack::PushRename(const std::filesystem::path& newPath, const std::filesystem::path& oldPath)
+    {
+        m_redoStack.clear();
+        m_undoStack.push_back({FileAction::Rename, newPath, oldPath});
+    }
+
+    void FileUndoStack::PushMove(const std::filesystem::path& newPath, const std::filesystem::path& oldPath)
+    {
+        m_redoStack.clear();
+        m_undoStack.push_back({FileAction::Move, newPath, oldPath});
+    }
+
+    bool FileUndoStack::Undo()
+    {
+        if (m_undoStack.empty())
+            return false;
+
+        auto entry = std::move(m_undoStack.back());
+        m_undoStack.pop_back();
+
+        if (!Execute(entry, true))
+            return false;
+
+        m_redoStack.push_back(std::move(entry));
+        return true;
+    }
+
+    bool FileUndoStack::Redo()
+    {
+        if (m_redoStack.empty())
+            return false;
+
+        auto entry = std::move(m_redoStack.back());
+        m_redoStack.pop_back();
+
+        if (!Execute(entry, false))
+            return false;
+
+        m_undoStack.push_back(std::move(entry));
+        return true;
+    }
+
+    bool FileUndoStack::Execute(const FileUndoEntry& entry, bool undo)
+    {
+        std::error_code ec;
+        switch (entry.m_action)
+        {
+        case FileAction::CreateFolder:
+            if (undo)
+                std::filesystem::remove_all(entry.m_path, ec);
+            else
+                std::filesystem::create_directory(entry.m_path, ec);
+            break;
+
+        case FileAction::Delete:
+            if (undo)
+                std::filesystem::rename(entry.m_auxPath, entry.m_path, ec);
+            else
+                std::filesystem::rename(entry.m_path, entry.m_auxPath, ec);
+            break;
+
+        case FileAction::Rename:
+            if (undo)
+                std::filesystem::rename(entry.m_path, entry.m_auxPath, ec);
+            else
+                std::filesystem::rename(entry.m_auxPath, entry.m_path, ec);
+            break;
+
+        case FileAction::Move:
+            if (undo)
+                std::filesystem::rename(entry.m_path, entry.m_auxPath, ec);
+            else
+                std::filesystem::rename(entry.m_auxPath, entry.m_path, ec);
+            break;
+        }
+
+        if (ec)
+        {
+            hive::LogWarning(LOG_ASSETS, "File undo/redo failed: {}", ec.message());
+            return false;
+        }
+        return true;
+    }
 
     static QToolButton* MakeToolBtn(QWidget* parent, const QString& text, const QString& tooltip)
     {
@@ -249,13 +715,18 @@ namespace forge
         return btn;
     }
 
-    // ── AssetBrowserPanel ──────────────────────────────────────────────
-
     AssetBrowserPanel::AssetBrowserPanel(QWidget* parent)
         : QWidget{parent}
         , m_historyBack{forge::GetAllocator()}
         , m_historyForward{forge::GetAllocator()}
     {
+        setFocusPolicy(Qt::StrongFocus);
+
+        m_thumbnailCache = new ThumbnailCache{this};
+        connect(m_thumbnailCache, &ThumbnailCache::ThumbnailLoaded, this, [this] {
+            m_contentList->viewport()->update();
+        });
+
         auto* mainLayout = new QVBoxLayout{this};
         mainLayout->setContentsMargins(0, 0, 0, 0);
         mainLayout->setSpacing(0);
@@ -276,6 +747,9 @@ namespace forge
         m_splitter->setSizes({180, 600});
 
         mainLayout->addWidget(m_splitter);
+
+        BuildStatusBar();
+        mainLayout->addWidget(m_statusBar);
     }
 
     void AssetBrowserPanel::BuildToolbar()
@@ -288,7 +762,7 @@ namespace forge
         layout->setContentsMargins(4, 0, 4, 0);
         layout->setSpacing(2);
 
-        m_backBtn = MakeToolBtn(m_breadcrumbBar, "\xe2\x86\x90", "Back");
+        m_backBtn = MakeToolBtn(m_breadcrumbBar, "\xe2\x86\x90", "Back (Backspace)");
         m_forwardBtn = MakeToolBtn(m_breadcrumbBar, "\xe2\x86\x92", "Forward");
         m_upBtn = MakeToolBtn(m_breadcrumbBar, "\xe2\x86\x91", "Up");
 
@@ -304,10 +778,24 @@ namespace forge
         layout->addWidget(m_forwardBtn);
         layout->addWidget(m_upBtn);
 
-        auto* sep = new QWidget{m_breadcrumbBar};
-        sep->setFixedWidth(1);
-        sep->setStyleSheet("background: #2a2a2a;");
-        layout->addWidget(sep);
+        auto* sep1 = new QWidget{m_breadcrumbBar};
+        sep1->setFixedWidth(1);
+        sep1->setStyleSheet("background: #2a2a2a;");
+        layout->addWidget(sep1);
+
+        m_undoBtn = MakeToolBtn(m_breadcrumbBar, "\xe2\x86\xb6", "Undo (Ctrl+Z)");
+        m_redoBtn = MakeToolBtn(m_breadcrumbBar, "\xe2\x86\xb7", "Redo (Ctrl+Y)");
+        m_undoBtn->setEnabled(false);
+        m_redoBtn->setEnabled(false);
+        connect(m_undoBtn, &QToolButton::clicked, this, &AssetBrowserPanel::UndoFileAction);
+        connect(m_redoBtn, &QToolButton::clicked, this, &AssetBrowserPanel::RedoFileAction);
+        layout->addWidget(m_undoBtn);
+        layout->addWidget(m_redoBtn);
+
+        auto* sep2 = new QWidget{m_breadcrumbBar};
+        sep2->setFixedWidth(1);
+        sep2->setStyleSheet("background: #2a2a2a;");
+        layout->addWidget(sep2);
 
         layout->addSpacing(6);
         layout->addStretch();
@@ -349,7 +837,7 @@ namespace forge
 
     void AssetBrowserPanel::BuildFolderTree()
     {
-        m_folderTree = new QTreeWidget{m_splitter};
+        m_folderTree = new DropFolderTree{this, m_splitter};
         m_folderTree->setHeaderHidden(true);
         m_folderTree->setEditTriggers(QAbstractItemView::NoEditTriggers);
         m_folderTree->setIndentation(14);
@@ -362,12 +850,13 @@ namespace forge
                                     "QTreeWidget::item:selected { background: #3d2e0a; color: #f0a500; }");
 
         connect(m_folderTree, &QTreeWidget::itemClicked, this, &AssetBrowserPanel::OnFolderTreeClicked);
-        connect(m_folderTree, &QTreeWidget::customContextMenuRequested, this, &AssetBrowserPanel::OnFolderTreeContextMenu);
+        connect(m_folderTree, &QTreeWidget::customContextMenuRequested, this,
+                &AssetBrowserPanel::OnFolderTreeContextMenu);
     }
 
     void AssetBrowserPanel::BuildContentArea()
     {
-        m_contentList = new QListWidget{m_splitter};
+        m_contentList = new DropContentList{this, m_splitter};
         m_contentList->setViewMode(QListView::IconMode);
         m_contentList->setResizeMode(QListView::Adjust);
         m_contentList->setMovement(QListView::Static);
@@ -375,8 +864,8 @@ namespace forge
         m_contentList->setGridSize(QSize{m_iconSize + 8, m_iconSize + 28});
         m_contentList->setSpacing(4);
         m_contentList->setUniformItemSizes(true);
-        m_contentList->setSelectionMode(QAbstractItemView::ExtendedSelection);
-        m_contentList->setDragDropMode(QAbstractItemView::DragOnly);
+        m_contentList->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
+        m_contentList->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
         m_contentList->setContextMenuPolicy(Qt::CustomContextMenu);
         m_contentList->setStyleSheet("QListWidget {"
                                      "  background: #111; border: none; outline: none;"
@@ -385,13 +874,50 @@ namespace forge
                                      "QListWidget::item:hover { background: #1e1e1e; }"
                                      "QListWidget::item:selected { background: #3d2e0a; }");
 
-        m_contentList->setItemDelegate(new ContentItemDelegate{m_contentList});
+        m_contentList->setItemDelegate(new ContentItemDelegate{m_thumbnailCache, m_contentList});
 
         connect(m_contentList, &QListWidget::itemDoubleClicked, this, &AssetBrowserPanel::OnContentDoubleClicked);
-        connect(m_contentList, &QListWidget::customContextMenuRequested, this, &AssetBrowserPanel::OnContentContextMenu);
+        connect(m_contentList, &QListWidget::customContextMenuRequested, this,
+                &AssetBrowserPanel::OnContentContextMenu);
     }
 
-    // ── public API ─────────────────────────────────────────────────────
+    void AssetBrowserPanel::BuildStatusBar()
+    {
+        m_statusBar = new QWidget{this};
+        m_statusBar->setFixedHeight(24);
+        m_statusBar->setStyleSheet("QWidget { background: #141414; border-top: 1px solid #2a2a2a; }");
+
+        auto* layout = new QHBoxLayout{m_statusBar};
+        layout->setContentsMargins(8, 0, 8, 0);
+        layout->setSpacing(4);
+
+        m_statusLabel = new QLabel{"0 items", m_statusBar};
+        m_statusLabel->setStyleSheet("color: #666; font-size: 10px; font-family: 'Segoe UI', sans-serif;");
+        layout->addWidget(m_statusLabel);
+
+        layout->addStretch();
+
+        auto* sizeIcon = new QLabel{m_statusBar};
+        sizeIcon->setText("\xe2\x96\xa3");
+        sizeIcon->setStyleSheet("color: #555; font-size: 10px;");
+        layout->addWidget(sizeIcon);
+
+        m_sizeSlider = new QSlider{Qt::Horizontal, m_statusBar};
+        m_sizeSlider->setRange(48, 160);
+        m_sizeSlider->setValue(m_iconSize);
+        m_sizeSlider->setFixedWidth(100);
+        m_sizeSlider->setFixedHeight(16);
+        m_sizeSlider->setStyleSheet("QSlider::groove:horizontal {"
+                                    "  background: #222; height: 4px; border-radius: 2px;"
+                                    "}"
+                                    "QSlider::handle:horizontal {"
+                                    "  background: #888; width: 10px; height: 10px; margin: -3px 0;"
+                                    "  border-radius: 5px;"
+                                    "}"
+                                    "QSlider::handle:horizontal:hover { background: #f0a500; }");
+        connect(m_sizeSlider, &QSlider::valueChanged, this, &AssetBrowserPanel::UpdateIconSize);
+        layout->addWidget(m_sizeSlider);
+    }
 
     void AssetBrowserPanel::SetAssetsRoot(const char* path)
     {
@@ -412,6 +938,7 @@ namespace forge
             auto* item = new QListWidgetItem{"No assets directory"};
             item->setFlags(item->flags() & ~Qt::ItemIsSelectable);
             m_contentList->addItem(item);
+            UpdateStatusBar();
             return;
         }
 
@@ -431,9 +958,11 @@ namespace forge
         SyncTreeSelection();
         PopulateContent();
         UpdateBreadcrumb();
-    }
+        UpdateStatusBar();
 
-    // ── navigation ─────────────────────────────────────────────────────
+        m_undoBtn->setEnabled(m_fileUndo.CanUndo());
+        m_redoBtn->setEnabled(m_fileUndo.CanRedo());
+    }
 
     void AssetBrowserPanel::NavigateTo(const std::filesystem::path& dir)
     {
@@ -447,6 +976,7 @@ namespace forge
         SyncTreeSelection();
         PopulateContent();
         UpdateBreadcrumb();
+        UpdateStatusBar();
     }
 
     void AssetBrowserPanel::NavigateBack()
@@ -461,6 +991,7 @@ namespace forge
         SyncTreeSelection();
         PopulateContent();
         UpdateBreadcrumb();
+        UpdateStatusBar();
     }
 
     void AssetBrowserPanel::NavigateForward()
@@ -475,6 +1006,7 @@ namespace forge
         SyncTreeSelection();
         PopulateContent();
         UpdateBreadcrumb();
+        UpdateStatusBar();
     }
 
     void AssetBrowserPanel::NavigateUp()
@@ -510,7 +1042,8 @@ namespace forge
         std::filesystem::path relative = std::filesystem::relative(m_currentDir, m_root);
         std::filesystem::path accumulated = m_root;
 
-        auto insertPos = 5; // after back/fwd/up/separator/spacing
+        // insert after: back, fwd, up, sep1, undo, redo, sep2, spacing
+        auto insertPos = 9;
 
         auto addSegment = [&](const QString& name, const std::filesystem::path& target) {
             auto* btn = new QToolButton{m_breadcrumbBar};
@@ -548,7 +1081,19 @@ namespace forge
         }
     }
 
-    // ── folder tree ────────────────────────────────────────────────────
+    void AssetBrowserPanel::UpdateStatusBar()
+    {
+        int total = m_contentList->count();
+        int selected = m_contentList->selectedItems().size();
+
+        QString text;
+        if (selected > 0)
+            text = QString{"%1 items, %2 selected"}.arg(total).arg(selected);
+        else
+            text = QString{"%1 items"}.arg(total);
+
+        m_statusLabel->setText(text);
+    }
 
     void AssetBrowserPanel::PopulateFolderTree(QTreeWidgetItem* parent, const std::filesystem::path& dir)
     {
@@ -608,8 +1153,6 @@ namespace forge
         for (int i = 0; i < m_folderTree->topLevelItemCount(); ++i)
             findAndSelect(m_folderTree->topLevelItem(i));
     }
-
-    // ── content grid ───────────────────────────────────────────────────
 
     void AssetBrowserPanel::PopulateContent()
     {
@@ -682,8 +1225,6 @@ namespace forge
         }
     }
 
-    // ── event handlers ─────────────────────────────────────────────────
-
     void AssetBrowserPanel::OnFolderTreeClicked(QTreeWidgetItem* item)
     {
         auto path = item->data(0, Qt::UserRole).toString().toStdString();
@@ -715,8 +1256,8 @@ namespace forge
 
         if (item != nullptr)
         {
-            menu.addAction("Rename", this, &AssetBrowserPanel::RenameSelected);
-            menu.addAction("Delete", this, &AssetBrowserPanel::DeleteSelected);
+            menu.addAction("Rename\tF2", this, &AssetBrowserPanel::RenameSelected);
+            menu.addAction("Delete\tDel", this, &AssetBrowserPanel::DeleteSelected);
             menu.addSeparator();
 
             auto fsPath = std::filesystem::path{item->data(Qt::UserRole).toString().toStdString()};
@@ -727,54 +1268,14 @@ namespace forge
             menu.addAction("Show in Explorer", this, [this] { ShowInExplorer(m_currentDir); });
         }
 
+        menu.addSeparator();
+
+        auto* undoAction = menu.addAction("Undo\tCtrl+Z", this, &AssetBrowserPanel::UndoFileAction);
+        undoAction->setEnabled(m_fileUndo.CanUndo());
+        auto* redoAction = menu.addAction("Redo\tCtrl+Y", this, &AssetBrowserPanel::RedoFileAction);
+        redoAction->setEnabled(m_fileUndo.CanRedo());
+
         menu.exec(m_contentList->mapToGlobal(pos));
-    }
-
-    void AssetBrowserPanel::RenamePath(const std::filesystem::path& fsPath)
-    {
-        bool ok = false;
-        auto newName = QInputDialog::getText(this, "Rename", "New name:", QLineEdit::Normal,
-                                             QString::fromStdString(fsPath.filename().string()), &ok);
-        if (!ok || newName.isEmpty())
-            return;
-
-        auto newPath = fsPath.parent_path() / newName.toStdString();
-        std::error_code ec;
-        std::filesystem::rename(fsPath, newPath, ec);
-        if (ec)
-        {
-            QMessageBox::warning(this, "Error",
-                                 QString{"Failed to rename: %1"}.arg(QString::fromStdString(ec.message())));
-            return;
-        }
-
-        if (m_currentDir.generic_string().find(fsPath.generic_string()) != std::string::npos)
-            m_currentDir = newPath;
-
-        Refresh();
-    }
-
-    void AssetBrowserPanel::DeletePath(const std::filesystem::path& fsPath)
-    {
-        auto answer = QMessageBox::question(
-            this, "Delete",
-            QString{"Delete '%1'?"}.arg(QString::fromStdString(fsPath.filename().string())));
-        if (answer != QMessageBox::Yes)
-            return;
-
-        std::error_code ec;
-        std::filesystem::remove_all(fsPath, ec);
-        if (ec)
-        {
-            QMessageBox::warning(this, "Error",
-                                 QString{"Failed to delete: %1"}.arg(QString::fromStdString(ec.message())));
-            return;
-        }
-
-        if (m_currentDir.generic_string().find(fsPath.generic_string()) != std::string::npos)
-            m_currentDir = fsPath.parent_path();
-
-        Refresh();
     }
 
     void AssetBrowserPanel::OnFolderTreeContextMenu(const QPoint& pos)
@@ -797,8 +1298,8 @@ namespace forge
 
             if (fsPath != m_root)
             {
-                menu.addAction("Rename", this, [this, fsPath] { RenamePath(fsPath); });
-                menu.addAction("Delete", this, [this, fsPath] { DeletePath(fsPath); });
+                menu.addAction("Rename\tF2", this, [this, fsPath] { RenamePath(fsPath); });
+                menu.addAction("Delete\tDel", this, [this, fsPath] { DeletePath(fsPath); });
                 menu.addSeparator();
             }
 
@@ -808,7 +1309,61 @@ namespace forge
         menu.exec(m_folderTree->mapToGlobal(pos));
     }
 
-    // ── file operations ────────────────────────────────────────────────
+    void AssetBrowserPanel::keyPressEvent(QKeyEvent* event)
+    {
+        if (event->key() == Qt::Key_Backspace)
+        {
+            NavigateBack();
+            return;
+        }
+
+        if (event->key() == Qt::Key_F2)
+        {
+            RenameSelected();
+            return;
+        }
+
+        if (event->key() == Qt::Key_Delete)
+        {
+            DeleteSelected();
+            return;
+        }
+
+        if (event->key() == Qt::Key_Return || event->key() == Qt::Key_Enter)
+        {
+            auto items = m_contentList->selectedItems();
+            if (items.size() == 1)
+                OnContentDoubleClicked(items.first());
+            return;
+        }
+
+        if (event->modifiers() & Qt::ControlModifier)
+        {
+            if (event->key() == Qt::Key_Z)
+            {
+                UndoFileAction();
+                return;
+            }
+            if (event->key() == Qt::Key_Y)
+            {
+                RedoFileAction();
+                return;
+            }
+        }
+
+        QWidget::keyPressEvent(event);
+    }
+
+    std::filesystem::path AssetBrowserPanel::TrashPathFor(const std::filesystem::path& path)
+    {
+        auto trashDir = m_root / ".hive-trash";
+        std::error_code ec;
+        std::filesystem::create_directories(trashDir, ec);
+
+        auto now = std::chrono::steady_clock::now().time_since_epoch().count();
+        auto trashName = path.filename().string() + "." + std::to_string(now);
+        return trashDir / trashName;
+    }
 
     void AssetBrowserPanel::OnImportClicked()
     {
@@ -865,6 +1420,59 @@ namespace forge
             return;
         }
 
+        m_fileUndo.PushCreateFolder(newPath);
+        Refresh();
+    }
+
+    void AssetBrowserPanel::RenamePath(const std::filesystem::path& fsPath)
+    {
+        bool ok = false;
+        auto newName = QInputDialog::getText(this, "Rename", "New name:", QLineEdit::Normal,
+                                             QString::fromStdString(fsPath.filename().string()), &ok);
+        if (!ok || newName.isEmpty())
+            return;
+
+        auto newPath = fsPath.parent_path() / newName.toStdString();
+        std::error_code ec;
+        std::filesystem::rename(fsPath, newPath, ec);
+        if (ec)
+        {
+            QMessageBox::warning(this, "Error",
+                                 QString{"Failed to rename: %1"}.arg(QString::fromStdString(ec.message())));
+            return;
+        }
+
+        m_fileUndo.PushRename(newPath, fsPath);
+
+        if (m_currentDir.generic_string().find(fsPath.generic_string()) != std::string::npos)
+            m_currentDir = newPath;
+
+        Refresh();
+    }
+
+    void AssetBrowserPanel::DeletePath(const std::filesystem::path& fsPath)
+    {
+        auto answer = QMessageBox::question(
+            this, "Delete",
+            QString{"Delete '%1'?"}.arg(QString::fromStdString(fsPath.filename().string())));
+        if (answer != QMessageBox::Yes)
+            return;
+
+        auto trashPath = TrashPathFor(fsPath);
+        std::error_code ec;
+        std::filesystem::rename(fsPath, trashPath, ec);
+        if (ec)
+        {
+            QMessageBox::warning(this, "Error",
+                                 QString{"Failed to delete: %1"}.arg(QString::fromStdString(ec.message())));
+            return;
+        }
+
+        m_fileUndo.PushDelete(fsPath, trashPath);
+
+        if (m_currentDir.generic_string().find(fsPath.generic_string()) != std::string::npos)
+            m_currentDir = fsPath.parent_path();
+
         Refresh();
     }
 
@@ -895,11 +1503,14 @@ namespace forge
         if (QMessageBox::question(this, "Delete", msg) != QMessageBox::Yes)
             return;
 
-        std::error_code ec;
         for (auto* item : items)
         {
             auto fsPath = std::filesystem::path{item->data(Qt::UserRole).toString().toStdString()};
-            std::filesystem::remove_all(fsPath, ec);
+            auto trashPath = TrashPathFor(fsPath);
+            std::error_code ec;
+            std::filesystem::rename(fsPath, trashPath, ec);
+            if (!ec)
+                m_fileUndo.PushDelete(fsPath, trashPath);
         }
 
         Refresh();
@@ -914,13 +1525,41 @@ namespace forge
     void AssetBrowserPanel::MoveAsset(const std::filesystem::path& src, const std::filesystem::path& dstDir)
     {
         auto dstPath = dstDir / src.filename();
+        if (src == dstPath)
+            return;
+
         std::error_code ec;
         std::filesystem::rename(src, dstPath, ec);
         if (ec)
         {
             QMessageBox::warning(this, "Error",
                                  QString{"Failed to move: %1"}.arg(QString::fromStdString(ec.message())));
+            return;
         }
+
+        m_fileUndo.PushMove(dstPath, src);
         Refresh();
     }
+
+    void AssetBrowserPanel::UndoFileAction()
+    {
+        if (m_fileUndo.Undo())
+            Refresh();
+    }
+
+    void AssetBrowserPanel::RedoFileAction()
+    {
+        if (m_fileUndo.Redo())
+            Refresh();
+    }
+
+    void AssetBrowserPanel::UpdateIconSize(int size)
+    {
+        m_iconSize = size;
+        m_contentList->setIconSize(QSize{size, size});
+        m_contentList->setGridSize(QSize{size + 8, size + 28});
+        PopulateContent();
+    }
 } // namespace forge
+
+#include "asset_browser.moc"
