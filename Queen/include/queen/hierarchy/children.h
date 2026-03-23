@@ -89,16 +89,40 @@ namespace queen
             {
                 if (m_entities[i] == child)
                 {
-                    // Swap with last and pop (O(1) removal)
-                    if (i < m_entities.Size() - 1)
+                    for (size_t j = i; j + 1 < m_entities.Size(); ++j)
                     {
-                        m_entities[i] = m_entities.Back();
+                        m_entities[j] = m_entities[j + 1];
                     }
                     m_entities.PopBack();
                     return true;
                 }
             }
             return false;
+        }
+
+        void InsertAt(size_t index, Entity child)
+        {
+            if (index >= m_entities.Size())
+            {
+                m_entities.PushBack(child);
+                return;
+            }
+            m_entities.PushBack(m_entities.Back());
+            for (size_t i = m_entities.Size() - 1; i > index; --i)
+            {
+                m_entities[i] = m_entities[i - 1];
+            }
+            m_entities[index] = child;
+        }
+
+        [[nodiscard]] size_t IndexOf(Entity child) const
+        {
+            for (size_t i = 0; i < m_entities.Size(); ++i)
+            {
+                if (m_entities[i] == child)
+                    return i;
+            }
+            return m_entities.Size();
         }
 
         /**

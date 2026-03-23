@@ -1031,6 +1031,25 @@ namespace queen
             Remove<Parent>(child);
         }
 
+        void ReorderChild(Entity parent, Entity child, size_t index)
+        {
+            if (!IsAlive(parent) || !IsAlive(child))
+                return;
+            Children* children = Get<Children>(parent);
+            if (children == nullptr)
+                return;
+            children->Remove(child);
+            children->InsertAt(index, child);
+        }
+
+        [[nodiscard]] size_t GetChildIndex(Entity parent, Entity child) const
+        {
+            const Children* children = Get<Children>(parent);
+            if (children == nullptr)
+                return 0;
+            return children->IndexOf(child);
+        }
+
         /**
          * Get the parent of an entity
          *

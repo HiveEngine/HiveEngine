@@ -6,6 +6,7 @@
 
 #include <waggle/components/disabled.h>
 #include <waggle/components/name.h>
+#include <waggle/components/sibling_index.h>
 #include <waggle/disabled_propagation.h>
 
 #include <forge/editor_undo.h>
@@ -14,9 +15,11 @@
 #include <forge/selection.h>
 
 #include <QApplication>
+#include <QDir>
 #include <QDragEnterEvent>
 #include <QDropEvent>
 #include <QMenu>
+#include <QPainter>
 #include <QTreeWidget>
 #include <QTreeWidgetItemIterator>
 #include <QVBoxLayout>
@@ -33,20 +36,70 @@ namespace forge
     public:
         using QTreeWidget::QTreeWidget;
         std::function<void(const QString&)> onAssetDropped;
+        std::function<void(queen::Entity dragged, queen::Entity target, int dropPos)> onEntityReparent;
+        std::function<void(queen::Entity dragged)> onEntityDetach;
 
     protected:
         void dragEnterEvent(QDragEnterEvent* e) override
         {
+            auto* source = qobject_cast<QTreeWidget*>(e->source());
+            if (source == this)
+            {
+                QTreeWidget::dragEnterEvent(e);
+                return;
+            }
             e->acceptProposedAction();
         }
+
         void dragMoveEvent(QDragMoveEvent* e) override
         {
+            auto* source = qobject_cast<QTreeWidget*>(e->source());
+            if (source == this)
+            {
+                QTreeWidget::dragMoveEvent(e);
+                return;
+            }
             e->acceptProposedAction();
         }
 
         void dropEvent(QDropEvent* e) override
         {
             auto* source = qobject_cast<QTreeWidget*>(e->source());
+            if (source == this)
+            {
+                auto items = selectedItems();
+                if (items.isEmpty())
+                {
+                    e->ignore();
+                    return;
+                }
+
+                auto* draggedItem = items.first();
+                uint32_t draggedIdx = draggedItem->data(0, Qt::UserRole).toUInt();
+                uint16_t draggedGen = static_cast<uint16_t>(draggedItem->data(0, Qt::UserRole + 1).toUInt());
+                queen::Entity dragged{draggedIdx, draggedGen};
+
+                auto* targetItem = itemAt(e->position().toPoint());
+                if (targetItem && targetItem != draggedItem)
+                {
+                    uint32_t targetIdx = targetItem->data(0, Qt::UserRole).toUInt();
+                    uint16_t targetGen = static_cast<uint16_t>(targetItem->data(0, Qt::UserRole + 1).toUInt());
+                    queen::Entity target{targetIdx, targetGen};
+
+                    int pos = static_cast<int>(dropIndicatorPosition());
+                    if (onEntityReparent)
+                        onEntityReparent(dragged, target, pos);
+                }
+                else if (!targetItem)
+                {
+                    if (onEntityDetach)
+                        onEntityDetach(dragged);
+                }
+                e->setDropAction(Qt::IgnoreAction);
+                e->accept();
+                return;
+            }
+
             if (source && source != this)
             {
                 auto items = source->selectedItems();
@@ -62,6 +115,28 @@ namespace forge
     };
     static const QColor ENABLED_COLOR{0xe8, 0xe8, 0xe8};
     static const QColor DISABLED_COLOR{0x55, 0x55, 0x55};
+
+    static QPixmap MakeTrianglePixmap(bool open)
+    {
+        constexpr int kSize = 10;
+        QPixmap pix{kSize, kSize};
+        pix.fill(Qt::transparent);
+        QPainter p{&pix};
+        p.setRenderHint(QPainter::Antialiasing);
+        p.setPen(Qt::NoPen);
+        p.setBrush(QColor{0x99, 0x99, 0x99});
+        QPolygonF tri;
+        if (open)
+        {
+            tri << QPointF(1, 2) << QPointF(9, 2) << QPointF(5, 8);
+        }
+        else
+        {
+            tri << QPointF(3, 1) << QPointF(3, 9) << QPointF(9, 5);
+        }
+        p.drawPolygon(tri);
+        return pix;
+    }
 
     static void DefaultEntityLabel(queen::World& world, queen::Entity entity, char* buf, size_t bufSize)
     {
@@ -83,16 +158,129 @@ namespace forge
         layout->setContentsMargins(0, 0, 0, 0);
 
         auto* tree = new DropAwareTree{this};
-        tree->onAssetDropped = [this](const QString& path) {
-            emit assetDropped(path);
+        tree->onAssetDropped = [this](const QString& path) { emit assetDropped(path); };
+
+        tree->onEntityReparent = [this](queen::Entity dragged, queen::Entity target, int dropPos) {
+            if (!m_currentWorld || !m_currentWorld->IsAlive(dragged) || !m_currentWorld->IsAlive(target))
+                return;
+            if (dragged == target || m_currentWorld->IsDescendantOf(target, dragged))
+                return;
+
+            auto* oldParentComp = m_currentWorld->Get<queen::Parent>(dragged);
+            queen::Entity oldParent = oldParentComp ? oldParentComp->m_entity : queen::Entity{};
+
+            // QAbstractItemView::DropIndicatorPosition: OnItem=0, AboveItem=1, BelowItem=2, OnViewport=3
+            if (dropPos == 0)
+            {
+                m_currentWorld->SetParent(dragged, target);
+            }
+            else
+            {
+                queen::Entity targetParent = m_currentWorld->GetParent(target);
+                if (m_currentWorld->IsAlive(targetParent))
+                {
+                    m_currentWorld->SetParent(dragged, targetParent);
+                    size_t targetIdx = m_currentWorld->GetChildIndex(targetParent, target);
+                    m_currentWorld->ReorderChild(targetParent, dragged, dropPos == 2 ? targetIdx + 1 : targetIdx);
+                }
+                else
+                {
+                    m_currentWorld->RemoveParent(dragged);
+                    auto* targetSi = m_currentWorld->Get<waggle::SiblingIndex>(target);
+                    uint32_t targetOrder = targetSi ? targetSi->m_value : 0;
+                    uint32_t newOrder = (dropPos == 2) ? targetOrder + 1 : (targetOrder > 0 ? targetOrder - 1 : 0);
+                    m_currentWorld->Set(dragged, waggle::SiblingIndex{newOrder});
+                    ReindexRoots();
+                }
+            }
+
+            waggle::RecalculateEntityHierarchyDisabled(*m_currentWorld, dragged);
+            Refresh(*m_currentWorld);
+
+            auto captured = std::make_shared<std::pair<queen::Entity, queen::Entity>>(dragged, oldParent);
+            queen::Entity newParent = m_currentWorld->GetParent(dragged);
+
+            m_editorUndo.Push(
+                [this, captured]() {
+                    if (m_currentWorld->IsAlive(captured->second))
+                        m_currentWorld->SetParent(captured->first, captured->second);
+                    else
+                        m_currentWorld->RemoveParent(captured->first);
+                    waggle::RecalculateEntityHierarchyDisabled(*m_currentWorld, captured->first);
+                    Refresh(*m_currentWorld);
+                },
+                [this, captured, newParent]() {
+                    if (m_currentWorld->IsAlive(newParent))
+                        m_currentWorld->SetParent(captured->first, newParent);
+                    else
+                        m_currentWorld->RemoveParent(captured->first);
+                    waggle::RecalculateEntityHierarchyDisabled(*m_currentWorld, captured->first);
+                    Refresh(*m_currentWorld);
+                });
+
+            emit sceneModified();
         };
+
+        tree->onEntityDetach = [this](queen::Entity dragged) {
+            if (!m_currentWorld || !m_currentWorld->IsAlive(dragged))
+                return;
+            if (!m_currentWorld->Has<queen::Parent>(dragged))
+                return;
+
+            auto oldParent = m_currentWorld->Get<queen::Parent>(dragged)->m_entity;
+            auto captured = std::make_shared<std::pair<queen::Entity, queen::Entity>>(dragged, oldParent);
+
+            m_currentWorld->RemoveParent(dragged);
+            waggle::RecalculateEntityHierarchyDisabled(*m_currentWorld, dragged);
+            Refresh(*m_currentWorld);
+
+            m_editorUndo.Push(
+                [this, captured]() {
+                    m_currentWorld->SetParent(captured->first, captured->second);
+                    waggle::RecalculateEntityHierarchyDisabled(*m_currentWorld, captured->first);
+                    Refresh(*m_currentWorld);
+                },
+                [this, captured]() {
+                    m_currentWorld->RemoveParent(captured->first);
+                    waggle::RecalculateEntityHierarchyDisabled(*m_currentWorld, captured->first);
+                    Refresh(*m_currentWorld);
+                });
+
+            emit sceneModified();
+        };
+
         m_tree = tree;
         m_tree->setHeaderHidden(true);
         m_tree->setSelectionMode(QAbstractItemView::ExtendedSelection);
         m_tree->setContextMenuPolicy(Qt::CustomContextMenu);
         m_tree->setAcceptDrops(true);
+        m_tree->setDragEnabled(true);
+        m_tree->setDragDropMode(QAbstractItemView::InternalMove);
+        m_tree->setDefaultDropAction(Qt::MoveAction);
         m_tree->setRootIsDecorated(true);
-        m_tree->setIndentation(16);
+        m_tree->setIndentation(18);
+        auto closedPix = MakeTrianglePixmap(false);
+        auto openPix = MakeTrianglePixmap(true);
+        auto tempDir = QDir::tempPath();
+        auto closedPath = tempDir + "/hive_arrow_closed.png";
+        auto openPath = tempDir + "/hive_arrow_open.png";
+        closedPix.save(closedPath);
+        openPix.save(openPath);
+
+        m_tree->setStyleSheet(QString{
+            "QTreeWidget { background: #1e1e1e; border: none; outline: none; }"
+            "QTreeWidget::item { padding: 2px 0; color: #c8c8c8; }"
+            "QTreeWidget::item:selected { background: #3d2e0a; color: #f0a500; }"
+            "QTreeWidget::item:hover:!selected { background: #2a2a2a; }"
+            "QTreeWidget::branch:has-children:!has-siblings:closed,"
+            "QTreeWidget::branch:closed:has-children:has-siblings {"
+            "  image: url(%1);"
+            "}"
+            "QTreeWidget::branch:open:has-children:!has-siblings,"
+            "QTreeWidget::branch:open:has-children:has-siblings {"
+            "  image: url(%2);"
+            "}"
+        }.arg(closedPath, openPath));
 
         layout->addWidget(m_tree);
 
@@ -136,7 +324,15 @@ namespace forge
             }
         });
 
-        std::sort(roots.begin(), roots.end(), [](queen::Entity a, queen::Entity b) { return a.Index() < b.Index(); });
+        std::sort(roots.begin(), roots.end(), [&world](queen::Entity a, queen::Entity b) {
+            auto* sa = world.Get<waggle::SiblingIndex>(a);
+            auto* sb = world.Get<waggle::SiblingIndex>(b);
+            uint32_t ia = sa ? sa->m_value : UINT32_MAX;
+            uint32_t ib = sb ? sb->m_value : UINT32_MAX;
+            if (ia != ib)
+                return ia < ib;
+            return a.Index() < b.Index();
+        });
 
         for (queen::Entity root : roots)
         {
@@ -154,6 +350,8 @@ namespace forge
                 found->second->setExpanded(true);
             }
         }
+
+        m_tree->viewport()->update();
     }
 
     void HierarchyPanel::AddEntityNode(queen::World& world, queen::Entity entity, QTreeWidgetItem* parentItem)
@@ -276,6 +474,35 @@ namespace forge
         m_selection.AddToSelection(queen::Entity{index, gen});
     }
 
+    void HierarchyPanel::ReindexRoots()
+    {
+        if (!m_currentWorld)
+            return;
+
+        wax::Vector<queen::Entity> roots{forge::GetAllocator()};
+        m_currentWorld->ForEachArchetype([&](auto& arch) {
+            if (arch.template HasComponent<queen::Parent>())
+                return;
+            for (uint32_t row = 0; row < arch.EntityCount(); ++row)
+                roots.PushBack(arch.GetEntity(row));
+        });
+
+        std::sort(roots.begin(), roots.end(), [this](queen::Entity a, queen::Entity b) {
+            auto* sa = m_currentWorld->Get<waggle::SiblingIndex>(a);
+            auto* sb = m_currentWorld->Get<waggle::SiblingIndex>(b);
+            uint32_t ia = sa ? sa->m_value : UINT32_MAX;
+            uint32_t ib = sb ? sb->m_value : UINT32_MAX;
+            if (ia != ib)
+                return ia < ib;
+            return a.Index() < b.Index();
+        });
+
+        for (size_t i = 0; i < roots.Size(); ++i)
+        {
+            m_currentWorld->Set(roots[i], waggle::SiblingIndex{static_cast<uint32_t>(i)});
+        }
+    }
+
     void HierarchyPanel::ShowEntityContextMenu(const QPoint& pos)
     {
         if (!m_currentWorld)
@@ -364,6 +591,30 @@ namespace forge
                 char nameBuf[32];
                 snprintf(nameBuf, sizeof(nameBuf), "Entity %u", entity.Index());
                 m_currentWorld->Set(entity, waggle::Name{wax::FixedString{nameBuf}});
+
+                auto created = std::make_shared<queen::Entity>(entity);
+                m_editorUndo.Push(
+                    [this, created]() {
+                        if (m_currentWorld->IsAlive(*created))
+                        {
+                            m_currentWorld->DespawnRecursive(*created);
+                            m_selection.Clear();
+                            Refresh(*m_currentWorld);
+                        }
+                    },
+                    [this, created]() {
+                        if (!m_currentWorld->IsAlive(*created))
+                        {
+                            auto e = m_currentWorld->Spawn().Build();
+                            *created = e;
+                            char buf[32];
+                            snprintf(buf, sizeof(buf), "Entity %u", e.Index());
+                            m_currentWorld->Set(e, waggle::Name{wax::FixedString{buf}});
+                        }
+                        m_selection.Select(*created);
+                        Refresh(*m_currentWorld);
+                    });
+
                 m_selection.Select(entity);
                 Refresh(*m_currentWorld);
                 emit sceneModified();

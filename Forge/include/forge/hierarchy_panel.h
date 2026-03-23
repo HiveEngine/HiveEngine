@@ -44,6 +44,7 @@ namespace forge
 
         void SelectRange(QTreeWidgetItem* from, QTreeWidgetItem* to);
         void AddItemToSelection(QTreeWidgetItem* item);
+        void ReindexRoots();
 
         QTreeWidget* m_tree{};
         EditorSelection& m_selection;
