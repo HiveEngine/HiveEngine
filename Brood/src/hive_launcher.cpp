@@ -28,6 +28,7 @@
 
 #include <QApplication>
 #include <QMessageBox>
+#include <QProcess>
 #endif
 
 #include <brood/process_runtime.h>
@@ -305,6 +306,67 @@ namespace
                         s.m_mainWindow->RefreshAll();
                     });
 
+                QObject::connect(s.m_mainWindow, &forge::ForgeMainWindow::buildRequested, [&s]() {
+                    if (s.m_buildProcess != nullptr && s.m_buildProcess->state() != QProcess::NotRunning)
+                    {
+                        hive::LogWarning(LOG_LAUNCHER, "Build already in progress");
+                        return;
+                    }
+
+                    auto exePath = std::filesystem::path{QCoreApplication::applicationFilePath().toStdString()};
+                    auto buildDir = exePath.parent_path().parent_path().parent_path();
+
+                    hive::LogInfo(LOG_LAUNCHER, "Building gameplay module...");
+
+                    auto* process = new QProcess{s.m_mainWindow};
+                    s.m_buildProcess = process;
+
+                    QObject::connect(process,
+                                     qOverload<int, QProcess::ExitStatus>(&QProcess::finished),
+                                     [&s, process](int exitCode, QProcess::ExitStatus) {
+                                         if (exitCode == 0)
+                                         {
+                                             hive::LogInfo(LOG_LAUNCHER, "Build succeeded");
+                                             s.m_pendingDllReload = true;
+                                         }
+                                         else
+                                         {
+                                             hive::LogError(LOG_LAUNCHER, "Build failed (exit code {})", exitCode);
+                                         }
+                                         s.m_buildProcess = nullptr;
+                                         process->deleteLater();
+                                     });
+
+                    QObject::connect(process, &QProcess::readyReadStandardOutput, [process]() {
+                        auto data = process->readAllStandardOutput();
+                        for (const auto& line : data.split('\n'))
+                        {
+                            auto trimmed = line.trimmed();
+                            if (!trimmed.isEmpty())
+                                hive::LogInfo(LOG_LAUNCHER, "[build] {}", trimmed.toStdString());
+                        }
+                    });
+
+                    QObject::connect(process, &QProcess::readyReadStandardError, [process]() {
+                        auto data = process->readAllStandardError();
+                        for (const auto& line : data.split('\n'))
+                        {
+                            auto trimmed = line.trimmed();
+                            if (!trimmed.isEmpty())
+                                hive::LogError(LOG_LAUNCHER, "[build] {}", trimmed.toStdString());
+                        }
+                    });
+
+                    auto buildDirStr = QString::fromStdString(buildDir.generic_string());
+#if HIVE_PLATFORM_WINDOWS
+                    auto target = QStringLiteral("gameplay.dll");
+#else
+                    auto target = QStringLiteral("gameplay.so");
+#endif
+                    process->setWorkingDirectory(buildDirStr);
+                    process->start("cmake", {"--build", buildDirStr, "--target", target});
+                });
+
                 s.m_mainWindow->show();
 #endif
 
@@ -330,6 +392,19 @@ namespace
 
             callbacks.m_onFrame = [](waggle::EngineContext& ctx, void* ud) {
                 auto& s = *static_cast<LauncherState*>(ud);
+
+                if (s.m_pendingDllReload && ctx.m_world != nullptr)
+                {
+                    s.m_pendingDllReload = false;
+                    if (s.m_gameplay.IsLoaded())
+                    {
+                        s.m_gameplay.Unregister(*ctx.m_world);
+                        ctx.m_world->ClearSystems();
+                        s.m_gameplay.Unload();
+                    }
+                    TryLoadGameplayModule(ctx, s);
+                }
+
                 if (s.m_project != nullptr)
                 {
                     s.m_project->Update();

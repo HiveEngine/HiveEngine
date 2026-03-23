@@ -1,5 +1,7 @@
 #pragma once
 
+#include <hive/hive_config.h>
+
 #include <comb/default_allocator.h>
 
 #include <wax/containers/hash_map.h>
@@ -19,7 +21,7 @@ namespace nectar
 
     /// Directed Acyclic Graph of asset dependencies.
     /// Double-indexed: forward (from -> deps) and reverse (to -> dependants).
-    class DependencyGraph
+    class HIVE_API DependencyGraph
     {
     public:
         explicit DependencyGraph(comb::DefaultAllocator& alloc);

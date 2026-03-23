@@ -52,7 +52,7 @@ namespace nectar
         fwrite(&entryCount, 4, 1, f);
 
         // Build a reverse map: composite key → AssetId
-        wax::HashMap<uint64_t, AssetId> keyToAsset{alloc, entryCount};
+        wax::HashMap<uint64_t, AssetId> keyToAsset{alloc, entryCount > 0 ? entryCount : size_t{1}};
         cache.ForEachAssetKeys([&](AssetId id, const wax::Vector<uint64_t>& keys) {
             for (size_t i = 0; i < keys.Size(); ++i)
                 keyToAsset.Insert(keys[i], id);

@@ -2,7 +2,7 @@
 # Swarm - RHI for HiveEngine
 # ============================================================================
 
-add_library(Swarm STATIC)
+add_library(Swarm ${HIVE_LIB_TYPE})
 
 target_include_directories(Swarm
     PUBLIC

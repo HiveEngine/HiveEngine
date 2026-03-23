@@ -1,5 +1,7 @@
 #pragma once
 
+#include <hive/hive_config.h>
+
 #include <comb/default_allocator.h>
 
 #include <wax/containers/hash_map.h>
@@ -12,7 +14,7 @@ namespace nectar
 {
     /// Maps file extensions to importers.
     /// Extensions are stored lowercase with the leading dot (e.g. ".png").
-    class ImporterRegistry
+    class HIVE_API ImporterRegistry
     {
     public:
         explicit ImporterRegistry(comb::DefaultAllocator& alloc);

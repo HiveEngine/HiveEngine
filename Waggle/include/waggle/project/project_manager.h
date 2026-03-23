@@ -39,7 +39,7 @@ namespace waggle
         uint32_t m_watcherIntervalMs{500};
     };
 
-    class ProjectManager
+    class HIVE_API ProjectManager
     {
     public:
         explicit ProjectManager(comb::DefaultAllocator& alloc, drone::JobSubmitter jobs = {});

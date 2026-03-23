@@ -22,10 +22,11 @@ target_precompile_headers(Larvae
         include/larvae/precomp.h
 )
 
-target_link_libraries(Larvae
-    PUBLIC
-        Hive
-)
+if(HIVE_BUILD_SHARED)
+    target_link_libraries(Larvae PUBLIC hive_engine)
+else()
+    target_link_libraries(Larvae PUBLIC Hive)
+endif()
 
 target_sources(Larvae
     PRIVATE

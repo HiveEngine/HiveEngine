@@ -688,6 +688,28 @@ namespace queen
             return m_systems.IsSystemEnabled(id);
         }
 
+        void RemoveSystem(SystemId id)
+        {
+            m_systems.RemoveSystem(id);
+            InvalidateScheduler();
+        }
+
+        bool RemoveSystemByName(const char* name)
+        {
+            if (m_systems.RemoveSystemByName(name))
+            {
+                InvalidateScheduler();
+                return true;
+            }
+            return false;
+        }
+
+        void ClearSystems()
+        {
+            m_systems.Clear();
+            InvalidateScheduler();
+        }
+
         [[nodiscard]] SystemStorage<PersistentAllocator>& GetSystemStorage() noexcept
         {
             return m_systems;
@@ -1007,6 +1029,25 @@ namespace queen
             }
 
             Remove<Parent>(child);
+        }
+
+        void ReorderChild(Entity parent, Entity child, size_t index)
+        {
+            if (!IsAlive(parent) || !IsAlive(child))
+                return;
+            Children* children = Get<Children>(parent);
+            if (children == nullptr)
+                return;
+            children->Remove(child);
+            children->InsertAt(index, child);
+        }
+
+        [[nodiscard]] size_t GetChildIndex(Entity parent, Entity child) const
+        {
+            const Children* children = Get<Children>(parent);
+            if (children == nullptr)
+                return 0;
+            return children->IndexOf(child);
         }
 
         /**

@@ -1,9 +1,10 @@
 #pragma once
 
+#include <hive/hive_config.h>
+
 #include <comb/chained_buddy_allocator.h>
 #include <comb/thread_safe_allocator.h>
 
-#include <cstdio>
 #include <mutex>
 
 namespace comb
@@ -21,7 +22,7 @@ namespace comb
      * Works in all build modes (not just COMB_MEM_DEBUG).
      * Thread-safe singleton.
      */
-    class ModuleRegistry
+    class HIVE_API ModuleRegistry
     {
     public:
         static constexpr size_t kMaxModules = 64;
@@ -32,11 +33,7 @@ namespace comb
             ModuleAllocator* m_allocator;
         };
 
-        static ModuleRegistry& GetInstance()
-        {
-            static ModuleRegistry s_instance;
-            return s_instance;
-        }
+        static ModuleRegistry& GetInstance();
 
         void Register(const char* name, ModuleAllocator* alloc)
         {
@@ -104,7 +101,7 @@ namespace comb
      *   comb::ModuleRegistry::GetInstance().PrintStats();
      * @endcode
      */
-    class ModuleAllocator
+    class HIVE_API ModuleAllocator
     {
     public:
         ModuleAllocator(const char* name, size_t capacity)
@@ -166,37 +163,6 @@ namespace comb
         DefaultAllocator m_allocator;
     };
 
-    /**
-     * Print memory stats for all registered modules
-     */
-    inline void ModuleRegistry::PrintStats() const
-    {
-        std::lock_guard<std::mutex> lock{m_mutex};
-
-        std::printf("========== Module Memory Stats ==========\n");
-        size_t totalUsed = 0;
-        size_t totalCapacity = 0;
-
-        for (size_t i = 0; i < m_count; ++i)
-        {
-            size_t used = m_entries[i].m_allocator->GetUsedMemory();
-            size_t total = m_entries[i].m_allocator->GetTotalMemory();
-            totalUsed += used;
-            totalCapacity += total;
-
-            double usedMB = static_cast<double>(used) / (1024.0 * 1024.0);
-            double totalMB = static_cast<double>(total) / (1024.0 * 1024.0);
-            double pct = total > 0 ? (static_cast<double>(used) / static_cast<double>(total)) * 100.0 : 0.0;
-
-            std::printf("  %-20s %8.2f / %8.2f MB  (%5.1f%%)\n", m_entries[i].m_name, usedMB, totalMB, pct);
-        }
-
-        double totalUsedMB = static_cast<double>(totalUsed) / (1024.0 * 1024.0);
-        double totalCapMB = static_cast<double>(totalCapacity) / (1024.0 * 1024.0);
-        std::printf("  ----------------------------------------\n");
-        std::printf("  %-20s %8.2f / %8.2f MB\n", "TOTAL", totalUsedMB, totalCapMB);
-        std::printf("=========================================\n");
-    }
 
     /**
      * Get the global default allocator instance (Meyers singleton)
@@ -205,11 +171,7 @@ namespace comb
      *
      * @return Reference to the global default allocator
      */
-    inline DefaultAllocator& GetDefaultAllocator()
-    {
-        static ModuleAllocator s_global{"Global", 32 * 1024 * 1024, 1024 * 1024 * 1024}; // 32 MB blocks, 1 GB cap
-        return s_global.Get();
-    }
+    HIVE_API DefaultAllocator& GetDefaultAllocator();
 
     static_assert(Allocator<DefaultAllocator>, "DefaultAllocator must satisfy comb::Allocator concept");
 } // namespace comb

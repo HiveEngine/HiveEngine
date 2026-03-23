@@ -1,5 +1,7 @@
 #pragma once
 
+#include <hive/hive_config.h>
+
 #include <comb/allocator_concepts.h>
 
 #include <cstddef>
@@ -18,7 +20,7 @@ namespace comb
 {
     // Linear (bump/arena) allocator — O(1) alloc, no individual deallocation.
     // Reset() frees everything at once. Supports markers for scoped rollback.
-    class LinearAllocator
+    class HIVE_API LinearAllocator
     {
     public:
         explicit LinearAllocator(size_t capacity);

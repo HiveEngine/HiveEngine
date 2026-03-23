@@ -2,7 +2,7 @@
 # Nectar - Asset Pipeline for HiveEngine
 # ============================================================================
 
-add_library(Nectar STATIC)
+add_library(Nectar ${HIVE_LIB_TYPE})
 
 hive_configure_target(Nectar)
 

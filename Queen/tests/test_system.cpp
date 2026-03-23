@@ -386,4 +386,51 @@ namespace
 
         larvae::AssertEqual(sum, 6.0f);
     });
+
+    auto test_remove = larvae::RegisterTest("QueenSystem", "RemoveSystemDisablesExecution", []() {
+        queen::World world;
+        std::atomic<int> counter{0};
+
+        auto id = world.System("Counter").Run([&counter](queen::World&) { counter.fetch_add(1); });
+
+        world.Advance();
+        larvae::AssertEqual(counter.load(), 1);
+
+        world.RemoveSystem(id);
+        world.Advance();
+        larvae::AssertEqual(counter.load(), 1);
+    });
+
+    auto test_remove_by_name = larvae::RegisterTest("QueenSystem", "RemoveSystemByName", []() {
+        queen::World world;
+        std::atomic<int> counter{0};
+
+        world.System("ToRemove").Run([&counter](queen::World&) { counter.fetch_add(1); });
+
+        world.Advance();
+        larvae::AssertEqual(counter.load(), 1);
+
+        larvae::AssertTrue(world.RemoveSystemByName("ToRemove"));
+        larvae::AssertFalse(world.RemoveSystemByName("DoesNotExist"));
+
+        world.Advance();
+        larvae::AssertEqual(counter.load(), 1);
+    });
+
+    auto test_clear_systems = larvae::RegisterTest("QueenSystem", "ClearSystemsRemovesAll", []() {
+        queen::World world;
+        std::atomic<int> counter{0};
+
+        world.System("A").Run([&counter](queen::World&) { counter.fetch_add(1); });
+        world.System("B").Run([&counter](queen::World&) { counter.fetch_add(10); });
+
+        world.Advance();
+        larvae::AssertEqual(counter.load(), 11);
+
+        world.ClearSystems();
+        larvae::AssertEqual(world.SystemCount(), size_t{0});
+
+        world.Advance();
+        larvae::AssertEqual(counter.load(), 11);
+    });
 } // namespace

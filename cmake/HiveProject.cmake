@@ -80,26 +80,30 @@ function(hive_configure_gameplay_module target)
 
     hive_configure_target(${target})
 
-    target_link_libraries(${target}
-        PRIVATE
-            Queen
-            Waggle
-            Hive
-            Comb
-            Wax
-            Nectar
-    )
+    if(HIVE_BUILD_SHARED)
+        target_link_libraries(${target} PRIVATE hive_engine)
+    else()
+        target_link_libraries(${target}
+            PRIVATE
+                Queen
+                Waggle
+                Hive
+                Comb
+                Wax
+                Nectar
+        )
 
-    if(HIVE_GAMEPLAY_LINK_SWARM AND TARGET Swarm)
-        target_link_libraries(${target} PRIVATE Swarm)
-    endif()
+        if(HIVE_GAMEPLAY_LINK_SWARM AND TARGET Swarm)
+            target_link_libraries(${target} PRIVATE Swarm)
+        endif()
 
-    if(HIVE_GAMEPLAY_LINK_TERRA AND TARGET Terra)
-        target_link_libraries(${target} PRIVATE Terra)
-    endif()
+        if(HIVE_GAMEPLAY_LINK_TERRA AND TARGET Terra)
+            target_link_libraries(${target} PRIVATE Terra)
+        endif()
 
-    if(HIVE_GAMEPLAY_LINK_ANTENNAE AND TARGET Antennae)
-        target_link_libraries(${target} PRIVATE Antennae)
+        if(HIVE_GAMEPLAY_LINK_ANTENNAE AND TARGET Antennae)
+            target_link_libraries(${target} PRIVATE Antennae)
+        endif()
     endif()
 
     target_include_directories(${target} PRIVATE "${HIVE_GAMEPLAY_SOURCE_INCLUDE_DIR}")

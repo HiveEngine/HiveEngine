@@ -178,6 +178,24 @@
 #endif
 #endif
 
+// --- Shared Library Export/Import ---
+
+#if HIVE_PLATFORM_WINDOWS
+#if defined(HIVE_ENGINE_BUILDING_DLL)
+#define HIVE_API __declspec(dllexport)
+#elif defined(HIVE_ENGINE_USING_DLL)
+#define HIVE_API __declspec(dllimport)
+#else
+#define HIVE_API
+#endif
+#else
+#if defined(HIVE_ENGINE_BUILDING_DLL)
+#define HIVE_API __attribute__((visibility("default")))
+#else
+#define HIVE_API
+#endif
+#endif
+
 // Log Level (0=Trace, 1=Debug, 2=Info, 3=Warning, 4=Error, 5=Fatal)
 
 #ifndef HIVE_LOG_LEVEL

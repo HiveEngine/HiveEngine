@@ -136,6 +136,7 @@ option(HIVE_WARNINGS_AS_ERRORS "Treat warnings as errors" OFF)
 option(HIVE_ENABLE_SIMD "Enable SIMD optimizations (SSE2)" ON)
 option(HIVE_ENABLE_COMPILER_CACHE "Enable sccache/ccache when available" ON)
 option(HIVE_BUILD_TESTING "Build tests and benchmarks" OFF)
+option(HIVE_BUILD_SHARED "Build engine as shared library (hive_engine.dll/so)" OFF)
 option(HIVE_BUILD_EMBEDDED_PROJECTS "Build bundled sample projects" ON)
 option(HIVE_BOOTSTRAP_DILIGENT "Automatically bootstrap a local HiveDiligent package when missing" ON)
 set(HIVE_COMPILER_CACHE_PROGRAM "" CACHE FILEPATH "Explicit compiler cache launcher path")
@@ -149,6 +150,13 @@ set(HIVE_QT_BOOTSTRAP_BUILD_DIR "" CACHE PATH "Build directory for Qt bootstrap"
 
 if(HIVE_BUILD_TESTING)
     enable_testing()
+endif()
+
+if(HIVE_BUILD_SHARED)
+    set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+    set(HIVE_LIB_TYPE OBJECT)
+else()
+    set(HIVE_LIB_TYPE STATIC)
 endif()
 
 # Sanitizer options (for Debug builds with Clang)
@@ -236,6 +244,84 @@ add_subdirectory(Queen)
 add_subdirectory(Waggle)
 add_subdirectory(Antennae)
 add_subdirectory(Swarm)
+if(HIVE_BUILD_SHARED)
+    add_library(hive_engine SHARED
+        $<TARGET_OBJECTS:Hive>
+        $<TARGET_OBJECTS:Comb>
+        $<TARGET_OBJECTS:Drone>
+        $<TARGET_OBJECTS:Queen>
+        $<TARGET_OBJECTS:Nectar>
+        $<TARGET_OBJECTS:Terra>
+        $<TARGET_OBJECTS:Antennae>
+        $<TARGET_OBJECTS:Swarm>
+        $<TARGET_OBJECTS:Waggle>
+    )
+
+    foreach(_mod Hive Comb Drone Queen Nectar Terra Antennae Swarm Waggle)
+        target_compile_definitions(${_mod} PRIVATE HIVE_ENGINE_BUILDING_DLL=1)
+    endforeach()
+    target_compile_definitions(hive_engine INTERFACE
+        HIVE_ENGINE_USING_DLL=1
+        COMB_MEM_DEBUG=0
+        COMB_MEM_DEBUG_CALLSTACKS=0
+    )
+
+    target_include_directories(hive_engine PUBLIC
+        Hive/include
+        Hive/extern/hmm
+        Comb/include
+        Wax/include
+        Drone/include
+        Queen/include
+        Nectar/include
+        Terra/include
+        Antennae/include
+        Swarm/include
+        Waggle/include
+    )
+
+    target_include_directories(hive_engine SYSTEM PUBLIC
+        Terra/extern/glfw/include
+    )
+    target_include_directories(hive_engine SYSTEM PRIVATE
+        Nectar/extern/cgltf
+        Nectar/extern/lz4
+        Nectar/extern/stb
+        Nectar/extern/zstd
+        Hive/extern/tinyobj
+    )
+
+    target_link_libraries(hive_engine PRIVATE fmt::fmt)
+    target_include_directories(hive_engine PUBLIC
+        $<TARGET_PROPERTY:fmt::fmt,INTERFACE_INCLUDE_DIRECTORIES>
+    )
+
+    if(HIVE_FEATURE_GLFW AND TARGET glfw)
+        target_link_libraries(hive_engine PRIVATE glfw)
+    endif()
+
+    if(TARGET Diligent-GraphicsEngineVk-static)
+        target_link_libraries(hive_engine PRIVATE
+            Diligent-GraphicsEngineVk-static
+            Diligent-GraphicsEngine
+            Diligent-BuildSettings
+        )
+    endif()
+
+    if(WIN32)
+        target_link_libraries(hive_engine PRIVATE ws2_32 dbghelp)
+    elseif(UNIX)
+        target_link_libraries(hive_engine PRIVATE dl)
+    endif()
+
+    set_target_properties(hive_engine PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
+        LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
+        ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
+    )
+    add_subdirectory(tests/freelibrary)
+endif()
+
 set(HIVE_QT_STATUS "OFF")
 if(HIVE_FEATURE_QT AND HIVE_ENGINE_MODE STREQUAL "Editor")
     include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/QtBootstrap.cmake)
@@ -282,6 +368,7 @@ message(STATUS "  SIMD:             ${HIVE_ENABLE_SIMD}")
 message(STATUS "  Diligent:         ${HIVE_DILIGENT_STATUS}")
 message(STATUS "  Compiler Cache:   ${HIVE_COMPILER_CACHE_STATUS}")
 message(STATUS "  Testing:          ${HIVE_BUILD_TESTING}")
+message(STATUS "  Shared Engine:    ${HIVE_BUILD_SHARED}")
 message(STATUS "  Embedded Projects:${HIVE_BUILD_EMBEDDED_PROJECTS}")
 message(STATUS "  Warnings->Errors: ${HIVE_WARNINGS_AS_ERRORS}")
 if(HIVE_ENABLE_SANITIZERS)

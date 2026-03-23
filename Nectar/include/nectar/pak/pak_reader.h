@@ -1,5 +1,7 @@
 #pragma once
 
+#include <hive/hive_config.h>
+
 #include <comb/default_allocator.h>
 
 #include <wax/containers/string_view.h>
@@ -14,7 +16,7 @@
 namespace nectar
 {
     /// Reads assets from a .npak archive by ContentHash.
-    class PakReader
+    class HIVE_API PakReader
     {
     public:
         ~PakReader();

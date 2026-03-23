@@ -11,6 +11,7 @@
 
 #include <queen/core/tick.h>
 #include <queen/scheduler/dependency_graph.h>
+#include <queen/scheduler/scheduler_scratch.h>
 #include <queen/system/system_storage.h>
 
 #include <atomic>
@@ -208,13 +209,10 @@ namespace queen
                 Tick m_tick;
                 drone::Counter* m_counter;
             };
+            static_assert(sizeof(TaskData) <= sizeof(SchedulerTaskSlot));
 
-            static constexpr size_t kMaxTasks = 256;
-            thread_local TaskData s_tasks[kMaxTasks];
-            thread_local size_t s_taskIdx = 0;
-
-            auto& td = s_tasks[s_taskIdx % kMaxTasks];
-            ++s_taskIdx;
+            size_t slot = AllocateSchedulerTaskSlot();
+            auto& td = *reinterpret_cast<TaskData*>(&GetSchedulerTaskBuffer()[slot]);
 
             td.m_scheduler = this;
             td.m_world = &world;

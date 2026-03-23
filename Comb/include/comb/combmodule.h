@@ -5,7 +5,7 @@
 
 namespace comb
 {
-    extern const hive::LogCategory LOG_COMB_ROOT;
+    extern HIVE_API const hive::LogCategory LOG_COMB_ROOT;
 
     class CombModule : public hive::Module
     {

@@ -26,7 +26,7 @@ namespace nectar
 
     static constexpr size_t kDefaultStorageCapacity = 4096;
 
-    class AssetServer
+    class HIVE_API AssetServer
     {
     public:
         explicit AssetServer(comb::DefaultAllocator& alloc);

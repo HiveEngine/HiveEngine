@@ -1,5 +1,7 @@
 #pragma once
 
+#include <hive/hive_config.h>
+
 #include <comb/default_allocator.h>
 
 #include <wax/containers/string.h>
@@ -18,7 +20,7 @@ namespace waggle
         bool m_linkAntennae{false};
     };
 
-    class CMakeGenerator
+    class HIVE_API CMakeGenerator
     {
     public:
         [[nodiscard]] static wax::String Generate(const CMakeGenConfig& config, comb::DefaultAllocator& alloc);

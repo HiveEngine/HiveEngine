@@ -1,5 +1,7 @@
 #pragma once
 
+#include <hive/hive_config.h>
+
 #include <nectar/mesh/mesh_data.h>
 #include <nectar/pipeline/asset_importer.h>
 
@@ -9,7 +11,7 @@ namespace nectar
     /// Settings from HiveDocument [import] section:
     ///   scale (float, 1.0), flip_uv (bool, false), generate_normals (bool, true),
     ///   generate_tangents (bool, true), base_path (string, "") — filesystem path for resolving external .bin
-    class GltfImporter final : public AssetImporter<NmshHeader>
+    class HIVE_API GltfImporter final : public AssetImporter<NmshHeader>
     {
     public:
         wax::Span<const char* const> SourceExtensions() const override;

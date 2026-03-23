@@ -2,17 +2,15 @@
 
 #include <swarm/swarm.h>
 
-#include <terra/platform/glfw_terra.h>
+#include <terra/terra.h>
+
+#ifdef Q_OS_WIN
+#define TERRA_NATIVE_WIN32
+#include <terra/terra_native.h>
+#endif
 
 #include <QVBoxLayout>
 #include <QWindow>
-
-#ifdef Q_OS_WIN
-#include <GLFW/glfw3.h>
-#include <Windows.h>
-#define GLFW_EXPOSE_NATIVE_WIN32
-#include <GLFW/glfw3native.h>
-#endif
 
 namespace forge
 {
@@ -27,16 +25,12 @@ namespace forge
         if (window == nullptr)
             return;
 
-#ifdef Q_OS_WIN
-        GLFWwindow* glfwWin = terra::GetGlfwWindow(window);
-        if (glfwWin == nullptr)
+#ifdef TERRA_NATIVE_WIN32
+        auto native = terra::GetNativeWindow(window);
+        if (native.m_window == nullptr)
             return;
 
-        HWND hwnd = glfwGetWin32Window(glfwWin);
-        if (hwnd == nullptr)
-            return;
-
-        auto* foreignWindow = QWindow::fromWinId(reinterpret_cast<WId>(hwnd));
+        auto* foreignWindow = QWindow::fromWinId(reinterpret_cast<WId>(native.m_window));
         m_embedded = QWidget::createWindowContainer(foreignWindow, this);
 
         auto* layout = new QVBoxLayout{this};

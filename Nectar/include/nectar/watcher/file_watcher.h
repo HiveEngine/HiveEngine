@@ -1,5 +1,7 @@
 #pragma once
 
+#include <hive/hive_config.h>
+
 #include <comb/default_allocator.h>
 
 #include <wax/containers/hash_map.h>
@@ -44,7 +46,7 @@ namespace nectar
     };
 
     /// Polling-based file watcher using mtime + size checks.
-    class PollingFileWatcher final : public IFileWatcher
+    class HIVE_API PollingFileWatcher final : public IFileWatcher
     {
     public:
         PollingFileWatcher(comb::DefaultAllocator& alloc, uint32_t intervalMs = 500);
@@ -70,7 +72,7 @@ namespace nectar
         wax::HashMap<wax::String, FileSnapshot> m_knownFiles;
     };
 
-    class NativeFileWatcher final : public IFileWatcher, public drone::IService
+    class HIVE_API NativeFileWatcher final : public IFileWatcher, public drone::IService
     {
     public:
         explicit NativeFileWatcher(comb::DefaultAllocator& alloc);
@@ -109,5 +111,5 @@ namespace nectar
         PlatformData* m_platform{nullptr};
     };
 
-    IFileWatcher* CreateFileWatcher(comb::DefaultAllocator& alloc);
+    HIVE_API IFileWatcher* CreateFileWatcher(comb::DefaultAllocator& alloc);
 } // namespace nectar

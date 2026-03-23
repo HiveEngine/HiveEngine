@@ -14,12 +14,11 @@ namespace hive
         ~ModuleRegistry() = default;
 
         using ModuleFactoryFn = std::unique_ptr<Module> (*)();
-        void RegisterModule(ModuleFactoryFn fn);
-
-        void CreateModules();
-        void ConfigureModules();
-        void InitModules();
-        void ShutdownModules();
+        HIVE_API void RegisterModule(ModuleFactoryFn fn);
+        HIVE_API void CreateModules();
+        HIVE_API void ConfigureModules();
+        HIVE_API void InitModules();
+        HIVE_API void ShutdownModules();
 
     private:
         std::vector<ModuleFactoryFn> m_moduleFactories;

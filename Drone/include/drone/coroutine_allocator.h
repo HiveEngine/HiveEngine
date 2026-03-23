@@ -1,5 +1,7 @@
 #pragma once
 
+#include <hive/hive_config.h>
+
 #include <comb/slab_allocator.h>
 #include <comb/thread_safe_allocator.h>
 
@@ -12,6 +14,6 @@ namespace drone
     using CoroutineSlabAllocator = comb::SlabAllocator<4096, 64, 128, 256, 512, 1024>;
     using CoroutineAllocator = comb::ThreadSafeAllocator<CoroutineSlabAllocator>;
 
-    CoroutineAllocator& GetCoroutineAllocator();
+    HIVE_API CoroutineAllocator& GetCoroutineAllocator();
 
 } // namespace drone

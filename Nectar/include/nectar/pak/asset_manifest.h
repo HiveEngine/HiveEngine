@@ -1,5 +1,7 @@
 #pragma once
 
+#include <hive/hive_config.h>
+
 #include <comb/default_allocator.h>
 
 #include <wax/containers/hash_map.h>
@@ -14,7 +16,7 @@ namespace nectar
 {
     /// Maps VFS paths to ContentHash.
     /// Embedded inside .npak at the sentinel hash for runtime path resolution.
-    class AssetManifest
+    class HIVE_API AssetManifest
     {
     public:
         explicit AssetManifest(comb::DefaultAllocator& alloc);

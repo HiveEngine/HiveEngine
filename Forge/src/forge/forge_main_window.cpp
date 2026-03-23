@@ -239,6 +239,11 @@ namespace forge
         m_editorUndo = new EditorUndoManager{};
 
         CreateMenus();
+
+        m_toolbar = new EditorToolbar{this};
+        m_toolbar->setMovable(false);
+        addToolBar(Qt::TopToolBarArea, m_toolbar);
+
         CreateDocks();
         ConnectSignals();
         menuBar()->show();
@@ -467,6 +472,7 @@ namespace forge
         });
 
         connect(m_assetBrowser, &AssetBrowserPanel::gltfImportRequested, this, &ForgeMainWindow::gltfImportRequested);
+        connect(m_toolbar, &EditorToolbar::buildPressed, this, &ForgeMainWindow::buildRequested);
 
         connect(m_assetBrowser, &AssetBrowserPanel::sceneOpenRequested, this, &ForgeMainWindow::sceneOpenRequested);
 

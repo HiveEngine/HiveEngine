@@ -38,5 +38,5 @@ namespace terra
 
 namespace terra
 {
-    NativeWindow GetNativeWindow(WindowContext* windowContext);
+    HIVE_API NativeWindow GetNativeWindow(WindowContext* windowContext);
 }

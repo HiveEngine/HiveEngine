@@ -1,5 +1,7 @@
 #pragma once
 
+#include <hive/hive_config.h>
+
 #include <comb/default_allocator.h>
 
 #include <wax/containers/string.h>
@@ -29,7 +31,7 @@ namespace nectar
 
     /// Parses .hive file text into a HiveDocument.
     /// Best-effort: collects errors without stopping.
-    class HiveParser
+    class HIVE_API HiveParser
     {
     public:
         [[nodiscard]] static HiveParseResult Parse(wax::StringView content, comb::DefaultAllocator& alloc);

@@ -25,7 +25,7 @@ namespace nectar
 
     /// Thread-safe cache of cook results.
     /// Maps (AssetId, platform) → CookCacheEntry.
-    class CookCache
+    class HIVE_API CookCache
     {
     public:
         explicit CookCache(comb::DefaultAllocator& alloc);

@@ -453,4 +453,56 @@ namespace
         larvae::AssertFalse(world.IsAlive(child));
         larvae::AssertEqual(world.ChildCount(parent), size_t{0});
     });
+
+    auto t_reorder_child = larvae::RegisterTest("QueenHierarchy", "ReorderChild", []() {
+        queen::World world;
+        auto parent = world.Spawn().Build();
+        auto a = world.Spawn().Build();
+        auto b = world.Spawn().Build();
+        auto c = world.Spawn().Build();
+        world.SetParent(a, parent);
+        world.SetParent(b, parent);
+        world.SetParent(c, parent);
+
+        larvae::AssertEqual(world.GetChildIndex(parent, a), size_t{0});
+        larvae::AssertEqual(world.GetChildIndex(parent, b), size_t{1});
+        larvae::AssertEqual(world.GetChildIndex(parent, c), size_t{2});
+
+        world.ReorderChild(parent, c, 0);
+        larvae::AssertEqual(world.GetChildIndex(parent, c), size_t{0});
+        larvae::AssertEqual(world.GetChildIndex(parent, a), size_t{1});
+        larvae::AssertEqual(world.GetChildIndex(parent, b), size_t{2});
+    });
+
+    auto t_reorder_to_end = larvae::RegisterTest("QueenHierarchy", "ReorderChildToEnd", []() {
+        queen::World world;
+        auto parent = world.Spawn().Build();
+        auto a = world.Spawn().Build();
+        auto b = world.Spawn().Build();
+        auto c = world.Spawn().Build();
+        world.SetParent(a, parent);
+        world.SetParent(b, parent);
+        world.SetParent(c, parent);
+
+        world.ReorderChild(parent, a, 2);
+        larvae::AssertEqual(world.GetChildIndex(parent, b), size_t{0});
+        larvae::AssertEqual(world.GetChildIndex(parent, c), size_t{1});
+        larvae::AssertEqual(world.GetChildIndex(parent, a), size_t{2});
+    });
+
+    auto t_remove_preserves_order = larvae::RegisterTest("QueenHierarchy", "RemoveChildPreservesOrder", []() {
+        queen::World world;
+        auto parent = world.Spawn().Build();
+        auto a = world.Spawn().Build();
+        auto b = world.Spawn().Build();
+        auto c = world.Spawn().Build();
+        world.SetParent(a, parent);
+        world.SetParent(b, parent);
+        world.SetParent(c, parent);
+
+        world.RemoveParent(b);
+        larvae::AssertEqual(world.ChildCount(parent), size_t{2});
+        larvae::AssertEqual(world.GetChildIndex(parent, a), size_t{0});
+        larvae::AssertEqual(world.GetChildIndex(parent, c), size_t{1});
+    });
 } // namespace

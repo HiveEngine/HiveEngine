@@ -1,5 +1,7 @@
 #pragma once
 
+#include <hive/hive_config.h>
+
 #include <wax/serialization/byte_span.h>
 
 #include <cstddef>
@@ -69,7 +71,7 @@ namespace nectar
         }
 
         /// Hash a blob of data
-        [[nodiscard]] static ContentHash FromData(const void* data, size_t size) noexcept;
+        [[nodiscard]] HIVE_API static ContentHash FromData(const void* data, size_t size) noexcept;
 
         [[nodiscard]] static ContentHash FromData(wax::ByteSpan span) noexcept
         {

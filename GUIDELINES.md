@@ -464,3 +464,62 @@ Sanitizer presets, if available:
 cmake --preset llvm-windows-ubsan
 cmake --preset llvm-windows-asan
 ```
+
+---
+
+## Shared Engine DLL (`HIVE_BUILD_SHARED`)
+
+When building with `HIVE_BUILD_SHARED=ON`, all engine modules are compiled
+into `hive_engine.dll`. This enables gameplay DLL hot-reload via `FreeLibrary`.
+
+### HIVE_API
+
+Every class or free function with a `.cpp` implementation that needs to cross
+the DLL boundary must be annotated with `HIVE_API`:
+
+```cpp
+class HIVE_API MyClass { ... };
+HIVE_API void MyFunction();
+```
+
+- Templates do NOT get `HIVE_API` (compiled into each consumer).
+- Inline functions do NOT get `HIVE_API`.
+- If a class has `HIVE_API`, its members do NOT need individual `HIVE_API`.
+- `HIVE_API` is defined in `hive_config.h` — `dllexport` when building the
+  engine, `dllimport` when consuming it, empty in static builds.
+
+### Singletons
+
+Engine singletons use `hive::Singleton<T>` which stores pointers in a
+centralized registry (`singleton_registry.cpp`). This ensures a single
+instance across exe and DLL boundaries. Never use `inline static` in
+templates for cross-DLL state — use the singleton registry or exported
+functions.
+
+### Headers Safe for Gameplay DLLs
+
+Gameplay DLLs can include any engine header. However, the following
+must NOT be used in gameplay code:
+
+| Avoid | Reason | Alternative |
+|-------|--------|-------------|
+| `static` local allocators | CRT atexit handlers hang `FreeLibrary` | `new`/`delete` in Register/Unregister |
+| `<fstream>`, `std::ofstream` | MSVC STL creates module-level statics | `fopen`/`fwrite` or engine VFS |
+| Tracy macros (`ZoneScoped` etc.) | TLS cleanup hangs during DLL unload | Profiler disabled for DLL consumers |
+| `COMB_MEM_DEBUG` features | Debug allocator statics in DLL | Disabled via `COMB_MEM_DEBUG=0` |
+
+### Feature Restrictions in Shared Mode
+
+The `hive-editor-shared` preset disables:
+- `HIVE_FEATURE_PROFILER` — Tracy creates threads during DLL init (loader lock deadlock)
+- `HIVE_FEATURE_MEM_DEBUG` — Debug allocator templates create statics in DLL consumers
+
+These restrictions apply globally to avoid ODR violations between the engine
+DLL and its consumers.
+
+### fmt Usage in Headers
+
+Log functions use `fmt::vformat` (type-erased, in `.cpp`) instead of
+`fmt::format` (template, inlined into each consumer). This prevents fmt
+static locals from being created in gameplay DLLs. The templates in `log.h`
+call `LogFormatted()` (exported) which does the actual formatting.

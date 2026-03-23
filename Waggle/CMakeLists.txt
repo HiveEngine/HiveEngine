@@ -2,7 +2,7 @@
 # Waggle - Engine Application Layer for HiveEngine
 # ============================================================================
 
-add_library(Waggle STATIC)
+add_library(Waggle ${HIVE_LIB_TYPE})
 
 hive_configure_target(Waggle)
 

@@ -6,14 +6,14 @@
 #include <wax/containers/string.h>
 #include <wax/containers/string_view.h>
 
+#include <queen/query/query_term.h>
+#include <queen/world/world.h>
+
 #include <nectar/hive/hive_document.h>
 #include <nectar/hive/hive_parser.h>
 #include <nectar/hive/hive_value.h>
 #include <nectar/hive/hive_writer.h>
 #include <nectar/vfs/virtual_filesystem.h>
-
-#include <queen/query/query_term.h>
-#include <queen/world/world.h>
 
 #include <waggle/app_context.h>
 #include <waggle/project/project_context.h>
@@ -23,8 +23,7 @@
 
 #include <algorithm>
 #include <cstdint>
-#include <filesystem>
-#include <fstream>
+#include <cstdio>
 
 namespace
 {
@@ -74,10 +73,23 @@ namespace
         uint64_t m_completedTick{0};
     };
 
+    comb::ModuleAllocator* g_gameplayAlloc{nullptr};
+
+    void InitGameplayAllocator()
+    {
+        if (g_gameplayAlloc == nullptr)
+            g_gameplayAlloc = new comb::ModuleAllocator{"SponzaDemoGameplay", 4 * 1024 * 1024};
+    }
+
+    void ShutdownGameplayAllocator()
+    {
+        delete g_gameplayAlloc;
+        g_gameplayAlloc = nullptr;
+    }
+
     comb::DefaultAllocator& GetGameplayAllocator()
     {
-        static comb::ModuleAllocator s_alloc{"SponzaDemoGameplay", 4 * 1024 * 1024};
-        return s_alloc.Get();
+        return g_gameplayAlloc->Get();
     }
 
     void ClampScenarioState(HeadlessScenarioState& state)
@@ -155,18 +167,20 @@ namespace
         auto& alloc = GetGameplayAllocator();
         nectar::HiveDocument report{alloc};
 
-        report.SetValue(
-            "scenario", "source",
-            nectar::HiveValue::MakeString(alloc, scenario.m_loadedFromAsset ? wax::StringView{kScenarioAssetPath}
-                                                                            : wax::StringView{"defaults"}));
-        report.SetValue("scenario", "entity_count", nectar::HiveValue::MakeInt(static_cast<int64_t>(scenario.m_entityCount)));
-        report.SetValue("scenario", "step_count", nectar::HiveValue::MakeInt(static_cast<int64_t>(scenario.m_stepCount)));
+        report.SetValue("scenario", "source",
+                        nectar::HiveValue::MakeString(alloc, scenario.m_loadedFromAsset
+                                                                 ? wax::StringView{kScenarioAssetPath}
+                                                                 : wax::StringView{"defaults"}));
+        report.SetValue("scenario", "entity_count",
+                        nectar::HiveValue::MakeInt(static_cast<int64_t>(scenario.m_entityCount)));
+        report.SetValue("scenario", "step_count",
+                        nectar::HiveValue::MakeInt(static_cast<int64_t>(scenario.m_stepCount)));
         report.SetValue("scenario", "initial_position", nectar::HiveValue::MakeFloat(scenario.m_initialPosition));
         report.SetValue("scenario", "spawn_spacing", nectar::HiveValue::MakeFloat(scenario.m_spawnSpacing));
-        report.SetValue("scenario", "velocity_per_second",
-                        nectar::HiveValue::MakeFloat(scenario.m_velocityPerSecond));
+        report.SetValue("scenario", "velocity_per_second", nectar::HiveValue::MakeFloat(scenario.m_velocityPerSecond));
 
-        report.SetValue("result", "entity_count", nectar::HiveValue::MakeInt(static_cast<int64_t>(metrics.m_entityCount)));
+        report.SetValue("result", "entity_count",
+                        nectar::HiveValue::MakeInt(static_cast<int64_t>(metrics.m_entityCount)));
         report.SetValue("result", "completed_tick",
                         nectar::HiveValue::MakeInt(static_cast<int64_t>(metrics.m_completedTick)));
         report.SetValue("result", "position_sum", nectar::HiveValue::MakeFloat(metrics.m_positionSum));
@@ -174,20 +188,24 @@ namespace
         report.SetValue("result", "max_position", nectar::HiveValue::MakeFloat(metrics.m_maxPosition));
 
         const wax::String content = nectar::HiveWriter::Write(report, alloc);
-        std::filesystem::path reportPath{projectManager.Paths().m_cache.CStr()};
-        reportPath /= kReportFileName;
 
-        std::error_code ec;
-        std::filesystem::create_directories(reportPath.parent_path(), ec);
+        wax::String reportPath{alloc};
+        reportPath.Append(projectManager.Paths().m_cache.View().Data(), projectManager.Paths().m_cache.View().Size());
+        reportPath.Append("/");
+        reportPath.Append(kReportFileName);
 
-        std::ofstream file{reportPath, std::ios::binary};
-        if (!file)
-        {
+        FILE* f = nullptr;
+#ifdef _MSC_VER
+        fopen_s(&f, reportPath.CStr(), "wb");
+#else
+        f = fopen(reportPath.CStr(), "wb");
+#endif
+        if (!f)
             return false;
-        }
 
-        file.write(content.CStr(), static_cast<std::streamsize>(content.Size()));
-        return file.good();
+        fwrite(content.CStr(), 1, content.Size(), f);
+        fclose(f);
+        return true;
     }
 
     void RegisterBootstrapSystem(queen::World& world)
@@ -205,10 +223,10 @@ namespace
 
             for (uint32_t index = 0; index < scenario->m_entityCount; ++index)
             {
-                (void)runtimeWorld.Spawn(
-                    HeadlessAgent{index},
-                    SimulationPosition{scenario->m_initialPosition + static_cast<float>(index) * scenario->m_spawnSpacing},
-                    SimulationVelocity{scenario->m_velocityPerSecond});
+                (void)runtimeWorld.Spawn(HeadlessAgent{index},
+                                         SimulationPosition{scenario->m_initialPosition +
+                                                            static_cast<float>(index) * scenario->m_spawnSpacing},
+                                         SimulationVelocity{scenario->m_velocityPerSecond});
             }
 
             scenario->m_bootstrapped = true;
@@ -217,8 +235,9 @@ namespace
 
     void RegisterSimulationSystem(queen::World& world)
     {
-        world.System<queen::Read<HeadlessAgent>, queen::Write<SimulationPosition>, queen::Read<SimulationVelocity>>(
-                 "SponzaDemo.Step")
+        world
+            .System<queen::Read<HeadlessAgent>, queen::Write<SimulationPosition>, queen::Read<SimulationVelocity>>(
+                "SponzaDemo.Step")
             .After("SponzaDemo.Bootstrap")
             .EachWithRes<waggle::Time>([](queen::Entity, const HeadlessAgent&, SimulationPosition& position,
                                           const SimulationVelocity& velocity, queen::Res<waggle::Time> time) {
@@ -260,6 +279,8 @@ namespace
 
 HIVE_GAMEPLAY_EXPORT void HiveGameplayRegister(queen::World& world)
 {
+    InitGameplayAllocator();
+
     const waggle::RuntimeContext* runtime = world.Resource<waggle::RuntimeContext>();
     if (runtime == nullptr || runtime->m_mode != waggle::EngineMode::HEADLESS)
     {
@@ -289,6 +310,7 @@ HIVE_GAMEPLAY_EXPORT void HiveGameplayUnregister(queen::World& world)
         world.RemoveResource<HeadlessScenarioState>();
     }
 
+    ShutdownGameplayAllocator();
     hive::LogInfo(LOG_SPONZA, "Sponza Demo unregistered");
 }
 
@@ -306,3 +328,4 @@ HIVE_GAMEPLAY_EXPORT const char* HiveGameplayVersion()
 {
     return "0.2.0";
 }
+

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <hive/hive_config.h>
+
 #include <wax/containers/hash_map.h>
 #include <wax/containers/string.h>
 
@@ -8,7 +10,7 @@
 namespace nectar
 {
     /// In-memory mount source for testing and tools.
-    class MemoryMountSource final : public MountSource
+    class HIVE_API MemoryMountSource final : public MountSource
     {
     public:
         explicit MemoryMountSource(comb::DefaultAllocator& alloc);

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <hive/hive_config.h>
+
 #include <atomic>
 #include <condition_variable>
 #include <cstdint>
@@ -21,7 +23,7 @@ namespace drone
         uint32_t m_tickIntervalMs{100};
     };
 
-    class ServiceThread
+    class HIVE_API ServiceThread
     {
     public:
         static constexpr size_t kMaxServices = 16;

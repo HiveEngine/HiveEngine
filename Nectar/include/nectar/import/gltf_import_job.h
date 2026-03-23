@@ -1,5 +1,7 @@
 #pragma once
 
+#include <hive/hive_config.h>
+
 #include <comb/default_allocator.h>
 
 #include <wax/containers/string.h>
@@ -29,7 +31,7 @@ namespace nectar
 
     using GltfProgressFn = void (*)(const char* step, uint32_t current, uint32_t total, void* userData);
 
-    GltfImportResult ExecuteGltfImport(const GltfImportDesc& desc, AssetDatabase& db, comb::DefaultAllocator& alloc,
+    HIVE_API GltfImportResult ExecuteGltfImport(const GltfImportDesc& desc, AssetDatabase& db, comb::DefaultAllocator& alloc,
                                        ImportPipeline* pipeline = nullptr, GltfProgressFn progress = nullptr,
                                        void* progressUserData = nullptr);
 } // namespace nectar

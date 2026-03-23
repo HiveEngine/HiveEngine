@@ -1,5 +1,7 @@
 #pragma once
 
+#include <hive/hive_config.h>
+
 #include <terra/terra.h>
 
 #include <GLFW/glfw3.h>
@@ -18,7 +20,7 @@ namespace terra
         InputState m_lastInputState{};
     };
 
-    [[nodiscard]] GLFWwindow* GetGlfwWindow(WindowContext* windowContext);
+    [[nodiscard]] HIVE_API GLFWwindow* GetGlfwWindow(WindowContext* windowContext);
 
-    [[nodiscard]] const GLFWwindow* GetGlfwWindow(const WindowContext* windowContext);
+    [[nodiscard]] HIVE_API const GLFWwindow* GetGlfwWindow(const WindowContext* windowContext);
 } // namespace terra

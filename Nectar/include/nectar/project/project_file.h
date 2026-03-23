@@ -1,5 +1,7 @@
 #pragma once
 
+#include <hive/hive_config.h>
+
 #include <comb/default_allocator.h>
 
 #include <wax/containers/string.h>
@@ -32,7 +34,7 @@ namespace nectar
         wax::StringView m_startupScene;
     };
 
-    class ProjectFile
+    class HIVE_API ProjectFile
     {
     public:
         explicit ProjectFile(comb::DefaultAllocator& alloc);

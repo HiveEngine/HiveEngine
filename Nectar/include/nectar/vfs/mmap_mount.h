@@ -1,5 +1,7 @@
 #pragma once
 
+#include <hive/hive_config.h>
+
 #include <wax/containers/string.h>
 
 #include <nectar/vfs/mount_source.h>
@@ -8,7 +10,7 @@ namespace nectar
 {
     /// Mount source backed by loose files on disk, read via memory mapping.
     /// Faster than DiskMountSource for reads (no per-read syscall, OS prefetch).
-    class MmapMountSource final : public MountSource
+    class HIVE_API MmapMountSource final : public MountSource
     {
     public:
         MmapMountSource(wax::StringView rootDir, comb::DefaultAllocator& alloc);

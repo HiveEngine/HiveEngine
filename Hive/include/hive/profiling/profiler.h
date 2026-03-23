@@ -2,7 +2,7 @@
 
 #include <hive/hive_config.h>
 
-#if HIVE_FEATURE_PROFILER
+#if HIVE_FEATURE_PROFILER && !defined(HIVE_ENGINE_USING_DLL)
 
 #include <tracy/Tracy.hpp>
 

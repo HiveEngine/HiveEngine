@@ -1,5 +1,7 @@
 #pragma once
 
+#include <hive/hive_config.h>
+
 #include <wax/containers/string_view.h>
 #include <wax/serialization/byte_span.h>
 
@@ -11,7 +13,7 @@ namespace nectar
     /// Cross-platform read-only memory-mapped file.
     /// On Windows uses CreateFileW + CreateFileMappingW + MapViewOfFile.
     /// On Linux/macOS uses open + fstat + mmap.
-    class MappedFile
+    class HIVE_API MappedFile
     {
     public:
         /// Open a file for memory mapping. Returns invalid MappedFile on failure.

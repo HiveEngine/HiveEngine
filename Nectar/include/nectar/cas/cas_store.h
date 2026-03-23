@@ -1,5 +1,7 @@
 #pragma once
 
+#include <hive/hive_config.h>
+
 #include <comb/default_allocator.h>
 
 #include <wax/containers/string.h>
@@ -14,7 +16,7 @@ namespace nectar
     /// Content-Addressable Store.
     /// Stores immutable blobs on disk, identified by their ContentHash.
     /// Uses 2-level directory sharding: hash "7f3a8b..." -> root/7f/3a/7f3a8b...
-    class CasStore
+    class HIVE_API CasStore
     {
     public:
         CasStore(comb::DefaultAllocator& alloc, wax::StringView rootDir);

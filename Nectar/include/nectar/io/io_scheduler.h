@@ -19,7 +19,7 @@ namespace nectar
 {
     class VirtualFilesystem;
 
-    class IOScheduler
+    class HIVE_API IOScheduler
     {
     public:
         IOScheduler(VirtualFilesystem& vfs, comb::DefaultAllocator& alloc, drone::JobSubmitter jobs);
