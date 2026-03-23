@@ -9,6 +9,15 @@
 
 #if COMB_MEM_DEBUG
 
+namespace comb::debug
+{
+    GlobalMemoryTracker& GlobalMemoryTracker::GetInstance()
+    {
+        static GlobalMemoryTracker s_instance;
+        return s_instance;
+    }
+} // namespace comb::debug
+
 #include <iomanip>
 #include <sstream>
 

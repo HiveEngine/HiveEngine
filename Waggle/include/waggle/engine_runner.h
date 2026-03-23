@@ -1,5 +1,7 @@
 #pragma once
 
+#include <hive/hive_config.h>
+
 #include <drone/frame_pipeline.h>
 #include <drone/job_submitter.h>
 
@@ -60,7 +62,7 @@ namespace waggle
     // Main engine entry point.
     // Manages the full lifecycle: modules -> window -> device -> swapchain -> loop -> cleanup.
     // Returns 0 on success.
-    int Run(const EngineConfig& config, const EngineCallbacks& callbacks);
+    HIVE_API int Run(const EngineConfig& config, const EngineCallbacks& callbacks);
 
-    bool CreateWindowAndRenderer(EngineContext& ctx, const char* title, uint32_t width, uint32_t height);
+    HIVE_API bool CreateWindowAndRenderer(EngineContext& ctx, const char* title, uint32_t width, uint32_t height);
 } // namespace waggle

@@ -201,13 +201,17 @@ namespace drone
             return n + 1;
         }
 
+        static constexpr size_t kCacheLineSize = 64;
+
         Allocator* m_allocator;
         Cell* m_buffer;
         size_t m_capacity;
         size_t m_mask;
 
-        // Separate cache lines to avoid false sharing
-        alignas(64) std::atomic<size_t> m_head;
-        alignas(64) std::atomic<size_t> m_tail;
+        std::atomic<size_t> m_head;
+        char m_padHead[kCacheLineSize - sizeof(std::atomic<size_t>)];
+        std::atomic<size_t> m_tail;
+        char m_padTail[kCacheLineSize - sizeof(std::atomic<size_t>)];
+
     };
 } // namespace drone

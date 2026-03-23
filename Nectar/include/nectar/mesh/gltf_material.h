@@ -25,5 +25,5 @@ namespace nectar
 
     /// Parse a glTF/GLB blob and extract per-material texture info.
     /// Returns one entry per material in the glTF materials[] array.
-    wax::Vector<GltfMaterialInfo> ParseGltfMaterials(wax::ByteSpan gltfData, comb::DefaultAllocator& alloc);
+    HIVE_API wax::Vector<GltfMaterialInfo> ParseGltfMaterials(wax::ByteSpan gltfData, comb::DefaultAllocator& alloc);
 } // namespace nectar

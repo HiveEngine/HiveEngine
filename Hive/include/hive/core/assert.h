@@ -40,8 +40,8 @@
 
 namespace hive
 {
-    bool HandleAssertionFailure(const char* file, std::uint_least32_t line, const char* function,
-                                const char* message = nullptr);
+    HIVE_API bool HandleAssertionFailure(const char* file, std::uint_least32_t line, const char* function,
+                                        const char* message = nullptr);
 
     // Assert: Debug only, zero cost in release, expr not evaluated in release
     // NOTE: Currently only checks at runtime. In C++26, we could add compile-time

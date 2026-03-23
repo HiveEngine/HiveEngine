@@ -1,5 +1,7 @@
 #pragma once
 
+#include <hive/hive_config.h>
+
 #include <string>
 #include <unordered_set>
 #include <vector>
@@ -31,12 +33,11 @@ namespace hive
 
         [[nodiscard]] virtual const char* GetName() const = 0;
 
-        void Configure();
-        void Initialize();
+        HIVE_API void Configure();
+        HIVE_API void Initialize();
+        HIVE_API void Shutdown();
 
-        void Shutdown();
-
-        [[nodiscard]] bool CanInitialize(const std::unordered_set<std::string>& initModulesNames) const;
+        [[nodiscard]] HIVE_API bool CanInitialize(const std::unordered_set<std::string>& initModulesNames) const;
 
         [[nodiscard]] bool IsInitialized() const
         {

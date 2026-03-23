@@ -19,7 +19,7 @@ namespace waggle
     using GameplayApiVersionFn = uint32_t (*)();
     using GameplayBuildSignatureFn = const char* (*)();
 
-    class GameplayModule
+    class HIVE_API GameplayModule
     {
     public:
         GameplayModule() = default;

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <hive/hive_config.h>
+
 #include <comb/default_allocator.h>
 
 #include <wax/containers/hash_map.h>
@@ -14,7 +16,7 @@ namespace nectar
 {
     /// In-memory registry of all known assets.
     /// Dual-indexed: by UUID (primary) and by path (secondary).
-    class AssetDatabase
+    class HIVE_API AssetDatabase
     {
     public:
         explicit AssetDatabase(comb::DefaultAllocator& alloc);

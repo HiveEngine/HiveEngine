@@ -1,5 +1,7 @@
 #pragma once
 
+#include <hive/hive_config.h>
+
 #include <comb/default_allocator.h>
 
 #include <wax/containers/hash_map.h>
@@ -11,7 +13,7 @@
 namespace nectar
 {
     /// Maps asset type names to cookers (e.g. "Texture" → TextureCooker).
-    class CookerRegistry
+    class HIVE_API CookerRegistry
     {
     public:
         explicit CookerRegistry(comb::DefaultAllocator& alloc);

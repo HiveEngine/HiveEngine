@@ -1,5 +1,7 @@
 #pragma once
 
+#include <hive/hive_config.h>
+
 #include <nectar/pak/pak_reader.h>
 #include <nectar/vfs/mount_source.h>
 
@@ -8,7 +10,7 @@ namespace nectar
     /// Mount source backed by a .npak archive.
     /// Resolves VFS paths via the embedded AssetManifest.
     /// Takes ownership of the PakReader.
-    class PakMountSource final : public MountSource
+    class HIVE_API PakMountSource final : public MountSource
     {
     public:
         PakMountSource(PakReader* reader, comb::DefaultAllocator& alloc);

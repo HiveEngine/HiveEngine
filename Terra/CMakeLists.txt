@@ -2,7 +2,7 @@
 # Terra - Windowing Module
 # ============================================================================
 
-add_library(Terra STATIC)
+add_library(Terra ${HIVE_LIB_TYPE})
 
 hive_configure_target(Terra)
 

@@ -40,7 +40,7 @@ endif()
 # Library Configuration
 # ============================================================================
 
-add_library(Hive STATIC)
+add_library(Hive ${HIVE_LIB_TYPE})
 
 hive_configure_target(Hive)
 
@@ -69,6 +69,7 @@ target_sources(Hive
         src/hive/core/log.cpp
         src/hive/core/module.cpp
         src/hive/core/moduleregistry.cpp
+        src/hive/utils/singleton_registry.cpp
 )
 
 if(WIN32)

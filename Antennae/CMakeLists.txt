@@ -2,7 +2,7 @@
 # Antennae - Input Module
 # ============================================================================
 
-add_library(Antennae STATIC)
+add_library(Antennae ${HIVE_LIB_TYPE})
 
 hive_configure_target(Antennae)
 

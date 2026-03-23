@@ -1,5 +1,7 @@
 #pragma once
 
+#include <hive/hive_config.h>
+
 #include <comb/default_allocator.h>
 
 #include <wax/containers/string_view.h>
@@ -16,17 +18,14 @@ namespace nectar
     class PakBuilder
     {
     public:
-        explicit PakBuilder(comb::DefaultAllocator& alloc);
+        HIVE_API explicit PakBuilder(comb::DefaultAllocator& alloc);
 
-        /// Add a blob to be packed. Data is copied internally.
-        void AddBlob(ContentHash hash, wax::ByteSpan data, CompressionMethod compression = CompressionMethod::LZ4);
+        HIVE_API void AddBlob(ContentHash hash, wax::ByteSpan data,
+                              CompressionMethod compression = CompressionMethod::LZ4);
 
-        /// Set the asset manifest to embed in the .npak.
-        void SetManifest(const AssetManifest& manifest);
+        HIVE_API void SetManifest(const AssetManifest& manifest);
 
-        /// Build the .npak and write to the given file path.
-        /// Returns true on success.
-        [[nodiscard]] bool Build(wax::StringView outputPath);
+        [[nodiscard]] HIVE_API bool Build(wax::StringView outputPath);
 
     private:
         struct BuildEntry

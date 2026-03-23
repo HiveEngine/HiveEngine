@@ -32,7 +32,7 @@ namespace brood
                 return;
             }
 
-#if HIVE_FEATURE_MEM_DEBUG
+#if COMB_MEM_DEBUG
             comb::debug::ReportLiveAllocatorLeaks();
 #endif
             hive::ShutdownProfiler();

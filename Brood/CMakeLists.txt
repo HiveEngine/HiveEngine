@@ -6,23 +6,27 @@ set(BROOD_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
 set(BROOD_CMAKE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
 function(brood_link_test_target target)
-    target_link_libraries(${target}
-        PRIVATE
-            Larvae
-            Hive
-            Comb
-            Wax
-            Queen
-            Waggle
-            Nectar
-            Drone
-    )
+    if(HIVE_BUILD_SHARED)
+        target_link_libraries(${target} PRIVATE Larvae hive_engine)
+    else()
+        target_link_libraries(${target}
+            PRIVATE
+                Larvae
+                Hive
+                Comb
+                Wax
+                Queen
+                Waggle
+                Nectar
+                Drone
+        )
 
-    foreach(_module IN ITEMS Terra Antennae Swarm Forge)
-        if(TARGET ${_module})
-            target_link_libraries(${target} PRIVATE ${_module})
-        endif()
-    endforeach()
+        foreach(_module IN ITEMS Terra Antennae Swarm Forge)
+            if(TARGET ${_module})
+                target_link_libraries(${target} PRIVATE ${_module})
+            endif()
+        endforeach()
+    endif()
 
     target_include_directories(${target}
         PRIVATE
@@ -44,13 +48,11 @@ add_executable(hive_launcher
 
 hive_configure_target(hive_launcher)
 
-target_link_libraries(hive_launcher
-    PRIVATE
-        Waggle
-        Hive
-        Comb
-        Nectar
-)
+if(HIVE_BUILD_SHARED)
+    target_link_libraries(hive_launcher PRIVATE hive_engine)
+else()
+    target_link_libraries(hive_launcher PRIVATE Waggle Hive Comb Nectar)
+endif()
 
 target_include_directories(hive_launcher
     PRIVATE

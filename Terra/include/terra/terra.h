@@ -1,5 +1,7 @@
 #pragma once
 
+#include <hive/hive_config.h>
+
 #include <terra/input/keys.h>
 
 namespace terra
@@ -23,48 +25,48 @@ namespace terra
     };
 
     // Windowing system init
-    bool InitSystem();
+    HIVE_API bool InitSystem();
 
-    void ShutdownSystem();
+    HIVE_API void ShutdownSystem();
 
     // Window operation
-    WindowContext* CreateWindowContext(const char* title, int width, int height);
-    void DestroyWindowContext(WindowContext* windowContext);
+    HIVE_API WindowContext* CreateWindowContext(const char* title, int width, int height);
+    HIVE_API void DestroyWindowContext(WindowContext* windowContext);
 
-    bool ShouldWindowClose(WindowContext* windowContext);
+    HIVE_API bool ShouldWindowClose(WindowContext* windowContext);
 
-    [[nodiscard]] const InputState* GetWindowInputState(const WindowContext* windowContext);
+    [[nodiscard]] HIVE_API const InputState* GetWindowInputState(const WindowContext* windowContext);
 
-    [[nodiscard]] InputState* GetWindowInputState(WindowContext* windowContext);
+    [[nodiscard]] HIVE_API InputState* GetWindowInputState(WindowContext* windowContext);
 
-    [[nodiscard]] bool IsKeyDown(const InputState* inputState, Key key);
+    [[nodiscard]] HIVE_API bool IsKeyDown(const InputState* inputState, Key key);
 
-    [[nodiscard]] bool IsMouseButtonDown(const InputState* inputState, MouseButton button);
+    [[nodiscard]] HIVE_API bool IsMouseButtonDown(const InputState* inputState, MouseButton button);
 
-    [[nodiscard]] float GetMouseDeltaX(const InputState* inputState);
+    [[nodiscard]] HIVE_API float GetMouseDeltaX(const InputState* inputState);
 
-    [[nodiscard]] float GetMouseDeltaY(const InputState* inputState);
+    [[nodiscard]] HIVE_API float GetMouseDeltaY(const InputState* inputState);
 
-    [[nodiscard]] float GetMouseX(const InputState* inputState);
+    [[nodiscard]] HIVE_API float GetMouseX(const InputState* inputState);
 
-    [[nodiscard]] float GetMouseY(const InputState* inputState);
+    [[nodiscard]] HIVE_API float GetMouseY(const InputState* inputState);
 
-    [[nodiscard]] float GetScrollDeltaX(const InputState* inputState);
+    [[nodiscard]] HIVE_API float GetScrollDeltaX(const InputState* inputState);
 
-    [[nodiscard]] float GetScrollDeltaY(const InputState* inputState);
+    [[nodiscard]] HIVE_API float GetScrollDeltaY(const InputState* inputState);
 
-    [[nodiscard]] int GetWindowWidth(const WindowContext* windowContext);
+    [[nodiscard]] HIVE_API int GetWindowWidth(const WindowContext* windowContext);
 
-    [[nodiscard]] int GetWindowHeight(const WindowContext* windowContext);
+    [[nodiscard]] HIVE_API int GetWindowHeight(const WindowContext* windowContext);
 
-    void SetWindowSize(WindowContext* windowContext, int width, int height);
+    HIVE_API void SetWindowSize(WindowContext* windowContext, int width, int height);
 
-    void SetWindowVisible(WindowContext* windowContext, bool visible);
+    HIVE_API void SetWindowVisible(WindowContext* windowContext, bool visible);
 
-    void SetWindowTitle(WindowContext* windowContext, const char* title);
+    HIVE_API void SetWindowTitle(WindowContext* windowContext, const char* title);
 
     // Inputs
-    void PollEvents(); // Called once per frame
+    HIVE_API void PollEvents(); // Called once per frame
 
-    void PollEvents(WindowContext* windowContext); // Preferred when polling a specific window
+    HIVE_API void PollEvents(WindowContext* windowContext); // Preferred when polling a specific window
 } // namespace terra

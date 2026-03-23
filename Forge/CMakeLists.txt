@@ -58,15 +58,23 @@ if(WIN32)
     target_compile_definitions(Forge PRIVATE NOMINMAX)
 endif()
 
-target_link_libraries(Forge
-    PUBLIC
-        Queen
-        Swarm
-        Qt6::Widgets
-    PRIVATE
-        Waggle
-        glfw
-)
+if(HIVE_BUILD_SHARED)
+    target_link_libraries(Forge
+        PUBLIC
+            hive_engine
+            Qt6::Widgets
+    )
+else()
+    target_link_libraries(Forge
+        PUBLIC
+            Queen
+            Swarm
+            Qt6::Widgets
+        PRIVATE
+            Waggle
+            glfw
+    )
+endif()
 
 if(UNIX AND NOT APPLE)
     find_package(Fontconfig REQUIRED)

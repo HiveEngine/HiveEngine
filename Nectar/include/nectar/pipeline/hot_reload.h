@@ -1,5 +1,7 @@
 #pragma once
 
+#include <hive/hive_config.h>
+
 #include <comb/default_allocator.h>
 
 #include <wax/containers/string.h>
@@ -24,7 +26,7 @@ namespace nectar
 
     /// Orchestrates hot-reload: file watcher → re-import → re-cook → cascade.
     /// Does NOT touch AssetServer directly — caller handles the asset swap.
-    class HotReloadManager
+    class HIVE_API HotReloadManager
     {
     public:
         HotReloadManager(comb::DefaultAllocator& alloc, IFileWatcher& watcher, AssetDatabase& db,

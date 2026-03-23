@@ -1,5 +1,7 @@
 #pragma once
 
+#include <hive/hive_config.h>
+
 #include <comb/default_allocator.h>
 
 #include <wax/containers/string.h>
@@ -12,7 +14,7 @@
 
 namespace nectar
 {
-    class VirtualFilesystem
+    class HIVE_API VirtualFilesystem
     {
     public:
         explicit VirtualFilesystem(comb::DefaultAllocator& alloc);

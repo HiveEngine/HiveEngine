@@ -242,6 +242,35 @@ namespace queen
             return false;
         }
 
+        void RemoveSystem(SystemId id)
+        {
+            SystemDescriptor<Allocator>* system = GetSystem(id);
+            if (system != nullptr)
+            {
+                system->SetExecutor(nullptr, nullptr, nullptr);
+                system->SetEnabled(false);
+            }
+        }
+
+        bool RemoveSystemByName(const char* name)
+        {
+            for (size_t i = 0; i < m_systems.Size(); ++i)
+            {
+                if (std::strcmp(m_systems[i].Name(), name) == 0)
+                {
+                    m_systems[i].SetExecutor(nullptr, nullptr, nullptr);
+                    m_systems[i].SetEnabled(false);
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        void Clear()
+        {
+            m_systems.Clear();
+        }
+
     private:
         Allocator* m_allocator;
         wax::Vector<SystemDescriptor<Allocator>> m_systems;

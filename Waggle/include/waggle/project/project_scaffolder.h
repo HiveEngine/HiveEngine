@@ -1,5 +1,7 @@
 #pragma once
 
+#include <hive/hive_config.h>
+
 #include <comb/default_allocator.h>
 
 #include <wax/containers/string.h>
@@ -29,7 +31,7 @@ namespace waggle
         bool m_writeDefaultScene{true};
     };
 
-    class ProjectScaffolder
+    class HIVE_API ProjectScaffolder
     {
     public:
         [[nodiscard]] static wax::String GenerateProjectManifest(const ProjectScaffoldConfig& config,

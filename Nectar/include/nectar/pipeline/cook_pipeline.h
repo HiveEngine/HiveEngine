@@ -1,5 +1,7 @@
 #pragma once
 
+#include <hive/hive_config.h>
+
 #include <comb/default_allocator.h>
 
 #include <wax/containers/string_view.h>
@@ -35,7 +37,7 @@ namespace nectar
     };
 
     /// Orchestrates the cook phase: intermediate → platform-optimized → CAS.
-    class CookPipeline
+    class HIVE_API CookPipeline
     {
     public:
         CookPipeline(comb::DefaultAllocator& alloc, CookerRegistry& registry, CasStore& cas, AssetDatabase& db,

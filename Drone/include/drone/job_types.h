@@ -1,5 +1,7 @@
 #pragma once
 
+#include <hive/hive_config.h>
+
 #include <cstdint>
 
 namespace drone
@@ -23,7 +25,7 @@ namespace drone
         Priority m_priority{Priority::NORMAL};
         Counter* m_counter{nullptr}; // Auto-decremented after execution (set by Submit)
 
-        void Execute() const;
+        HIVE_API void Execute() const;
 
         [[nodiscard]] bool IsValid() const noexcept
         {

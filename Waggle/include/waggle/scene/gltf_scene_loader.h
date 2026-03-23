@@ -1,5 +1,7 @@
 #pragma once
 
+#include <hive/hive_config.h>
+
 #include <comb/default_allocator.h>
 
 #include <wax/containers/string_view.h>
@@ -25,7 +27,7 @@ namespace waggle
         bool m_success{false};
     };
 
-    GltfSceneLoadResult LoadGltfScene(queen::World& world, const void* data, size_t dataSize, wax::StringView basePath,
-                                      comb::DefaultAllocator& alloc);
+    HIVE_API GltfSceneLoadResult LoadGltfScene(queen::World& world, const void* data, size_t dataSize, wax::StringView basePath,
+                                               comb::DefaultAllocator& alloc);
 
 } // namespace waggle

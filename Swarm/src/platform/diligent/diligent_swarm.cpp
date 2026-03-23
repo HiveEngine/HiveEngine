@@ -134,6 +134,9 @@ namespace swarm
     void DrawPipeline(RenderContext* ctx)
     {
         using namespace Diligent;
+        ITextureView* pRTV = ctx->m_swapchain->GetCurrentBackBufferRTV();
+        ITextureView* pDSV = ctx->m_swapchain->GetDepthBufferDSV();
+        ctx->m_context->SetRenderTargets(1, &pRTV, pDSV, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
         ctx->m_context->SetPipelineState(ctx->m_pipeline);
         DrawAttribs drawAttrs;
         drawAttrs.NumVertices = 3;

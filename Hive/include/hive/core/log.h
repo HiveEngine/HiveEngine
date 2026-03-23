@@ -49,7 +49,7 @@ namespace hive
         const LogCategory* m_parentCategory{nullptr};
     };
 
-    extern const LogCategory LOG_HIVE_ROOT;
+    extern HIVE_API const LogCategory LOG_HIVE_ROOT;
 
     enum class LogSeverity
     {
@@ -59,7 +59,7 @@ namespace hive
         ERROR
     };
 
-    class LogManager final : public Singleton<LogManager>
+    class HIVE_API LogManager final : public Singleton<LogManager>
     {
     public:
         using LoggerId = unsigned int;
@@ -84,7 +84,7 @@ namespace hive
         unsigned int m_idCount = 0;
     };
 
-    class ConsoleLogger
+    class HIVE_API ConsoleLogger
     {
     public:
         explicit ConsoleLogger(LogManager& manager);
@@ -105,33 +105,30 @@ namespace hive
         LogManager::GetInstance().Log(cat, sev, msg);
     }
 
-    // Primary API: Formatted logging (modern {fmt})
+    HIVE_API void LogFormatted(const LogCategory& cat, LogSeverity sev, fmt::string_view fmt, fmt::format_args args);
+
     template <typename... Args>
     void LogTrace(const LogCategory& category, fmt::format_string<Args...> format, Args&&... args)
     {
-        auto msg = fmt::format(format, std::forward<Args>(args)...);
-        LogGeneral(category, LogSeverity::TRACE, msg.c_str());
+        LogFormatted(category, LogSeverity::TRACE, format, fmt::make_format_args(args...));
     }
 
     template <typename... Args>
     void LogInfo(const LogCategory& category, fmt::format_string<Args...> format, Args&&... args)
     {
-        auto msg = fmt::format(format, std::forward<Args>(args)...);
-        LogGeneral(category, LogSeverity::INFO, msg.c_str());
+        LogFormatted(category, LogSeverity::INFO, format, fmt::make_format_args(args...));
     }
 
     template <typename... Args>
     void LogWarning(const LogCategory& category, fmt::format_string<Args...> format, Args&&... args)
     {
-        auto msg = fmt::format(format, std::forward<Args>(args)...);
-        LogGeneral(category, LogSeverity::WARN, msg.c_str());
+        LogFormatted(category, LogSeverity::WARN, format, fmt::make_format_args(args...));
     }
 
     template <typename... Args>
     void LogError(const LogCategory& category, fmt::format_string<Args...> format, Args&&... args)
     {
-        auto msg = fmt::format(format, std::forward<Args>(args)...);
-        LogGeneral(category, LogSeverity::ERROR, msg.c_str());
+        LogFormatted(category, LogSeverity::ERROR, format, fmt::make_format_args(args...));
     }
 
     inline void LogTrace(const LogCategory& category, const char* message)

@@ -78,11 +78,7 @@ namespace comb::debug
         /**
          * Get singleton instance (Meyer's singleton, thread-safe since C++11)
          */
-        static GlobalMemoryTracker& GetInstance()
-        {
-            static GlobalMemoryTracker s_instance;
-            return s_instance;
-        }
+        HIVE_API static GlobalMemoryTracker& GetInstance();
 
         // Non-copyable, non-movable (singleton)
         GlobalMemoryTracker(const GlobalMemoryTracker&) = delete;

@@ -73,12 +73,18 @@ namespace brood::launcher
             return;
         }
 
-        if (state.m_gameplay.Load(dllPath.CStr()))
+        std::filesystem::path p{dllPath.CStr()};
+        auto shadowFsPath = p.parent_path() / (p.stem().string() + "_live" + p.extension().string());
+        std::error_code ec;
+        std::filesystem::copy_file(p, shadowFsPath, std::filesystem::copy_options::overwrite_existing, ec);
+
+        std::string shadowStr = shadowFsPath.string();
+        const char* loadPath = ec ? dllPath.CStr() : shadowStr.c_str();
+
+        if (state.m_gameplay.Load(loadPath))
         {
             if (!state.m_gameplay.Register(*ctx.m_world))
-            {
                 hive::LogWarning(LOG_LAUNCHER, "Gameplay DLL Register() failed");
-            }
         }
         else
         {

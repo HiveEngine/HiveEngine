@@ -58,4 +58,9 @@ namespace hive
 
         std::cout << kSeverityLabels[index] << category.GetFullPath() << " - " << message << std::endl;
     }
+    void LogFormatted(const LogCategory& cat, LogSeverity sev, fmt::string_view format, fmt::format_args args)
+    {
+        auto msg = fmt::vformat(format, args);
+        LogGeneral(cat, sev, msg.c_str());
+    }
 } // namespace hive

@@ -7,7 +7,8 @@
 #include <wax/containers/vector.h>
 
 #include <queen/command/command_buffer.h>
-#include <queen/scheduler/worker_context.h>
+
+#include <drone/worker_context.h>
 
 namespace queen
 {
@@ -167,8 +168,8 @@ namespace queen
     private:
         [[nodiscard]] static size_t SlotIndex()
         {
-            size_t idx = WorkerContext::CurrentWorkerIndex();
-            return (idx == WorkerContext::kMainThread) ? 0 : idx + 1;
+            size_t idx = drone::WorkerContext::CurrentWorkerIndex();
+            return (idx == drone::WorkerContext::kMainThread) ? 0 : idx + 1;
         }
 
         Allocator* m_allocator;

@@ -68,6 +68,7 @@ namespace forge
         void stopPressed();
         void gizmoModeChanged(int mode);
         void gizmoSpaceToggled();
+        void buildPressed();
 
     private:
         QPushButton* m_playBtn{};
@@ -77,5 +78,6 @@ namespace forge
         QPushButton* m_rotateBtn{};
         QPushButton* m_scaleBtn{};
         QPushButton* m_spaceBtn{};
+        QPushButton* m_buildBtn{};
     };
 } // namespace forge

@@ -25,6 +25,8 @@
 #include <filesystem>
 #include <memory>
 
+class QProcess;
+
 namespace brood::launcher
 {
 
@@ -123,6 +125,7 @@ namespace brood::launcher
         uint32_t m_windowHeight{1080};
         bool m_exitAfterSetup{false};
         bool m_projectOpen{false};
+        bool m_pendingDllReload{false};
 
 #if HIVE_MODE_EDITOR
         ProjectHubState m_hub;
@@ -145,6 +148,7 @@ namespace brood::launcher
         bool m_openRecoveryScenePopup{false};
         bool m_firstFrame{true};
         forge::ForgeMainWindow* m_mainWindow{nullptr};
+        QProcess* m_buildProcess{nullptr};
 #endif
     };
 

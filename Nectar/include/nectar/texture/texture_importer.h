@@ -1,5 +1,7 @@
 #pragma once
 
+#include <hive/hive_config.h>
+
 #include <nectar/pipeline/asset_importer.h>
 #include <nectar/texture/texture_data.h>
 
@@ -9,7 +11,7 @@ namespace nectar
     /// Reads settings from HiveDocument [import] section:
     ///   max_size (int, 0=no limit), srgb (bool, true),
     ///   generate_mipmaps (bool, true), flip_y (bool, false)
-    class TextureImporter final : public AssetImporter<NtexHeader>
+    class HIVE_API TextureImporter final : public AssetImporter<NtexHeader>
     {
     public:
         wax::Span<const char* const> SourceExtensions() const override;

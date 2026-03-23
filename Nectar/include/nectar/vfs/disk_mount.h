@@ -1,5 +1,7 @@
 #pragma once
 
+#include <hive/hive_config.h>
+
 #include <wax/containers/string.h>
 
 #include <nectar/vfs/mount_source.h>
@@ -7,7 +9,7 @@
 namespace nectar
 {
     /// Mount source backed by a directory on the real filesystem.
-    class DiskMountSource final : public MountSource
+    class HIVE_API DiskMountSource final : public MountSource
     {
     public:
         DiskMountSource(wax::StringView rootDir, comb::DefaultAllocator& alloc);

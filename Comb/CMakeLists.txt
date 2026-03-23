@@ -6,7 +6,7 @@
 # Library Configuration
 # ============================================================================
 
-add_library(Comb STATIC)
+add_library(Comb ${HIVE_LIB_TYPE})
 
 hive_configure_target(Comb)
 

@@ -75,6 +75,7 @@ namespace forge
         void gltfImportRequested(const QString& path);
         void sceneOpenRequested(const QString& path);
         void sceneModified();
+        void buildRequested();
 
     private:
         void CreateMenus();

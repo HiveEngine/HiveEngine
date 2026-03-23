@@ -1,5 +1,7 @@
 #pragma once
 
+#include <hive/hive_config.h>
+
 namespace queen
 {
     class World;
@@ -8,7 +10,7 @@ namespace queen
 namespace waggle
 {
 
-    void TransformSystem(queen::World& world);
-    void WorldAABBSystem(queen::World& world);
+    HIVE_API void TransformSystem(queen::World& world);
+    HIVE_API void WorldAABBSystem(queen::World& world);
 
 } // namespace waggle

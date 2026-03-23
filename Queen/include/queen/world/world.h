@@ -688,6 +688,28 @@ namespace queen
             return m_systems.IsSystemEnabled(id);
         }
 
+        void RemoveSystem(SystemId id)
+        {
+            m_systems.RemoveSystem(id);
+            InvalidateScheduler();
+        }
+
+        bool RemoveSystemByName(const char* name)
+        {
+            if (m_systems.RemoveSystemByName(name))
+            {
+                InvalidateScheduler();
+                return true;
+            }
+            return false;
+        }
+
+        void ClearSystems()
+        {
+            m_systems.Clear();
+            InvalidateScheduler();
+        }
+
         [[nodiscard]] SystemStorage<PersistentAllocator>& GetSystemStorage() noexcept
         {
             return m_systems;

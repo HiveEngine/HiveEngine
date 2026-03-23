@@ -7,7 +7,7 @@
 #include <queen/core/entity.h>
 #include <queen/core/tick.h>
 #include <queen/event/events.h>
-#include <queen/scheduler/work_stealing_deque.h>
+#include <drone/work_stealing_deque.h>
 #include <queen/storage/column.h>
 #include <queen/storage/table.h>
 #include <queen/world/world.h>
@@ -293,7 +293,7 @@ namespace
 
     auto test_deque_grow = larvae::RegisterTest("QueenRegression", "WorkStealingDequeGrowPreservesItems", []() {
         comb::LinearAllocator alloc{4 * 1024 * 1024};
-        queen::WorkStealingDeque<int, comb::LinearAllocator> deque{alloc, 4};
+        drone::WorkStealingDeque<int, comb::LinearAllocator> deque{alloc, 4};
 
         // Push more items than initial capacity to force Grow()
         constexpr int kCount = 100;
@@ -315,7 +315,7 @@ namespace
 
     auto test_deque_grow_steal = larvae::RegisterTest("QueenRegression", "WorkStealingDequeGrowWithSteal", []() {
         comb::LinearAllocator alloc{4 * 1024 * 1024};
-        queen::WorkStealingDeque<int, comb::LinearAllocator> deque{alloc, 4};
+        drone::WorkStealingDeque<int, comb::LinearAllocator> deque{alloc, 4};
 
         // Push items, steal some, push more (triggers grow with active steals)
         for (int i = 0; i < 4; ++i)

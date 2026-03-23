@@ -1,5 +1,7 @@
 #pragma once
 
+#include <hive/hive_config.h>
+
 #include <comb/default_allocator.h>
 
 #include <wax/containers/string.h>
@@ -35,7 +37,7 @@ namespace nectar
     };
 
     /// Orchestrates asset import: source -> importer -> CAS + database.
-    class ImportPipeline
+    class HIVE_API ImportPipeline
     {
     public:
         ImportPipeline(comb::DefaultAllocator& alloc, ImporterRegistry& registry, CasStore& cas, VirtualFilesystem& vfs,

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <hive/hive_config.h>
+
 #include <hive/core/clock.h>
 
 #include <queen/world/world.h>
@@ -16,7 +18,7 @@ namespace waggle
         queen::WorldAllocatorConfig m_world{};
     };
 
-    class App
+    class HIVE_API App
     {
     public:
         explicit App(const AppConfig& config = {});

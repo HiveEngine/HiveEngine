@@ -1,10 +1,12 @@
 #pragma once
 
+#include <hive/hive_config.h>
+
 #include <cstddef>
 
 namespace hive
 {
-    class DynamicLibrary
+    class HIVE_API DynamicLibrary
     {
     public:
         DynamicLibrary() = default;

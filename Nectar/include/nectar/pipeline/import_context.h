@@ -1,5 +1,7 @@
 #pragma once
 
+#include <hive/hive_config.h>
+
 #include <comb/default_allocator.h>
 
 #include <wax/containers/string_view.h>
@@ -15,7 +17,7 @@ namespace nectar
 
     /// Passed to AssetImporter during import.
     /// Allows the importer to declare dependencies it discovers while parsing source data.
-    class ImportContext
+    class HIVE_API ImportContext
     {
     public:
         ImportContext(comb::DefaultAllocator& alloc, AssetDatabase& db, AssetId current);

@@ -10,6 +10,7 @@
 #include <wax/containers/vector.h>
 
 #include <drone/counter.h>
+#include <drone/parallel_scratch.h>
 #include <drone/job_submitter.h>
 #include <drone/job_types.h>
 #include <drone/mpmc_queue.h>
@@ -183,23 +184,10 @@ namespace drone
             }
             const size_t numChunks = (total + chunkSize - 1) / chunkSize;
 
-            struct ChunkData
-            {
-                void (*m_func)(size_t, void*);
-                void* m_userData;
-                size_t m_begin;
-                size_t m_end;
-                Counter* m_counter;
-            };
+            hive::Assert(numChunks <= kMaxParallelChunks, "ParallelFor: too many chunks");
 
-            static constexpr size_t kMaxChunks = 1024;
-            thread_local ChunkData s_chunks[kMaxChunks];
-            thread_local size_t s_chunkIdx = 0;
-
-            hive::Assert(numChunks <= kMaxChunks, "ParallelFor: too many chunks, increase kMaxChunks or chunkSize");
-
-            size_t baseIdx = s_chunkIdx % kMaxChunks;
-            s_chunkIdx += numChunks;
+            ParallelChunk* chunks = GetParallelChunkBuffer();
+            size_t baseIdx = AllocateParallelChunkSlots(numChunks);
 
             Counter counter{static_cast<int64_t>(numChunks)};
 
@@ -208,7 +196,7 @@ namespace drone
                 const size_t chunkBegin = begin + chunk * chunkSize;
                 const size_t chunkEnd = (chunkBegin + chunkSize < end) ? (chunkBegin + chunkSize) : end;
 
-                auto& cd = s_chunks[(baseIdx + chunk) % kMaxChunks];
+                auto& cd = chunks[(baseIdx + chunk) % kMaxParallelChunks];
                 cd.m_func = func;
                 cd.m_userData = data;
                 cd.m_begin = chunkBegin;
@@ -217,12 +205,12 @@ namespace drone
 
                 JobDecl job;
                 job.m_func = [](void* d) {
-                    auto* cd = static_cast<ChunkData*>(d);
-                    for (size_t i = cd->m_begin; i < cd->m_end; ++i)
+                    auto* pc = static_cast<ParallelChunk*>(d);
+                    for (size_t i = pc->m_begin; i < pc->m_end; ++i)
                     {
-                        cd->m_func(i, cd->m_userData);
+                        pc->m_func(i, pc->m_userData);
                     }
-                    cd->m_counter->Decrement();
+                    pc->m_counter->Decrement();
                 };
                 job.m_userData = &cd;
                 job.m_priority = Priority::HIGH;
