@@ -506,3 +506,256 @@ namespace
         larvae::AssertEqual(world.GetChildIndex(parent, c), size_t{1});
     });
 } // namespace
+
+namespace
+{
+    struct ClonePos { float x, y; };
+    struct CloneVel { float dx, dy; };
+
+    auto t_clone_entity = larvae::RegisterTest("QueenHierarchy", "CloneEntity", []() {
+        queen::World world;
+        auto src = world.Spawn(ClonePos{1.0f, 2.0f}, CloneVel{3.0f, 4.0f});
+
+        auto clone = world.CloneEntity(src);
+
+        larvae::AssertTrue(world.IsAlive(clone));
+        larvae::AssertFalse(src == clone);
+
+        auto* cp = world.Get<ClonePos>(clone);
+        auto* cv = world.Get<CloneVel>(clone);
+        larvae::AssertTrue(cp != nullptr);
+        larvae::AssertTrue(cv != nullptr);
+        larvae::AssertEqual(cp->x, 1.0f);
+        larvae::AssertEqual(cp->y, 2.0f);
+        larvae::AssertEqual(cv->dx, 3.0f);
+        larvae::AssertEqual(cv->dy, 4.0f);
+    });
+
+    auto t_clone_no_hierarchy = larvae::RegisterTest("QueenHierarchy", "CloneSkipsParentChildren", []() {
+        queen::World world;
+        auto parent = world.Spawn().Build();
+        auto child = world.Spawn(ClonePos{1, 1});
+        world.SetParent(child, parent);
+
+        auto clone = world.CloneEntity(child);
+
+        larvae::AssertTrue(world.IsAlive(clone));
+        larvae::AssertFalse(world.Has<queen::Parent>(clone));
+        larvae::AssertEqual(world.ChildCount(parent), size_t{1});
+    });
+} // namespace
+
+namespace
+{
+    struct Tag {};
+    struct Health { int hp; };
+
+    auto t_clone_dead_entity = larvae::RegisterTest("QueenClone", "CloneDeadEntityReturnsInvalid", []() {
+        queen::World world;
+        auto e = world.Spawn(ClonePos{1, 2});
+        world.Despawn(e);
+
+        auto clone = world.CloneEntity(e);
+        larvae::AssertTrue(clone.IsNull());
+    });
+
+    auto t_clone_preserves_all_components = larvae::RegisterTest("QueenClone", "ClonePreservesAllComponents", []() {
+        queen::World world;
+        auto src = world.Spawn(ClonePos{1, 2}, CloneVel{3, 4}, Health{100});
+
+        auto clone = world.CloneEntity(src);
+
+        larvae::AssertTrue(world.Has<ClonePos>(clone));
+        larvae::AssertTrue(world.Has<CloneVel>(clone));
+        larvae::AssertTrue(world.Has<Health>(clone));
+        larvae::AssertEqual(world.Get<Health>(clone)->hp, 100);
+    });
+
+    auto t_clone_is_independent = larvae::RegisterTest("QueenClone", "CloneIsIndependent", []() {
+        queen::World world;
+        auto src = world.Spawn(ClonePos{1, 2});
+
+        auto clone = world.CloneEntity(src);
+        world.Get<ClonePos>(clone)->x = 99.0f;
+
+        larvae::AssertEqual(world.Get<ClonePos>(src)->x, 1.0f);
+        larvae::AssertEqual(world.Get<ClonePos>(clone)->x, 99.0f);
+    });
+
+    auto t_clone_entity_with_children_does_not_copy_children = larvae::RegisterTest(
+        "QueenClone", "CloneParentDoesNotCopyChildren", []() {
+            queen::World world;
+            auto parent = world.Spawn(ClonePos{0, 0});
+            auto child1 = world.Spawn(ClonePos{1, 1});
+            auto child2 = world.Spawn(ClonePos{2, 2});
+            world.SetParent(child1, parent);
+            world.SetParent(child2, parent);
+
+            auto clone = world.CloneEntity(parent);
+
+            larvae::AssertTrue(world.IsAlive(clone));
+            larvae::AssertEqual(world.ChildCount(clone), size_t{0});
+            larvae::AssertEqual(world.ChildCount(parent), size_t{2});
+        });
+
+    auto t_clone_zero_size_component = larvae::RegisterTest("QueenClone", "CloneWithZeroSizeComponent", []() {
+        queen::World world;
+        auto src = world.Spawn(ClonePos{5, 6}, Tag{});
+
+        auto clone = world.CloneEntity(src);
+
+        larvae::AssertTrue(world.Has<ClonePos>(clone));
+        larvae::AssertTrue(world.Has<Tag>(clone));
+        larvae::AssertEqual(world.Get<ClonePos>(clone)->x, 5.0f);
+    });
+
+    auto t_clone_multiple_times = larvae::RegisterTest("QueenClone", "CloneMultipleTimes", []() {
+        queen::World world;
+        auto src = world.Spawn(Health{42});
+
+        auto c1 = world.CloneEntity(src);
+        auto c2 = world.CloneEntity(src);
+        auto c3 = world.CloneEntity(src);
+
+        larvae::AssertFalse(c1 == c2);
+        larvae::AssertFalse(c2 == c3);
+        larvae::AssertEqual(world.Get<Health>(c1)->hp, 42);
+        larvae::AssertEqual(world.Get<Health>(c2)->hp, 42);
+        larvae::AssertEqual(world.Get<Health>(c3)->hp, 42);
+    });
+
+    auto t_clone_then_despawn_original = larvae::RegisterTest("QueenClone", "CloneSurvivesDespawnOfOriginal", []() {
+        queen::World world;
+        auto src = world.Spawn(ClonePos{7, 8});
+        auto clone = world.CloneEntity(src);
+
+        world.Despawn(src);
+
+        larvae::AssertFalse(world.IsAlive(src));
+        larvae::AssertTrue(world.IsAlive(clone));
+        larvae::AssertEqual(world.Get<ClonePos>(clone)->x, 7.0f);
+    });
+
+    auto t_clone_then_despawn_clone = larvae::RegisterTest("QueenClone", "DespawnCloneKeepsOriginal", []() {
+        queen::World world;
+        auto src = world.Spawn(ClonePos{9, 10});
+        auto clone = world.CloneEntity(src);
+
+        world.Despawn(clone);
+
+        larvae::AssertTrue(world.IsAlive(src));
+        larvae::AssertFalse(world.IsAlive(clone));
+        larvae::AssertEqual(world.Get<ClonePos>(src)->x, 9.0f);
+    });
+
+    auto t_clone_deep_hierarchy = larvae::RegisterTest("QueenClone", "CloneDeepHierarchyNotCopied", []() {
+        queen::World world;
+        auto root = world.Spawn(ClonePos{0, 0});
+        auto mid = world.Spawn(ClonePos{1, 1});
+        auto leaf = world.Spawn(ClonePos{2, 2});
+        world.SetParent(mid, root);
+        world.SetParent(leaf, mid);
+
+        auto cloneLeaf = world.CloneEntity(leaf);
+
+        larvae::AssertTrue(world.IsAlive(cloneLeaf));
+        larvae::AssertFalse(world.Has<queen::Parent>(cloneLeaf));
+        larvae::AssertEqual(world.Get<ClonePos>(cloneLeaf)->x, 2.0f);
+    });
+
+    auto t_clone_entity_no_components = larvae::RegisterTest("QueenClone", "CloneEntityNoComponents", []() {
+        queen::World world;
+        auto src = world.Spawn().Build();
+
+        auto clone = world.CloneEntity(src);
+
+        larvae::AssertTrue(world.IsAlive(clone));
+        larvae::AssertFalse(src == clone);
+    });
+} // namespace
+
+namespace
+{
+    auto t_clone_recursive_copies_children = larvae::RegisterTest(
+        "QueenClone", "CloneRecursiveCopiesChildren", []() {
+            queen::World world;
+            auto parent = world.Spawn(ClonePos{1, 2});
+            auto child1 = world.Spawn(ClonePos{3, 4});
+            auto child2 = world.Spawn(ClonePos{5, 6});
+            world.SetParent(child1, parent);
+            world.SetParent(child2, parent);
+
+            auto clone = world.CloneEntityRecursive(parent);
+
+            larvae::AssertTrue(world.IsAlive(clone));
+            larvae::AssertEqual(world.ChildCount(clone), size_t{2});
+            larvae::AssertEqual(world.Get<ClonePos>(clone)->x, 1.0f);
+        });
+
+    auto t_clone_recursive_deep = larvae::RegisterTest(
+        "QueenClone", "CloneRecursiveDeepHierarchy", []() {
+            queen::World world;
+            auto root = world.Spawn(Health{1});
+            auto mid = world.Spawn(Health{2});
+            auto leaf = world.Spawn(Health{3});
+            world.SetParent(mid, root);
+            world.SetParent(leaf, mid);
+
+            auto clone = world.CloneEntityRecursive(root);
+
+            larvae::AssertEqual(world.ChildCount(clone), size_t{1});
+            queen::Entity cloneMid{};
+            world.ForEachChild(clone, [&](queen::Entity c) { cloneMid = c; });
+            larvae::AssertTrue(world.IsAlive(cloneMid));
+            larvae::AssertEqual(world.Get<Health>(cloneMid)->hp, 2);
+            larvae::AssertEqual(world.ChildCount(cloneMid), size_t{1});
+
+            queen::Entity cloneLeaf{};
+            world.ForEachChild(cloneMid, [&](queen::Entity c) { cloneLeaf = c; });
+            larvae::AssertEqual(world.Get<Health>(cloneLeaf)->hp, 3);
+        });
+
+    auto t_clone_recursive_no_children = larvae::RegisterTest(
+        "QueenClone", "CloneRecursiveLeafIsSameAsClone", []() {
+            queen::World world;
+            auto leaf = world.Spawn(ClonePos{42, 0});
+
+            auto clone = world.CloneEntityRecursive(leaf);
+
+            larvae::AssertTrue(world.IsAlive(clone));
+            larvae::AssertEqual(world.ChildCount(clone), size_t{0});
+            larvae::AssertEqual(world.Get<ClonePos>(clone)->x, 42.0f);
+        });
+
+    auto t_clone_recursive_original_untouched = larvae::RegisterTest(
+        "QueenClone", "CloneRecursiveDoesNotModifyOriginal", []() {
+            queen::World world;
+            auto parent = world.Spawn(ClonePos{0, 0});
+            auto child = world.Spawn(ClonePos{1, 1});
+            world.SetParent(child, parent);
+
+            size_t entityCountBefore = world.EntityCount();
+            auto clone = world.CloneEntityRecursive(parent);
+            size_t entityCountAfter = world.EntityCount();
+
+            larvae::AssertEqual(entityCountAfter, entityCountBefore + 2);
+            larvae::AssertEqual(world.ChildCount(parent), size_t{1});
+            larvae::AssertEqual(world.ChildCount(clone), size_t{1});
+        });
+
+    auto t_clone_recursive_children_are_independent = larvae::RegisterTest(
+        "QueenClone", "CloneRecursiveChildrenAreIndependent", []() {
+            queen::World world;
+            auto parent = world.Spawn(Health{10});
+            auto child = world.Spawn(Health{20});
+            world.SetParent(child, parent);
+
+            auto cloneParent = world.CloneEntityRecursive(parent);
+
+            queen::Entity cloneChild{};
+            world.ForEachChild(cloneParent, [&](queen::Entity c) { cloneChild = c; });
+
+            world.Get<Health>(cloneChild)->hp = 999;
+            larvae::AssertEqual(world.Get<Health>(child)->hp, 20);
+        });
+} // namespace

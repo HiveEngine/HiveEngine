@@ -11,10 +11,12 @@ target_sources(Forge
         src/forge/theme.cpp
         src/forge/selection.cpp
         src/forge/hierarchy_panel.cpp
-        src/forge/undo.cpp
         src/forge/editor_undo.cpp
         src/forge/inspector_panel.cpp
         src/forge/entity_inspector.cpp
+        src/forge/entity_inspector_fields.cpp
+        src/forge/entity_inspector_multi_fields.cpp
+        src/forge/entity_inspector_helpers.cpp
         src/forge/asset_inspector.cpp
         src/forge/material_inspector.cpp
         src/forge/asset_picker.cpp

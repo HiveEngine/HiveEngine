@@ -19,7 +19,7 @@
 #include <forge/project_hub.h>
 #include <forge/selection.h>
 #include <forge/toolbar.h>
-#include <forge/undo.h>
+
 #include <forge/vulkan_viewport_widget.h>
 
 #include <QCloseEvent>
@@ -96,12 +96,11 @@ namespace forge
     }
 
     void ForgeMainWindow::Initialize(queen::World* world, EditorSelection* selection,
-                                     const queen::ComponentRegistry<256>* registry, UndoStack* undo)
+                                     const queen::ComponentRegistry<256>* registry)
     {
         m_world = world;
         m_selection = selection;
         m_registry = registry;
-        m_undo = undo;
     }
 
     void ForgeMainWindow::ShowHub(const std::vector<DiscoveredProject>& projects)
@@ -279,8 +278,8 @@ namespace forge
         if (m_world && m_hierarchy)
             m_hierarchy->Refresh(*m_world);
 
-        if (m_world && m_inspector && m_selection && m_registry && m_undo)
-            m_inspector->Refresh(*m_world, *m_selection, *m_registry, *m_undo, *m_editorUndo);
+        if (m_world && m_inspector && m_selection && m_registry)
+            m_inspector->Refresh(*m_world, *m_selection, *m_registry, *m_editorUndo);
 
         if (m_assetBrowser)
             m_assetBrowser->Refresh();
@@ -438,8 +437,8 @@ namespace forge
     void ForgeMainWindow::ConnectSignals()
     {
         connect(m_hierarchy, &HierarchyPanel::entitySelected, this, [this](uint32_t) {
-            if (!m_inspectorLocked && m_world && m_registry && m_undo)
-                m_inspector->Refresh(*m_world, *m_selection, *m_registry, *m_undo, *m_editorUndo);
+            if (!m_inspectorLocked && m_world && m_registry)
+                m_inspector->Refresh(*m_world, *m_selection, *m_registry, *m_editorUndo);
         });
 
         connect(m_hierarchy, &HierarchyPanel::sceneModified, this, [this] {
@@ -466,8 +465,8 @@ namespace forge
             if (m_selection)
             {
                 m_selection->SelectAsset(std::filesystem::path{path.toStdString()}, type);
-                if (m_world && m_registry && m_undo)
-                    m_inspector->Refresh(*m_world, *m_selection, *m_registry, *m_undo, *m_editorUndo);
+                if (m_world && m_registry)
+                    m_inspector->Refresh(*m_world, *m_selection, *m_registry, *m_editorUndo);
             }
         });
 

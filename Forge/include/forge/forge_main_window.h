@@ -31,7 +31,6 @@ namespace forge
     class InspectorPanel;
     class ProgressOverlay;
     class ProjectHub;
-    class UndoStack;
     class VulkanViewportWidget;
 
     class ForgeMainWindow : public QMainWindow
@@ -41,8 +40,8 @@ namespace forge
     public:
         explicit ForgeMainWindow(QWidget* parent = nullptr);
 
-        void Initialize(queen::World* world, EditorSelection* selection, const queen::ComponentRegistry<256>* registry,
-                        UndoStack* undo);
+        void Initialize(queen::World* world, EditorSelection* selection,
+                        const queen::ComponentRegistry<256>* registry);
         void ShowHub(const std::vector<struct DiscoveredProject>& projects);
         void ShowLoading(const QString& projectName);
         void ShowEditor();
@@ -85,8 +84,6 @@ namespace forge
         queen::World* m_world{};
         EditorSelection* m_selection{};
         const queen::ComponentRegistry<256>* m_registry{};
-        UndoStack* m_undo{};
-
         HierarchyPanel* m_hierarchy{};
         InspectorPanel* m_inspector{};
         AssetBrowserPanel* m_assetBrowser{};

@@ -20,6 +20,7 @@
 #include <QDropEvent>
 #include <QMenu>
 #include <QPainter>
+#include <QShortcut>
 #include <QTreeWidget>
 #include <QTreeWidgetItemIterator>
 #include <QVBoxLayout>
@@ -149,6 +150,49 @@ namespace forge
         snprintf(buf, bufSize, "Entity %u", entity.Index());
     }
 
+    // Captures entity position before a move, for undo/redo restoration
+    struct MoveSnapshot
+    {
+        queen::Entity entity;
+        queen::Entity parent;
+        uint32_t siblingIndex;
+        size_t childIndex;
+        bool hadParent;
+    };
+
+    static MoveSnapshot CaptureMoveState(queen::World& world, queen::Entity entity)
+    {
+        MoveSnapshot snap{};
+        snap.entity = entity;
+        snap.parent = world.GetParent(entity);
+        snap.hadParent = world.IsAlive(snap.parent);
+        if (snap.hadParent)
+        {
+            snap.childIndex = world.GetChildIndex(snap.parent, entity);
+        }
+        else
+        {
+            auto* si = world.Get<waggle::SiblingIndex>(entity);
+            snap.siblingIndex = si ? si->m_value : 0;
+        }
+        return snap;
+    }
+
+    static void RestoreMoveState(queen::World& world, const MoveSnapshot& snap)
+    {
+        if (snap.hadParent && world.IsAlive(snap.parent))
+        {
+            world.SetParent(snap.entity, snap.parent);
+            world.ReorderChild(snap.parent, snap.entity, snap.childIndex);
+        }
+        else
+        {
+            if (world.Has<queen::Parent>(snap.entity))
+                world.RemoveParent(snap.entity);
+            world.Set(snap.entity, waggle::SiblingIndex{snap.siblingIndex});
+        }
+    }
+
     HierarchyPanel::HierarchyPanel(EditorSelection& selection, EditorUndoManager& editorUndo, QWidget* parent)
         : QWidget{parent}
         , m_selection{selection}
@@ -158,98 +202,19 @@ namespace forge
         layout->setContentsMargins(0, 0, 0, 0);
 
         auto* tree = new DropAwareTree{this};
-        tree->onAssetDropped = [this](const QString& path) { emit assetDropped(path); };
-
-        tree->onEntityReparent = [this](queen::Entity dragged, queen::Entity target, int dropPos) {
-            if (!m_currentWorld || !m_currentWorld->IsAlive(dragged) || !m_currentWorld->IsAlive(target))
-                return;
-            if (dragged == target || m_currentWorld->IsDescendantOf(target, dragged))
-                return;
-
-            auto* oldParentComp = m_currentWorld->Get<queen::Parent>(dragged);
-            queen::Entity oldParent = oldParentComp ? oldParentComp->m_entity : queen::Entity{};
-
-            // QAbstractItemView::DropIndicatorPosition: OnItem=0, AboveItem=1, BelowItem=2, OnViewport=3
-            if (dropPos == 0)
-            {
-                m_currentWorld->SetParent(dragged, target);
-            }
-            else
-            {
-                queen::Entity targetParent = m_currentWorld->GetParent(target);
-                if (m_currentWorld->IsAlive(targetParent))
-                {
-                    m_currentWorld->SetParent(dragged, targetParent);
-                    size_t targetIdx = m_currentWorld->GetChildIndex(targetParent, target);
-                    m_currentWorld->ReorderChild(targetParent, dragged, dropPos == 2 ? targetIdx + 1 : targetIdx);
-                }
-                else
-                {
-                    m_currentWorld->RemoveParent(dragged);
-                    auto* targetSi = m_currentWorld->Get<waggle::SiblingIndex>(target);
-                    uint32_t targetOrder = targetSi ? targetSi->m_value : 0;
-                    uint32_t newOrder = (dropPos == 2) ? targetOrder + 1 : (targetOrder > 0 ? targetOrder - 1 : 0);
-                    m_currentWorld->Set(dragged, waggle::SiblingIndex{newOrder});
-                    ReindexRoots();
-                }
-            }
-
-            waggle::RecalculateEntityHierarchyDisabled(*m_currentWorld, dragged);
-            Refresh(*m_currentWorld);
-
-            auto captured = std::make_shared<std::pair<queen::Entity, queen::Entity>>(dragged, oldParent);
-            queen::Entity newParent = m_currentWorld->GetParent(dragged);
-
-            m_editorUndo.Push(
-                [this, captured]() {
-                    if (m_currentWorld->IsAlive(captured->second))
-                        m_currentWorld->SetParent(captured->first, captured->second);
-                    else
-                        m_currentWorld->RemoveParent(captured->first);
-                    waggle::RecalculateEntityHierarchyDisabled(*m_currentWorld, captured->first);
-                    Refresh(*m_currentWorld);
-                },
-                [this, captured, newParent]() {
-                    if (m_currentWorld->IsAlive(newParent))
-                        m_currentWorld->SetParent(captured->first, newParent);
-                    else
-                        m_currentWorld->RemoveParent(captured->first);
-                    waggle::RecalculateEntityHierarchyDisabled(*m_currentWorld, captured->first);
-                    Refresh(*m_currentWorld);
-                });
-
-            emit sceneModified();
-        };
-
-        tree->onEntityDetach = [this](queen::Entity dragged) {
-            if (!m_currentWorld || !m_currentWorld->IsAlive(dragged))
-                return;
-            if (!m_currentWorld->Has<queen::Parent>(dragged))
-                return;
-
-            auto oldParent = m_currentWorld->Get<queen::Parent>(dragged)->m_entity;
-            auto captured = std::make_shared<std::pair<queen::Entity, queen::Entity>>(dragged, oldParent);
-
-            m_currentWorld->RemoveParent(dragged);
-            waggle::RecalculateEntityHierarchyDisabled(*m_currentWorld, dragged);
-            Refresh(*m_currentWorld);
-
-            m_editorUndo.Push(
-                [this, captured]() {
-                    m_currentWorld->SetParent(captured->first, captured->second);
-                    waggle::RecalculateEntityHierarchyDisabled(*m_currentWorld, captured->first);
-                    Refresh(*m_currentWorld);
-                },
-                [this, captured]() {
-                    m_currentWorld->RemoveParent(captured->first);
-                    waggle::RecalculateEntityHierarchyDisabled(*m_currentWorld, captured->first);
-                    Refresh(*m_currentWorld);
-                });
-
-            emit sceneModified();
-        };
-
         m_tree = tree;
+
+        SetupTreeWidget();
+        SetupDropCallbacks();
+        SetupShortcuts();
+
+        layout->addWidget(m_tree);
+        connect(m_tree, &QTreeWidget::itemClicked, this, &HierarchyPanel::OnItemClicked);
+        connect(m_tree, &QTreeWidget::customContextMenuRequested, this, &HierarchyPanel::ShowEntityContextMenu);
+    }
+
+    void HierarchyPanel::SetupTreeWidget()
+    {
         m_tree->setHeaderHidden(true);
         m_tree->setSelectionMode(QAbstractItemView::ExtendedSelection);
         m_tree->setContextMenuPolicy(Qt::CustomContextMenu);
@@ -259,6 +224,7 @@ namespace forge
         m_tree->setDefaultDropAction(Qt::MoveAction);
         m_tree->setRootIsDecorated(true);
         m_tree->setIndentation(18);
+
         auto closedPix = MakeTrianglePixmap(false);
         auto openPix = MakeTrianglePixmap(true);
         auto tempDir = QDir::tempPath();
@@ -281,11 +247,272 @@ namespace forge
             "  image: url(%2);"
             "}"
         }.arg(closedPath, openPath));
+    }
 
-        layout->addWidget(m_tree);
+    void HierarchyPanel::SetupDropCallbacks()
+    {
+        auto* tree = static_cast<DropAwareTree*>(m_tree);
+        tree->onAssetDropped = [this](const QString& path) { emit assetDropped(path); };
+        tree->onEntityReparent = [this](queen::Entity dragged, queen::Entity target, int dropPos) {
+            HandleReparent(dragged, target, dropPos);
+        };
+        tree->onEntityDetach = [this](queen::Entity dragged) { HandleDetach(dragged); };
+    }
 
-        connect(m_tree, &QTreeWidget::itemClicked, this, &HierarchyPanel::OnItemClicked);
-        connect(m_tree, &QTreeWidget::customContextMenuRequested, this, &HierarchyPanel::ShowEntityContextMenu);
+    void HierarchyPanel::SetupShortcuts()
+    {
+        auto* deleteShortcut = new QShortcut{QKeySequence::Delete, m_tree};
+        connect(deleteShortcut, &QShortcut::activated, this, [this]() {
+            if (!m_currentWorld || m_selection.All().IsEmpty())
+                return;
+            const auto& selected = m_selection.All();
+            DeleteEntitiesWithUndo(selected.Begin(), selected.Size());
+        });
+
+        auto* duplicateShortcut = new QShortcut{QKeySequence{Qt::CTRL | Qt::Key_D}, m_tree};
+        connect(duplicateShortcut, &QShortcut::activated, this, [this]() { DuplicateSelection(); });
+
+        auto* copyShortcut = new QShortcut{QKeySequence::Copy, m_tree};
+        connect(copyShortcut, &QShortcut::activated, this, [this]() {
+            m_clipboard.clear();
+            for (size_t i = 0; i < m_selection.All().Size(); ++i)
+                m_clipboard.push_back(m_selection.All()[i]);
+        });
+
+        auto* pasteShortcut = new QShortcut{QKeySequence::Paste, m_tree};
+        connect(pasteShortcut, &QShortcut::activated, this, [this]() { PasteClipboard(); });
+
+        auto* selectAllShortcut = new QShortcut{QKeySequence::SelectAll, m_tree};
+        connect(selectAllShortcut, &QShortcut::activated, this, [this]() {
+            if (!m_currentWorld)
+                return;
+            m_selection.Clear();
+            QTreeWidgetItemIterator it{m_tree};
+            while (*it)
+            {
+                uint32_t idx = (*it)->data(0, Qt::UserRole).toUInt();
+                uint16_t gen = static_cast<uint16_t>((*it)->data(0, Qt::UserRole + 1).toUInt());
+                m_selection.AddToSelection(queen::Entity{idx, gen});
+                (*it)->setSelected(true);
+                ++it;
+            }
+            if (!m_selection.All().IsEmpty())
+                emit entitySelected(m_selection.All()[0].Index());
+        });
+    }
+
+    void HierarchyPanel::HandleReparent(queen::Entity dragged, queen::Entity target, int dropPos)
+    {
+        if (!m_currentWorld || !m_currentWorld->IsAlive(dragged) || !m_currentWorld->IsAlive(target))
+            return;
+        if (dragged == target || m_currentWorld->IsDescendantOf(target, dragged))
+            return;
+
+        auto before = std::make_shared<MoveSnapshot>(CaptureMoveState(*m_currentWorld, dragged));
+
+        // QAbstractItemView::DropIndicatorPosition: OnItem=0, AboveItem=1, BelowItem=2
+        if (dropPos == 0)
+        {
+            m_currentWorld->SetParent(dragged, target);
+        }
+        else
+        {
+            queen::Entity targetParent = m_currentWorld->GetParent(target);
+            if (m_currentWorld->IsAlive(targetParent))
+            {
+                m_currentWorld->SetParent(dragged, targetParent);
+                size_t targetIdx = m_currentWorld->GetChildIndex(targetParent, target);
+                m_currentWorld->ReorderChild(targetParent, dragged, dropPos == 2 ? targetIdx + 1 : targetIdx);
+            }
+            else
+            {
+                m_currentWorld->RemoveParent(dragged);
+                auto* targetSi = m_currentWorld->Get<waggle::SiblingIndex>(target);
+                uint32_t targetOrder = targetSi ? targetSi->m_value : 0;
+                uint32_t newOrder = (dropPos == 2) ? targetOrder + 1 : (targetOrder > 0 ? targetOrder - 1 : 0);
+                m_currentWorld->Set(dragged, waggle::SiblingIndex{newOrder});
+                ReindexRoots();
+            }
+        }
+
+        waggle::RecalculateEntityHierarchyDisabled(*m_currentWorld, dragged);
+
+        auto after = std::make_shared<MoveSnapshot>(CaptureMoveState(*m_currentWorld, dragged));
+
+        m_editorUndo.Push(
+            [this, before]() {
+                RestoreMoveState(*m_currentWorld, *before);
+                waggle::RecalculateEntityHierarchyDisabled(*m_currentWorld, before->entity);
+                Refresh(*m_currentWorld);
+            },
+            [this, after]() {
+                RestoreMoveState(*m_currentWorld, *after);
+                waggle::RecalculateEntityHierarchyDisabled(*m_currentWorld, after->entity);
+                Refresh(*m_currentWorld);
+            });
+
+        Refresh(*m_currentWorld);
+        emit sceneModified();
+    }
+
+    void HierarchyPanel::HandleDetach(queen::Entity dragged)
+    {
+        if (!m_currentWorld || !m_currentWorld->IsAlive(dragged))
+            return;
+        if (!m_currentWorld->Has<queen::Parent>(dragged))
+            return;
+
+        auto before = std::make_shared<MoveSnapshot>(CaptureMoveState(*m_currentWorld, dragged));
+
+        m_currentWorld->RemoveParent(dragged);
+        waggle::RecalculateEntityHierarchyDisabled(*m_currentWorld, dragged);
+
+        m_editorUndo.Push(
+            [this, before]() {
+                RestoreMoveState(*m_currentWorld, *before);
+                waggle::RecalculateEntityHierarchyDisabled(*m_currentWorld, before->entity);
+                Refresh(*m_currentWorld);
+            },
+            [this, entity = dragged]() {
+                m_currentWorld->RemoveParent(entity);
+                waggle::RecalculateEntityHierarchyDisabled(*m_currentWorld, entity);
+                Refresh(*m_currentWorld);
+            });
+
+        Refresh(*m_currentWorld);
+        emit sceneModified();
+    }
+
+    void HierarchyPanel::DuplicateSelection()
+    {
+        if (!m_currentWorld || m_selection.All().IsEmpty())
+            return;
+
+        auto selected = m_selection.All();
+        m_selection.Clear();
+
+        struct CloneInfo
+        {
+            queen::Entity clone;
+            queen::Entity parent;
+            bool hadParent;
+        };
+        auto created = std::make_shared<std::vector<CloneInfo>>();
+
+        for (size_t i = 0; i < selected.Size(); ++i)
+        {
+            if (!m_currentWorld->IsAlive(selected[i]))
+                continue;
+
+            queen::Entity clone = CloneEntityRecursive(selected[i]);
+            if (!m_currentWorld->IsAlive(clone))
+                continue;
+
+            queen::Entity parent = m_currentWorld->GetParent(selected[i]);
+            bool hadParent = m_currentWorld->IsAlive(parent);
+            if (hadParent)
+                m_currentWorld->SetParent(clone, parent);
+
+            created->push_back({clone, parent, hadParent});
+            m_selection.AddToSelection(clone);
+        }
+
+        m_editorUndo.Push(
+            [this, created]() {
+                m_selection.Clear();
+                for (auto& info : *created)
+                {
+                    if (!m_currentWorld->IsAlive(info.clone))
+                        continue;
+                    if (m_currentWorld->Has<queen::Parent>(info.clone))
+                        m_currentWorld->RemoveParent(info.clone);
+                    m_undoHidden.insert(EntityKey(info.clone));
+                }
+                Refresh(*m_currentWorld);
+            },
+            [this, created]() {
+                m_selection.Clear();
+                for (auto& info : *created)
+                {
+                    if (!m_currentWorld->IsAlive(info.clone))
+                        continue;
+                    m_undoHidden.erase(EntityKey(info.clone));
+                    if (info.hadParent && m_currentWorld->IsAlive(info.parent))
+                        m_currentWorld->SetParent(info.clone, info.parent);
+                    m_selection.AddToSelection(info.clone);
+                }
+                Refresh(*m_currentWorld);
+            });
+
+        Refresh(*m_currentWorld);
+        emit sceneModified();
+    }
+
+    void HierarchyPanel::PasteClipboard()
+    {
+        if (!m_currentWorld || m_clipboard.empty())
+            return;
+
+        queen::Entity pasteParent{};
+        if (m_selection.All().Size() == 1)
+            pasteParent = m_selection.Primary();
+
+        m_selection.Clear();
+
+        struct CloneInfo
+        {
+            queen::Entity clone;
+            queen::Entity parent;
+            bool hadParent;
+        };
+        auto created = std::make_shared<std::vector<CloneInfo>>();
+
+        for (auto src : m_clipboard)
+        {
+            if (!m_currentWorld->IsAlive(src))
+                continue;
+
+            queen::Entity clone = CloneEntityRecursive(src);
+            if (!m_currentWorld->IsAlive(clone))
+                continue;
+
+            bool hadParent = m_currentWorld->IsAlive(pasteParent);
+            if (hadParent)
+                m_currentWorld->SetParent(clone, pasteParent);
+
+            created->push_back({clone, pasteParent, hadParent});
+            m_selection.AddToSelection(clone);
+        }
+
+        m_editorUndo.Push(
+            [this, created]() {
+                m_selection.Clear();
+                for (auto& info : *created)
+                {
+                    if (!m_currentWorld->IsAlive(info.clone))
+                        continue;
+                    if (m_currentWorld->Has<queen::Parent>(info.clone))
+                        m_currentWorld->RemoveParent(info.clone);
+                    m_undoHidden.insert(EntityKey(info.clone));
+                }
+                Refresh(*m_currentWorld);
+            },
+            [this, created]() {
+                m_selection.Clear();
+                for (auto& info : *created)
+                {
+                    if (!m_currentWorld->IsAlive(info.clone))
+                        continue;
+                    m_undoHidden.erase(EntityKey(info.clone));
+                    if (info.hadParent && m_currentWorld->IsAlive(info.parent))
+                        m_currentWorld->SetParent(info.clone, info.parent);
+                    m_selection.AddToSelection(info.clone);
+                }
+                Refresh(*m_currentWorld);
+            });
+
+        Refresh(*m_currentWorld);
+        emit sceneModified();
     }
 
     void HierarchyPanel::SetLabelFn(EntityLabelFn fn)
@@ -336,7 +563,7 @@ namespace forge
 
         for (queen::Entity root : roots)
         {
-            if (world.IsAlive(root))
+            if (world.IsAlive(root) && m_undoHidden.find(EntityKey(root)) == m_undoHidden.end())
             {
                 AddEntityNode(world, root, nullptr);
             }
@@ -474,6 +701,29 @@ namespace forge
         m_selection.AddToSelection(queen::Entity{index, gen});
     }
 
+    queen::Entity HierarchyPanel::CloneEntityRecursive(queen::Entity source)
+    {
+        queen::Entity clone = m_currentWorld->CloneEntity(source);
+        if (!m_currentWorld->IsAlive(clone))
+            return clone;
+
+        auto* srcName = m_currentWorld->Get<waggle::Name>(source);
+        if (srcName)
+        {
+            wax::FixedString cloneName;
+            snprintf(cloneName.Data(), cloneName.Capacity(), "%s (Copy)", srcName->m_name.CStr());
+            m_currentWorld->Set(clone, waggle::Name{cloneName});
+        }
+
+        m_currentWorld->ForEachChild(source, [&](queen::Entity child) {
+            queen::Entity childClone = CloneEntityRecursive(child);
+            if (m_currentWorld->IsAlive(childClone))
+                m_currentWorld->SetParent(childClone, clone);
+        });
+
+        return clone;
+    }
+
     void HierarchyPanel::ReindexRoots()
     {
         if (!m_currentWorld)
@@ -501,6 +751,116 @@ namespace forge
         {
             m_currentWorld->Set(roots[i], waggle::SiblingIndex{static_cast<uint32_t>(i)});
         }
+    }
+
+    void HierarchyPanel::DeleteEntitiesWithUndo(const queen::Entity* entities, size_t count)
+    {
+        if (!m_currentWorld || count == 0)
+            return;
+
+        // Filter out entities whose ancestors are also in the selection
+        // to avoid duplicate backups
+        std::vector<queen::Entity> topLevel;
+        for (size_t i = 0; i < count; ++i)
+        {
+            if (!m_currentWorld->IsAlive(entities[i]))
+                continue;
+
+            bool ancestorSelected = false;
+            queen::Entity parent = m_currentWorld->GetParent(entities[i]);
+            while (m_currentWorld->IsAlive(parent))
+            {
+                for (size_t j = 0; j < count; ++j)
+                {
+                    if (entities[j] == parent)
+                    {
+                        ancestorSelected = true;
+                        break;
+                    }
+                }
+                if (ancestorSelected)
+                    break;
+                parent = m_currentWorld->GetParent(parent);
+            }
+            if (!ancestorSelected)
+                topLevel.push_back(entities[i]);
+        }
+
+        if (topLevel.empty())
+            return;
+
+        struct Snapshot
+        {
+            queen::Entity clone;
+            queen::Entity originalParent;
+            uint32_t siblingIndex;
+            bool hadParent;
+        };
+
+        auto snapshots = std::make_shared<std::vector<Snapshot>>();
+
+        for (auto entity : topLevel)
+        {
+            queen::Entity parent = m_currentWorld->GetParent(entity);
+            bool hadParent = m_currentWorld->IsAlive(parent);
+
+            uint32_t sibIdx = 0;
+            if (!hadParent)
+            {
+                auto* si = m_currentWorld->Get<waggle::SiblingIndex>(entity);
+                sibIdx = si ? si->m_value : 0;
+            }
+
+            // Backup: clone entire subtree (preserves all component data)
+            queen::Entity clone = m_currentWorld->CloneEntityRecursive(entity);
+            m_undoHidden.insert(EntityKey(clone));
+
+            snapshots->push_back({clone, parent, sibIdx, hadParent});
+
+            m_currentWorld->DespawnRecursive(entity);
+        }
+
+        m_selection.Clear();
+        m_lastClickedItem = nullptr;
+
+        m_editorUndo.Push(
+            [this, snapshots]() {
+                // Undo: restore clones by unhiding and reparenting
+                m_selection.Clear();
+                for (auto& snap : *snapshots)
+                {
+                    if (!m_currentWorld->IsAlive(snap.clone))
+                        continue;
+
+                    m_undoHidden.erase(EntityKey(snap.clone));
+
+                    if (snap.hadParent && m_currentWorld->IsAlive(snap.originalParent))
+                        m_currentWorld->SetParent(snap.clone, snap.originalParent);
+                    else
+                        m_currentWorld->Set(snap.clone, waggle::SiblingIndex{snap.siblingIndex});
+
+                    m_selection.AddToSelection(snap.clone);
+                }
+                Refresh(*m_currentWorld);
+            },
+            [this, snapshots]() {
+                // Redo: re-hide the clones
+                m_selection.Clear();
+                for (auto& snap : *snapshots)
+                {
+                    if (!m_currentWorld->IsAlive(snap.clone))
+                        continue;
+
+                    if (m_currentWorld->Has<queen::Parent>(snap.clone))
+                        m_currentWorld->RemoveParent(snap.clone);
+
+                    m_undoHidden.insert(EntityKey(snap.clone));
+                }
+                Refresh(*m_currentWorld);
+            });
+
+        Refresh(*m_currentWorld);
+        emit sceneModified();
     }
 
     void HierarchyPanel::ShowEntityContextMenu(const QPoint& pos)
@@ -548,12 +908,14 @@ namespace forge
                         {
                             waggle::SetEntityDisabled(*m_currentWorld, e, wasDisabled);
                         }
+                        Refresh(*m_currentWorld);
                     },
                     [this, before, nowDisabling]() {
                         for (auto& [e, _] : *before)
                         {
                             waggle::SetEntityDisabled(*m_currentWorld, e, nowDisabling);
                         }
+                        Refresh(*m_currentWorld);
                     });
 
                 emit sceneModified();
@@ -562,24 +924,13 @@ namespace forge
             menu.addAction("Delete", [this, entity]() {
                 if (m_selection.All().Size() > 1 && m_selection.IsSelected(entity))
                 {
-                    auto selected = m_selection.All();
-                    m_selection.Clear();
-                    for (size_t i = 0; i < selected.Size(); ++i)
-                    {
-                        if (m_currentWorld->IsAlive(selected[i]))
-                        {
-                            m_currentWorld->DespawnRecursive(selected[i]);
-                        }
-                    }
+                    const auto& selected = m_selection.All();
+                    DeleteEntitiesWithUndo(selected.Begin(), selected.Size());
                 }
                 else
                 {
-                    m_selection.Clear();
-                    m_currentWorld->DespawnRecursive(entity);
+                    DeleteEntitiesWithUndo(&entity, 1);
                 }
-                m_lastClickedItem = nullptr;
-                Refresh(*m_currentWorld);
-                emit sceneModified();
             });
         }
         else
@@ -597,20 +948,13 @@ namespace forge
                     [this, created]() {
                         if (m_currentWorld->IsAlive(*created))
                         {
-                            m_currentWorld->DespawnRecursive(*created);
+                            m_undoHidden.insert(EntityKey(*created));
                             m_selection.Clear();
                             Refresh(*m_currentWorld);
                         }
                     },
                     [this, created]() {
-                        if (!m_currentWorld->IsAlive(*created))
-                        {
-                            auto e = m_currentWorld->Spawn().Build();
-                            *created = e;
-                            char buf[32];
-                            snprintf(buf, sizeof(buf), "Entity %u", e.Index());
-                            m_currentWorld->Set(e, waggle::Name{wax::FixedString{buf}});
-                        }
+                        m_undoHidden.erase(EntityKey(*created));
                         m_selection.Select(*created);
                         Refresh(*m_currentWorld);
                     });

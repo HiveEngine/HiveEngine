@@ -4,6 +4,8 @@
 
 #include <hive/core/clock.h>
 
+#include <drone/job_submitter.h>
+
 #include <queen/world/world.h>
 
 #include <cstdint>
@@ -53,6 +55,11 @@ namespace waggle
             m_running = false;
         }
 
+        void SetJobSubmitter(drone::JobSubmitter jobs) noexcept
+        {
+            m_jobs = jobs;
+        }
+
     private:
         void UpdateTimeResource();
         void UpdateFrameInfoResource();
@@ -65,6 +72,7 @@ namespace waggle
         int64_t m_simTime{0};
         uint64_t m_simTick{0};
 
+        drone::JobSubmitter m_jobs{};
         bool m_running{true};
         bool m_firstTick{true};
     };

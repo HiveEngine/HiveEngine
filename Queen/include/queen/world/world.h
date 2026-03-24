@@ -192,6 +192,69 @@ namespace queen
 
         template <typename... Components> [[nodiscard]] Entity Spawn(Components&&... components);
 
+        [[nodiscard]] Entity CloneEntity(Entity source)
+        {
+            if (!IsAlive(source))
+                return Entity{};
+
+            EntityRecord* srcRecord = m_entityLocations.Get(source);
+            if (srcRecord == nullptr || !srcRecord->IsValid())
+                return Entity{};
+
+            auto* srcArchetype = srcRecord->m_archetype;
+            uint32_t srcRow = srcRecord->m_row;
+
+            Entity clone = m_entityAllocator.Allocate();
+            uint32_t cloneRow = srcArchetype->GetTable().AllocateRow(clone, m_currentTick);
+
+            EntityRecord cloneRecord{};
+            cloneRecord.m_archetype = srcArchetype;
+            cloneRecord.m_row = cloneRow;
+            m_entityLocations.Set(clone, cloneRecord);
+
+            auto& table = srcArchetype->GetTable();
+            const auto& metas = srcArchetype->GetComponentMetas();
+
+            for (size_t i = 0; i < metas.Size(); ++i)
+            {
+                if (metas[i].m_typeId == TypeIdOf<Parent>() || metas[i].m_typeId == TypeIdOf<Children>())
+                    continue;
+
+                if (metas[i].m_copy == nullptr)
+                    continue;
+
+                auto* col = table.GetColumnByTypeId(metas[i].m_typeId);
+                if (col == nullptr)
+                    continue;
+
+                void* dst = col->GetRaw(cloneRow);
+                const void* src = col->GetRaw(srcRow);
+                metas[i].m_copy(dst, src);
+            }
+
+            if (Has<Parent>(clone))
+                Remove<Parent>(clone);
+            if (Has<Children>(clone))
+                Remove<Children>(clone);
+
+            return clone;
+        }
+
+        [[nodiscard]] Entity CloneEntityRecursive(Entity source)
+        {
+            Entity clone = CloneEntity(source);
+            if (!IsAlive(clone))
+                return clone;
+
+            ForEachChild(source, [&](Entity child) {
+                Entity childClone = CloneEntityRecursive(child);
+                if (IsAlive(childClone))
+                    SetParent(childClone, clone);
+            });
+
+            return clone;
+        }
+
         void Despawn(Entity entity)
         {
             HIVE_PROFILE_SCOPE_N("World::Despawn");

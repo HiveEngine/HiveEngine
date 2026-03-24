@@ -57,8 +57,7 @@ namespace forge
     }
 
     void InspectorPanel::Refresh(queen::World& world, EditorSelection& selection,
-                                 const queen::ComponentRegistry<256>& registry, UndoStack& undo,
-                                 EditorUndoManager& editorUndo)
+                                 const queen::ComponentRegistry<256>& registry, EditorUndoManager& editorUndo)
     {
         auto* content = new QWidget;
         content->setObjectName("inspectorContent");
@@ -66,7 +65,7 @@ namespace forge
         switch (selection.Kind())
         {
             case SelectionKind::ENTITY: {
-                auto* inspector = new EntityInspector{world, selection, registry, undo, editorUndo, content};
+                auto* inspector = new EntityInspector{world, selection, registry, editorUndo, content};
                 auto* layout = new QVBoxLayout{content};
                 layout->setContentsMargins(0, 0, 0, 0);
                 layout->addWidget(inspector);

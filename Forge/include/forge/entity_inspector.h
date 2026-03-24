@@ -21,7 +21,6 @@ namespace forge
 {
     class EditorSelection;
     class EditorUndoManager;
-    class UndoStack;
 
     class EntityInspector : public QWidget
     {
@@ -29,7 +28,7 @@ namespace forge
 
     public:
         EntityInspector(queen::World& world, EditorSelection& selection, const queen::ComponentRegistry<256>& registry,
-                        UndoStack& undo, EditorUndoManager& editorUndo, QWidget* parent = nullptr);
+                        EditorUndoManager& editorUndo, QWidget* parent = nullptr);
 
     signals:
         void sceneModified();
@@ -42,7 +41,7 @@ namespace forge
             queen::Entity m_entity;
             queen::TypeId m_typeId;
             uint16_t m_baseOffset;
-            UndoStack* m_undo;
+            EditorUndoManager* m_undo;
         };
 
         struct MultiFieldContext
@@ -55,13 +54,20 @@ namespace forge
         };
 
         void BuildSingleEntity(queen::World& world, queen::Entity entity, const queen::ComponentRegistry<256>& registry,
-                               UndoStack& undo, EditorUndoManager& editorUndo);
+                               EditorUndoManager& editorUndo);
         void BuildMultiEntity(queen::World& world, const wax::Vector<queen::Entity>& entities,
                               const queen::ComponentRegistry<256>& registry, EditorUndoManager& editorUndo);
 
         void BuildFieldWidget(const queen::FieldInfo& field, void* data, const FieldContext& ctx, QFormLayout* form);
+        QWidget* BuildStructFieldWidget(const queen::FieldInfo& field, void* fieldData, const FieldContext& ctx,
+                                        QFormLayout* form);
+        QWidget* BuildEnumFieldWidget(const queen::FieldInfo& field, void* fieldData, const FieldContext& ctx);
         void BuildMultiFieldWidget(const queen::FieldInfo& field, void* primaryData, const MultiFieldContext& ctx,
                                    QFormLayout* form);
+        QWidget* BuildMultiStructFieldWidget(const queen::FieldInfo& field, void* fieldData,
+                                              const MultiFieldContext& ctx, QFormLayout* form);
+        QWidget* BuildMultiEnumFieldWidget(const queen::FieldInfo& field, void* fieldData,
+                                            const MultiFieldContext& ctx);
 
         QVBoxLayout* m_rootLayout{};
     };

@@ -9,8 +9,6 @@
 
 namespace forge
 {
-    class UndoStack;
-
     enum class GizmoMode : uint8_t
     {
         TRANSLATE,
