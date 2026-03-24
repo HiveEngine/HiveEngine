@@ -25,7 +25,6 @@
 #include <waggle/time.h>
 
 #include <forge/scene_file.h>
-#include <forge/undo.h>
 
 #include <cstdio>
 #include <memory>
@@ -53,7 +52,6 @@ namespace brood::launcher
     void ResetSceneEditorState(LauncherState& state)
     {
         state.m_selection.Clear();
-        state.m_undo = std::make_unique<forge::UndoStack>();
         state.m_pendingEditorAction = PendingEditorAction::NONE;
         state.m_pendingScenePath.Clear();
         state.m_openUnsavedScenePopup = false;

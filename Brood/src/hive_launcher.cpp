@@ -8,6 +8,7 @@
 
 #include <waggle/app_context.h>
 #include <waggle/disabled_propagation.h>
+#include <waggle/systems/transform_system.h>
 #include <waggle/engine_runner.h>
 #include <waggle/project/gameplay_module.h>
 #include <waggle/project/project_context.h>
@@ -102,7 +103,17 @@ namespace
             const wax::String windowTitle = state.m_projectPath.IsEmpty() ? wax::String{"HiveEngine Launcher"}
                                                                           : BuildWindowTitle(state.m_projectPath);
 
+            if (requestedMode != waggle::EngineMode::HEADLESS && !state.m_exitAfterSetup)
+            {
+                state.m_jobAlloc = std::make_unique<comb::BuddyAllocator>(4 * 1024 * 1024);
+                state.m_jobSystem.reset(
+                    new drone::JobSystem<comb::BuddyAllocator>{*state.m_jobAlloc});
+                state.m_jobSystem->Start();
+            }
+
             waggle::EngineConfig config{};
+            if (state.m_jobSystem)
+                config.m_jobs = drone::MakeJobSubmitter(*state.m_jobSystem);
             config.m_windowTitle = windowTitle.CStr();
 #if HIVE_MODE_EDITOR
             config.m_windowWidth = 1920;
@@ -119,6 +130,8 @@ namespace
                 s.m_project = comb::New<waggle::ProjectManager>(alloc, alloc);
                 ctx.m_world->InsertResource(waggle::AppContext{ctx.m_app});
                 waggle::RegisterDisabledObservers(*ctx.m_world);
+                waggle::RegisterTransformObservers(*ctx.m_world);
+                waggle::RegisterEngineSystems(*ctx.m_world);
 
 #if HIVE_MODE_EDITOR
                 RegisterSceneComponentTypes(s);
@@ -126,7 +139,7 @@ namespace
 
 #if HIVE_MODE_EDITOR
                 s.m_mainWindow = new forge::ForgeMainWindow;
-                s.m_mainWindow->Initialize(ctx.m_world, &s.m_selection, &s.m_componentRegistry, s.m_undo.get());
+                s.m_mainWindow->Initialize(ctx.m_world, &s.m_selection, &s.m_componentRegistry);
 
                 InitializeProjectHub(s.m_hub);
                 std::vector<forge::DiscoveredProject> hubProjects;
@@ -402,6 +415,7 @@ namespace
                         ctx.m_world->ClearSystems();
                         s.m_gameplay.Unload();
                     }
+                    waggle::RegisterEngineSystems(*ctx.m_world);
                     TryLoadGameplayModule(ctx, s);
                 }
 
@@ -461,7 +475,10 @@ namespace
             };
 
             callbacks.m_userData = &state;
-            return waggle::Run(config, callbacks);
+            int rc = waggle::Run(config, callbacks);
+            if (state.m_jobSystem)
+                state.m_jobSystem->Stop();
+            return rc;
         }
     };
 

@@ -100,39 +100,15 @@ namespace queen
      * │ │ - Parallel task data                                         │   │
      * │ └──────────────────────────────────────────────────────────────┘   │
      * └────────────────────────────────────────────────────────────────────┘
-     *
-     * Performance characteristics:
-     * - Persistent/Components: O(log N) alloc/dealloc (buddy)
-     * - Frame/Thread: O(1) alloc (linear bump), O(1) reset
-     *
-     * Usage:
-     * @code
-     *   // Option 1: Default sizes
-     *   WorldAllocators allocs = WorldAllocators::Create(backing_alloc);
-     *
-     *   // Option 2: Custom sizes
-     *   WorldAllocatorConfig config;
-     *   config.persistent_size = 16_MB;
-     *   config.component_size = 128_MB;
-     *   config.frame_size = 2_MB;
-     *   config.thread_frame_size = 512_KB;
-     *   config.thread_count = 4;
-     *   WorldAllocators allocs = WorldAllocators::Create(backing_alloc, config);
-     *
-     *   // In game loop
-     *   world.Update();
-     *   allocs.ResetFrame();  // Called automatically by World::Update()
-     * @endcode
      */
 
     struct WorldAllocatorConfig
     {
-        // Note: BuddyAllocator MaxLevels=20 supports up to 32 MB per allocator
-        size_t m_persistentSize = 8 * 1024 * 1024; // 8 MB default
-        size_t m_componentSize = 32 * 1024 * 1024; // 32 MB default (max for BuddyAllocator)
-        size_t m_frameSize = 1 * 1024 * 1024;      // 1 MB default
-        size_t m_threadFrameSize = 256 * 1024;     // 256 KB per thread
-        size_t m_threadCount = 0;                  // 0 = auto-detect
+        size_t m_persistentSize = 32 * 1024 * 1024;  // 32 MB — archetypes, systems, resources
+        size_t m_componentSize = 128 * 1024 * 1024;  // 128 MB — entity component data
+        size_t m_frameSize = 8 * 1024 * 1024;        // 8 MB — per-frame temporaries
+        size_t m_threadFrameSize = 512 * 1024;       // 512 KB per worker thread
+        size_t m_threadCount = 0;                    // 0 = auto-detect
     };
 
     /**

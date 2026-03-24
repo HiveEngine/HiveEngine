@@ -5,6 +5,7 @@
 #include <QWidget>
 
 #include <unordered_map>
+#include <unordered_set>
 
 class QTreeWidget;
 class QTreeWidgetItem;
@@ -38,13 +39,29 @@ namespace forge
         void assetDropped(const QString& path);
 
     private:
+        void SetupTreeWidget();
+        void SetupShortcuts();
+        void SetupDropCallbacks();
+
         void AddEntityNode(queen::World& world, queen::Entity entity, QTreeWidgetItem* parentItem);
         void OnItemClicked(QTreeWidgetItem* item, int column);
         void ShowEntityContextMenu(const QPoint& pos);
 
+        void HandleReparent(queen::Entity dragged, queen::Entity target, int dropPos);
+        void HandleDetach(queen::Entity dragged);
+        void DuplicateSelection();
+        void PasteClipboard();
+
         void SelectRange(QTreeWidgetItem* from, QTreeWidgetItem* to);
         void AddItemToSelection(QTreeWidgetItem* item);
         void ReindexRoots();
+        queen::Entity CloneEntityRecursive(queen::Entity source);
+        void DeleteEntitiesWithUndo(const queen::Entity* entities, size_t count);
+
+        static constexpr uint64_t EntityKey(queen::Entity e)
+        {
+            return (uint64_t(e.Generation()) << 32) | e.Index();
+        }
 
         QTreeWidget* m_tree{};
         EditorSelection& m_selection;
@@ -53,5 +70,7 @@ namespace forge
         queen::World* m_currentWorld{};
         QTreeWidgetItem* m_lastClickedItem{};
         std::unordered_map<uint32_t, QTreeWidgetItem*> m_entityItems;
+        std::vector<queen::Entity> m_clipboard;
+        std::unordered_set<uint64_t> m_undoHidden;
     };
 } // namespace forge

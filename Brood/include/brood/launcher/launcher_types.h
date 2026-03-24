@@ -5,6 +5,10 @@
 
 #include <comb/default_allocator.h>
 
+#include <comb/buddy_allocator.h>
+
+#include <drone/job_system.h>
+
 #include <waggle/project/gameplay_module.h>
 #include <waggle/project/project_manager.h>
 
@@ -14,7 +18,7 @@
 #include <forge/forge_main_window.h>
 #include <forge/selection.h>
 #include <forge/toolbar.h>
-#include <forge/undo.h>
+
 #endif
 
 #include <wax/containers/array.h>
@@ -117,6 +121,8 @@ namespace brood::launcher
     struct LauncherState
     {
         comb::ModuleAllocator m_alloc{"Launcher", size_t{1024} * 1024 * 1024};
+        std::unique_ptr<comb::BuddyAllocator> m_jobAlloc;
+        std::unique_ptr<drone::JobSystem<comb::BuddyAllocator>> m_jobSystem;
         waggle::ProjectManager* m_project{nullptr};
         waggle::GameplayModule m_gameplay;
         wax::String m_projectPath;
@@ -130,7 +136,7 @@ namespace brood::launcher
 #if HIVE_MODE_EDITOR
         ProjectHubState m_hub;
         forge::EditorSelection m_selection;
-        std::unique_ptr<forge::UndoStack> m_undo{std::make_unique<forge::UndoStack>()};
+
         forge::GizmoState m_gizmo;
         forge::PlayState m_playState{forge::PlayState::EDITING};
         queen::ComponentRegistry<256> m_componentRegistry;

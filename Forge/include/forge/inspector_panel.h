@@ -16,7 +16,6 @@ namespace forge
 {
     class EditorSelection;
     class EditorUndoManager;
-    class UndoStack;
 
     class InspectorPanel : public QScrollArea
     {
@@ -26,7 +25,7 @@ namespace forge
         explicit InspectorPanel(QWidget* parent = nullptr);
 
         void Refresh(queen::World& world, EditorSelection& selection, const queen::ComponentRegistry<256>& registry,
-                     UndoStack& undo, EditorUndoManager& editorUndo);
+                     EditorUndoManager& editorUndo);
 
     signals:
         void sceneModified();
