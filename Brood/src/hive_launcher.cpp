@@ -105,7 +105,7 @@ namespace
 
             if (requestedMode != waggle::EngineMode::HEADLESS && !state.m_exitAfterSetup)
             {
-                state.m_jobAlloc = std::make_unique<comb::BuddyAllocator>(4 * 1024 * 1024);
+                state.m_jobAlloc = std::make_unique<comb::BuddyAllocator>(16 * 1024 * 1024);
                 state.m_jobSystem.reset(
                     new drone::JobSystem<comb::BuddyAllocator>{*state.m_jobAlloc});
                 state.m_jobSystem->Start();
